@@ -1,0 +1,4 @@
+title = "commercial_charter_protocol gitleaks config"
+
+[extend]
+useDefault = true
