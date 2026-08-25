@@ -61,6 +61,14 @@ defmodule CharterAgreementProtocol.Error do
     :governing_invalid,
     :receipt_invalid,
     :receipt_claims_mismatch,
+    :extension_namespace_invalid,
+    :extension_duplicate,
+    :extension_unknown_critical,
+    :extension_criticality_conflict,
+    :extension_retired,
+    :extension_schema_unavailable,
+    :extension_schema_digest_mismatch,
+    :extension_scope_invalid,
     :signing_input_invalid,
     :signing_refused
   ]
@@ -113,6 +121,14 @@ defmodule CharterAgreementProtocol.Error do
           | :governing_invalid
           | :receipt_invalid
           | :receipt_claims_mismatch
+          | :extension_namespace_invalid
+          | :extension_duplicate
+          | :extension_unknown_critical
+          | :extension_criticality_conflict
+          | :extension_retired
+          | :extension_schema_unavailable
+          | :extension_schema_digest_mismatch
+          | :extension_scope_invalid
           | :signing_input_invalid
           | :signing_refused
   @type subject :: [binary() | non_neg_integer()]

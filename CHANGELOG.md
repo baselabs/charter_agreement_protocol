@@ -66,6 +66,17 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   and dynamic-dispatch calls; require public specifications and
   non-authorizing module stances; and census CAP, ABP, and BAP separators and
   protected types for completeness and disjointness.
+- A compiled seven-field extension registry with RFC 2606 example-class
+  identities, exact critical/optional envelope validation, schema-digest-bound
+  critical bodies, fail-closed critical lifecycle handling, and verbatim
+  unknown-optional quarantine with names-only facts.
+- The indexed-price profile family: closed ISO 4217 revision terms under
+  `com.example/pricing-indexed`, optional receipt observation evidence under
+  `com.example/pricing-indexed-observation`, authoritative evaluation-semantics
+  documentation, and executable valid/invalid/quarantine corpus cells.
+- Reserved, schema-free vLEI and eIDAS QEAA attestation profile names. CAP
+  interprets no attestation bytes until a normative authority defines and a
+  later protocol revision adopts a closed schema.
 - Package scaffold: mix project with the complete `mix quality` battery
   (dependency audits, format check, warnings-as-errors compile,
   `credo --strict`, 100% coverage census, dialyzer, warnings-as-errors

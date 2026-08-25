@@ -29,6 +29,7 @@ defmodule CharterAgreementProtocol.Receipt do
     DescriptorFacts,
     Digest,
     Error,
+    Extension,
     Facts,
     Limits,
     ReceiptFacts,
@@ -65,6 +66,7 @@ defmodule CharterAgreementProtocol.Receipt do
     :occurred_at,
     :recorded_at,
     :extensions,
+    :extension_outcome,
     :envelope
   ]
   defstruct @enforce_keys
@@ -84,6 +86,7 @@ defmodule CharterAgreementProtocol.Receipt do
           occurred_at: Timestamp.t(),
           recorded_at: Timestamp.t(),
           extensions: CharterAgreementProtocol.Json.value(),
+          extension_outcome: Extension.Outcome.t(),
           envelope: CompactJws.t()
         }
 
@@ -248,6 +251,7 @@ defmodule CharterAgreementProtocol.Receipt do
          {:ok, revision_digest} <- required_digest(values, "revision_digest"),
          {:ok, deployment_digest} <- required_digest(values, "deployment_digest"),
          {:ok, grant} <- extract_grant(values["grant"]),
+         {:ok, extension_outcome} <- Extension.validate(values["extensions"], :receipt, 1),
          {:ok, occurred_at} <- Timestamp.parse(occurred_value),
          {:ok, recorded_at} <- Timestamp.parse(recorded_value),
          :ok <- recorded_after_occurred(occurred_at, recorded_at) do
@@ -267,6 +271,7 @@ defmodule CharterAgreementProtocol.Receipt do
          occurred_at: occurred_at,
          recorded_at: recorded_at,
          extensions: values["extensions"],
+         extension_outcome: extension_outcome,
          envelope: envelope
        }}
     else
@@ -553,7 +558,7 @@ defmodule CharterAgreementProtocol.Receipt do
         chain_conflict: projection.chain_conflict,
         governing_match: projection.governing_match,
         deployment_digest_matched: projection.deployment_digest_matched,
-        optional_extensions_retained: []
+        optional_extensions_retained: receipt.extension_outcome.optional_retained
       },
       additions
     )

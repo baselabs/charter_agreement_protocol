@@ -75,7 +75,7 @@ defmodule CharterAgreementProtocol.SigningInputTest do
           "extensions" => %{
             "critical" => %{},
             "optional" => %{
-              "com.example.observation" => %{"observed_price" => 1.5}
+              "com.example/observation" => %{"observed_price" => 1.5}
             }
           }
         }

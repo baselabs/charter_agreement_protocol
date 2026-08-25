@@ -6,6 +6,7 @@ defmodule CharterAgreementProtocol.SchemaTest do
   test "a table-valid closed object is returned unchanged" do
     value = valid_value()
     assert Schema.validate(definition(), value) == {:ok, value}
+    assert match?({:object, _members}, Schema.document(definition()))
   end
 
   test "a non-object reaches the type stage" do
@@ -155,6 +156,8 @@ defmodule CharterAgreementProtocol.SchemaTest do
     assert_raise ArgumentError, fn ->
       Schema.definition("bad", [field], cross_field: [:bad])
     end
+
+    assert_raise ArgumentError, fn -> Schema.document(%{definition() | name: ""}) end
   end
 
   test "forged inconsistent definitions return typed errors instead of executing" do
@@ -230,7 +233,7 @@ defmodule CharterAgreementProtocol.SchemaTest do
         Schema.field("integer", types: [:integer], constraint: {:integer_range, 1, 2}),
         Schema.field("bytes", types: [:string], constraint: {:string_bytes, 2, 4}),
         Schema.field("choice", types: [:string], constraint: {:one_of, [{:string, "yes"}]}),
-        Schema.field("match", types: [:string], constraint: {:matches, ~r/\Aok\z/}),
+        Schema.field("match", types: [:string], constraint: {:matches, ~r/\Aok\z/u}),
         Schema.field("all",
           types: [:string],
           constraint: {:all, [{:string_bytes, 2, 2}, {:matches, ~r/\Aok\z/}]}
@@ -248,6 +251,7 @@ defmodule CharterAgreementProtocol.SchemaTest do
        ]}
 
     assert Schema.validate(definition, value) == {:ok, value}
+    assert match?({:object, _members}, Schema.document(definition))
     refute contains_function?(definition)
 
     mismatched =
@@ -286,6 +290,7 @@ defmodule CharterAgreementProtocol.SchemaTest do
     ]
 
     definition = Schema.definition("cross", fields, cross_field: rules)
+    assert match?({:object, _members}, Schema.document(definition))
 
     members = [
       {"a", {:integer, 1}},

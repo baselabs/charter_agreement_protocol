@@ -13,6 +13,8 @@ defmodule CharterAgreementProtocol.CharterRevision do
     Canonicalization,
     Digest,
     Error,
+    Extension,
+    ExtensionRegistry,
     Json,
     Limits,
     Schema,
@@ -93,6 +95,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
     :receipt_profile,
     :supersedes,
     :extensions,
+    :extension_outcome,
     :canonical_bytes
   ]
   defstruct [
@@ -111,6 +114,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
     :receipt_profile,
     :supersedes,
     :extensions,
+    :extension_outcome,
     :canonical_bytes
   ]
 
@@ -131,6 +135,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
           receipt_profile: binary(),
           supersedes: [binary()],
           extensions: Json.value(),
+          extension_outcome: Extension.Outcome.t(),
           canonical_bytes: binary()
         }
 
@@ -329,7 +334,9 @@ defmodule CharterAgreementProtocol.CharterRevision do
          {:ok, bindings} <- bindings(values["abp_bindings"]),
          {:string, receipt_profile} <- values["receipt_profile"],
          {:ok, supersedes} <- supersedes(values),
-         :ok <- extensions(values["extensions"]),
+         {:ok, extension_outcome} <-
+           Extension.validate(values["extensions"], :charter_revision, 1),
+         :ok <- receipt_profile_registered(receipt_profile),
          :ok <- genesis_shape(revision_number, charter_id, previous, supersedes),
          :ok <- ordered_interval(effective_from, effective_until),
          :ok <- unique_roles(parties),
@@ -351,6 +358,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
          receipt_profile: receipt_profile,
          supersedes: supersedes,
          extensions: values["extensions"],
+         extension_outcome: extension_outcome,
          canonical_bytes: bytes
        }}
     else
@@ -503,10 +511,10 @@ defmodule CharterAgreementProtocol.CharterRevision do
     end
   end
 
-  defp extensions({:object, members}) do
-    case Map.new(members) do
-      %{"critical" => {:object, []}, "optional" => {:object, _}} when length(members) == 2 -> :ok
-      _value -> revision_error()
+  defp receipt_profile_registered(namespace) do
+    case ExtensionRegistry.entry(namespace) do
+      {:ok, %{criticality: :optional, state: :active}} -> :ok
+      _unknown_or_inactive -> revision_error()
     end
   end
 

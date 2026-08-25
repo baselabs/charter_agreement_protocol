@@ -31,6 +31,11 @@ constructor, rejects authorization and term-evaluation vocabulary, proves the
 runtime cannot reach filesystems, clocks, or shell/OS escape routes, requires
 public specifications and non-authorizing module stances, and keeps CAP wire
 identities disjoint from the exact ABP and BAP dependency pins.
+The compiled extension registry now enforces exact critical/optional envelopes,
+schema-digest binding, unknown-critical rejection, and verbatim optional
+quarantine. Its RFC 2606 example-class indexed-price profile carries closed
+revision terms and separate receipt observations while CAP leaves term
+evaluation to each host.
 See [Protocol foundation](docs/protocol.md).
 
 ## Status
@@ -38,10 +43,10 @@ See [Protocol foundation](docs/protocol.md).
 Foundational codecs, bounded decode limits, the schema engine, corpus loader,
 independent Node integrity harness, Party Descriptor verification, and Charter
 Revision, Acceptance, and Termination Notice engines are implemented.
-The governing-chain, Receipt, and honest-signer input/assembly engines are
-implemented. Extension profiles, the complete second verifier, and the
-report/release engines remain under construction. The package is not
-published to Hex.
+The governing-chain, Receipt, honest-signer input/assembly, compiled extension
+registry, and indexed-price profile engines are implemented. The complete
+second verifier and report/release engines remain under construction. The
+package is not published to Hex.
 
 ## Development
 

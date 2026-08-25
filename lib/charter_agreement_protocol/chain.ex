@@ -274,6 +274,7 @@ defmodule CharterAgreementProtocol.Chain do
         charter_id: revision.charter_id || digest,
         revision_number: revision.revision_number,
         prev_revision_digest: revision.prev_revision_digest,
+        optional_extensions_retained: revision.extension_outcome.optional_retained,
         acceptance_facts: matches,
         acceptance_digests: matches |> Enum.map(& &1.acceptance_digest) |> Enum.sort(),
         acceptance_status: status

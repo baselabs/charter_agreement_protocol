@@ -25,6 +25,7 @@ defmodule CharterAgreementProtocol.Schema do
             | {:string_bytes, non_neg_integer(), non_neg_integer()}
             | {:one_of, [CharterAgreementProtocol.Json.value()]}
             | {:matches, Regex.t()}
+            | :utc_timestamp
             | {:all, [constraint()]}
 
     @type t :: %__MODULE__{
@@ -46,6 +47,7 @@ defmodule CharterAgreementProtocol.Schema do
             {:field_equals, binary(), CharterAgreementProtocol.Json.value()}
             | {:fields_equal, binary(), binary()}
             | {:ordered, binary(), :lt | :lte | :gt | :gte, binary()}
+            | {:ordered_if_present, binary(), :lt | :lte | :gt | :gte, binary()}
             | {:allowed, [binary()], [[CharterAgreementProtocol.Json.value()]]}
             | {:requires, binary(), CharterAgreementProtocol.Json.value(), binary()}
 
@@ -99,6 +101,14 @@ defmodule CharterAgreementProtocol.Schema do
 
   def validate(_definition, _value), do: error(:invalid_type, ["schema"])
 
+  @doc "Project one protocol-owned definition to the canonical tagged schema document it implements."
+  @spec document(Definition.t()) :: CharterAgreementProtocol.Json.value()
+  def document(%Definition{} = definition) do
+    if valid_definition?(definition),
+      do: definition_document(definition),
+      else: raise(ArgumentError, "invalid schema definition")
+  end
+
   defp validate_value(definition, {:object, members} = value) when is_list(members) do
     if valid_members?(members) do
       member_map = Map.new(members)
@@ -137,6 +147,7 @@ defmodule CharterAgreementProtocol.Schema do
 
   defp valid_constraint?({:one_of, values}), do: is_list(values) and values != []
   defp valid_constraint?({:matches, %Regex{}}), do: true
+  defp valid_constraint?(:utc_timestamp), do: true
 
   defp valid_constraint?({:all, constraints}),
     do:
@@ -285,6 +296,9 @@ defmodule CharterAgreementProtocol.Schema do
   defp valid_cross_rule?({:ordered, left, operator, right}),
     do: valid_name?(left) and operator in [:lt, :lte, :gt, :gte] and valid_name?(right)
 
+  defp valid_cross_rule?({:ordered_if_present, left, operator, right}),
+    do: valid_name?(left) and operator in [:lt, :lte, :gt, :gte] and valid_name?(right)
+
   defp valid_cross_rule?({:allowed, fields, tuples}) do
     is_list(fields) and fields != [] and Enum.all?(fields, &valid_name?/1) and is_list(tuples) and
       tuples != [] and Enum.all?(tuples, &(is_list(&1) and length(&1) == length(fields)))
@@ -306,6 +320,9 @@ defmodule CharterAgreementProtocol.Schema do
   defp constraint_matches?({:one_of, values}, value), do: value in values
   defp constraint_matches?({:matches, regex}, {:string, value}), do: Regex.match?(regex, value)
 
+  defp constraint_matches?(:utc_timestamp, {:string, value}),
+    do: match?({:ok, _timestamp}, CharterAgreementProtocol.Timestamp.parse(value))
+
   defp constraint_matches?({:all, constraints}, value),
     do: Enum.all?(constraints, &constraint_matches?(&1, value))
 
@@ -323,6 +340,13 @@ defmodule CharterAgreementProtocol.Schema do
       ordered?(left_value, operator, right_value)
     else
       :error -> false
+    end
+  end
+
+  defp cross_rule_matches?({:ordered_if_present, left, operator, right}, members) do
+    case {Map.fetch(members, left), Map.fetch(members, right)} do
+      {{:ok, left_value}, {:ok, right_value}} -> ordered?(left_value, operator, right_value)
+      _missing -> true
     end
   end
 
@@ -356,6 +380,126 @@ defmodule CharterAgreementProtocol.Schema do
   defp cardinality({:string, value}), do: byte_size(value)
   defp cardinality({:array, value}), do: length(value)
   defp cardinality({:object, value}), do: length(value)
+
+  defp definition_document(definition) do
+    {:object,
+     [
+       {"name", {:string, definition.name}},
+       {"fields", {:array, Enum.map(definition.fields, &field_document/1)}},
+       {"cross_field", {:array, Enum.map(definition.cross_field, &cross_rule_document/1)}}
+     ]}
+  end
+
+  defp field_document(field) do
+    {:object,
+     [
+       {"name", {:string, field.name}},
+       {"types", {:array, Enum.map(field.types, &{:string, Atom.to_string(&1)})}},
+       {"required", {:boolean, field.required?}},
+       {"constraint", constraint_document(field.constraint)},
+       {"cardinality", cardinality_document(field.cardinality)},
+       {"nested", nested_document(field.nested)}
+     ]}
+  end
+
+  defp constraint_document(nil), do: :null
+  defp constraint_document(:utc_timestamp), do: object("kind", "utc_timestamp")
+
+  defp constraint_document({:integer_range, minimum, maximum}),
+    do:
+      object([
+        {"kind", {:string, "integer_range"}},
+        {"minimum", {:integer, minimum}},
+        {"maximum", {:integer, maximum}}
+      ])
+
+  defp constraint_document({:string_bytes, minimum, maximum}),
+    do:
+      object([
+        {"kind", {:string, "string_bytes"}},
+        {"minimum", {:integer, minimum}},
+        {"maximum", {:integer, maximum}}
+      ])
+
+  defp constraint_document({:one_of, values}),
+    do: object([{"kind", {:string, "one_of"}}, {"values", {:array, values}}])
+
+  defp constraint_document({:matches, regex}),
+    do:
+      object([
+        {"kind", {:string, "matches"}},
+        {"pattern", {:string, Regex.source(regex)}},
+        {"options", {:array, Enum.map(Regex.opts(regex), &{:string, Atom.to_string(&1)})}}
+      ])
+
+  defp constraint_document({:all, constraints}),
+    do:
+      object([
+        {"kind", {:string, "all"}},
+        {"constraints", {:array, Enum.map(constraints, &constraint_document/1)}}
+      ])
+
+  defp cardinality_document(nil), do: :null
+
+  defp cardinality_document({minimum, maximum}),
+    do: {:array, [{:integer, minimum}, {:integer, maximum}]}
+
+  defp nested_document(nil), do: :null
+
+  defp nested_document({kind, definition}),
+    do:
+      object([
+        {"kind", {:string, Atom.to_string(kind)}},
+        {"definition", definition_document(definition)}
+      ])
+
+  defp cross_rule_document({:field_equals, field, value}),
+    do:
+      object([{"kind", {:string, "field_equals"}}, {"field", {:string, field}}, {"value", value}])
+
+  defp cross_rule_document({:fields_equal, left, right}),
+    do: ordered_rule_document("fields_equal", left, nil, right)
+
+  defp cross_rule_document({:ordered, left, operator, right}),
+    do: ordered_rule_document("ordered", left, operator, right)
+
+  defp cross_rule_document({:ordered_if_present, left, operator, right}),
+    do: ordered_rule_document("ordered_if_present", left, operator, right)
+
+  defp cross_rule_document({:allowed, fields, tuples}),
+    do:
+      object([
+        {"kind", {:string, "allowed"}},
+        {"fields", {:array, Enum.map(fields, &{:string, &1})}},
+        {"tuples", {:array, Enum.map(tuples, &{:array, &1})}}
+      ])
+
+  defp cross_rule_document({:requires, field, value, required_field}),
+    do:
+      object([
+        {"kind", {:string, "requires"}},
+        {"field", {:string, field}},
+        {"value", value},
+        {"required_field", {:string, required_field}}
+      ])
+
+  defp ordered_rule_document(kind, left, operator, right) do
+    members = [
+      {"kind", {:string, kind}},
+      {"left", {:string, left}},
+      {"right", {:string, right}}
+    ]
+
+    object(
+      if(operator,
+        do: members ++ [{"operator", {:string, Atom.to_string(operator)}}],
+        else: members
+      )
+    )
+  end
+
+  defp object(name, value), do: object([{name, {:string, value}}])
+  defp object(members), do: {:object, members}
 
   defp error(:invalid_type, subject), do: {:error, Error.new(:invalid_type, subject)}
   defp error(:unknown_member, subject), do: {:error, Error.new(:unknown_member, subject)}

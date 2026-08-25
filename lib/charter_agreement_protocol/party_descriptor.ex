@@ -14,6 +14,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     DescriptorFacts,
     Digest,
     Error,
+    Extension,
     Facts,
     Limits,
     Schema,
@@ -49,6 +50,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     :verification_keys,
     :attestation_hints,
     :extensions,
+    :extension_outcome,
     :effective_from,
     :envelope
   ]
@@ -60,6 +62,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     :verification_keys,
     :attestation_hints,
     :extensions,
+    :extension_outcome,
     :effective_from,
     :envelope
   ]
@@ -72,6 +75,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
           verification_keys: [VerificationKey.t()],
           attestation_hints: [AttestationHint.t()],
           extensions: CharterAgreementProtocol.Json.value(),
+          extension_outcome: Extension.Outcome.t(),
           effective_from: Timestamp.t(),
           envelope: CompactJws.t()
         }
@@ -206,7 +210,8 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
          {:ok, keys} <- verification_keys(values["verification_keys"]),
          :ok <- unique_active_keys(keys),
          {:ok, hints} <- attestation_hints(values["attestation_hints"]),
-         :ok <- valid_extensions(values["extensions"]),
+         {:ok, extension_outcome} <-
+           Extension.validate(values["extensions"], :party_descriptor, 1),
          {:ok, effective_from} <- Timestamp.parse(effective_from_value),
          :ok <- genesis_shape(descriptor_number, party_id, previous) do
       {:ok,
@@ -218,6 +223,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
          verification_keys: keys,
          attestation_hints: hints,
          extensions: values["extensions"],
+         extension_outcome: extension_outcome,
          effective_from: effective_from,
          envelope: envelope
        }}
@@ -272,13 +278,6 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
        {:string, uri} = value["uri"]
        %AttestationHint{kind: kind, uri: uri}
      end)}
-  end
-
-  defp valid_extensions({:object, members}) do
-    case Map.new(members) do
-      %{"critical" => {:object, []}, "optional" => {:object, _}} when length(members) == 2 -> :ok
-      _value -> descriptor_error()
-    end
   end
 
   defp do_verify(compact, predecessor, limits) do
@@ -465,6 +464,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
         prev_descriptor_digest: descriptor.prev_descriptor_digest,
         signing_key_id: descriptor.envelope.kid,
         descriptor_position: :head,
+        optional_extensions_retained: descriptor.extension_outcome.optional_retained,
         lineage: lineage
       })
 

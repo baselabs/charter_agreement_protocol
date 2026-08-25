@@ -56,7 +56,9 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "chain_fork",
     "supersession",
     "precedence_selection",
-    "outcome_indeterminate"
+    "outcome_indeterminate",
+    "extension_unknown_critical",
+    "extension_optional_roundtrip"
   ]
 
   @floor %{
@@ -93,7 +95,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     },
     "charter_revision.decode" => %{
       required:
-        ~w(valid invalid_type invalid_constraint invalid_cardinality unknown_member missing_required),
+        ~w(valid invalid_type invalid_constraint invalid_cardinality unknown_member missing_required extension_unknown_critical),
       n_a: "signature, chain, and foundational codec-only behavior are outside revision decoding"
     },
     "acceptance.verify" => %{
@@ -120,7 +122,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       n_a: "set integrity and single-artifact behavior are outside temporal precedence selection"
     },
     "receipt.verify" => %{
-      required: ~w(valid invalid_constraint signature_invalid chain_fork outcome_indeterminate),
+      required:
+        ~w(valid invalid_constraint signature_invalid chain_fork outcome_indeterminate extension_optional_roundtrip),
       n_a: "non-receipt codec and set-construction behavior is outside receipt verification"
     }
   }

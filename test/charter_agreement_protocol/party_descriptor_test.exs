@@ -396,7 +396,7 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
       DescriptorFixture.genesis(
         claims: %{
           "extensions" => %{
-            "critical" => %{"urn:example:unknown" => %{}},
+            "critical" => %{"com.example/unknown" => %{}},
             "optional" => %{}
           }
         }
@@ -404,7 +404,7 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
 
     assert_error_code(
       PartyDescriptor.verify(unknown_critical.compact, nil, Limits.default()),
-      :descriptor_invalid
+      :extension_unknown_critical
     )
   end
 

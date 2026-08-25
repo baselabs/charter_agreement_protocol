@@ -3,9 +3,9 @@
 This document defines the implemented byte-level, schema-validation, corpus,
 Party Descriptor, and Charter Revision surfaces of Charter Agreement Protocol.
 Acceptance and Termination Notice evidence verification is also implemented.
-Governing-chain, Receipt verification, and the external-signature signing seam
-are implemented. Extension profiles and complete conformance reports are not
-part of the implemented surface yet.
+Governing-chain, Receipt verification, the external-signature signing seam, the
+compiled extension registry, and the indexed-price profile are implemented.
+Complete conformance reports are not part of the implemented surface yet.
 
 ## Tagged JSON values
 
@@ -151,8 +151,8 @@ The canonical payload contains exactly these claims:
 - `descriptor_number`, beginning at 1 and increasing by exactly one;
 - 1–32 unique Ed25519 verification keys, with at least one active key;
 - 0–16 non-normative attestation hints, which this library never dereferences;
-- a closed `extensions` envelope with `critical` and `optional` objects; until
-  the compiled extension registry is present, `critical` must be empty; and
+- a closed `extensions` envelope with `critical` and `optional` objects,
+  validated against the compiled registry; and
 - `effective_from`, in uppercase UTC RFC 3339 form ending in `Z`.
 
 Genesis is self-signed by an active key declared in its own descriptor. Its
@@ -199,11 +199,14 @@ authorized. The frozen conformance vector comes from exact package 0.1.1 and
 retains blueprint `example.demo/echo`, release 1, and both package-derived
 digests without re-encoding them.
 
-The extension envelope is closed to `critical` and `optional`. Critical
-extensions remain empty until the compiled registry surface lands. Unknown
-members, missing precedence, duplicate roles, invalid cardinalities, malformed
-digests, widened identifiers, and non-canonical bytes fail closed with
-value-free errors.
+The extension envelope is closed to `critical` and `optional`. Registered
+critical bodies must occupy their declared artifact surface and validate
+against the exact schema digest compiled into the registry. Unknown critical
+namespaces fail closed. Unknown optional bodies remain digest-covered and
+byte-preserved in the decoded artifact but are quarantined; facts retain only
+their namespaces. Unknown members, missing precedence, duplicate roles,
+invalid cardinalities, malformed digests, widened identifiers, and
+non-canonical bytes fail closed with value-free errors.
 
 ## Acceptances
 
@@ -334,6 +337,46 @@ equality but has no descriptor key or chain view. Its facts therefore add
 governance as undetermined. Host post-sign verification uses full chain context.
 Neither form validates live grant state, authorization, execution, effect truth,
 legal validity, term satisfaction, view completeness, or wall-clock truth.
+
+## Extensions and profiles
+
+Every extension envelope is exactly
+`{"critical": {namespace: body}, "optional": {namespace: body}}`. A namespace
+is at most 512 UTF-8 bytes and has the lowercase reverse-DNS-plus-path form with
+exactly one slash. An artifact may carry at most 32 namespaces total, and a
+namespace may not occur in both regions.
+
+`CharterAgreementProtocol.ExtensionRegistry` is compiled production data. Each
+entry contains exactly `namespace`, `owner`, `criticality`, `state`,
+`schema_digest`, `a2a_uri`, and `promoted_at_revision`. Registry changes are
+package code releases; the runtime reads no registry file. Lifecycle states are
+closed to reserved, active, deprecated, and retired. Retired names remain
+occupied and cannot be reused. A critical body requires an active/deprecated
+critical entry, the declared artifact placement, and a supplied schema whose
+canonical schema-document digest equals the entry pin before validation.
+
+Unknown critical and reserved-critical bodies are rejected. Unknown, reserved,
+and retired optional bodies are retained exactly and quarantined. Registered
+optional bodies must match criticality, placement, schema digest, and schema.
+Neither a registry entry nor a successful extension verdict is authority.
+
+All shipped identities use the RFC 2606 `example.com` reservation:
+`com.example` reverse-DNS namespaces, `example.com` declaration URIs, and
+example owners. The registry carries active indexed-price term and observation
+profiles, the active schema-free core receipt profile, two reserved
+attestation-family names, and one retired example namespace that mechanically
+keeps retired-name reuse closed. The attestation entries define no bytes and
+CAP does not interpret their bodies.
+
+Profiles may define revision term schemas, receipt-extension members, and
+evaluation-semantics documents. They cannot define signature, acceptance,
+precedence, or authority semantics because those surfaces remain closed core
+members outside extension bodies. The implemented price profile is specified
+in [Indexed-price profile](profiles/indexed-price.md). Its revision terms and
+receipt observations use separate namespaces because registry criticality is a
+stable namespace property. CAP validates and binds the data but leaves
+`term_satisfaction` in the facts omission floor; hosts independently compute
+and compare prices.
 
 ## Signing inputs and compact assembly
 

@@ -9,6 +9,7 @@ defmodule CharterAgreementProtocol.DescriptorFacts do
     :prev_descriptor_digest,
     :signing_key_id,
     :descriptor_position,
+    :optional_extensions_retained,
     :lineage,
     :not_verified
   ]
@@ -23,6 +24,7 @@ defmodule CharterAgreementProtocol.DescriptorFacts do
           prev_descriptor_digest: nil | binary(),
           signing_key_id: binary(),
           descriptor_position: position(),
+          optional_extensions_retained: [binary()],
           lineage: [binary()],
           not_verified: [atom()]
         }

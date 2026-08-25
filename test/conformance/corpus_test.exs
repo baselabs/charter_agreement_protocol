@@ -218,7 +218,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_revision_expectations(cases) do
     revision_cases = Enum.filter(cases, &(&1["surface"] == "charter_revision.decode"))
-    assert length(revision_cases) == 7
+    assert length(revision_cases) == 10
 
     Enum.each(revision_cases, fn one ->
       actual = CharterRevision.decode(one["input"]["text"], Limits.default())
@@ -376,7 +376,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_receipt_expectations(cases) do
     receipt_cases = Enum.filter(cases, &(&1["surface"] == "receipt.verify"))
-    assert length(receipt_cases) == 5
+    assert length(receipt_cases) == 6
 
     Enum.each(receipt_cases, fn one ->
       input = one["input"]
@@ -397,7 +397,8 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
         "outcome" => Atom.to_string(facts.outcome),
         "chain_conflict" => Atom.to_string(facts.chain_conflict),
         "governing_match" => Atom.to_string(facts.governing_match),
-        "deployment_digest_matched" => facts.deployment_digest_matched
+        "deployment_digest_matched" => facts.deployment_digest_matched,
+        "optional_extensions_retained" => facts.optional_extensions_retained
       }
     }
   end
