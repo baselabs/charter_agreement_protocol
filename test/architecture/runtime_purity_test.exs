@@ -35,11 +35,16 @@ defmodule CharterAgreementProtocol.Architecture.RuntimePurityTest do
     {:os, :cmd}
   ]
   @dynamic_calls [{:erlang, :apply}, {:erlang, :make_fun}]
+  @adapter_beams [
+    "Elixir.CharterAgreementProtocol.Conformance.Cli.beam",
+    "Elixir.CharterAgreementProtocol.Conformance.Cli.Main.beam"
+  ]
 
   test "production BEAMs cannot reach filesystems, clocks, calendars, or dynamic dispatch" do
     beams = ArchitectureScan.production_beams()
     assert beams != []
-    assert runtime_offenders(beams) == []
+    pure_beams = Enum.reject(beams, &(Path.basename(&1) in @adapter_beams))
+    assert runtime_offenders(pure_beams) == []
   end
 
   test "the BEAM walk and filter observe file, clock, shell, and dynamic-dispatch calls" do

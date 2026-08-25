@@ -14,6 +14,7 @@ defmodule CharterAgreementProtocol.MixProject do
       package: package(),
       docs: docs(),
       aliases: aliases(),
+      escript: [main_module: CharterAgreementProtocol.Conformance.Cli.Main],
       name: "Charter Agreement Protocol",
       description:
         "Portable, non-authorizing charter-agreement format and verification protocol.",
@@ -26,6 +27,8 @@ defmodule CharterAgreementProtocol.MixProject do
           CharterAgreementProtocol.ChainFixture,
           CharterAgreementProtocol.CharterRevisionFixture,
           CharterAgreementProtocol.ConformanceTest.Builder,
+          CharterAgreementProtocol.Conformance.Cli,
+          CharterAgreementProtocol.Conformance.Cli.Main,
           CharterAgreementProtocol.DescriptorFixture,
           CharterAgreementProtocol.ReceiptFixture,
           CharterAgreementProtocol.TerminationFixture
@@ -65,6 +68,7 @@ defmodule CharterAgreementProtocol.MixProject do
       files: [
         "lib",
         "priv/conformance",
+        "priv/release-metadata.json",
         ".formatter.exs",
         "mix.exs",
         "README.md",
@@ -73,8 +77,10 @@ defmodule CharterAgreementProtocol.MixProject do
         "NOTICE",
         "SECURITY.md",
         "docs/protocol.md",
+        "docs/errata.md",
         "docs/profiles/indexed-price.md",
-        "docs/adr/no-versioning-rule.md"
+        "docs/adr/no-versioning-rule.md",
+        "docs/adr/conformance-release-candidate.md"
       ],
       licenses: ["Apache-2.0"],
       links: %{
@@ -97,8 +103,10 @@ defmodule CharterAgreementProtocol.MixProject do
         "NOTICE",
         "SECURITY.md",
         "docs/protocol.md",
+        "docs/errata.md",
         "docs/profiles/indexed-price.md",
-        "docs/adr/no-versioning-rule.md"
+        "docs/adr/no-versioning-rule.md",
+        "docs/adr/conformance-release-candidate.md"
       ]
     ]
   end
@@ -106,6 +114,10 @@ defmodule CharterAgreementProtocol.MixProject do
   defp aliases do
     [
       audit: ["hex.audit", "deps.unlock --check-unused", "deps.audit"],
+      "conformance.verify": "run --no-start scripts/check_conformance.exs",
+      "conformance.mutations": "run --no-start scripts/check_conformance_mutations.exs",
+      "verifier.agreement": "run --no-start scripts/check_verifier_agreement.exs",
+      "release.candidate": "run --no-start scripts/check_release_candidate.exs",
       quality: [
         "hex.audit",
         "deps.unlock --check-unused",
@@ -114,8 +126,12 @@ defmodule CharterAgreementProtocol.MixProject do
         "compile --warnings-as-errors",
         "credo --strict",
         "test --cover --seed 42",
+        "conformance.verify",
+        "conformance.mutations",
+        "verifier.agreement",
         "dialyzer",
-        "docs --warnings-as-errors"
+        "docs --warnings-as-errors",
+        "release.candidate"
       ]
     ]
   end

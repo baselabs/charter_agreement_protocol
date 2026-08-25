@@ -1,7 +1,7 @@
-alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest}
+alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest, ExtensionRegistry}
 alias CharterAgreementProtocol.Conformance.Corpus
 
-root = "priv/conformance"
+root = System.get_env("CAP_CONFORMANCE_ROOT") || "priv/conformance"
 case_format = "charter-agreement-protocol-conformance-cases"
 index_format = "charter-agreement-protocol-conformance-corpus-index"
 
@@ -316,7 +316,8 @@ descriptor_cases = [
         "positions" => %{
           genesis.digest => "superseded",
           left.digest => "head"
-        }
+        },
+        "sibling_descriptors" => []
       })
   },
   %{
@@ -327,6 +328,11 @@ descriptor_cases = [
     "expect" =>
       valid.(%{
         "topology" => "forked",
+        "positions" => %{
+          genesis.digest => "contested",
+          left.digest => "contested",
+          right.digest => "contested"
+        },
         "sibling_descriptors" => Enum.sort([left.digest, right.digest])
       })
   },
@@ -869,9 +875,38 @@ chain_cases = [
   }
 ]
 
+supplemental_case_ids =
+  MapSet.new(~w(
+    revision-indexed-price-valid
+    revision-indexed-price-formula-invalid
+    revision-extension-unknown-critical
+    receipt-signed-governing-match
+    receipt-outcome-indeterminate
+    receipt-rejected-effect-invalid
+    receipt-signature-invalid
+    receipt-hidden-sibling-conflict
+    receipt-indexed-price-observation-quarantine
+  ))
+
+supplemental_cases =
+  root
+  |> Path.join("cases/*.json")
+  |> Path.wildcard()
+  |> Enum.flat_map(fn path -> path |> File.read!() |> :json.decode() |> Map.fetch!("cases") end)
+  |> Enum.filter(&MapSet.member?(supplemental_case_ids, &1["id"]))
+
+unless MapSet.new(supplemental_cases, & &1["id"]) == supplemental_case_ids do
+  raise "supplemental conformance case set is incomplete"
+end
+
 cases =
   cases ++
-    descriptor_cases ++ revision_cases ++ acceptance_cases ++ termination_cases ++ chain_cases
+    descriptor_cases ++
+    revision_cases ++
+    acceptance_cases ++
+    termination_cases ++
+    chain_cases ++
+    supplemental_cases
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 
@@ -908,6 +943,7 @@ applicability =
 index = %{
   "format" => index_format,
   "corpus_digest" => "",
+  "registry_digest" => ExtensionRegistry.digest() |> Digest.to_tagged(),
   "total_cases" => length(cases),
   "files" => files,
   "applicability" => applicability

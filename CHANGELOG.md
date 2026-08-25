@@ -77,10 +77,30 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 - Reserved, schema-free vLEI and eIDAS QEAA attestation profile names. CAP
   interprets no attestation bytes until a normative authority defines and a
   later protocol revision adopts a closed schema.
+- A pure conformance runner, canonical identity-bound report, explicit-corpus
+  CLI/escript, and compiled requirement map linking every stable public
+  requirement to corpus, architecture-gate, and mutation evidence.
+- A 57-case obligation-complete corpus whose index binds the compiled extension
+  registry and carries both a domain-separated self-digest and a separately
+  certified exact-byte SHA-256 pin.
+- An independent Node 24-or-newer TypeScript verifier using only built-ins. It
+  recomputes signatures, artifact and set facts, governing views, receipt
+  projections, and foundational codec verdicts; its canonical report is
+  byte-identical to Elixir over repository and unpacked-package corpora.
+- The complete 22-break mutation battery, with baseline-green calibration and
+  the corpus-expectation flip last, plus directional second-verifier reds.
+- Release metadata, errata policy, conformance/release ADR, NIST CAVP SHA-256
+  known-answer checks, exact package allowlist verification, reproducible
+  archive comparison, and a mechanical no-publication-authority receipt.
+- A separate runnable Visa fork-evidence demo using real signed artifacts. It
+  reports same-signer equivocation, a contested governing view, Receipt
+  cross-check facts, and a countersigned bilateral supersession repair without
+  adjudicating or authorizing.
 - Package scaffold: mix project with the complete `mix quality` battery
   (dependency audits, format check, warnings-as-errors compile,
-  `credo --strict`, 100% coverage census, dialyzer, warnings-as-errors
-  docs), pinned GitHub CI with a full-history gitleaks secret scan,
+  `credo --strict`, 100% coverage census, conformance, mutations, independent
+  verifier agreement, dialyzer, warnings-as-errors docs, and release candidate),
+  pinned GitHub CI with a full-history gitleaks secret scan,
   weekly dependabot updates for mix and GitHub Actions, and the
   Apache-2.0 licensing set (LICENSE, NOTICE, SECURITY.md).
 

@@ -10,11 +10,18 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
   corpus cannot load.
   """
 
-  alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest, Error, Json}
+  alias CharterAgreementProtocol.{
+    Base64Url,
+    Canonicalization,
+    Digest,
+    Error,
+    ExtensionRegistry,
+    Json
+  }
 
   @index_format "charter-agreement-protocol-conformance-corpus-index"
   @case_format "charter-agreement-protocol-conformance-cases"
-  @index_keys ~w(applicability corpus_digest files format total_cases)
+  @index_keys ~w(applicability corpus_digest files format registry_digest total_cases)
   @file_keys ~w(cases path sha256_base64url)
   @case_keys ~w(class expect id input surface)
 
@@ -195,14 +202,20 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     end
   end
 
-  defp validate_index(index) do
+  defp validate_index(index) when is_map(index) do
     valid? =
-      is_map(index) and sorted_keys(index) == @index_keys and index["format"] == @index_format and
-        is_binary(index["corpus_digest"]) and is_integer(index["total_cases"]) and
-        index["total_cases"] >= 0 and valid_files?(index["files"]) and
-        is_map(index["applicability"])
+      sorted_keys(index) == @index_keys and index["format"] == @index_format and
+        valid_index_identity_fields?(index) and valid_files?(index["files"]) and
+        is_map(index["applicability"]) and valid_registry_digest?(index["registry_digest"])
 
     if valid?, do: :ok, else: index_error()
+  end
+
+  defp validate_index(_index), do: index_error()
+
+  defp valid_index_identity_fields?(index) do
+    is_binary(index["corpus_digest"]) and is_integer(index["total_cases"]) and
+      index["total_cases"] >= 0
   end
 
   defp valid_files?(files) when is_list(files) do
@@ -211,6 +224,9 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
   end
 
   defp valid_files?(_files), do: false
+
+  defp valid_registry_digest?(digest),
+    do: digest == ExtensionRegistry.digest() |> Digest.to_tagged()
 
   defp valid_file?(entry) when is_map(entry) do
     sorted_keys(entry) == @file_keys and is_integer(entry["cases"]) and entry["cases"] >= 0 and

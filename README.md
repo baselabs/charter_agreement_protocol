@@ -2,8 +2,8 @@
 
 Portable, non-authorizing charter-agreement format and verification protocol.
 
-The package now provides the bounded byte and validation foundation used by its
-artifact engines: strict unpadded base64url, deterministic JSON decoding,
+The package provides the complete approved core: strict unpadded base64url,
+deterministic JSON decoding,
 RFC 8785 canonicalization, domain-separated SHA-256 digests, typed value-free
 errors, table-driven closed schemas, and a self-digesting conformance corpus.
 The artifact engines verify signed Party Descriptors, predecessor-bound key
@@ -36,17 +36,23 @@ schema-digest binding, unknown-critical rejection, and verbatim optional
 quarantine. Its RFC 2606 example-class indexed-price profile carries closed
 revision terms and separate receipt observations while CAP leaves term
 evaluation to each host.
+The certified 57-case corpus executes every compiled applicability obligation.
+Its pure Elixir runner and builtins-only Node TypeScript verifier independently
+recompute complete projected fact documents and emit byte-identical canonical
+reports over both repository and unpacked-package corpora. Twenty-two named
+source mutations, three directional verifier reds, exact package-boundary
+checks, SHA-256 known-answer tests, and reproducible archive builds close the
+release-candidate gate.
+The separate runnable Visa fork demo constructs real signed artifacts, exposes
+a manufactured same-signer equivocation and contested governing view,
+cross-checks an action Receipt, and verifies a countersigned superseding repair.
 See [Protocol foundation](docs/protocol.md).
 
 ## Status
 
-Foundational codecs, bounded decode limits, the schema engine, corpus loader,
-independent Node integrity harness, Party Descriptor verification, and Charter
-Revision, Acceptance, and Termination Notice engines are implemented.
-The governing-chain, Receipt, honest-signer input/assembly, compiled extension
-registry, and indexed-price profile engines are implemented. The complete
-second verifier and report/release engines remain under construction. The
-package is not published to Hex.
+The approved protocol core, corpus, second verifier, mutation battery, and
+release-candidate gates are implemented. The current package remains an
+unpublished candidate; building its archive is not authorization to publish it.
 
 ## Development
 
@@ -55,6 +61,16 @@ mix deps.get
 mix quality
 ```
 
+Run the separate evidence demo with:
+
+```
+mix run examples/visa_fork_demo.exs
+```
+
+The demo reports signed evidence and structural facts. It never adjudicates a
+fork or authorizes an effect, and it is intentionally excluded from the package
+archive and conformance corpus.
+
 `mix quality` is the complete gate, run locally and in CI:
 
 - `hex.audit`, `deps.unlock --check-unused`, `deps.audit`
@@ -62,8 +78,12 @@ mix quality
 - `compile --warnings-as-errors`
 - `credo --strict`
 - `test --cover --seed 42` (100% coverage census)
+- `conformance.verify`
+- `conformance.mutations` (22 named source breaks; expectation flip last)
+- `verifier.agreement` (Elixir/TypeScript, repository/archive, byte-identical)
 - `dialyzer`
 - `docs --warnings-as-errors`
+- `release.candidate`
 
 ## License
 

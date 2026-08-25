@@ -1,11 +1,9 @@
-# Protocol foundation
+# Charter Agreement Protocol
 
-This document defines the implemented byte-level, schema-validation, corpus,
-Party Descriptor, and Charter Revision surfaces of Charter Agreement Protocol.
-Acceptance and Termination Notice evidence verification is also implemented.
-Governing-chain, Receipt verification, the external-signature signing seam, the
-compiled extension registry, and the indexed-price profile are implemented.
-Complete conformance reports are not part of the implemented surface yet.
+This document defines the complete implemented CAP core: byte and schema
+validation, signed evidence artifacts, set-level facts and governance views,
+the external-signature seam, compiled extensions and profiles, conformance,
+and release-candidate verification. None of these surfaces authorizes.
 
 ## Tagged JSON values
 
@@ -126,11 +124,34 @@ contain only definition and field names from the protocol-owned table.
   observations and whose not-applicable cells carry non-empty reasons; and
 - projected outputs for valid cases, so a verdict-only green is refused.
 
-The shipped foundational corpus contains real codec, digest, bounded-decode, and
-schema inputs. `verifier/check-corpus.mjs` independently checks the same bytes with
-Node 24 or newer using only `node:` built-ins. A corrupt index must exit nonzero.
-The Node harness is repository-side verification code and is intentionally absent
-from the Hex archive; `priv/conformance` is included.
+The shipped corpus contains 57 cases. Completion is determined by the compiled
+surface/class obligation floor, not a target count: every required cell has one
+or more executed cases, every other cell has a non-empty not-applicable reason,
+and counts must equal observations. The index also binds the compiled extension
+registry digest.
+
+`Conformance.Runner` recomputes every case and compares the complete projected
+output or typed error. `Conformance.Report` emits canonical JSON with per-case
+actual and expected documents, agreement counts, corpus and registry digests,
+and the raw SHA-256 identity of the exact index bytes. `Conformance.Cli` is the
+sole filesystem adapter and requires an explicit `--corpus` directory. It
+refuses a newly self-consistent index unless its raw identity equals the
+certified release pin.
+
+`mix conformance.verify` also regenerates the core cases in a scratch directory
+and requires byte identity with the certified corpus. The generator preserves
+an explicit closed set of supplemental receipt/profile cases whose signed ABP/BAP and
+profile fixtures were frozen at their owning boundaries; it refuses a missing
+supplemental case. `scripts/record_conformance_index.exs` is the full-corpus
+index recorder after a deliberate case change.
+
+`verifier/check-corpus.mjs` independently checks corpus integrity. The
+builtins-only Node TypeScript verifier independently recomputes every verdict,
+including Ed25519 evidence, forks, supersession, governing views, and Receipt
+fact JSON. Node 24 or newer is required. Elixir and TypeScript reports must be
+byte-identical over the repository corpus and the corpus unpacked from the Hex
+archive. The verifier is repository-side and never ships; `priv/conformance`
+does ship.
 
 ## Party Descriptors
 
@@ -429,3 +450,44 @@ from the consumed ABP and BAP package identities.
 Protocol evolution is carried as digest-covered data. Version tokens are rejected
 from durable paths and identifiers; the exact Hex package `source_ref` is the only
 allowlisted identity.
+
+## Conformance and release candidate
+
+`mix conformance.verify` runs the certified corpus through the Elixir CLI.
+`mix conformance.mutations` creates isolated scratch copies and proves all 22
+named source defects go red; each command first proves the unmodified baseline
+green, and `corpus-expectation-flip` runs last. `mix verifier.agreement` proves
+repository and unpacked-package report identity, executes independent verifier
+self-checks, and fires directional seeded reds.
+
+The SHA-256 known-answer gate uses the current NIST CAVP byte-oriented vectors
+for empty input, `d3`, and `b4190e` under FIPS 180-4. These vectors verify the
+runtime primitive against published answers; they do not claim that CAP itself
+has undergone CAVP validation. See the
+[NIST Secure Hashing validation page](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/secure-hashing)
+and [FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final).
+
+`mix release.candidate` verifies canonical release metadata, all three certified
+identity pins, development/test-only dependency direction, regular-file package
+inputs, two byte-identical independently built archives, and exact unpacked
+archive membership. The explicit package allowlist includes `lib`, the corpus,
+release metadata, and named public documents. It excludes `test`, `scripts`,
+`verifier`, lifecycle records, and environment files. The Hex build contract is
+documented at [Publishing packages](https://hex.pm/docs/publish): building or
+unpacking an archive performs no publication. This repository exposes no
+publish alias; `mix hex.publish` requires separate explicit authority.
+
+## Separate Visa evidence demo
+
+`mix run examples/visa_fork_demo.exs` constructs deterministic demonstration
+keys and real Ed25519-signed Party Descriptors, Acceptances, and a Receipt. One
+party is made to sign two sibling revisions at the same revision number. CAP
+then reports the paired Acceptance equivocation, a forked chain, a contested
+governing view, and an action Receipt whose governing match is undetermined.
+Both parties countersign a later revision that explicitly supersedes both
+siblings, after which the unique governing digest is reported.
+
+The demo is repository-side and separate from both the certified corpus and
+package archive. Its keys are demonstration fixtures, never trust anchors. CAP
+reports the evidence; it does not choose a winner, decide legal validity, or
+authorize the demonstrated action.

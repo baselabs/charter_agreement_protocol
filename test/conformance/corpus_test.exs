@@ -28,6 +28,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     deny(:not_a_map, :corpus_index_invalid)
     deny(Map.delete(minimal(), "index.json"), :corpus_index_invalid)
     deny(Map.put(minimal(), "index.json", "{}"), :corpus_index_invalid)
+    deny(Map.put(minimal(), "index.json", "null"), :corpus_index_invalid)
 
     padded = Map.update!(minimal(), "index.json", &(&1 <> " "))
     deny(padded, :corpus_index_invalid)
@@ -444,29 +445,22 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   defp projected_party_result({:error, %Error{code: code}}),
     do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
 
-  defp projected_chain_result({:ok, chain}, %{"output" => expected}) do
-    output = %{"topology" => Atom.to_string(chain.topology)}
+  defp projected_chain_result({:ok, chain}, _expectation) do
+    positions =
+      Map.new(chain.descriptors, fn facts ->
+        {facts.descriptor_digest, Atom.to_string(facts.descriptor_position)}
+      end)
 
-    output =
-      if Map.has_key?(expected, "positions") do
-        positions =
-          Map.new(chain.descriptors, fn facts ->
-            {facts.descriptor_digest, Atom.to_string(facts.descriptor_position)}
-          end)
+    siblings = if chain.fork_evidence, do: chain.fork_evidence.sibling_descriptors, else: []
 
-        Map.put(output, "positions", positions)
-      else
-        output
-      end
-
-    output =
-      if Map.has_key?(expected, "sibling_descriptors") do
-        Map.put(output, "sibling_descriptors", chain.fork_evidence.sibling_descriptors)
-      else
-        output
-      end
-
-    %{"status" => "valid", "output" => output}
+    %{
+      "status" => "valid",
+      "output" => %{
+        "topology" => Atom.to_string(chain.topology),
+        "positions" => positions,
+        "sibling_descriptors" => siblings
+      }
+    }
   end
 
   defp projected_chain_result({:error, %Error{code: code}}, _expectation),

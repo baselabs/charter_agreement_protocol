@@ -1,7 +1,7 @@
 defmodule CharterAgreementProtocol.ConformanceTest.Builder do
   @moduledoc false
 
-  alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest}
+  alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest, ExtensionRegistry}
   alias CharterAgreementProtocol.Conformance.Corpus
 
   @case_format "charter-agreement-protocol-conformance-cases"
@@ -32,6 +32,7 @@ defmodule CharterAgreementProtocol.ConformanceTest.Builder do
     index = %{
       "format" => @index_format,
       "corpus_digest" => "",
+      "registry_digest" => ExtensionRegistry.digest() |> Digest.to_tagged(),
       "total_cases" => length(cases),
       "files" => [
         %{
