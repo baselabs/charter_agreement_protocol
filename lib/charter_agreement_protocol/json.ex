@@ -8,6 +8,7 @@ defmodule CharterAgreementProtocol.Json do
   """
 
   alias CharterAgreementProtocol.{Canonicalization, Error}
+  alias CharterAgreementProtocol.Internal.Unicode
 
   @ijson_max 9_007_199_254_740_991
 
@@ -61,6 +62,13 @@ defmodule CharterAgreementProtocol.Json do
   defp sink(false), do: {:boolean, false}
   defp sink({:integer, lexeme}) when is_binary(lexeme), do: resolve_integer(lexeme)
   defp sink({:float, lexeme}) when is_binary(lexeme), do: resolve_float(lexeme)
+
+  defp sink({:string, value}) do
+    if Unicode.ijson_string?(value),
+      do: {:string, value},
+      else: throw({:cap_error, :invalid_encoding})
+  end
+
   defp sink(value), do: value
 
   defp resolve_integer(lexeme) do
@@ -110,6 +118,7 @@ defmodule CharterAgreementProtocol.Json do
     do: Error.new(:number_not_double_expressible, ["json"])
 
   defp cap_error(:duplicate_member), do: Error.new(:duplicate_member, ["json"])
+  defp cap_error(:invalid_encoding), do: Error.new(:invalid_encoding, ["json"])
 
   defp blank?(<<>>), do: true
   defp blank?(<<byte, rest::binary>>) when byte in [?\s, ?\t, ?\n, ?\r], do: blank?(rest)

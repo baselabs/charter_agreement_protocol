@@ -9,6 +9,7 @@ defmodule CharterAgreementProtocol.Canonicalization do
   """
 
   alias CharterAgreementProtocol.{Error, Json}
+  alias CharterAgreementProtocol.Internal.Unicode
 
   @ijson_max 9_007_199_254_740_991
   @decimal_high 21
@@ -62,7 +63,7 @@ defmodule CharterAgreementProtocol.Canonicalization do
   defp iodata({:float, float}) when is_float(float), do: number(float)
 
   defp iodata({:string, string}) when is_binary(string) do
-    if String.valid?(string),
+    if Unicode.ijson_string?(string),
       do: {:ok, [?", escape(string), ?"]},
       else: {:error, Error.new(:invalid_encoding, ["canonical_json"])}
   end

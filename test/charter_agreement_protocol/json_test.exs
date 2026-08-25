@@ -21,6 +21,13 @@ defmodule CharterAgreementProtocol.JsonTest do
     assert_error(Json.decode(<<0xFF>>), :invalid_encoding)
   end
 
+  test "rejects every I-JSON noncharacter" do
+    for codepoint <- [0xFDD0, 0xFDEF, 0xFFFE, 0xFFFF, 0x1FFFE, 0x10FFFF] do
+      json = <<?\", codepoint::utf8, ?\">>
+      assert_error(Json.decode(json), :invalid_encoding)
+    end
+  end
+
   test "admits only integer spellings that round-trip an ECMAScript peer" do
     assert {:ok, {:integer, 9_007_199_254_740_991}} = Json.decode("9007199254740991")
     assert {:ok, {:float, value}} = Json.decode("9007199254740992")

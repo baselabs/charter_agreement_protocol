@@ -27,6 +27,15 @@ defmodule CharterAgreementProtocol.CanonicalizationTest do
     assert Canonicalization.encode({:string, "e\u0301"}) == {:ok, ~s("é")}
   end
 
+  test "constructed strings reject every I-JSON noncharacter" do
+    for codepoint <- [0xFDD0, 0xFDEF, 0xFFFE, 0xFFFF, 0x1FFFE, 0x10FFFF] do
+      assert_error(
+        Canonicalization.encode({:string, <<codepoint::utf8>>}),
+        :invalid_encoding
+      )
+    end
+  end
+
   test "encodes every scalar in the tagged algebra" do
     assert Canonicalization.encode(:null) == {:ok, "null"}
     assert Canonicalization.encode({:boolean, true}) == {:ok, "true"}

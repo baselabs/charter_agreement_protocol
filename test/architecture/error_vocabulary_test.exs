@@ -35,6 +35,44 @@ defmodule CharterAgreementProtocol.Architecture.ErrorVocabularyTest do
            ) != []
 
     assert ArchitectureScan.error_constructor_bypass_findings(
+             "require CharterAgreementProtocol.Error, as: E\nE.new(:invented)"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "alias Elixir.CharterAgreementProtocol.Error, as: E\nE.new(:invented)"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "%CharterAgreementProtocol.Error{code: :invented, subject: []}"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "struct(CharterAgreementProtocol.Error, code: :invented, subject: [])"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "apply(CharterAgreementProtocol.Error, :new, [:invented, [], rejected])"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "&CharterAgreementProtocol.Error.new/3"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "Kernel.apply(Error, :new, [:invented, [], rejected])"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "Kernel.struct(Error, code: :invented, subject: [])"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "%Error{code: :invented, subject: []}"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings("%Error{} = error") == []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
              "alias CharterAgreementProtocol.Error\nError.new(:invalid_type)"
            ) == []
 

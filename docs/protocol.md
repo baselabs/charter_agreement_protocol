@@ -17,8 +17,9 @@ are not part of this surface yet.
 - `{:object, [{utf8_name, value}]}`
 
 The decoder rejects duplicate object names, trailing non-whitespace bytes,
-invalid UTF-8, malformed syntax, numbers that cannot round-trip through an
-ECMAScript double, and non-binary input. Errors do not contain rejected input.
+invalid UTF-8, I-JSON noncharacters, malformed syntax, numbers that cannot
+round-trip through an ECMAScript double, and non-binary input. Errors do not
+contain rejected input.
 
 ## Canonical JSON
 
@@ -26,7 +27,8 @@ ECMAScript double, and non-binary input. Errors do not contain rejected input.
 Canonicalization Scheme over the tagged algebra:
 
 - object names sort by unsigned UTF-16 code units;
-- strings use the shortest required JSON escapes and are not Unicode-normalized;
+- strings use the shortest required JSON escapes, reject I-JSON noncharacters,
+  and are not Unicode-normalized;
 - numbers use ECMAScript shortest-round-trip spelling;
 - output contains no inter-token whitespace.
 

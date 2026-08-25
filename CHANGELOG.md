@@ -20,3 +20,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   docs), pinned GitHub CI with a full-history gitleaks secret scan,
   weekly dependabot updates for mix and GitHub Actions, and the
   Apache-2.0 licensing set (LICENSE, NOTICE, SECURITY.md).
+
+### Fixed
+
+- Reject I-JSON noncharacters symmetrically during JSON decoding and constructed
+  canonicalization, and close alternate error-construction paths that could
+  bypass the declared-code and value-free-detail architecture gates.

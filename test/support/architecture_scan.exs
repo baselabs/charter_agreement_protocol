@@ -100,20 +100,11 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
     ast = quoted(input)
 
     {_ast, findings} =
-      Macro.prewalk(ast, [], fn
-        {:alias, _, [{:__aliases__, _, [:CharterAgreementProtocol, :Error]}, options]} = node, acc
-        when is_list(options) ->
-          case Keyword.get(options, :as) do
-            nil -> {node, acc}
-            {:__aliases__, _, [:Error]} -> {node, acc}
-            renamed -> {node, [{:renamed_error_constructor, renamed} | acc]}
-          end
-
-        {:import, _, [{:__aliases__, _, [:CharterAgreementProtocol, :Error]} | _]} = node, acc ->
-          {node, [:imported_error_constructor | acc]}
-
-        node, acc ->
-          {node, acc}
+      Macro.prewalk(ast, [], fn node, acc ->
+        case error_constructor_bypass(node) do
+          nil -> {node, acc}
+          finding -> {node, [finding | acc]}
+        end
       end)
 
     Enum.reverse(findings)
@@ -149,6 +140,62 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
     |> Enum.map(fn [word] -> Regex.replace(~r/\d+\z/, word, "") end)
     |> Enum.any?(&(&1 not in @non_version_hump_stems))
   end
+
+  defp error_alias?(segments),
+    do: normalize_elixir_prefix(segments) in [[:Error], [:CharterAgreementProtocol, :Error]]
+
+  defp error_constructor_bypass({directive, _, [{:__aliases__, _, segments}, options]})
+       when directive in [:alias, :require] and is_list(segments) and is_list(options) do
+    if error_alias?(segments), do: renamed_constructor(Keyword.get(options, :as))
+  end
+
+  defp error_constructor_bypass({:import, _, [{:__aliases__, _, segments} | _]}) do
+    if error_alias?(segments), do: :imported_error_constructor
+  end
+
+  defp error_constructor_bypass({:%, _, [{:__aliases__, _, segments}, {:%{}, _, fields}]}) do
+    if error_alias?(segments) and fields != [], do: :literal_error_struct
+  end
+
+  defp error_constructor_bypass({constructor, _, [{:__aliases__, _, segments} | _arguments]})
+       when constructor in [:struct, :struct!] do
+    if error_alias?(segments), do: :dynamic_error_struct
+  end
+
+  defp error_constructor_bypass({:apply, _, [{:__aliases__, _, segments}, :new, _arguments]}) do
+    if error_alias?(segments), do: :applied_error_constructor
+  end
+
+  defp error_constructor_bypass(
+         {{:., _, [{:__aliases__, _, kernel}, :apply]}, _,
+          [{:__aliases__, _, segments}, :new, _arguments]}
+       )
+       when kernel in [[:Kernel], [:erlang]] do
+    if error_alias?(segments), do: :applied_error_constructor
+  end
+
+  defp error_constructor_bypass(
+         {{:., _, [{:__aliases__, _, [:Kernel]}, constructor]}, _,
+          [{:__aliases__, _, segments} | _arguments]}
+       )
+       when constructor in [:struct, :struct!] do
+    if error_alias?(segments), do: :dynamic_error_struct
+  end
+
+  defp error_constructor_bypass(
+         {:&, _, [{:/, _, [{{:., _, [{:__aliases__, _, segments}, :new]}, _, []}, _arity]}]}
+       ) do
+    if error_alias?(segments), do: :captured_error_constructor
+  end
+
+  defp error_constructor_bypass(_node), do: nil
+
+  defp renamed_constructor(nil), do: nil
+  defp renamed_constructor({:__aliases__, _, [:Error]}), do: nil
+  defp renamed_constructor(renamed), do: {:renamed_error_constructor, renamed}
+
+  defp normalize_elixir_prefix([Elixir | rest]), do: rest
+  defp normalize_elixir_prefix(segments), do: segments
 
   defp strip_docs(ast) do
     Macro.prewalk(ast, fn
