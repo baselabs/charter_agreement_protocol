@@ -43,7 +43,7 @@ defmodule CharterAgreementProtocol.TerminationNoticeTest do
     for overrides <- variants do
       notice = signed_notice(setup, overrides)
 
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :termination_claims_mismatch}} =
                TerminationNotice.verify(
                  notice.compact,
                  setup.revision,
