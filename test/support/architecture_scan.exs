@@ -159,11 +159,11 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
   end
 
   defp error_constructor_bypass(
-         {{:., _, [{:__aliases__, _, kernel}, :apply]}, _,
+         {{:., _, [{:__aliases__, _, caller}, :apply]}, _,
           [{:__aliases__, _, segments}, :new, _arguments]}
-       )
-       when kernel in [[:Kernel], [:erlang]] do
-    if error_alias?(segments), do: :applied_error_constructor
+       ) do
+    if normalize_elixir_prefix(caller) in [[:Kernel], [:erlang]] and error_alias?(segments),
+      do: :applied_error_constructor
   end
 
   defp error_constructor_bypass(
@@ -173,11 +173,12 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
   end
 
   defp error_constructor_bypass(
-         {{:., _, [{:__aliases__, _, [:Kernel]}, constructor]}, _,
+         {{:., _, [{:__aliases__, _, caller}, constructor]}, _,
           [{:__aliases__, _, segments} | _arguments]}
        )
        when constructor in [:struct, :struct!] do
-    if error_alias?(segments), do: :dynamic_error_struct
+    if normalize_elixir_prefix(caller) == [:Kernel] and error_alias?(segments),
+      do: :dynamic_error_struct
   end
 
   defp error_constructor_bypass(
@@ -187,10 +188,11 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
   end
 
   defp error_constructor_bypass(
-         {{:., _, [{:__aliases__, _, [:Function]}, :capture]}, _,
+         {{:., _, [{:__aliases__, _, caller}, :capture]}, _,
           [{:__aliases__, _, segments}, :new, _arity]}
        ) do
-    if error_alias?(segments), do: :captured_error_constructor
+    if normalize_elixir_prefix(caller) == [:Function] and error_alias?(segments),
+      do: :captured_error_constructor
   end
 
   defp error_constructor_bypass(_node), do: nil
@@ -204,10 +206,40 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
 
   defp strip_read_patterns(ast) do
     Macro.prewalk(ast, fn
-      {:=, meta, [left, right]} -> {:=, meta, [strip_error_fields(left), right]}
-      node -> node
+      {:=, meta, [left, right]} ->
+        {:=, meta, [strip_error_fields(left), right]}
+
+      {:<-, meta, [left, right]} ->
+        {:<-, meta, [strip_error_fields(left), right]}
+
+      {:->, meta, [patterns, body]} ->
+        {:->, meta, [strip_clause_patterns(patterns), body]}
+
+      {kind, meta, [head, body]} when kind in [:def, :defp, :defmacro, :defmacrop] ->
+        {kind, meta, [strip_function_head(head), body]}
+
+      node ->
+        node
     end)
   end
+
+  defp strip_clause_patterns(patterns), do: Enum.map(patterns, &strip_error_fields/1)
+
+  defp strip_function_head({:when, meta, [head | guards]}) do
+    {:when, meta, [strip_function_head(head) | guards]}
+  end
+
+  defp strip_function_head({name, meta, arguments}) when is_atom(name) and is_list(arguments) do
+    {name, meta, Enum.map(arguments, &strip_function_argument/1)}
+  end
+
+  defp strip_function_head(head), do: head
+
+  defp strip_function_argument({:\\, meta, [pattern, default]}) do
+    {:\\, meta, [strip_error_fields(pattern), default]}
+  end
+
+  defp strip_function_argument(pattern), do: strip_error_fields(pattern)
 
   defp strip_error_fields(ast) do
     Macro.prewalk(ast, fn

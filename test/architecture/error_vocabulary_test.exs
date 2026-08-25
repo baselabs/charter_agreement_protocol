@@ -85,6 +85,18 @@ defmodule CharterAgreementProtocol.Architecture.ErrorVocabularyTest do
            ) != []
 
     assert ArchitectureScan.error_constructor_bypass_findings(
+             "Elixir.Function.capture(CharterAgreementProtocol.Error, :new, 3)"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "Elixir.Kernel.apply(Error, :new, [:invented, [], rejected])"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "Elixir.Kernel.struct(Error, code: :invented, subject: [])"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
              "alias CharterAgreementProtocol.Error\nError.new(:invalid_type)"
            ) == []
 
@@ -117,5 +129,19 @@ defmodule CharterAgreementProtocol.Architecture.ErrorVocabularyTest do
     assert ArchitectureScan.error_code_calls(
              ~S|Elixir.CharterAgreementProtocol.Error.new(:invalid_type)|
            ) == [:invalid_type]
+  end
+
+  test "read-only Error patterns are not classified as construction" do
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "case error do %Error{code: code} -> code end"
+           ) == []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "def code(%Error{code: code}), do: code"
+           ) == []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "with %Error{code: code} <- error, do: code"
+           ) == []
   end
 end
