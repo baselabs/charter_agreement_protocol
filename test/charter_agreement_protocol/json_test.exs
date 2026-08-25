@@ -26,6 +26,7 @@ defmodule CharterAgreementProtocol.JsonTest do
     assert {:ok, {:float, value}} = Json.decode("9007199254740992")
     assert value == 9_007_199_254_740_992.0
     assert_error(Json.decode("9007199254740993"), :number_not_double_expressible)
+    assert_error(Json.decode(String.duplicate("9", 400)), :number_not_double_expressible)
     assert_error(Json.decode("1e999"), :invalid_number)
   end
 

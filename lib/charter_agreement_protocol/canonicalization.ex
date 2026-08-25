@@ -37,11 +37,6 @@ defmodule CharterAgreementProtocol.Canonicalization do
 
   def verify(_input), do: {:error, Error.new(:invalid_type, ["canonical_json"])}
 
-  @doc "Return the RFC 8785 UTF-16 sort key for a valid UTF-8 member name."
-  @spec sort_key(binary()) :: binary()
-  def sort_key(name) when is_binary(name),
-    do: :unicode.characters_to_binary(name, :utf8, {:utf16, :big})
-
   @doc "Serialize a float using ECMAScript shortest-round-trip spelling."
   @spec number(term()) :: {:ok, binary()} | {:error, Error.t()}
   def number(float) when is_float(float) do
@@ -108,10 +103,11 @@ defmodule CharterAgreementProtocol.Canonicalization do
   end
 
   defp sort_members(members) do
-    if Enum.all?(members, fn
-         {name, _value} -> is_binary(name) and String.valid?(name)
-         _other -> false
-       end) do
+    if proper_list?(members) and
+         Enum.all?(members, fn
+           {name, _value} -> is_binary(name) and String.valid?(name)
+           _other -> false
+         end) do
       {:ok, Enum.sort_by(members, fn {name, _value} -> sort_key(name) end)}
     else
       {:error, Error.new(:invalid_type, ["canonical_json"])}
@@ -126,6 +122,12 @@ defmodule CharterAgreementProtocol.Canonicalization do
 
   defp maybe_comma([]), do: []
   defp maybe_comma(_acc), do: ","
+
+  defp proper_list?([]), do: true
+  defp proper_list?([_head | tail]), do: proper_list?(tail)
+  defp proper_list?(_improper), do: false
+
+  defp sort_key(name), do: :unicode.characters_to_binary(name, :utf8, {:utf16, :big})
 
   defp escape(<<>>), do: []
   defp escape(<<?", rest::binary>>), do: ["\\\"" | escape(rest)]

@@ -69,12 +69,20 @@ defmodule CharterAgreementProtocol.Json do
     if abs(integer) <= @ijson_max do
       {:integer, integer}
     else
-      {float, ""} = Float.parse(lexeme)
+      case Float.parse(lexeme) do
+        {float, ""} ->
+          resolve_large_integer(lexeme, float)
 
-      case Canonicalization.number(float) do
-        {:ok, ^lexeme} -> {:float, float}
-        _error -> throw({:cap_error, :number_not_double_expressible})
+        _error ->
+          throw({:cap_error, :number_not_double_expressible})
       end
+    end
+  end
+
+  defp resolve_large_integer(lexeme, float) do
+    case Canonicalization.number(float) do
+      {:ok, ^lexeme} -> {:float, float}
+      _error -> throw({:cap_error, :number_not_double_expressible})
     end
   end
 

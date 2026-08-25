@@ -24,4 +24,38 @@ defmodule CharterAgreementProtocol.Architecture.ErrorVocabularyTest do
 
     assert emitted == Enum.sort(Error.codes())
   end
+
+  test "renaming or importing the error constructor cannot bypass the vocabulary scan" do
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "alias CharterAgreementProtocol.Error, as: E\nE.new(:invented)"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "import CharterAgreementProtocol.Error\nnew(:invented)"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "alias CharterAgreementProtocol.Error\nError.new(:invalid_type)"
+           ) == []
+
+    assert Enum.flat_map(
+             ArchitectureScan.source_files(["lib"]),
+             &ArchitectureScan.error_constructor_bypass_findings/1
+           ) == []
+  end
+
+  test "production error details are protocol-owned literals" do
+    assert ArchitectureScan.unsafe_error_detail_findings(
+             ~S|Error.new(:invalid_type, [], rejected_input)|
+           ) != []
+
+    assert ArchitectureScan.unsafe_error_detail_findings(
+             ~S|Error.new(:invalid_type, [], "protocol-detail")|
+           ) == []
+
+    assert Enum.flat_map(
+             ArchitectureScan.source_files(["lib"]),
+             &ArchitectureScan.unsafe_error_detail_findings/1
+           ) == []
+  end
 end

@@ -13,6 +13,15 @@ defmodule CharterAgreementProtocol.ErrorTest do
 
     invalid_subject = Process.get(:invalid_subject_for_test, :not_a_subject)
     assert_raise ArgumentError, fn -> Error.new(:invalid_type, invalid_subject) end
+
+    assert %Error{detail: :protocol_detail} =
+             Error.new(:invalid_type, ["json"], :protocol_detail)
+
+    assert %Error{detail: "protocol-detail"} =
+             Error.new(:invalid_type, ["json"], "protocol-detail")
+
+    invalid_detail = Process.get(:invalid_detail_for_test, {:secret, "do-not-echo"})
+    assert_raise ArgumentError, fn -> Error.new(:invalid_type, ["json"], invalid_detail) end
   end
 
   test "the vocabulary is closed and duplicate-free" do

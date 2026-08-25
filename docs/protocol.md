@@ -62,8 +62,10 @@ one XOR/OR accumulator, and tests the accumulator only after the full input.
 Public decode and verification failures return
 `%CharterAgreementProtocol.Error{code, subject, detail}`. The code vocabulary is
 closed. Subjects contain protocol-owned names and non-negative indexes, never
-rejected values. An architecture gate rejects undeclared production emissions and
-declared codes with no production emission site.
+rejected values. Details are absent or a protocol-owned atom/string. Architecture
+gates reject undeclared production emissions, declared codes with no production
+emission site, constructor aliases/imports that could evade the scan, and dynamic
+production detail values.
 
 ## Architecture boundaries
 

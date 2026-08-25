@@ -76,10 +76,20 @@ defmodule CharterAgreementProtocol.CanonicalizationTest do
     )
 
     assert_error(Canonicalization.encode({:array, [:null | :improper]}), :invalid_type)
+
+    assert_error(
+      Canonicalization.encode({:object, [{"a", :null} | :improper]}),
+      :invalid_type
+    )
+
     assert_error(Canonicalization.encode({:object, [:not_a_member]}), :invalid_type)
     assert_error(Canonicalization.encode({:unsupported, "secret"}), :invalid_type)
     assert_error(Canonicalization.number(1), :invalid_type)
     assert_error(Canonicalization.verify(:not_bytes), :invalid_type)
+  end
+
+  test "UTF-16 member sort keys remain an internal prevalidated mechanic" do
+    refute function_exported?(Canonicalization, :sort_key, 1)
   end
 
   defp assert_error(result, code) do

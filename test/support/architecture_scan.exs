@@ -96,6 +96,50 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
     Enum.reverse(calls)
   end
 
+  def error_constructor_bypass_findings(input) do
+    ast = quoted(input)
+
+    {_ast, findings} =
+      Macro.prewalk(ast, [], fn
+        {:alias, _, [{:__aliases__, _, [:CharterAgreementProtocol, :Error]}, options]} = node, acc
+        when is_list(options) ->
+          case Keyword.get(options, :as) do
+            nil -> {node, acc}
+            {:__aliases__, _, [:Error]} -> {node, acc}
+            renamed -> {node, [{:renamed_error_constructor, renamed} | acc]}
+          end
+
+        {:import, _, [{:__aliases__, _, [:CharterAgreementProtocol, :Error]} | _]} = node, acc ->
+          {node, [:imported_error_constructor | acc]}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.reverse(findings)
+  end
+
+  def unsafe_error_detail_findings(input) do
+    ast = quoted(input)
+
+    {_ast, findings} =
+      Macro.prewalk(ast, [], fn
+        {{:., _, [{:__aliases__, _, [:Error]}, :new]}, _, [_code, _subject, detail]} = node,
+        acc ->
+          {node, maybe_unsafe_detail(detail, acc)}
+
+        {{:., _, [{:__aliases__, _, [:CharterAgreementProtocol, :Error]}, :new]}, _,
+         [_code, _subject, detail]} = node,
+        acc ->
+          {node, maybe_unsafe_detail(detail, acc)}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.reverse(findings)
+  end
+
   defp package_source_ref?(name),
     do: Regex.match?(~r/\bsource_ref\b.*\bv(?:#\{@version\}|\d)/i, name)
 
@@ -133,4 +177,15 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
     do: {atom, [{:atom, Atom.to_string(atom)} | acc]}
 
   defp collect(node, acc), do: {node, acc}
+
+  defp quoted(input) do
+    source = if File.regular?(input), do: File.read!(input), else: input
+    Code.string_to_quoted!(source, file: input)
+  end
+
+  defp maybe_unsafe_detail(detail, acc)
+       when is_nil(detail) or is_atom(detail) or is_binary(detail),
+       do: acc
+
+  defp maybe_unsafe_detail(detail, acc), do: [detail | acc]
 end
