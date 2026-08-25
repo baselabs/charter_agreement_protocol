@@ -84,8 +84,8 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   registry and carries both a domain-separated self-digest and a separately
   certified exact-byte SHA-256 pin.
 - An independent Node 24-or-newer TypeScript verifier using only built-ins. It
-  recomputes signatures, artifact and set facts, governing views, receipt
-  projections, and foundational codec verdicts; its canonical report is
+  recomputes every certified signature, artifact and set fact, governing view,
+  receipt projection, and foundational codec verdict; its canonical report is
   byte-identical to Elixir over repository and unpacked-package corpora.
 - The complete 22-break mutation battery, with baseline-green calibration and
   the corpus-expectation flip last, plus directional second-verifier reds.
@@ -106,6 +106,13 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ### Fixed
 
+- Enumerate hidden corpus entries, reject non-regular paths, and enforce corpus
+  byte ceilings before file reads in every filesystem verifier.
+- Align the independent verifier's Receipt projection, issuer-key selection,
+  JSON structural limits, and compiled extension-registry identity with the
+  certified Elixir boundary.
+- Require every mutation's exact scratch environment to pass before a failing
+  mutated command can receive credit.
 - Reject noncanonical Ed25519 points, all eight low-order torsion encodings for
   public keys and signature `R` values, and out-of-range signature scalars
   before runtime verification; this closes the identity-key universal forgery

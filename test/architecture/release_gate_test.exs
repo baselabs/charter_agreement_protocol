@@ -64,6 +64,13 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     end
   end
 
+  test "mutation credit requires the exact scratch environment to be green before mutation" do
+    source = File.read!("scripts/check_conformance_mutations.exs")
+
+    assert source =~
+             "scratch_green!(mutation.command, scratch)\n      mutate_once!(Path.join(scratch, mutation.path)"
+  end
+
   test "requirement evidence resolves in both directions" do
     assert {:ok, corpus} = Corpus.load(shipped_files())
     observed = Enum.frequencies_by(corpus.cases, &{&1["surface"], &1["class"]})

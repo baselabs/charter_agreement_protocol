@@ -127,10 +127,55 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
     assert_received {:exit, 0}
   end
 
+  test "the CLI includes hidden corpus entries in the exact file-set check" do
+    root = copy_shipped_corpus("hidden-entry")
+
+    try do
+      File.write!(Path.join(root, ".hidden-extra"), "not certified")
+
+      assert ExUnit.CaptureIO.capture_io(:stderr, fn ->
+               send(self(), {:exit, Cli.run(["--corpus", root])})
+             end) =~ "conformance verification failed"
+
+      assert_received {:exit, 1}
+    after
+      File.rm_rf!(Path.dirname(root))
+    end
+  end
+
+  test "the CLI rejects non-regular corpus entries before attempting to read them" do
+    root = copy_shipped_corpus("fifo-entry")
+    fifo = Path.join(root, "blocking-fifo")
+
+    try do
+      {_output, 0} = System.cmd("mkfifo", [fifo])
+      task = Task.async(fn -> Cli.run(["--corpus", root]) end)
+      result = Task.yield(task, 1_000)
+      if result == nil, do: Task.shutdown(task, :brutal_kill)
+
+      assert result == {:ok, 1}
+    after
+      File.rm_rf!(Path.dirname(root))
+    end
+  end
+
   defp shipped_files do
     "priv/conformance/**/*"
     |> Path.wildcard()
     |> Enum.reject(&File.dir?/1)
     |> Map.new(fn path -> {Path.relative_to(path, "priv/conformance"), File.read!(path)} end)
+  end
+
+  defp copy_shipped_corpus(label) do
+    scratch =
+      Path.join(
+        System.tmp_dir!(),
+        "cap-cli-#{label}-#{System.unique_integer([:positive, :monotonic])}"
+      )
+
+    root = Path.join(scratch, "conformance")
+    File.mkdir_p!(scratch)
+    {:ok, _copied} = File.cp_r("priv/conformance", root)
+    root
   end
 end

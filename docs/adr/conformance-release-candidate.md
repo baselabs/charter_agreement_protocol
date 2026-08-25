@@ -18,8 +18,8 @@ The release candidate is certified by two identities with distinct jobs:
 The pure corpus loader, runner, and report perform no I/O. The CLI is the sole
 filesystem adapter. Reports compare every complete projected output or typed
 error; status-only agreement is insufficient. The Node verifier uses only
-Node built-ins and independently implements the protocol surfaces. Repository
-and unpacked-package reports must be byte-identical canonical JSON.
+Node built-ins and independently implements every certified corpus projection.
+Repository and unpacked-package reports must be byte-identical canonical JSON.
 
 Core corpus regeneration runs only in a scratch directory and must reproduce
 the certified bytes. A closed list of supplemental cross-package and profile

@@ -38,8 +38,9 @@ revision terms and separate receipt observations while CAP leaves term
 evaluation to each host.
 The certified 57-case corpus executes every compiled applicability obligation.
 Its pure Elixir runner and builtins-only Node TypeScript verifier independently
-recompute complete projected fact documents and emit byte-identical canonical
-reports over both repository and unpacked-package corpora. Twenty-two named
+recompute every certified case's complete projected fact document and emit
+byte-identical canonical reports over both repository and unpacked-package
+corpora. Twenty-two named
 source mutations, three directional verifier reds, exact package-boundary
 checks, SHA-256 known-answer tests, and reproducible archive builds close the
 release-candidate gate.

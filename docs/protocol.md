@@ -146,9 +146,10 @@ supplemental case. `scripts/record_conformance_index.exs` is the full-corpus
 index recorder after a deliberate case change.
 
 `verifier/check-corpus.mjs` independently checks corpus integrity. The
-builtins-only Node TypeScript verifier independently recomputes every verdict,
-including Ed25519 evidence, forks, supersession, governing views, and Receipt
-fact JSON. Node 24 or newer is required. Elixir and TypeScript reports must be
+builtins-only Node TypeScript verifier independently recomputes every certified
+corpus verdict, including Ed25519 evidence, forks, supersession, governing
+views, and Receipt fact JSON. Node 24 or newer is required. Elixir and
+TypeScript reports must be
 byte-identical over the repository corpus and the corpus unpacked from the Hex
 archive. The verifier is repository-side and never ships; `priv/conformance`
 does ship.

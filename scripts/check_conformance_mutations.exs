@@ -186,6 +186,7 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       Enum.each(@copy_paths, &copy_path(&1, scratch))
       File.ln_s!(Path.join(@root, "deps"), Path.join(scratch, "deps"))
       copy_build(scratch)
+      scratch_green!(mutation.command, scratch)
       mutate_once!(Path.join(scratch, mutation.path), mutation.from, mutation.to)
 
       {output, status} =
@@ -216,6 +217,18 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       if status != 0, do: raise("baseline not green: #{Enum.join(command, " ")}\n#{output}")
       Process.put(key, :ok)
     end
+  end
+
+  defp scratch_green!(command, scratch) do
+    {output, status} =
+      System.cmd(hd(command), tl(command),
+        cd: scratch,
+        stderr_to_stdout: true,
+        env: [{"MIX_ENV", "test"}]
+      )
+
+    if status != 0,
+      do: raise("scratch baseline not green: #{Enum.join(command, " ")}\n#{output}")
   end
 
   defp copy_path(relative, scratch) do

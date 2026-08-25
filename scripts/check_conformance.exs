@@ -40,9 +40,19 @@ defmodule CharterAgreementProtocol.ConformanceRegenerationGate do
   defp files(root) do
     root
     |> Path.join("**/*")
-    |> Path.wildcard()
-    |> Enum.reject(&File.dir?/1)
-    |> Map.new(fn path -> {Path.relative_to(path, root), File.read!(path)} end)
+    |> Path.wildcard(match_dot: true)
+    |> Enum.reduce(%{}, fn path, files ->
+      case File.lstat!(path) do
+        %File.Stat{type: :directory} ->
+          files
+
+        %File.Stat{type: :regular} ->
+          Map.put(files, Path.relative_to(path, root), File.read!(path))
+
+        %File.Stat{type: type} ->
+          raise "non-regular conformance entry: #{path} (#{type})"
+      end
+    end)
   end
 end
 
