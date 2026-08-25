@@ -19,7 +19,10 @@ defmodule CharterAgreementProtocol.MixProject do
         "Portable, non-authorizing charter-agreement format and verification protocol.",
       source_url: @source_url,
       homepage_url: @source_url,
-      test_coverage: [summary: [threshold: 100]],
+      test_coverage: [
+        summary: [threshold: 100],
+        ignore_modules: [CharterAgreementProtocol.ConformanceTest.Builder]
+      ],
       test_ignore_filters: [&String.starts_with?(&1, "test/support/")],
       dialyzer: [plt_core_path: "_build/plts", plt_local_path: "_build/plts"]
     ]
@@ -51,6 +54,7 @@ defmodule CharterAgreementProtocol.MixProject do
       maintainers: ["rjpalermo"],
       files: [
         "lib",
+        "priv/conformance",
         ".formatter.exs",
         "mix.exs",
         "README.md",

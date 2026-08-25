@@ -2,15 +2,18 @@
 
 Portable, non-authorizing charter-agreement format and verification protocol.
 
-The package now provides the foundational byte contract used by its artifact
-engines: strict unpadded base64url, deterministic JSON decoding, RFC 8785
-canonicalization, domain-separated SHA-256 digests, and typed value-free
-errors. See [Foundational byte contract](docs/protocol.md).
+The package now provides the bounded byte and validation foundation used by its
+artifact engines: strict unpadded base64url, deterministic JSON decoding,
+RFC 8785 canonicalization, domain-separated SHA-256 digests, typed value-free
+errors, table-driven closed schemas, and a self-digesting conformance corpus.
+See [Protocol foundation](docs/protocol.md).
 
 ## Status
 
-Foundational codecs implemented. Artifact schemas and verification engines are
-not implemented yet. The package is not published to Hex.
+Foundational codecs, bounded decode limits, the schema engine, corpus loader,
+foundational corpus, and independent Node integrity harness are implemented.
+Artifact-specific schemas and verification engines are not implemented yet.
+The package is not published to Hex.
 
 ## Development
 

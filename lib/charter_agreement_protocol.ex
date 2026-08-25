@@ -2,9 +2,10 @@ defmodule CharterAgreementProtocol do
   @moduledoc """
   Charter Agreement Protocol.
 
-  The foundational byte-contract modules implement strict base64url,
-  deterministic JSON decoding, RFC 8785 canonicalization, domain-separated
-  tagged digests, and typed value-free errors. Artifact-specific verification
-  surfaces land on top of these codecs.
+  The implemented foundation provides strict base64url, bounded deterministic
+  JSON decoding, RFC 8785 canonicalization, domain-separated tagged digests,
+  typed value-free errors, table-driven artifact validation, and a
+  drift-resistant conformance-corpus loader. Artifact-specific verification
+  surfaces land on top of this foundation.
   """
 end

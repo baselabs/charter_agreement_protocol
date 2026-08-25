@@ -25,7 +25,23 @@ defmodule CharterAgreementProtocol.Error do
     :integer_magnitude,
     :digest_algorithm_unsupported,
     :digest_encoding_invalid,
-    :digest_mismatch
+    :digest_mismatch,
+    :invalid_limits,
+    :limit_exceeded,
+    :unknown_member,
+    :missing_required,
+    :constraint_violation,
+    :cardinality_violation,
+    :nested_invalid,
+    :cross_field_invalid,
+    :corpus_index_invalid,
+    :corpus_case_invalid,
+    :corpus_hash_mismatch,
+    :corpus_file_set_mismatch,
+    :corpus_case_id_duplicate,
+    :corpus_count_mismatch,
+    :corpus_applicability_incomplete,
+    :corpus_empty
   ]
 
   @type code ::
@@ -43,6 +59,22 @@ defmodule CharterAgreementProtocol.Error do
           | :digest_algorithm_unsupported
           | :digest_encoding_invalid
           | :digest_mismatch
+          | :invalid_limits
+          | :limit_exceeded
+          | :unknown_member
+          | :missing_required
+          | :constraint_violation
+          | :cardinality_violation
+          | :nested_invalid
+          | :cross_field_invalid
+          | :corpus_index_invalid
+          | :corpus_case_invalid
+          | :corpus_hash_mismatch
+          | :corpus_file_set_mismatch
+          | :corpus_case_id_duplicate
+          | :corpus_count_mismatch
+          | :corpus_applicability_incomplete
+          | :corpus_empty
   @type subject :: [binary() | non_neg_integer()]
   @type detail :: nil | atom() | binary()
   @type t :: %__MODULE__{code: code(), subject: subject(), detail: detail()}

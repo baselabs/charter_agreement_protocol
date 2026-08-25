@@ -10,6 +10,13 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   deterministic tagged JSON, RFC 8785 canonicalization with exact-byte
   verification, domain-separated tagged SHA-256 digests with all-byte
   comparison, and a closed typed error vocabulary.
+- Caller-supplied bounded JSON decode limits; a table-driven closed-schema
+  engine with fixed seven-stage failure precedence; and a pure conformance
+  corpus loader enforcing self-digest, file/hash/count/ID integrity, compiled
+  applicability, and non-vacuous expectations.
+- A shipped foundational corpus plus a Node 24-or-newer, builtins-only integrity
+  harness that independently rejects corrupted corpus bytes and stays outside
+  the package archive.
 - Architecture gates that reject implementation-version tokens everywhere
   except the exact Hex package source reference, reject runtime dependency
   drift away from OTP `:crypto`, and keep declared error codes synchronized
