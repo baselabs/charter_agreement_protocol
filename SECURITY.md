@@ -9,7 +9,7 @@
 ## Reporting a vulnerability
 
 Use GitHub private vulnerability reporting for
-`baselabs/commercial_charter_protocol`. Do not open a public issue containing
+`baselabs/charter_agreement_protocol`. Do not open a public issue containing
 an exploit, credential, private key, production data, tenant data, or
 unreleased vulnerability detail.
 

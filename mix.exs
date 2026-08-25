@@ -1,12 +1,12 @@
-defmodule CommercialCharterProtocol.MixProject do
+defmodule CharterAgreementProtocol.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @source_url "https://github.com/baselabs/commercial_charter_protocol"
+  @source_url "https://github.com/baselabs/charter_agreement_protocol"
 
   def project do
     [
-      app: :commercial_charter_protocol,
+      app: :charter_agreement_protocol,
       version: @version,
       elixir: "~> 1.20",
       deps: deps(),
@@ -14,9 +14,9 @@ defmodule CommercialCharterProtocol.MixProject do
       package: package(),
       docs: docs(),
       aliases: aliases(),
-      name: "Commercial Charter Protocol",
+      name: "Charter Agreement Protocol",
       description:
-        "Portable, non-authorizing commercial charter format and verification protocol.",
+        "Portable, non-authorizing charter-agreement format and verification protocol.",
       source_url: @source_url,
       homepage_url: @source_url,
       test_coverage: [summary: [threshold: 100]],

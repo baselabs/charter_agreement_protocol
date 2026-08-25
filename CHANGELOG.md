@@ -1,6 +1,6 @@
 # Changelog
 
-All notable public changes to `commercial_charter_protocol` are documented here.
+All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 

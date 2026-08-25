@@ -4,7 +4,7 @@ Status: accepted (2026-08-24).
 
 ## Context
 
-Commercial Charter Protocol artifacts carry `protocol_revision` as a
+Charter Agreement Protocol artifacts carry `protocol_revision` as a
 digest-covered member of every artifact, and consumers declare an explicit
 revision set; compatibility is identity-exact or an error. Identifier-level
 version tokens — module names like `V2Decoder`, paths like `priv/v1/`,

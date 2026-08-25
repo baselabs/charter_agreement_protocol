@@ -1,6 +1,6 @@
-# Commercial Charter Protocol
+# Charter Agreement Protocol
 
-Package scaffold for the BaseLabs Commercial Charter Protocol. The protocol
+Package scaffold for the BaseLabs Charter Agreement Protocol. The protocol
 surface — its artifacts, validation contract, and architecture decision
 records — lands with the first implementation slices.
 
