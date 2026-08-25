@@ -289,17 +289,59 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
     {:ok, second_facts} =
       PartyDescriptor.verify(successor.compact, genesis_facts, Limits.default())
 
+    third = DescriptorFixture.successor(successor, 3)
+
+    assert {:ok, %{descriptor_number: 3}} =
+             PartyDescriptor.verify(third.compact, second_facts, Limits.default())
+
     tampered_lineage = %{
       second_facts
-      | lineage: [genesis.compact, tamper_signature(successor.compact)]
+      | lineage: [tamper_signature(successor.compact), genesis.compact]
     }
-
-    third = DescriptorFixture.successor(successor, 3)
 
     assert_error_code(
       PartyDescriptor.verify(third.compact, tampered_lineage, Limits.default()),
       :descriptor_chain_invalid
     )
+  end
+
+  test "invalid caller limits remain typed and unknown critical extensions fail closed" do
+    genesis = DescriptorFixture.genesis()
+    invalid_limits = %{Limits.default() | max_bytes: -1}
+
+    assert_error_code(
+      PartyDescriptor.verify(genesis.compact, nil, invalid_limits),
+      :invalid_limits
+    )
+
+    {:ok, predecessor} = PartyDescriptor.verify(genesis.compact, nil, Limits.default())
+
+    assert_error_code(
+      PartyDescriptor.verify(genesis.compact, predecessor, invalid_limits),
+      :invalid_limits
+    )
+
+    unknown_critical =
+      DescriptorFixture.genesis(
+        claims: %{
+          "extensions" => %{
+            "critical" => %{"urn:example:unknown" => %{}},
+            "optional" => %{}
+          }
+        }
+      )
+
+    assert_error_code(
+      PartyDescriptor.verify(unknown_critical.compact, nil, Limits.default()),
+      :descriptor_invalid
+    )
+  end
+
+  test "fixture timestamps remain valid beyond single-digit descriptor numbers" do
+    fixture = DescriptorFixture.genesis() |> DescriptorFixture.successor(11)
+
+    assert {:ok, descriptor} = PartyDescriptor.decode(fixture.compact, Limits.default())
+    assert descriptor.descriptor_number == 11
   end
 
   defp assert_error(compact, predecessor, code) do

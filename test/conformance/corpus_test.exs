@@ -165,7 +165,19 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   test "the shipped corpus loads through the pure map interface" do
-    assert {:ok, %Corpus{}} = Corpus.load(shipped_files())
+    assert {:ok, %Corpus{cases: cases}} = Corpus.load(shipped_files())
+
+    assert Enum.any?(cases, fn one ->
+             one["surface"] == "party_descriptor.verify" and
+               one["expect"]["status"] == "invalid" and
+               one["class"] == "signature_invalid"
+           end)
+
+    assert Enum.any?(cases, fn one ->
+             one["surface"] == "descriptor_chain.verify" and
+               one["expect"]["status"] == "invalid" and
+               one["class"] in ["signature_invalid", "chain_invalid"]
+           end)
   end
 
   defp shipped_files do

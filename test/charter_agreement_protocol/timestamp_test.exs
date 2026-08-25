@@ -12,8 +12,14 @@ defmodule CharterAgreementProtocol.TimestampTest do
     assert {:ok, next_second} = Timestamp.parse("2024-03-01T00:00:00Z")
     assert Timestamp.compare(next_second, first) == :gt
 
-    assert {:ok, _leap} = Timestamp.parse("2016-12-31T23:59:60Z")
-    assert {:ok, _leap_fraction} = Timestamp.parse("2016-06-30T23:59:60.5Z")
+    assert {:ok, leap} = Timestamp.parse("2016-12-31T23:59:60Z")
+    assert {:ok, leap_fraction} = Timestamp.parse("2016-12-31T23:59:60.5Z")
+    assert {:ok, before_leap} = Timestamp.parse("2016-12-31T23:59:59.999Z")
+    assert {:ok, after_leap} = Timestamp.parse("2017-01-01T00:00:00Z")
+
+    assert Timestamp.compare(before_leap, leap) == :lt
+    assert Timestamp.compare(leap, leap_fraction) == :lt
+    assert Timestamp.compare(leap_fraction, after_leap) == :lt
   end
 
   test "rejects offsets, lowercase markers, impossible dates, misplaced leap seconds, and terms" do

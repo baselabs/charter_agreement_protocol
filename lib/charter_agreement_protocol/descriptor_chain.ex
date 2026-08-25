@@ -20,14 +20,12 @@ defmodule CharterAgreementProtocol.DescriptorChain do
   @doc "Verify one complete descriptor view in any input order."
   @spec verify(term(), Limits.t()) :: {:ok, t()} | {:error, Error.t()}
   def verify(compacts, %Limits{} = limits) when is_list(compacts) and compacts != [] do
-    with {:ok, decoded} <- decode_all(compacts, limits),
-         :ok <- unique_digests(decoded),
-         {:ok, genesis} <- one_genesis(decoded),
-         {:ok, genesis_facts} <- PartyDescriptor.verify(genesis.compact, nil, limits),
-         {:ok, verified} <- verify_reachable(decoded, [genesis_facts], limits) do
-      {:ok, build(verified)}
+    if Limits.valid?(limits) do
+      with {:ok, verified} <- PartyDescriptor.verify_chain_view(compacts, limits) do
+        {:ok, build(verified)}
+      end
     else
-      {:error, %Error{} = error} -> {:error, error}
+      invalid_limits()
     end
   end
 
@@ -42,82 +40,6 @@ defmodule CharterAgreementProtocol.DescriptorChain do
   end
 
   def verify(_compacts, _limits), do: {:error, Error.new(:invalid_type, ["limits"])}
-
-  defp decode_all(compacts, limits) do
-    Enum.reduce_while(compacts, {:ok, []}, fn compact, {:ok, decoded} ->
-      case PartyDescriptor.decode(compact, limits) do
-        {:ok, descriptor} ->
-          entry = %{
-            compact: compact,
-            descriptor: descriptor,
-            digest: PartyDescriptor.digest(descriptor)
-          }
-
-          {:cont, {:ok, [entry | decoded]}}
-
-        _error ->
-          {:halt, chain_error()}
-      end
-    end)
-    |> then(fn
-      {:ok, decoded} -> {:ok, Enum.reverse(decoded)}
-      error -> error
-    end)
-  end
-
-  defp unique_digests(decoded) do
-    digests = Enum.map(decoded, & &1.digest)
-    if digests == Enum.uniq(digests), do: :ok, else: chain_error()
-  end
-
-  defp one_genesis(decoded) do
-    case Enum.filter(decoded, &(&1.descriptor.descriptor_number == 1)) do
-      [genesis] -> {:ok, genesis}
-      _other -> chain_error()
-    end
-  end
-
-  defp verify_reachable(decoded, verified, limits) do
-    known = MapSet.new(verified, & &1.descriptor_digest)
-
-    pending =
-      Enum.reject(decoded, fn entry -> MapSet.member?(known, entry.digest) end)
-
-    ready =
-      Enum.filter(pending, fn entry ->
-        MapSet.member?(known, entry.descriptor.prev_descriptor_digest)
-      end)
-
-    cond do
-      pending == [] ->
-        {:ok, verified}
-
-      ready == [] ->
-        chain_error()
-
-      true ->
-        parents = Map.new(verified, &{&1.descriptor_digest, &1})
-
-        with {:ok, additions} <- verify_ready(ready, parents, limits) do
-          verify_reachable(decoded, verified ++ additions, limits)
-        end
-    end
-  end
-
-  defp verify_ready(ready, parents, limits) do
-    Enum.reduce_while(ready, {:ok, []}, fn entry, {:ok, additions} ->
-      predecessor = Map.fetch!(parents, entry.descriptor.prev_descriptor_digest)
-
-      case PartyDescriptor.verify(entry.compact, predecessor, limits) do
-        {:ok, facts} -> {:cont, {:ok, [facts | additions]}}
-        _error -> {:halt, chain_error()}
-      end
-    end)
-    |> then(fn
-      {:ok, additions} -> {:ok, Enum.reverse(additions)}
-      error -> error
-    end)
-  end
 
   defp build(verified) do
     sibling_groups =
@@ -160,8 +82,7 @@ defmodule CharterAgreementProtocol.DescriptorChain do
     %{facts | descriptor_position: position}
   end
 
-  defp chain_error,
-    do: {:error, Error.new(:descriptor_chain_invalid, ["descriptor_chain"])}
+  defp chain_error, do: {:error, Error.new(:descriptor_chain_invalid, ["descriptor_chain"])}
 
   defp invalid_limits, do: {:error, Error.new(:invalid_limits, ["limits"])}
 end

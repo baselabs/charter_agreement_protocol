@@ -49,9 +49,14 @@ defmodule CharterAgreementProtocol.Timestamp do
          true <- hour in 0..23 and minute in 0..59,
          true <- valid_second?(month, day, hour, minute, second) do
       base_second = min(second, 59)
-      seconds = Date.to_gregorian_days(date) * 86_400 + hour * 3_600 + minute * 60 + base_second
-      leap = if second == 60, do: 1, else: 0
-      {:ok, %__MODULE__{seconds: seconds + leap, fraction: String.trim_trailing(fraction, "0")}}
+      nominal = Date.to_gregorian_days(date) * 86_400 + hour * 3_600 + minute * 60 + base_second
+      leap_tick = if second == 60, do: 1, else: 0
+
+      {:ok,
+       %__MODULE__{
+         seconds: nominal * 2 + leap_tick,
+         fraction: String.trim_trailing(fraction, "0")
+       }}
     else
       _failure -> invalid()
     end

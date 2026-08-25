@@ -81,5 +81,25 @@ defmodule CharterAgreementProtocol.DescriptorChainTest do
              DescriptorChain.verify([genesis.compact, child.compact], Limits.default())
   end
 
+  test "preserves invalid caller limits and bounds complete artifact views" do
+    genesis = DescriptorFixture.genesis()
+    second = DescriptorFixture.successor(genesis, 2)
+    invalid_limits = %{Limits.default() | max_bytes: -1}
+
+    assert {:error, %Error{code: :invalid_limits}} =
+             DescriptorChain.verify([genesis.compact], invalid_limits)
+
+    assert {:error, %Error{code: :invalid_limits}} =
+             CharterAgreementProtocol.PartyDescriptor.verify_chain_view(
+               [genesis.compact],
+               invalid_limits
+             )
+
+    assert {:ok, tight} = Limits.new(max_artifact_set_items: 1)
+
+    assert {:error, %Error{code: :limit_exceeded}} =
+             DescriptorChain.verify([genesis.compact, second.compact], tight)
+  end
+
   defp tagged_zero, do: "sha-256:" <> String.duplicate("A", 43)
 end

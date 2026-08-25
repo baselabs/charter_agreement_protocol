@@ -34,6 +34,7 @@ values are:
 | members per object | 1,024 | 65,536 |
 | items per array | 4,096 | 65,536 |
 | decoded bytes per string or member name | 65,536 | 1,048,576 |
+| artifacts per set-level verification input | 1,024 | 4,096 |
 
 Container counts are per container. String limits apply after JSON unescaping and
 count UTF-8 bytes. The exact bound is accepted; maximum plus one returns the
@@ -144,7 +145,8 @@ The canonical payload contains exactly these claims:
 - `descriptor_number`, beginning at 1 and increasing by exactly one;
 - 1–32 unique Ed25519 verification keys, with at least one active key;
 - 0–16 non-normative attestation hints, which this library never dereferences;
-- a closed `extensions` envelope with `critical` and `optional` objects; and
+- a closed `extensions` envelope with `critical` and `optional` objects; until
+  the compiled extension registry is present, `critical` must be empty; and
 - `effective_from`, in uppercase UTC RFC 3339 form ending in `Z`.
 
 Genesis is self-signed by an active key declared in its own descriptor. Its

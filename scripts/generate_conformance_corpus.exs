@@ -234,22 +234,27 @@ descriptor_compact = fn claims, kid, private ->
 end
 
 {genesis_key, genesis_private} = descriptor_key.(1, "genesis-key")
+{_wrong_key, wrong_private} = descriptor_key.(9, "wrong-key")
+
+genesis_claims = %{
+  "protocol_revision" => 1,
+  "descriptor_number" => 1,
+  "verification_keys" => [genesis_key],
+  "attestation_hints" => [],
+  "extensions" => %{"critical" => %{}, "optional" => %{}},
+  "effective_from" => "2026-08-25T10:00:00Z"
+}
 
 genesis =
   descriptor_compact.(
-    %{
-      "protocol_revision" => 1,
-      "descriptor_number" => 1,
-      "verification_keys" => [genesis_key],
-      "attestation_hints" => [],
-      "extensions" => %{"critical" => %{}, "optional" => %{}},
-      "effective_from" => "2026-08-25T10:00:00Z"
-    },
+    genesis_claims,
     "genesis-key",
     genesis_private
   )
 
-successor = fn byte, key_id ->
+wrong_signed_genesis = descriptor_compact.(genesis_claims, "genesis-key", wrong_private)
+
+successor = fn byte, key_id, signing_private, previous_digest ->
   {key, _private} = descriptor_key.(byte, key_id)
 
   descriptor_compact.(
@@ -257,19 +262,28 @@ successor = fn byte, key_id ->
       "protocol_revision" => 1,
       "party_id" => genesis.digest,
       "descriptor_number" => 2,
-      "prev_descriptor_digest" => genesis.digest,
+      "prev_descriptor_digest" => previous_digest,
       "verification_keys" => [key],
       "attestation_hints" => [],
       "extensions" => %{"critical" => %{}, "optional" => %{}},
       "effective_from" => "2026-08-25T10:00:01Z"
     },
     "genesis-key",
-    genesis_private
+    signing_private
   )
 end
 
-left = successor.(2, "left-key")
-right = successor.(3, "right-key")
+left = successor.(2, "left-key", genesis_private, genesis.digest)
+right = successor.(3, "right-key", genesis_private, genesis.digest)
+wrong_signed_child = successor.(4, "wrong-signed-key", wrong_private, genesis.digest)
+
+orphan =
+  successor.(
+    5,
+    "orphan-key",
+    genesis_private,
+    "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  )
 
 descriptor_cases = [
   %{
@@ -283,6 +297,13 @@ descriptor_cases = [
         "party_id" => genesis.digest,
         "descriptor_number" => 1
       })
+  },
+  %{
+    "id" => "party-descriptor-wrong-signature",
+    "surface" => "party_descriptor.verify",
+    "class" => "signature_invalid",
+    "input" => %{"compact" => wrong_signed_genesis.compact, "predecessor" => nil},
+    "expect" => invalid.("signature_invalid")
   },
   %{
     "id" => "descriptor-chain-superseded-position",
@@ -308,6 +329,20 @@ descriptor_cases = [
         "topology" => "forked",
         "sibling_descriptors" => Enum.sort([left.digest, right.digest])
       })
+  },
+  %{
+    "id" => "descriptor-chain-wrong-signer",
+    "surface" => "descriptor_chain.verify",
+    "class" => "signature_invalid",
+    "input" => %{"compacts" => [genesis.compact, wrong_signed_child.compact]},
+    "expect" => invalid.("descriptor_chain_invalid")
+  },
+  %{
+    "id" => "descriptor-chain-orphan",
+    "surface" => "descriptor_chain.verify",
+    "class" => "chain_invalid",
+    "input" => %{"compacts" => [genesis.compact, orphan.compact]},
+    "expect" => invalid.("descriptor_chain_invalid")
   }
 ]
 

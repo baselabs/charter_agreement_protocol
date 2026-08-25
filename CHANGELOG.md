@@ -41,3 +41,12 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 - Reject I-JSON noncharacters symmetrically during JSON decoding and constructed
   canonicalization, and close alternate error-construction paths that could
   bypass the declared-code and value-free-detail architecture gates.
+- Bound complete artifact-set inputs and verify descriptor chains with one
+  decode and signature check per artifact instead of repeatedly replaying each
+  predecessor lineage.
+- Preserve `invalid_limits` across every descriptor and chain entry point, order
+  accepted leap-second instants before the following midnight, reject unknown
+  critical descriptor extensions until the registry is available, and keep
+  long-chain test fixtures on valid timestamps.
+- Require wrong-signature and disconnected-chain rejection cells in both corpus
+  integrity implementations.

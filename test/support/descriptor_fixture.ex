@@ -45,7 +45,8 @@ defmodule CharterAgreementProtocol.DescriptorFixture do
         "verification_keys" => [key],
         "attestation_hints" => [],
         "extensions" => %{"critical" => %{}, "optional" => %{}},
-        "effective_from" => "2026-08-25T10:00:0#{number - 1}Z"
+        "effective_from" =>
+          ~U[2026-08-25 10:00:00Z] |> DateTime.add(number - 1) |> DateTime.to_iso8601()
       }
       |> Map.merge(Keyword.get(options, :claims, %{}))
 

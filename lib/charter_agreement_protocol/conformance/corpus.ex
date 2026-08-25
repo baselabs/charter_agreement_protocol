@@ -39,6 +39,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "missing_required",
     "non_canonical_bytes",
     "digest_mismatch",
+    "signature_invalid",
+    "chain_invalid",
     "descriptor_superseded",
     "descriptor_fork"
   ]
@@ -67,12 +69,12 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       n_a: "byte encoding and digest behavior is outside artifact schema validation"
     },
     "party_descriptor.verify" => %{
-      required: ~w(valid),
+      required: ~w(valid signature_invalid),
       n_a:
         "set topology and foundational codec-only behavior are outside one descriptor verification"
     },
     "descriptor_chain.verify" => %{
-      required: ~w(descriptor_superseded descriptor_fork),
+      required: ~w(signature_invalid chain_invalid descriptor_superseded descriptor_fork),
       n_a: "single-artifact and foundational codec-only behavior are outside descriptor topology"
     }
   }

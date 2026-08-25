@@ -167,17 +167,27 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   @spec verify(term(), nil | DescriptorFacts.t(), Limits.t()) ::
           {:ok, DescriptorFacts.t()} | {:error, Error.t()}
   def verify(compact, predecessor, %Limits{} = limits) do
-    with {:ok, verified_predecessor} <- verify_predecessor(predecessor, limits),
-         {:ok, descriptor} <- decode(compact, limits),
-         {:ok, party_id, public_key, lineage} <-
-           verification_context(descriptor, verified_predecessor, compact),
-         :ok <- CompactJws.verify_signature(descriptor.envelope, public_key) do
-      {:ok, facts(descriptor, party_id, lineage)}
-    end
+    if Limits.valid?(limits), do: do_verify(compact, predecessor, limits), else: invalid_limits()
   end
 
   def verify(_compact, _predecessor, _limits),
     do: {:error, Error.new(:invalid_type, ["limits"])}
+
+  @doc false
+  @spec verify_chain_view([term()], Limits.t()) ::
+          {:ok, [DescriptorFacts.t()]} | {:error, Error.t()}
+  def verify_chain_view(compacts, %Limits{} = limits) when is_list(compacts) do
+    cond do
+      not Limits.valid?(limits) ->
+        invalid_limits()
+
+      length(compacts) > limits.max_artifact_set_items ->
+        {:error, Error.new(:limit_exceeded, ["descriptor_chain", "items"])}
+
+      true ->
+        do_verify_chain_view(compacts, limits)
+    end
+  end
 
   defp extract({:object, members}, envelope) do
     values = Map.new(members)
@@ -259,9 +269,83 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
   defp valid_extensions({:object, members}) do
     case Map.new(members) do
-      %{"critical" => {:object, _}, "optional" => {:object, _}} when length(members) == 2 -> :ok
+      %{"critical" => {:object, []}, "optional" => {:object, _}} when length(members) == 2 -> :ok
       _value -> descriptor_error()
     end
+  end
+
+  defp do_verify(compact, predecessor, limits) do
+    with {:ok, verified_predecessor} <- verify_predecessor(predecessor, limits),
+         {:ok, descriptor} <- decode(compact, limits),
+         {:ok, party_id, public_key, lineage} <-
+           verification_context(descriptor, verified_predecessor, compact),
+         :ok <- CompactJws.verify_signature(descriptor.envelope, public_key) do
+      {:ok, facts(descriptor, party_id, lineage)}
+    end
+  end
+
+  defp do_verify_chain_view(compacts, limits) do
+    with {:ok, decoded} <- decode_chain_entries(compacts, limits),
+         :ok <- unique_chain_digests(decoded),
+         {:ok, genesis} <- one_chain_genesis(decoded),
+         {:ok, genesis_facts} <- verify_one(genesis.compact, nil, limits),
+         children = Enum.group_by(decoded, & &1.descriptor.prev_descriptor_digest),
+         {:ok, verified} <- verify_descendants([genesis_facts], children, %{}, limits),
+         true <- map_size(verified) == length(decoded) do
+      {:ok, Map.values(verified)}
+    else
+      {:error, %Error{} = error} -> {:error, error}
+      false -> chain_error()
+    end
+  end
+
+  defp decode_chain_entries(compacts, limits) do
+    Enum.reduce_while(compacts, {:ok, []}, fn compact, {:ok, entries} ->
+      case decode(compact, limits) do
+        {:ok, descriptor} ->
+          entry = %{compact: compact, descriptor: descriptor, digest: digest(descriptor)}
+          {:cont, {:ok, [entry | entries]}}
+
+        _error ->
+          {:halt, chain_error()}
+      end
+    end)
+  end
+
+  defp unique_chain_digests(entries) do
+    digests = Enum.map(entries, & &1.digest)
+    if digests == Enum.uniq(digests), do: :ok, else: chain_error()
+  end
+
+  defp one_chain_genesis(entries) do
+    case Enum.filter(entries, &(&1.descriptor.descriptor_number == 1)) do
+      [genesis] -> {:ok, genesis}
+      _other -> chain_error()
+    end
+  end
+
+  defp verify_descendants([], _children, verified, _limits), do: {:ok, verified}
+
+  defp verify_descendants([predecessor | queue], children, verified, limits) do
+    entries = Map.get(children, predecessor.descriptor_digest, [])
+
+    with {:ok, additions} <- verify_children(entries, predecessor, limits) do
+      verified =
+        Enum.reduce([predecessor | additions], verified, fn facts, acc ->
+          Map.put(acc, facts.descriptor_digest, facts)
+        end)
+
+      verify_descendants(additions ++ queue, children, verified, limits)
+    end
+  end
+
+  defp verify_children(children, predecessor, limits) do
+    Enum.reduce_while(children, {:ok, []}, fn entry, {:ok, additions} ->
+      case verify_one(entry.compact, predecessor, limits) do
+        {:ok, facts} -> {:cont, {:ok, [facts | additions]}}
+        _error -> {:halt, chain_error()}
+      end
+    end)
   end
 
   defp optional_digest(values, name) do
@@ -289,7 +373,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
   defp verify_predecessor(%DescriptorFacts{lineage: lineage} = supplied, limits)
        when is_list(lineage) and lineage != [] do
-    with {:ok, verified} <- verify_lineage(lineage, limits),
+    with {:ok, verified} <- lineage |> Enum.reverse() |> verify_lineage(limits),
          true <- verified.descriptor_digest == supplied.descriptor_digest do
       {:ok, verified}
     else
@@ -338,7 +422,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
          descriptor.party_id == predecessor.party_id do
       with {:ok, key} <-
              active_key(predecessor.descriptor.verification_keys, descriptor.envelope.kid) do
-        {:ok, predecessor.party_id, key.public_key, predecessor.lineage ++ [compact]}
+        {:ok, predecessor.party_id, key.public_key, [compact | predecessor.lineage]}
       end
     else
       chain_error()
@@ -375,4 +459,6 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
   defp chain_error,
     do: {:error, Error.new(:descriptor_chain_invalid, ["party_descriptor", "chain"])}
+
+  defp invalid_limits, do: {:error, Error.new(:invalid_limits, ["limits"])}
 end
