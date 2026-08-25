@@ -53,3 +53,5 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   long-chain test fixtures on valid timestamps.
 - Require wrong-signature and disconnected-chain rejection cells in both corpus
   integrity implementations.
+- Return typed revision errors for malformed supersession members and reject
+  supersession targets on genesis revisions.

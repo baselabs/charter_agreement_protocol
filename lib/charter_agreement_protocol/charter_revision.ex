@@ -328,7 +328,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
          {:string, receipt_profile} <- values["receipt_profile"],
          {:ok, supersedes} <- supersedes(values),
          :ok <- extensions(values["extensions"]),
-         :ok <- genesis_shape(revision_number, charter_id, previous),
+         :ok <- genesis_shape(revision_number, charter_id, previous, supersedes),
          :ok <- ordered_interval(effective_from, effective_until),
          :ok <- unique_roles(parties),
          :ok <- binding_roles(bindings, parties) do
@@ -452,6 +452,8 @@ defmodule CharterAgreementProtocol.CharterRevision do
     with :ok <- valid_digest(tagged), do: {:ok, tagged}
   end
 
+  defp tagged_digest(_value), do: revision_error()
+
   defp optional_digest(values, name) do
     case Map.fetch(values, name) do
       :error -> {:ok, nil}
@@ -506,13 +508,13 @@ defmodule CharterAgreementProtocol.CharterRevision do
     end
   end
 
-  defp genesis_shape(1, nil, nil), do: :ok
+  defp genesis_shape(1, nil, nil, []), do: :ok
 
-  defp genesis_shape(number, charter_id, previous)
+  defp genesis_shape(number, charter_id, previous, _supersedes)
        when number > 1 and is_binary(charter_id) and is_binary(previous),
        do: :ok
 
-  defp genesis_shape(_number, _charter_id, _previous), do: revision_error()
+  defp genesis_shape(_number, _charter_id, _previous, _supersedes), do: revision_error()
 
   defp ordered_interval(_from, nil), do: :ok
 

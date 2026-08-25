@@ -210,7 +210,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_revision_expectations(cases) do
     revision_cases = Enum.filter(cases, &(&1["surface"] == "charter_revision.decode"))
-    assert length(revision_cases) == 5
+    assert length(revision_cases) == 7
 
     Enum.each(revision_cases, fn one ->
       actual = CharterRevision.decode(one["input"]["text"], Limits.default())

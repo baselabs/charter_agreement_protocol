@@ -174,8 +174,9 @@ status, or ownership of an attestation target.
 A Charter Revision is unsigned canonical JSON. Its digest is computed over the
 exact canonical bytes under the `charter_revision_content` domain. Genesis is
 revision 1 and omits both `charter_id` and `prev_revision_digest`; every local
-successor shape includes both. Set-level continuity and governance are separate
-verification surfaces.
+successor shape includes both. Genesis also carries no supersession targets,
+because no prior-numbered revision can exist. Set-level continuity and
+governance are separate verification surfaces.
 
 Every revision contains exactly two uniquely named party roles bound to tagged
 Party Descriptor digests. It declares legal text by a `legal_text` domain digest

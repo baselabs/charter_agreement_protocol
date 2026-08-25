@@ -418,6 +418,23 @@ revision_cases = [
     invalid.("revision_invalid")
   ),
   revision_case.(
+    "charter-revision-genesis-supersession",
+    "invalid_constraint",
+    Map.put(revision_claims, "supersedes", [revision_digest]),
+    invalid.("revision_invalid")
+  ),
+  revision_case.(
+    "charter-revision-non-string-supersession",
+    "invalid_type",
+    Map.put(revision_claims, "supersedes", [42])
+    |> Map.merge(%{
+      "charter_id" => revision_digest,
+      "revision_number" => 2,
+      "prev_revision_digest" => revision_digest
+    }),
+    invalid.("revision_invalid")
+  ),
+  revision_case.(
     "charter-revision-empty-reasons",
     "invalid_cardinality",
     put_in(revision_claims, ["termination_rules", "reason_codes"], []),

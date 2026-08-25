@@ -146,6 +146,21 @@ defmodule CharterAgreementProtocol.CharterRevisionTest do
     end
   end
 
+  test "rejects a non-string supersession member as a typed error" do
+    genesis = CharterRevisionFixture.genesis()
+    successor = CharterRevisionFixture.successor(genesis, 2)
+    claims = Map.put(successor.claims, "supersedes", [42])
+
+    assert_decode_error(CharterRevisionFixture.from_claims(claims, genesis.legal_text))
+  end
+
+  test "rejects supersession on genesis where no prior revision exists" do
+    genesis = CharterRevisionFixture.genesis()
+    claims = Map.put(genesis.claims, "supersedes", [genesis.digest])
+
+    assert_decode_error(CharterRevisionFixture.from_claims(claims, genesis.legal_text))
+  end
+
   test "rejects malformed digests, identifiers, non-empty critical extensions, and improper inputs" do
     base = CharterRevisionFixture.genesis()
 

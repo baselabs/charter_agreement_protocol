@@ -79,7 +79,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       n_a: "single-artifact and foundational codec-only behavior are outside descriptor topology"
     },
     "charter_revision.decode" => %{
-      required: ~w(valid invalid_constraint invalid_cardinality unknown_member missing_required),
+      required:
+        ~w(valid invalid_type invalid_constraint invalid_cardinality unknown_member missing_required),
       n_a: "signature, chain, and foundational codec-only behavior are outside revision decoding"
     }
   }
