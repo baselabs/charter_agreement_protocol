@@ -41,7 +41,14 @@ defmodule CharterAgreementProtocol.Error do
     :corpus_case_id_duplicate,
     :corpus_count_mismatch,
     :corpus_applicability_incomplete,
-    :corpus_empty
+    :corpus_empty,
+    :timestamp_invalid,
+    :compact_invalid,
+    :protected_header_invalid,
+    :signature_invalid,
+    :descriptor_invalid,
+    :descriptor_key_invalid,
+    :descriptor_chain_invalid
   ]
 
   @type code ::
@@ -75,6 +82,13 @@ defmodule CharterAgreementProtocol.Error do
           | :corpus_count_mismatch
           | :corpus_applicability_incomplete
           | :corpus_empty
+          | :timestamp_invalid
+          | :compact_invalid
+          | :protected_header_invalid
+          | :signature_invalid
+          | :descriptor_invalid
+          | :descriptor_key_invalid
+          | :descriptor_chain_invalid
   @type subject :: [binary() | non_neg_integer()]
   @type detail :: nil | atom() | binary()
   @type t :: %__MODULE__{code: code(), subject: subject(), detail: detail()}

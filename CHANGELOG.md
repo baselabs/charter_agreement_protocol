@@ -17,6 +17,14 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 - A shipped foundational corpus plus a Node 24-or-newer, builtins-only integrity
   harness that independently rejects corrupted corpus bytes and stays outside
   the package archive.
+- Strict UTC RFC 3339 timestamps and canonical attached compact-JWS parsing for
+  the Party Descriptor boundary, including exact protected-header and Ed25519
+  signature checks.
+- Closed Party Descriptor decoding and verification with self-signed genesis,
+  predecessor-active-key transitions, reverified lineage, linear supersession,
+  signed sibling-fork facts, and no winner selection.
+- Elixir and Node corpus coverage for valid descriptors, superseded descriptors,
+  and signed sibling forks, with exact applicability-floor enforcement.
 - Architecture gates that reject implementation-version tokens everywhere
   except the exact Hex package source reference, reject runtime dependency
   drift away from OTP `:crypto`, and keep declared error codes synchronized

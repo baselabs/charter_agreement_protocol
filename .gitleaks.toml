@@ -2,3 +2,10 @@ title = "charter_agreement_protocol gitleaks config"
 
 [extend]
 useDefault = true
+
+[[allowlists]]
+description = "Deterministic signed conformance fixtures are public test vectors, not credentials"
+targetRules = ["jwt"]
+paths = [
+  '''^priv/conformance/cases/(party_descriptor-verify|descriptor_chain-verify)\.json$'''
+]

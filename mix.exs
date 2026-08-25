@@ -21,7 +21,10 @@ defmodule CharterAgreementProtocol.MixProject do
       homepage_url: @source_url,
       test_coverage: [
         summary: [threshold: 100],
-        ignore_modules: [CharterAgreementProtocol.ConformanceTest.Builder]
+        ignore_modules: [
+          CharterAgreementProtocol.ConformanceTest.Builder,
+          CharterAgreementProtocol.DescriptorFixture
+        ]
       ],
       test_ignore_filters: [&String.starts_with?(&1, "test/support/")],
       dialyzer: [plt_core_path: "_build/plts", plt_local_path: "_build/plts"]

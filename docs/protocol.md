@@ -1,8 +1,9 @@
 # Protocol foundation
 
-This document defines the implemented byte-level, schema-validation, and corpus
-foundation of Charter Agreement Protocol. Artifact-specific schemas, signatures,
-chain evaluation, and conformance reports are not part of this surface yet.
+This document defines the implemented byte-level, schema-validation, corpus, and
+Party Descriptor surfaces of Charter Agreement Protocol. Charter revisions,
+acceptances, terminations, governing-chain evaluation, receipts, and conformance
+reports are not part of the implemented surface yet.
 
 ## Tagged JSON values
 
@@ -127,6 +128,42 @@ schema inputs. `verifier/check-corpus.mjs` independently checks the same bytes w
 Node 24 or newer using only `node:` built-ins. A corrupt index must exit nonzero.
 The Node harness is repository-side verification code and is intentionally absent
 from the Hex archive; `priv/conformance` is included.
+
+## Party Descriptors
+
+A Party Descriptor is an attached compact JWS with protected type
+`cap+party`. Its protected header is closed to `alg`, `kid`, and `typ`; `alg`
+must be `EdDSA`, `kid` uses the bounded ASCII protocol grammar, and the signature
+is exactly 64 Ed25519 bytes. Protected-header and payload bytes must already be
+canonical JSON. The `kid` is only a lookup hint and has no authority by itself.
+
+The canonical payload contains exactly these claims:
+
+- `protocol_revision`, fixed at the protocol data value `1`;
+- conditional `party_id` and `prev_descriptor_digest` tagged digests;
+- `descriptor_number`, beginning at 1 and increasing by exactly one;
+- 1–32 unique Ed25519 verification keys, with at least one active key;
+- 0–16 non-normative attestation hints, which this library never dereferences;
+- a closed `extensions` envelope with `critical` and `optional` objects; and
+- `effective_from`, in uppercase UTC RFC 3339 form ending in `Z`.
+
+Genesis is self-signed by an active key declared in its own descriptor. Its
+party identifier is the descriptor's domain-separated content digest. Every
+successor names that identifier and the exact predecessor digest, increments
+the descriptor number by one, and is signed by a key active in the predecessor.
+Supplying predecessor facts does not bypass verification: their retained raw
+lineage is reverified before it can authorize the next key transition.
+
+`verify_descriptor_chain/2` accepts a complete in-view set in any order. A
+single reachable history returns `:linear`; every non-head descriptor is marked
+`:superseded`. Two or more individually valid descriptors naming the same
+predecessor return `:forked`, mark all returned descriptor facts `:contested`,
+and retain the sibling digests as signed fork evidence. The verifier never
+selects a winner and never claims that the caller's view is globally complete.
+
+Descriptor verification proves signed key continuity only. It does not prove
+organizational identity, legal validity, authorization, current revocation
+status, or ownership of an attestation target.
 
 ## Architecture boundaries
 

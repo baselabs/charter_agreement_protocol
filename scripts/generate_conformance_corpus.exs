@@ -208,6 +208,111 @@ canonical = fn value ->
   bytes
 end
 
+descriptor_key = fn byte, key_id ->
+  {public, private} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<byte>>, 32))
+
+  {%{
+     "key_id" => key_id,
+     "algorithm" => "Ed25519",
+     "public_key" => Base64Url.encode(public),
+     "status" => "active"
+   }, private}
+end
+
+descriptor_compact = fn claims, kid, private ->
+  protected = canonical.(%{"alg" => "EdDSA", "kid" => kid, "typ" => "cap+party"})
+  payload = canonical.(claims)
+  protected_segment = Base64Url.encode(protected)
+  payload_segment = Base64Url.encode(payload)
+  message = protected_segment <> "." <> payload_segment
+  signature = :crypto.sign(:eddsa, :none, message, [private, :ed25519])
+
+  %{
+    compact: message <> "." <> Base64Url.encode(signature),
+    digest: :party_descriptor_content |> Digest.hash(payload) |> Digest.to_tagged()
+  }
+end
+
+{genesis_key, genesis_private} = descriptor_key.(1, "genesis-key")
+
+genesis =
+  descriptor_compact.(
+    %{
+      "protocol_revision" => 1,
+      "descriptor_number" => 1,
+      "verification_keys" => [genesis_key],
+      "attestation_hints" => [],
+      "extensions" => %{"critical" => %{}, "optional" => %{}},
+      "effective_from" => "2026-08-25T10:00:00Z"
+    },
+    "genesis-key",
+    genesis_private
+  )
+
+successor = fn byte, key_id ->
+  {key, _private} = descriptor_key.(byte, key_id)
+
+  descriptor_compact.(
+    %{
+      "protocol_revision" => 1,
+      "party_id" => genesis.digest,
+      "descriptor_number" => 2,
+      "prev_descriptor_digest" => genesis.digest,
+      "verification_keys" => [key],
+      "attestation_hints" => [],
+      "extensions" => %{"critical" => %{}, "optional" => %{}},
+      "effective_from" => "2026-08-25T10:00:01Z"
+    },
+    "genesis-key",
+    genesis_private
+  )
+end
+
+left = successor.(2, "left-key")
+right = successor.(3, "right-key")
+
+descriptor_cases = [
+  %{
+    "id" => "party-descriptor-genesis-valid",
+    "surface" => "party_descriptor.verify",
+    "class" => "valid",
+    "input" => %{"compact" => genesis.compact, "predecessor" => nil},
+    "expect" =>
+      valid.(%{
+        "descriptor_digest" => genesis.digest,
+        "party_id" => genesis.digest,
+        "descriptor_number" => 1
+      })
+  },
+  %{
+    "id" => "descriptor-chain-superseded-position",
+    "surface" => "descriptor_chain.verify",
+    "class" => "descriptor_superseded",
+    "input" => %{"compacts" => [genesis.compact, left.compact]},
+    "expect" =>
+      valid.(%{
+        "topology" => "linear",
+        "positions" => %{
+          genesis.digest => "superseded",
+          left.digest => "head"
+        }
+      })
+  },
+  %{
+    "id" => "descriptor-chain-signed-sibling-fork",
+    "surface" => "descriptor_chain.verify",
+    "class" => "descriptor_fork",
+    "input" => %{"compacts" => [genesis.compact, left.compact, right.compact]},
+    "expect" =>
+      valid.(%{
+        "topology" => "forked",
+        "sibling_descriptors" => Enum.sort([left.digest, right.digest])
+      })
+  }
+]
+
+cases = cases ++ descriptor_cases
+
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 
 grouped = Enum.group_by(cases, & &1["surface"])

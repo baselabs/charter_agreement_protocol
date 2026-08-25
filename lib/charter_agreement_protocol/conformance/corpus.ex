@@ -21,7 +21,9 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "json.decode",
     "canonicalization.encode",
     "digest.hash",
-    "schema.validate"
+    "schema.validate",
+    "party_descriptor.verify",
+    "descriptor_chain.verify"
   ]
 
   @classes [
@@ -36,7 +38,9 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "unknown_member",
     "missing_required",
     "non_canonical_bytes",
-    "digest_mismatch"
+    "digest_mismatch",
+    "descriptor_superseded",
+    "descriptor_fork"
   ]
 
   @floor %{
@@ -61,6 +65,15 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       required:
         ~w(valid invalid_type invalid_constraint invalid_cardinality unknown_member missing_required maximum_plus_one),
       n_a: "byte encoding and digest behavior is outside artifact schema validation"
+    },
+    "party_descriptor.verify" => %{
+      required: ~w(valid),
+      n_a:
+        "set topology and foundational codec-only behavior are outside one descriptor verification"
+    },
+    "descriptor_chain.verify" => %{
+      required: ~w(descriptor_superseded descriptor_fork),
+      n_a: "single-artifact and foundational codec-only behavior are outside descriptor topology"
     }
   }
 
