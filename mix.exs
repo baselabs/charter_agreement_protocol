@@ -15,7 +15,8 @@ defmodule CommercialCharterProtocol.MixProject do
       docs: docs(),
       aliases: aliases(),
       name: "Commercial Charter Protocol",
-      description: "Commercial charter protocol.",
+      description:
+        "Portable, non-authorizing commercial charter format and verification protocol.",
       source_url: @source_url,
       homepage_url: @source_url,
       test_coverage: [summary: [threshold: 100]],
@@ -32,7 +33,7 @@ defmodule CommercialCharterProtocol.MixProject do
   defp elixirc_paths(_), do: ["lib"]
 
   def application do
-    [extra_applications: []]
+    [extra_applications: [:crypto]]
   end
 
   defp deps do
@@ -56,7 +57,8 @@ defmodule CommercialCharterProtocol.MixProject do
         "CHANGELOG.md",
         "LICENSE",
         "NOTICE",
-        "SECURITY.md"
+        "SECURITY.md",
+        "docs/adr/no-versioning-rule.md"
       ],
       licenses: ["Apache-2.0"],
       links: %{
@@ -77,7 +79,8 @@ defmodule CommercialCharterProtocol.MixProject do
         "CHANGELOG.md",
         "LICENSE",
         "NOTICE",
-        "SECURITY.md"
+        "SECURITY.md",
+        "docs/adr/no-versioning-rule.md"
       ]
     ]
   end
