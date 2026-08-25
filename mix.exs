@@ -25,7 +25,8 @@ defmodule CharterAgreementProtocol.MixProject do
           CharterAgreementProtocol.AcceptanceFixture,
           CharterAgreementProtocol.CharterRevisionFixture,
           CharterAgreementProtocol.ConformanceTest.Builder,
-          CharterAgreementProtocol.DescriptorFixture
+          CharterAgreementProtocol.DescriptorFixture,
+          CharterAgreementProtocol.TerminationFixture
         ]
       ],
       test_ignore_filters: [&String.starts_with?(&1, "test/support/")],

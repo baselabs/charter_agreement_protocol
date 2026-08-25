@@ -593,7 +593,93 @@ acceptance_cases = [
   }
 ]
 
-cases = cases ++ descriptor_cases ++ revision_cases ++ acceptance_cases
+termination_compact = fn claims, kid, private ->
+  protected = canonical.(%{"alg" => "EdDSA", "kid" => kid, "typ" => "cap+termination"})
+  payload = canonical.(claims)
+  protected_segment = Base64Url.encode(protected)
+  payload_segment = Base64Url.encode(payload)
+  message = protected_segment <> "." <> payload_segment
+  signature = :crypto.sign(:eddsa, :none, message, [private, :ed25519])
+
+  %{
+    compact: message <> "." <> Base64Url.encode(signature),
+    digest: :termination_content |> Digest.hash(payload) |> Digest.to_tagged()
+  }
+end
+
+termination_claims = %{
+  "protocol_revision" => 1,
+  "charter_id" => revision_digest,
+  "governing_revision_digest" => revision_digest,
+  "party_descriptor_digest" => genesis.digest,
+  "party_role" => "issuer",
+  "reason_code" => "mutual",
+  "effective_at" => "2026-08-26T13:00:00Z",
+  "issued_at" => "2026-08-25T13:00:00Z"
+}
+
+termination = termination_compact.(termination_claims, "genesis-key", genesis_private)
+
+unlisted_termination =
+  termination_claims
+  |> Map.put("reason_code", "not-listed")
+  |> termination_compact.("genesis-key", genesis_private)
+
+late_termination =
+  termination_claims
+  |> Map.put("issued_at", "2026-08-26T13:00:01Z")
+  |> termination_compact.("genesis-key", genesis_private)
+
+wrong_signed_termination =
+  termination_compact.(termination_claims, "genesis-key", wrong_private)
+
+termination_input = fn compact ->
+  %{
+    "compact" => compact,
+    "revision_text" => revision_bytes,
+    "descriptor_compacts" => [genesis.compact]
+  }
+end
+
+termination_cases = [
+  %{
+    "id" => "termination-valid",
+    "surface" => "termination.verify",
+    "class" => "valid",
+    "input" => termination_input.(termination.compact),
+    "expect" =>
+      valid.(%{
+        "termination_digest" => termination.digest,
+        "governing_revision_digest" => revision_digest,
+        "party_descriptor_digest" => genesis.digest,
+        "reason_code" => "mutual",
+        "descriptor_position" => "head"
+      })
+  },
+  %{
+    "id" => "termination-unlisted-reason",
+    "surface" => "termination.verify",
+    "class" => "invalid_constraint",
+    "input" => termination_input.(unlisted_termination.compact),
+    "expect" => invalid.("termination_claims_mismatch")
+  },
+  %{
+    "id" => "termination-issued-after-effective",
+    "surface" => "termination.verify",
+    "class" => "invalid_constraint",
+    "input" => termination_input.(late_termination.compact),
+    "expect" => invalid.("termination_invalid")
+  },
+  %{
+    "id" => "termination-wrong-signature",
+    "surface" => "termination.verify",
+    "class" => "signature_invalid",
+    "input" => termination_input.(wrong_signed_termination.compact),
+    "expect" => invalid.("signature_invalid")
+  }
+]
+
+cases = cases ++ descriptor_cases ++ revision_cases ++ acceptance_cases ++ termination_cases
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 

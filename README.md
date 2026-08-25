@@ -10,16 +10,18 @@ The artifact engines verify signed Party Descriptors, predecessor-bound key
 transitions, linear descriptor history, signed sibling-fork evidence, and
 closed unsigned Charter Revisions with exact ABP deployment bindings. Attached
 Acceptances prove exact countersignatures and retain same-signer equivocation
-evidence without selecting a branch.
+evidence without selecting a branch. Termination Notices prove that a pinned
+party signed a listed reason and pure effective-time coordinate without
+applying a clock or governance-effect policy.
 See [Protocol foundation](docs/protocol.md).
 
 ## Status
 
 Foundational codecs, bounded decode limits, the schema engine, corpus loader,
 independent Node integrity harness, Party Descriptor verification, and Charter
-Revision and Acceptance engines are implemented. Termination, governing-chain,
-and receipt engines remain under construction. The package is not published to
-Hex.
+Revision, Acceptance, and Termination Notice engines are implemented.
+Governing-chain and receipt engines remain under construction. The package is
+not published to Hex.
 
 ## Development
 

@@ -7,5 +7,5 @@ useDefault = true
 description = "Deterministic signed conformance fixtures are public test vectors, not credentials"
 targetRules = ["jwt"]
 paths = [
-  '''^priv/conformance/cases/(party_descriptor-verify|descriptor_chain-verify|acceptance-verify|acceptance-equivocation)\.json$'''
+  '''^priv/conformance/cases/(party_descriptor-verify|descriptor_chain-verify|acceptance-verify|acceptance-equivocation|termination-verify)\.json$'''
 ]

@@ -26,7 +26,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "descriptor_chain.verify",
     "charter_revision.decode",
     "acceptance.verify",
-    "acceptance.equivocation"
+    "acceptance.equivocation",
+    "termination.verify"
   ]
 
   @classes [
@@ -95,6 +96,11 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       required: ~w(equivocation),
       n_a:
         "single-artifact and foundational codec-only behavior are outside paired acceptance evidence"
+    },
+    "termination.verify" => %{
+      required: ~w(valid invalid_constraint signature_invalid),
+      n_a:
+        "governance effects and foundational codec-only behavior are outside one termination notice"
     }
   }
 

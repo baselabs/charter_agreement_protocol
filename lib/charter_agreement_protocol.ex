@@ -16,7 +16,9 @@ defmodule CharterAgreementProtocol do
     DescriptorChain,
     DescriptorFacts,
     Limits,
-    PartyDescriptor
+    PartyDescriptor,
+    TerminationFacts,
+    TerminationNotice
   }
 
   @doc "Decode one canonical attached Party Descriptor."
@@ -52,5 +54,12 @@ defmodule CharterAgreementProtocol do
           {:ok, AcceptanceFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_acceptance(compact, revision, descriptor_chain, limits),
     to: Acceptance,
+    as: :verify
+
+  @doc "Verify one termination notice against exact revision and descriptor-chain facts."
+  @spec verify_termination(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t()) ::
+          {:ok, TerminationFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate verify_termination(compact, revision, descriptor_chain, limits),
+    to: TerminationNotice,
     as: :verify
 end

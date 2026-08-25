@@ -2,8 +2,9 @@
 
 This document defines the implemented byte-level, schema-validation, corpus,
 Party Descriptor, and Charter Revision surfaces of Charter Agreement Protocol.
-Terminations, governing-chain evaluation, receipts, and conformance reports are
-not part of the implemented surface yet.
+Acceptance and Termination Notice evidence verification is also implemented.
+Governing-chain evaluation, receipts, and conformance reports are not part of
+the implemented surface yet.
 
 ## Tagged JSON values
 
@@ -224,6 +225,27 @@ signer equivocated.
 Acceptance verification proves exact signed assent claims. It does not prove
 legal validity, view completeness, current key revocation, authorization, or
 term satisfaction.
+
+## Termination Notices
+
+A Termination Notice is an attached compact JWS with protected type
+`cap+termination`. Its closed payload carries protocol revision, charter and
+governing-revision digests, Party Descriptor digest and role, one reason code,
+pure UTC `effective_at` and `issued_at` timestamps, and an optional opaque
+`detail_digest`.
+
+Verification re-decodes the retained Charter Revision and reconstructs the
+signed descriptor view before use. The notice must bind the exact charter,
+revision, party digest, and party role; its reason must be present in the
+revision's termination declaration; `issued_at` may equal but may not follow
+`effective_at`; and the protected `kid` must resolve to an active key in the
+pinned descriptor before Ed25519 verification. The returned facts retain the
+descriptor's view-relative position and never select a fresher branch.
+
+The verifier reads no clock. A valid notice proves signed evidence only: it does
+not prove delivery, receipt, legal effect, current revocation status, or that
+the requested effective time has arrived. Governing-chain evaluation owns
+those protocol-level effects.
 
 ## Architecture boundaries
 

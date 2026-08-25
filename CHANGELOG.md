@@ -31,6 +31,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 - Attached Acceptance verification with exact revision/party claim equality,
   reverified descriptor key context, view-relative signer position, and
   same-signer equivocation evidence that never selects a branch.
+- Attached Termination Notice verification with exact revision/party binding,
+  listed-reason enforcement, pure issue/effective ordering, active descriptor
+  key verification, and no clock or governance-effect decision.
 - Architecture gates that reject implementation-version tokens everywhere
   except the exact Hex package source reference, reject runtime dependency
   drift away from OTP `:crypto`, and keep declared error codes synchronized

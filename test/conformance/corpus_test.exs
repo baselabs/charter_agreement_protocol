@@ -10,7 +10,8 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     DescriptorChain,
     Error,
     Limits,
-    PartyDescriptor
+    PartyDescriptor,
+    TerminationNotice
   }
 
   defp minimal, do: Builder.build()
@@ -190,6 +191,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert_verify_surface_expectations(cases)
     assert_revision_expectations(cases)
     assert_acceptance_expectations(cases)
+    assert_termination_expectations(cases)
   end
 
   defp shipped_files do
@@ -284,6 +286,35 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   defp projected_acceptance_result({:error, %Error{code: code}}),
+    do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+
+  defp assert_termination_expectations(cases) do
+    termination_cases = Enum.filter(cases, &(&1["surface"] == "termination.verify"))
+    assert length(termination_cases) == 4
+
+    Enum.each(termination_cases, fn one ->
+      input = one["input"]
+      {:ok, revision} = CharterRevision.decode(input["revision_text"], Limits.default())
+      {:ok, chain} = DescriptorChain.verify(input["descriptor_compacts"], Limits.default())
+      actual = TerminationNotice.verify(input["compact"], revision, chain, Limits.default())
+      assert projected_termination_result(actual) == one["expect"]
+    end)
+  end
+
+  defp projected_termination_result({:ok, facts}) do
+    %{
+      "status" => "valid",
+      "output" => %{
+        "termination_digest" => facts.termination_digest,
+        "governing_revision_digest" => facts.governing_revision_digest,
+        "party_descriptor_digest" => facts.party_descriptor_digest,
+        "reason_code" => facts.reason_code,
+        "descriptor_position" => Atom.to_string(facts.descriptor_position)
+      }
+    }
+  end
+
+  defp projected_termination_result({:error, %Error{code: code}}),
     do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
 
   defp projected_equivocation_result({:ok, evidence}) do
