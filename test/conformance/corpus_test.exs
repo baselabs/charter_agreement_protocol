@@ -3,7 +3,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   alias CharterAgreementProtocol.Conformance.Corpus
   alias CharterAgreementProtocol.ConformanceTest.Builder
-  alias CharterAgreementProtocol.Error
+  alias CharterAgreementProtocol.{DescriptorChain, Error, Limits, PartyDescriptor}
 
   defp minimal, do: Builder.build()
 
@@ -178,6 +178,8 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
                one["expect"]["status"] == "invalid" and
                one["class"] in ["signature_invalid", "chain_invalid"]
            end)
+
+    assert_verify_surface_expectations(cases)
   end
 
   defp shipped_files do
@@ -186,6 +188,71 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     |> Enum.reject(&File.dir?/1)
     |> Map.new(fn path -> {Path.relative_to(path, "priv/conformance"), File.read!(path)} end)
   end
+
+  defp assert_verify_surface_expectations(cases) do
+    verify_cases =
+      Enum.filter(
+        cases,
+        &(&1["surface"] in ["party_descriptor.verify", "descriptor_chain.verify"])
+      )
+
+    assert length(verify_cases) == 6
+    Enum.each(verify_cases, &assert_verify_case/1)
+  end
+
+  defp assert_verify_case(%{"surface" => "party_descriptor.verify"} = one) do
+    actual = PartyDescriptor.verify(one["input"]["compact"], nil, Limits.default())
+
+    assert projected_party_result(actual) == one["expect"]
+  end
+
+  defp assert_verify_case(%{"surface" => "descriptor_chain.verify"} = one) do
+    actual = DescriptorChain.verify(one["input"]["compacts"], Limits.default())
+
+    assert projected_chain_result(actual, one["expect"]) == one["expect"]
+  end
+
+  defp projected_party_result({:ok, facts}) do
+    %{
+      "status" => "valid",
+      "output" => %{
+        "descriptor_digest" => facts.descriptor_digest,
+        "party_id" => facts.party_id,
+        "descriptor_number" => facts.descriptor_number
+      }
+    }
+  end
+
+  defp projected_party_result({:error, %Error{code: code}}),
+    do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+
+  defp projected_chain_result({:ok, chain}, %{"output" => expected}) do
+    output = %{"topology" => Atom.to_string(chain.topology)}
+
+    output =
+      if Map.has_key?(expected, "positions") do
+        positions =
+          Map.new(chain.descriptors, fn facts ->
+            {facts.descriptor_digest, Atom.to_string(facts.descriptor_position)}
+          end)
+
+        Map.put(output, "positions", positions)
+      else
+        output
+      end
+
+    output =
+      if Map.has_key?(expected, "sibling_descriptors") do
+        Map.put(output, "sibling_descriptors", chain.fork_evidence.sibling_descriptors)
+      else
+        output
+      end
+
+    %{"status" => "valid", "output" => output}
+  end
+
+  defp projected_chain_result({:error, %Error{code: code}}, _expectation),
+    do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
 
   defp deny(map, code) do
     assert {:error, %Error{code: ^code}} = Corpus.load(map)

@@ -177,15 +177,19 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   @spec verify_chain_view([term()], Limits.t()) ::
           {:ok, [DescriptorFacts.t()]} | {:error, Error.t()}
   def verify_chain_view(compacts, %Limits{} = limits) when is_list(compacts) do
-    cond do
-      not Limits.valid?(limits) ->
-        invalid_limits()
+    if Limits.valid?(limits) do
+      case artifact_set_length(compacts) do
+        :improper ->
+          {:error, Error.new(:invalid_type, ["descriptor_chain"])}
 
-      length(compacts) > limits.max_artifact_set_items ->
-        {:error, Error.new(:limit_exceeded, ["descriptor_chain", "items"])}
+        count when count > limits.max_artifact_set_items ->
+          {:error, Error.new(:limit_exceeded, ["descriptor_chain", "items"])}
 
-      true ->
-        do_verify_chain_view(compacts, limits)
+        _count ->
+          do_verify_chain_view(compacts, limits)
+      end
+    else
+      invalid_limits()
     end
   end
 
@@ -288,9 +292,9 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     with {:ok, decoded} <- decode_chain_entries(compacts, limits),
          :ok <- unique_chain_digests(decoded),
          {:ok, genesis} <- one_chain_genesis(decoded),
-         {:ok, genesis_facts} <- verify_one(genesis.compact, nil, limits),
+         {:ok, genesis_facts} <- verify_decoded(genesis.descriptor, genesis.compact, nil),
          children = Enum.group_by(decoded, & &1.descriptor.prev_descriptor_digest),
-         {:ok, verified} <- verify_descendants([genesis_facts], children, %{}, limits),
+         {:ok, verified} <- verify_descendants([genesis_facts], children, %{}),
          true <- map_size(verified) == length(decoded) do
       {:ok, Map.values(verified)}
     else
@@ -324,24 +328,24 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     end
   end
 
-  defp verify_descendants([], _children, verified, _limits), do: {:ok, verified}
+  defp verify_descendants([], _children, verified), do: {:ok, verified}
 
-  defp verify_descendants([predecessor | queue], children, verified, limits) do
+  defp verify_descendants([predecessor | queue], children, verified) do
     entries = Map.get(children, predecessor.descriptor_digest, [])
 
-    with {:ok, additions} <- verify_children(entries, predecessor, limits) do
+    with {:ok, additions} <- verify_children(entries, predecessor) do
       verified =
         Enum.reduce([predecessor | additions], verified, fn facts, acc ->
           Map.put(acc, facts.descriptor_digest, facts)
         end)
 
-      verify_descendants(additions ++ queue, children, verified, limits)
+      verify_descendants(additions ++ queue, children, verified)
     end
   end
 
-  defp verify_children(children, predecessor, limits) do
+  defp verify_children(children, predecessor) do
     Enum.reduce_while(children, {:ok, []}, fn entry, {:ok, additions} ->
-      case verify_one(entry.compact, predecessor, limits) do
+      case verify_decoded(entry.descriptor, entry.compact, predecessor) do
         {:ok, facts} -> {:cont, {:ok, [facts | additions]}}
         _error -> {:halt, chain_error()}
       end
@@ -397,13 +401,23 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   end
 
   defp verify_one(compact, predecessor, limits) do
-    with {:ok, descriptor} <- decode(compact, limits),
-         {:ok, party_id, public_key, lineage} <-
+    with {:ok, descriptor} <- decode(compact, limits) do
+      verify_decoded(descriptor, compact, predecessor)
+    end
+  end
+
+  defp verify_decoded(descriptor, compact, predecessor) do
+    with {:ok, party_id, public_key, lineage} <-
            verification_context(descriptor, predecessor, compact),
          :ok <- CompactJws.verify_signature(descriptor.envelope, public_key) do
       {:ok, facts(descriptor, party_id, lineage)}
     end
   end
+
+  defp artifact_set_length(value), do: artifact_set_length(value, 0)
+  defp artifact_set_length([], count), do: count
+  defp artifact_set_length([_item | rest], count), do: artifact_set_length(rest, count + 1)
+  defp artifact_set_length(_improper, _count), do: :improper
 
   defp verification_context(%__MODULE__{descriptor_number: 1} = descriptor, nil, compact) do
     with {:ok, key} <- active_key(descriptor.verification_keys, descriptor.envelope.kid) do

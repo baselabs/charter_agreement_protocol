@@ -97,8 +97,15 @@ defmodule CharterAgreementProtocol.DescriptorChainTest do
 
     assert {:ok, tight} = Limits.new(max_artifact_set_items: 1)
 
+    assert {:ok, %DescriptorChain{}} = DescriptorChain.verify([genesis.compact], tight)
+
     assert {:error, %Error{code: :limit_exceeded}} =
              DescriptorChain.verify([genesis.compact, second.compact], tight)
+
+    improper = [genesis.compact | "tail"]
+
+    assert {:error, %Error{code: :invalid_type}} =
+             DescriptorChain.verify(improper, Limits.default())
   end
 
   defp tagged_zero, do: "sha-256:" <> String.duplicate("A", 43)

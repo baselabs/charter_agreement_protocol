@@ -42,8 +42,8 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   canonicalization, and close alternate error-construction paths that could
   bypass the declared-code and value-free-detail architecture gates.
 - Bound complete artifact-set inputs and verify descriptor chains with one
-  decode and signature check per artifact instead of repeatedly replaying each
-  predecessor lineage.
+  signature check per artifact instead of repeatedly replaying each predecessor
+  lineage.
 - Preserve `invalid_limits` across every descriptor and chain entry point, order
   accepted leap-second instants before the following midnight, reject unknown
   critical descriptor extensions until the registry is available, and keep

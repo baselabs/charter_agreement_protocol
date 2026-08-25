@@ -5,6 +5,8 @@ defmodule CharterAgreementProtocol.TimestampTest do
 
   test "accepts exact UTC RFC 3339 instants including fractions and valid leap-second positions" do
     assert {:ok, first} = Timestamp.parse("2024-02-29T23:59:59Z")
+    assert %Timestamp{ordering_ticks: ticks} = first
+    assert is_integer(ticks)
     assert {:ok, later} = Timestamp.parse("2024-02-29T23:59:59.000000001Z")
     assert Timestamp.compare(first, later) == :lt
     assert Timestamp.compare(later, first) == :gt

@@ -4,14 +4,16 @@ defmodule CharterAgreementProtocol.Timestamp do
 
   Parsing never reads a clock. The protocol narrows RFC 3339 to uppercase `T`
   and a `Z` offset while retaining fractional seconds and leap-second syntax.
+  `ordering_ticks` is an internal total-order coordinate that preserves the
+  leap-second slot; it is not an elapsed-seconds value.
   """
 
   alias CharterAgreementProtocol.Error
 
-  @enforce_keys [:seconds, :fraction]
-  defstruct [:seconds, :fraction]
+  @enforce_keys [:ordering_ticks, :fraction]
+  defstruct [:ordering_ticks, :fraction]
 
-  @type t :: %__MODULE__{seconds: non_neg_integer(), fraction: binary()}
+  @type t :: %__MODULE__{ordering_ticks: non_neg_integer(), fraction: binary()}
 
   @pattern ~r/\A(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z\z/
 
@@ -35,7 +37,7 @@ defmodule CharterAgreementProtocol.Timestamp do
   @doc "Compare two parsed instants."
   @spec compare(t(), t()) :: :lt | :eq | :gt
   def compare(%__MODULE__{} = left, %__MODULE__{} = right) do
-    case order(left.seconds, right.seconds) do
+    case order(left.ordering_ticks, right.ordering_ticks) do
       :eq -> compare_fraction(left.fraction, right.fraction)
       ordering -> ordering
     end
@@ -54,7 +56,7 @@ defmodule CharterAgreementProtocol.Timestamp do
 
       {:ok,
        %__MODULE__{
-         seconds: nominal * 2 + leap_tick,
+         ordering_ticks: nominal * 2 + leap_tick,
          fraction: String.trim_trailing(fraction, "0")
        }}
     else

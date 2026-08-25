@@ -162,6 +162,8 @@ single reachable history returns `:linear`; every non-head descriptor is marked
 predecessor return `:forked`, mark all returned descriptor facts `:contested`,
 and retain the sibling digests as signed fork evidence. The verifier never
 selects a winner and never claims that the caller's view is globally complete.
+The set size is bounded by `max_artifact_set_items`; the exact ceiling is
+accepted and ceiling plus one returns `:limit_exceeded`.
 
 Descriptor verification proves signed key continuity only. It does not prove
 organizational identity, legal validity, authorization, current revocation
