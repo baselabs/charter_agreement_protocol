@@ -205,6 +205,7 @@ defmodule CharterAgreementProtocol.ChainTest do
              )
 
     assert set.revisions == [setup.genesis.bytes]
+    assert inspect(set) == "#CharterAgreementProtocol.ArtifactSet<redacted>"
     assert {:ok, built} = Facts.build(ChainFacts, %{accepted_revision_digests: []}, [:custom])
     assert built.not_verified == @not_verified ++ [:custom]
 
@@ -465,6 +466,28 @@ defmodule CharterAgreementProtocol.ChainTest do
              )
 
     assert facts.chain_topology == :forked
+    assert {:ok, :contested} = Chain.governing_revision(facts, at!("2026-08-25T12:00:02Z"))
+  end
+
+  test "an accepted revision beyond an unaccepted predecessor is contested, never a crash" do
+    setup = ChainFixture.base()
+    revision_2 = ChainFixture.successor(setup.genesis, 2)
+    revision_3 = ChainFixture.successor(revision_2, 3)
+
+    acceptances =
+      ChainFixture.dual_acceptances(setup.genesis, setup) ++
+        [ChainFixture.acceptance(revision_2, setup.issuer, "issuer")] ++
+        ChainFixture.dual_acceptances(revision_3, setup)
+
+    assert {:ok, %ChainFacts{chain_topology: :forked} = facts} =
+             Chain.verify(
+               Enum.map([setup.genesis, revision_2, revision_3], & &1.bytes),
+               Enum.map(acceptances, & &1.compact),
+               ChainFixture.descriptors(setup),
+               [],
+               Limits.default()
+             )
+
     assert {:ok, :contested} = Chain.governing_revision(facts, at!("2026-08-25T12:00:02Z"))
   end
 

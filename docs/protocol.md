@@ -278,8 +278,9 @@ reactivates an older revision. Neither verification function reads a clock,
 performs authorization, or decides legal effect.
 
 `build_set/4` only constructs a typed raw artifact set; it performs no
-verification. All facts records are built through one shared constructor that
-forces the closed twelve-item `not_verified` floor: tenancy, live policy,
+verification and its inspection is redacted. All facts records are built
+through one shared constructor. It forces the closed twelve-item `not_verified`
+floor: tenancy, live policy,
 authority, effect ownership, execution, billing, evaluation truth, legal
 validity, term satisfaction, view completeness, counterparty view, and wall
 clock. Additional omissions are unioned and cannot replace that floor. Facts

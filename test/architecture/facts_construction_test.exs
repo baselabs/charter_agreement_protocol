@@ -20,7 +20,9 @@ defmodule CharterAgreementProtocol.Architecture.FactsConstructionTest do
           "struct(ChainFacts, charter_id: digest)",
           "Kernel.struct!(DescriptorFacts, descriptor_digest: digest)",
           "apply(ForkEvidence, :__struct__, [[kind: :sibling_revisions]])",
-          "alias CharterAgreementProtocol.TerminationFacts, as: Evidence"
+          "alias CharterAgreementProtocol.TerminationFacts, as: Evidence",
+          "alias CharterAgreementProtocol, as: CAP\n%CAP.AcceptanceFacts{}",
+          "@facts_module CharterAgreementProtocol.ChainFacts\nstruct!(@facts_module, [])"
         ] do
       assert ArchitectureScan.facts_constructor_bypass_findings(source) != []
     end

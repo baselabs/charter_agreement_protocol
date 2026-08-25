@@ -34,14 +34,15 @@ defmodule CharterAgreementProtocol.Chain do
          :ok <- bounded_lists([revisions, acceptances, descriptors, terminations], limits),
          :ok <- binary_lists([revisions, acceptances, descriptors, terminations]),
          {:ok, descriptor_chains} <- verify_descriptor_chains(descriptors, limits),
-         {:ok, decoded_revisions, charter_id} <- verify_revisions(revisions, limits),
+         {:ok, indexed_revisions, revision_index, charter_id} <-
+           verify_revisions(revisions, limits),
          {:ok, acceptance_facts} <-
-           verify_acceptances(acceptances, decoded_revisions, descriptor_chains, limits),
+           verify_acceptances(acceptances, revision_index, descriptor_chains, limits),
          :ok <- unique_acceptance_coordinates(acceptance_facts),
-         {:ok, revision_facts} <- build_revision_facts(decoded_revisions, acceptance_facts),
+         {:ok, revision_facts} <- build_revision_facts(indexed_revisions, acceptance_facts),
          :ok <- accepted_supersession_targets(revision_facts),
          {:ok, termination_facts} <-
-           verify_terminations(terminations, decoded_revisions, descriptor_chains, limits) do
+           verify_terminations(terminations, revision_index, descriptor_chains, limits) do
       build_facts(
         charter_id,
         revision_facts,
@@ -118,29 +119,29 @@ defmodule CharterAgreementProtocol.Chain do
 
   defp verify_revisions(bytes_list, limits) do
     with {:ok, revisions} <- map_ok(bytes_list, &CharterRevision.decode(&1, limits)),
-         true <- unique_revision_digests?(revisions),
-         {:ok, charter_id} <- one_charter(revisions),
-         :ok <- revision_links(revisions, charter_id) do
-      {:ok, revisions, charter_id}
+         indexed <- Enum.map(revisions, &{CharterRevision.digest(&1), &1}),
+         true <- unique_revision_digests?(indexed),
+         revision_index <- Map.new(indexed),
+         {:ok, charter_id} <- one_charter(indexed),
+         :ok <- revision_links(indexed, revision_index, charter_id) do
+      {:ok, indexed, revision_index, charter_id}
     else
       {:error, %Error{} = error} -> {:error, error}
       _failure -> chain_error()
     end
   end
 
-  defp unique_revision_digests?(revisions) do
-    digests = Enum.map(revisions, &CharterRevision.digest/1)
+  defp unique_revision_digests?(indexed) do
+    digests = Enum.map(indexed, &elem(&1, 0))
     digests == Enum.uniq(digests)
   end
 
-  defp one_charter(revisions) do
-    genesis = Enum.filter(revisions, &(&1.revision_number == 1))
+  defp one_charter(indexed) do
+    genesis = Enum.filter(indexed, fn {_digest, revision} -> revision.revision_number == 1 end)
 
     case genesis do
-      [root] ->
-        charter_id = CharterRevision.digest(root)
-
-        if Enum.all?(revisions, &((&1.charter_id || CharterRevision.digest(&1)) == charter_id)),
+      [{charter_id, _root}] ->
+        if one_charter?(indexed, charter_id),
           do: {:ok, charter_id},
           else: chain_error()
 
@@ -149,39 +150,43 @@ defmodule CharterAgreementProtocol.Chain do
     end
   end
 
-  defp revision_links(revisions, charter_id) do
-    by_digest = Map.new(revisions, &{CharterRevision.digest(&1), &1})
+  defp one_charter?(indexed, charter_id) do
+    Enum.all?(indexed, fn {digest, revision} ->
+      (revision.charter_id || digest) == charter_id
+    end)
+  end
 
+  defp revision_links(indexed, revision_index, charter_id) do
     valid? =
-      Enum.all?(revisions, fn
-        %CharterRevision{revision_number: 1, prev_revision_digest: nil, supersedes: []} ->
+      Enum.all?(indexed, fn
+        {_digest, %CharterRevision{revision_number: 1, prev_revision_digest: nil, supersedes: []}} ->
           true
 
-        %CharterRevision{} = revision ->
-          valid_predecessor?(revision, by_digest, charter_id) and
-            valid_supersession_shape?(revision, by_digest, charter_id)
+        {_digest, %CharterRevision{} = revision} ->
+          valid_predecessor?(revision, revision_index, charter_id) and
+            valid_supersession_shape?(revision, revision_index, charter_id)
       end)
 
     if valid?, do: :ok, else: chain_error()
   end
 
-  defp valid_predecessor?(revision, by_digest, charter_id) do
-    case Map.get(by_digest, revision.prev_revision_digest) do
+  defp valid_predecessor?(revision, revision_index, charter_id) do
+    case Map.get(revision_index, revision.prev_revision_digest) do
       %CharterRevision{} = predecessor ->
         predecessor.revision_number == revision.revision_number - 1 and
-          (predecessor.charter_id || CharterRevision.digest(predecessor)) == charter_id
+          (predecessor.charter_id || revision.prev_revision_digest) == charter_id
 
       nil ->
         false
     end
   end
 
-  defp valid_supersession_shape?(revision, by_digest, charter_id) do
+  defp valid_supersession_shape?(revision, revision_index, charter_id) do
     Enum.all?(revision.supersedes, fn digest ->
-      case Map.get(by_digest, digest) do
+      case Map.get(revision_index, digest) do
         %CharterRevision{} = target ->
           target.revision_number < revision.revision_number and
-            (target.charter_id || CharterRevision.digest(target)) == charter_id
+            (target.charter_id || digest) == charter_id
 
         nil ->
           false
@@ -189,16 +194,16 @@ defmodule CharterAgreementProtocol.Chain do
     end)
   end
 
-  defp verify_acceptances(compacts, revisions, descriptor_chains, limits) do
+  defp verify_acceptances(compacts, revision_index, descriptor_chains, limits) do
     compacts
-    |> Enum.map(&verify_acceptance(&1, revisions, descriptor_chains, limits))
+    |> Enum.map(&verify_acceptance(&1, revision_index, descriptor_chains, limits))
     |> collect_ok()
   end
 
-  defp verify_acceptance(compact, revisions, descriptor_chains, limits) do
+  defp verify_acceptance(compact, revision_index, descriptor_chains, limits) do
     with {:ok, revision_digest, descriptor_digest} <-
            route_claims(compact, "cap+acceptance", "revision_digest", limits),
-         %CharterRevision{} = revision <- revision_by_digest(revisions, revision_digest),
+         %CharterRevision{} = revision <- Map.get(revision_index, revision_digest),
          %DescriptorChain{} = chain <- chain_for_descriptor(descriptor_chains, descriptor_digest) do
       Acceptance.verify(compact, revision, chain, limits)
     else
@@ -207,16 +212,16 @@ defmodule CharterAgreementProtocol.Chain do
     end
   end
 
-  defp verify_terminations(compacts, revisions, descriptor_chains, limits) do
+  defp verify_terminations(compacts, revision_index, descriptor_chains, limits) do
     compacts
-    |> Enum.map(&verify_termination(&1, revisions, descriptor_chains, limits))
+    |> Enum.map(&verify_termination(&1, revision_index, descriptor_chains, limits))
     |> collect_ok()
   end
 
-  defp verify_termination(compact, revisions, descriptor_chains, limits) do
+  defp verify_termination(compact, revision_index, descriptor_chains, limits) do
     with {:ok, revision_digest, descriptor_digest} <-
            route_claims(compact, "cap+termination", "governing_revision_digest", limits),
-         %CharterRevision{} = revision <- revision_by_digest(revisions, revision_digest),
+         %CharterRevision{} = revision <- Map.get(revision_index, revision_digest),
          %DescriptorChain{} = chain <- chain_for_descriptor(descriptor_chains, descriptor_digest) do
       TerminationNotice.verify(compact, revision, chain, limits)
     else
@@ -238,9 +243,6 @@ defmodule CharterAgreementProtocol.Chain do
     end
   end
 
-  defp revision_by_digest(revisions, digest),
-    do: Enum.find(revisions, &(CharterRevision.digest(&1) == digest))
-
   defp chain_for_descriptor(chains, digest) do
     Enum.find(chains, fn chain ->
       Enum.any?(chain.descriptors, &(&1.descriptor_digest == digest))
@@ -254,10 +256,9 @@ defmodule CharterAgreementProtocol.Chain do
     if coordinates == Enum.uniq(coordinates), do: :ok, else: chain_error()
   end
 
-  defp build_revision_facts(revisions, acceptance_facts) do
-    revisions
-    |> Enum.map(fn revision ->
-      digest = CharterRevision.digest(revision)
+  defp build_revision_facts(indexed_revisions, acceptance_facts) do
+    indexed_revisions
+    |> Enum.map(fn {digest, revision} ->
       matches = Enum.filter(acceptance_facts, &(&1.revision_digest == digest))
       status = if dual_accepted?(revision, matches), do: :accepted, else: :proposed
 
@@ -440,8 +441,10 @@ defmodule CharterAgreementProtocol.Chain do
   defp ancestor?(candidate, candidate, _by_digest), do: true
 
   defp ancestor?(candidate, current, by_digest) do
-    %RevisionFacts{prev_revision_digest: previous} = Map.fetch!(by_digest, current)
-    ancestor?(candidate, previous, by_digest)
+    case Map.get(by_digest, current) do
+      %RevisionFacts{prev_revision_digest: previous} -> ancestor?(candidate, previous, by_digest)
+      nil -> false
+    end
   end
 
   defp effective?(revision, at) do

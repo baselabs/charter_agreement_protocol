@@ -35,3 +35,8 @@ defmodule CharterAgreementProtocol.ArtifactSet do
 
   defp invalid, do: {:error, Error.new(:invalid_type, ["artifact_set"])}
 end
+
+defimpl Inspect, for: CharterAgreementProtocol.ArtifactSet do
+  def inspect(_value, _options),
+    do: Inspect.Algebra.string("#CharterAgreementProtocol.ArtifactSet<redacted>")
+end

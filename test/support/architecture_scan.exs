@@ -217,6 +217,10 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
       do: :renamed_facts_module
   end
 
+  defp facts_constructor_bypass({:@, _, [{_name, _, [{:__aliases__, _, segments}]}]}) do
+    if fact_module?(segments), do: :facts_module_indirection
+  end
+
   defp facts_constructor_bypass({:%, _, [{:__aliases__, _, segments}, {:%{}, _, _fields}]}) do
     if fact_module?(segments), do: :literal_facts_struct
   end
@@ -251,22 +255,19 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
   defp normalize_elixir_prefix(segments), do: segments
 
   defp fact_module?(segments) do
-    segments = normalize_elixir_prefix(segments)
-
-    segments in [
-      [:AcceptanceFacts],
-      [:ChainFacts],
-      [:DescriptorFacts],
-      [:ForkEvidence],
-      [:RevisionFacts],
-      [:TerminationFacts],
-      [:CharterAgreementProtocol, :AcceptanceFacts],
-      [:CharterAgreementProtocol, :ChainFacts],
-      [:CharterAgreementProtocol, :DescriptorFacts],
-      [:CharterAgreementProtocol, :ForkEvidence],
-      [:CharterAgreementProtocol, :RevisionFacts],
-      [:CharterAgreementProtocol, :TerminationFacts]
-    ]
+    segments
+    |> normalize_elixir_prefix()
+    |> List.last()
+    |> then(
+      &(&1 in [
+          :AcceptanceFacts,
+          :ChainFacts,
+          :DescriptorFacts,
+          :ForkEvidence,
+          :RevisionFacts,
+          :TerminationFacts
+        ])
+    )
   end
 
   defp strip_read_patterns(ast) do
