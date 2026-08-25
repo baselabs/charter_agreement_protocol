@@ -15,7 +15,8 @@ defmodule CharterAgreementProtocol.TerminationFacts do
     :issued_at,
     :detail_digest,
     :signing_key_id,
-    :descriptor_position
+    :descriptor_position,
+    :not_verified
   ]
   defstruct @enforce_keys
 
@@ -31,6 +32,12 @@ defmodule CharterAgreementProtocol.TerminationFacts do
           issued_at: Timestamp.t(),
           detail_digest: nil | binary(),
           signing_key_id: binary(),
-          descriptor_position: :head | :superseded | :contested
+          descriptor_position: :head | :superseded | :contested,
+          not_verified: [atom()]
         }
+end
+
+defimpl Inspect, for: CharterAgreementProtocol.TerminationFacts do
+  def inspect(_value, _options),
+    do: Inspect.Algebra.string("#CharterAgreementProtocol.TerminationFacts<redacted>")
 end

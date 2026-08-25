@@ -14,7 +14,8 @@ defmodule CharterAgreementProtocol.AcceptanceFacts do
     :party_role,
     :accepted_at,
     :signing_key_id,
-    :descriptor_position
+    :descriptor_position,
+    :not_verified
   ]
   defstruct @enforce_keys
 
@@ -29,6 +30,12 @@ defmodule CharterAgreementProtocol.AcceptanceFacts do
           party_role: binary(),
           accepted_at: Timestamp.t(),
           signing_key_id: binary(),
-          descriptor_position: :head | :superseded | :contested
+          descriptor_position: :head | :superseded | :contested,
+          not_verified: [atom()]
         }
+end
+
+defimpl Inspect, for: CharterAgreementProtocol.AcceptanceFacts do
+  def inspect(_value, _options),
+    do: Inspect.Algebra.string("#CharterAgreementProtocol.AcceptanceFacts<redacted>")
 end

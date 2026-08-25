@@ -27,7 +27,9 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "charter_revision.decode",
     "acceptance.verify",
     "acceptance.equivocation",
-    "termination.verify"
+    "termination.verify",
+    "chain.verify",
+    "governing_revision"
   ]
 
   @classes [
@@ -47,7 +49,10 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "chain_invalid",
     "descriptor_superseded",
     "descriptor_fork",
-    "equivocation"
+    "equivocation",
+    "chain_fork",
+    "supersession",
+    "precedence_selection"
   ]
 
   @floor %{
@@ -101,6 +106,14 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       required: ~w(valid invalid_constraint signature_invalid),
       n_a:
         "governance effects and foundational codec-only behavior are outside one termination notice"
+    },
+    "chain.verify" => %{
+      required: ~w(valid chain_fork supersession),
+      n_a: "single-artifact and foundational codec-only behavior are outside set verification"
+    },
+    "governing_revision" => %{
+      required: ~w(precedence_selection),
+      n_a: "set integrity and single-artifact behavior are outside temporal precedence selection"
     }
   }
 

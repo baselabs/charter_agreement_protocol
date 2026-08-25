@@ -9,7 +9,8 @@ defmodule CharterAgreementProtocol.DescriptorFacts do
     :prev_descriptor_digest,
     :signing_key_id,
     :descriptor_position,
-    :lineage
+    :lineage,
+    :not_verified
   ]
   defstruct @enforce_keys
 
@@ -22,18 +23,38 @@ defmodule CharterAgreementProtocol.DescriptorFacts do
           prev_descriptor_digest: nil | binary(),
           signing_key_id: binary(),
           descriptor_position: position(),
-          lineage: [binary()]
+          lineage: [binary()],
+          not_verified: [atom()]
         }
 end
 
-defmodule CharterAgreementProtocol.ForkEvidence do
-  @moduledoc "Signed sibling descriptor digests retained as fork evidence."
+defimpl Inspect, for: CharterAgreementProtocol.DescriptorFacts do
+  def inspect(_value, _options),
+    do: Inspect.Algebra.string("#CharterAgreementProtocol.DescriptorFacts<redacted>")
+end
 
-  @enforce_keys [:kind, :sibling_descriptors]
-  defstruct @enforce_keys
+defmodule CharterAgreementProtocol.ForkEvidence do
+  @moduledoc "Signed descriptor, revision, or acceptance conflict evidence."
+
+  @enforce_keys [:kind, :not_verified]
+  defstruct [
+    :kind,
+    sibling_descriptors: [],
+    revision_digests: [],
+    acceptance_digests: [],
+    not_verified: []
+  ]
 
   @type t :: %__MODULE__{
-          kind: :sibling_descriptors,
-          sibling_descriptors: [binary()]
+          kind: :sibling_descriptors | :sibling_revisions | :equivocal_acceptances,
+          sibling_descriptors: [binary()],
+          revision_digests: [binary()],
+          acceptance_digests: [binary()],
+          not_verified: [atom()]
         }
+end
+
+defimpl Inspect, for: CharterAgreementProtocol.ForkEvidence do
+  def inspect(_value, _options),
+    do: Inspect.Algebra.string("#CharterAgreementProtocol.ForkEvidence<redacted>")
 end

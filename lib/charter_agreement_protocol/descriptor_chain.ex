@@ -6,7 +6,14 @@ defmodule CharterAgreementProtocol.DescriptorChain do
   as the winner and never claims that its input view is globally complete.
   """
 
-  alias CharterAgreementProtocol.{DescriptorFacts, Error, ForkEvidence, Limits, PartyDescriptor}
+  alias CharterAgreementProtocol.{
+    DescriptorFacts,
+    Error,
+    Facts,
+    ForkEvidence,
+    Limits,
+    PartyDescriptor
+  }
 
   @enforce_keys [:topology, :descriptors]
   defstruct [:topology, :descriptors, :fork_evidence]
@@ -64,13 +71,16 @@ defmodule CharterAgreementProtocol.DescriptorChain do
 
       contested = Enum.map(verified, &%{&1 | descriptor_position: :contested})
 
+      {:ok, evidence} =
+        Facts.build(ForkEvidence, %{
+          kind: :sibling_descriptors,
+          sibling_descriptors: siblings
+        })
+
       %__MODULE__{
         topology: :forked,
         descriptors: sort(contested),
-        fork_evidence: %ForkEvidence{
-          kind: :sibling_descriptors,
-          sibling_descriptors: siblings
-        }
+        fork_evidence: evidence
       }
     end
   end

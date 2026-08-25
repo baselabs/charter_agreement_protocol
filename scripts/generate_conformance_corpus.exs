@@ -679,7 +679,199 @@ termination_cases = [
   }
 ]
 
-cases = cases ++ descriptor_cases ++ revision_cases ++ acceptance_cases ++ termination_cases
+{acceptor_key, acceptor_private} = descriptor_key.(7, "acceptor-key")
+
+acceptor =
+  descriptor_compact.(
+    %{
+      "protocol_revision" => 1,
+      "descriptor_number" => 1,
+      "verification_keys" => [acceptor_key],
+      "attestation_hints" => [],
+      "extensions" => %{"critical" => %{}, "optional" => %{}},
+      "effective_from" => "2026-08-25T10:00:00Z"
+    },
+    "acceptor-key",
+    acceptor_private
+  )
+
+chain_genesis_claims =
+  put_in(revision_claims, ["parties"], [
+    %{"party_descriptor_digest" => genesis.digest, "role" => "issuer"},
+    %{"party_descriptor_digest" => acceptor.digest, "role" => "acceptor"}
+  ])
+
+chain_genesis_bytes = canonical.(chain_genesis_claims)
+
+chain_genesis_digest =
+  :charter_revision_content |> Digest.hash(chain_genesis_bytes) |> Digest.to_tagged()
+
+chain_successor = fn previous_digest, number, legal, supersedes ->
+  claims =
+    chain_genesis_claims
+    |> Map.merge(%{
+      "charter_id" => chain_genesis_digest,
+      "revision_number" => number,
+      "prev_revision_digest" => previous_digest,
+      "effective_from" =>
+        ~U[2026-08-25 12:00:00Z]
+        |> DateTime.add(number - 1)
+        |> DateTime.to_iso8601(),
+      "legal_text" => %{
+        "content_digest" => :legal_text |> Digest.hash(legal) |> Digest.to_tagged(),
+        "media_type" => "text/plain"
+      }
+    })
+
+  claims = if supersedes == [], do: claims, else: Map.put(claims, "supersedes", supersedes)
+  bytes = canonical.(claims)
+  digest = :charter_revision_content |> Digest.hash(bytes) |> Digest.to_tagged()
+  %{claims: claims, bytes: bytes, digest: digest}
+end
+
+chain_left = chain_successor.(chain_genesis_digest, 2, "left terms\n", [])
+chain_right = chain_successor.(chain_genesis_digest, 2, "right terms\n", [])
+
+chain_repair =
+  chain_successor.(
+    chain_left.digest,
+    3,
+    "reconciled terms\n",
+    Enum.sort([chain_left.digest, chain_right.digest])
+  )
+
+chain_acceptance = fn revision_claims_value,
+                      revision_digest_value,
+                      descriptor_digest,
+                      role,
+                      kid,
+                      private ->
+  claims = %{
+    "protocol_revision" => 1,
+    "charter_id" => chain_genesis_digest,
+    "revision_number" => revision_claims_value["revision_number"],
+    "revision_digest" => revision_digest_value,
+    "party_descriptor_digest" => descriptor_digest,
+    "party_role" => role,
+    "accepted_at" => "2026-08-25T13:00:00Z"
+  }
+
+  claims =
+    if revision_claims_value["revision_number"] == 1,
+      do: claims,
+      else: Map.put(claims, "prev_revision_digest", revision_claims_value["prev_revision_digest"])
+
+  acceptance_compact.(claims, kid, private).compact
+end
+
+dual_chain_acceptances = fn revision_claims_value, revision_digest_value ->
+  [
+    chain_acceptance.(
+      revision_claims_value,
+      revision_digest_value,
+      genesis.digest,
+      "issuer",
+      "genesis-key",
+      genesis_private
+    ),
+    chain_acceptance.(
+      revision_claims_value,
+      revision_digest_value,
+      acceptor.digest,
+      "acceptor",
+      "acceptor-key",
+      acceptor_private
+    )
+  ]
+end
+
+chain_revision = %{
+  claims: chain_genesis_claims,
+  bytes: chain_genesis_bytes,
+  digest: chain_genesis_digest
+}
+
+chain_input = fn revisions ->
+  %{
+    "revisions" => Enum.map(revisions, & &1.bytes),
+    "acceptances" => Enum.flat_map(revisions, &dual_chain_acceptances.(&1.claims, &1.digest)),
+    "descriptors" => [genesis.compact, acceptor.compact],
+    "terminations" => []
+  }
+end
+
+valid_chain_input = chain_input.([chain_revision])
+forked_chain_input = chain_input.([chain_revision, chain_left, chain_right])
+repaired_chain_input = chain_input.([chain_revision, chain_left, chain_right, chain_repair])
+precedence_input = chain_input.([chain_revision, chain_left])
+
+chain_cases = [
+  %{
+    "id" => "chain-dual-acceptance-valid",
+    "surface" => "chain.verify",
+    "class" => "valid",
+    "input" => valid_chain_input,
+    "expect" =>
+      valid.(%{
+        "charter_id" => chain_genesis_digest,
+        "topology" => "linear",
+        "accepted_revision_digests" => [chain_genesis_digest],
+        "superseded_revision_digests" => []
+      })
+  },
+  %{
+    "id" => "chain-accepted-sibling-fork",
+    "surface" => "chain.verify",
+    "class" => "chain_fork",
+    "input" => forked_chain_input,
+    "expect" =>
+      valid.(%{
+        "charter_id" => chain_genesis_digest,
+        "topology" => "forked",
+        "accepted_revision_digests" =>
+          Enum.sort([chain_genesis_digest, chain_left.digest, chain_right.digest]),
+        "superseded_revision_digests" => []
+      })
+  },
+  %{
+    "id" => "chain-bilateral-supersession-repair",
+    "surface" => "chain.verify",
+    "class" => "supersession",
+    "input" => repaired_chain_input,
+    "expect" =>
+      valid.(%{
+        "charter_id" => chain_genesis_digest,
+        "topology" => "linear",
+        "accepted_revision_digests" =>
+          Enum.sort([
+            chain_genesis_digest,
+            chain_left.digest,
+            chain_right.digest,
+            chain_repair.digest
+          ]),
+        "superseded_revision_digests" => Enum.sort([chain_left.digest, chain_right.digest])
+      })
+  },
+  %{
+    "id" => "governing-revision-start-inclusive-precedence",
+    "surface" => "governing_revision",
+    "class" => "precedence_selection",
+    "input" =>
+      Map.put(precedence_input, "queries", [
+        %{"at" => "2026-08-25T11:59:59Z", "governing_revision" => "none"},
+        %{"at" => "2026-08-25T12:00:00Z", "governing_revision" => chain_genesis_digest},
+        %{"at" => "2026-08-25T12:00:01Z", "governing_revision" => chain_left.digest}
+      ]),
+    "expect" =>
+      valid.(%{
+        "governing_revisions" => ["none", chain_genesis_digest, chain_left.digest]
+      })
+  }
+]
+
+cases =
+  cases ++
+    descriptor_cases ++ revision_cases ++ acceptance_cases ++ termination_cases ++ chain_cases
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 

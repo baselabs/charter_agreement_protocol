@@ -6,6 +6,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   alias CharterAgreementProtocol.{
     Acceptance,
+    Chain,
     CharterRevision,
     DescriptorChain,
     Error,
@@ -192,6 +193,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert_revision_expectations(cases)
     assert_acceptance_expectations(cases)
     assert_termination_expectations(cases)
+    assert_chain_expectations(cases)
   end
 
   defp shipped_files do
@@ -315,6 +317,59 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   defp projected_termination_result({:error, %Error{code: code}}),
+    do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+
+  defp assert_chain_expectations(cases) do
+    chain_cases =
+      Enum.filter(cases, &(&1["surface"] in ["chain.verify", "governing_revision"]))
+
+    assert length(chain_cases) == 4
+    Enum.each(chain_cases, &assert_chain_case/1)
+  end
+
+  defp assert_chain_case(%{"surface" => "chain.verify"} = one) do
+    actual = verify_chain_input(one["input"])
+    assert projected_set_result(actual) == one["expect"]
+  end
+
+  defp assert_chain_case(%{"surface" => "governing_revision"} = one) do
+    input = one["input"]
+    {:ok, facts} = verify_chain_input(input)
+
+    governing =
+      Enum.map(input["queries"], fn query ->
+        {:ok, at, 0} = DateTime.from_iso8601(query["at"])
+        {:ok, result} = Chain.governing_revision(facts, at)
+        if is_atom(result), do: Atom.to_string(result), else: result
+      end)
+
+    assert %{"status" => "valid", "output" => %{"governing_revisions" => governing}} ==
+             one["expect"]
+  end
+
+  defp verify_chain_input(input) do
+    Chain.verify(
+      input["revisions"],
+      input["acceptances"],
+      input["descriptors"],
+      input["terminations"],
+      Limits.default()
+    )
+  end
+
+  defp projected_set_result({:ok, facts}) do
+    %{
+      "status" => "valid",
+      "output" => %{
+        "charter_id" => facts.charter_id,
+        "topology" => Atom.to_string(facts.chain_topology),
+        "accepted_revision_digests" => facts.accepted_revision_digests,
+        "superseded_revision_digests" => facts.superseded_revision_digests
+      }
+    }
+  end
+
+  defp projected_set_result({:error, %Error{code: code}}),
     do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
 
   defp projected_equivocation_result({:ok, evidence}) do

@@ -23,6 +23,7 @@ defmodule CharterAgreementProtocol.MixProject do
         summary: [threshold: 100],
         ignore_modules: [
           CharterAgreementProtocol.AcceptanceFixture,
+          CharterAgreementProtocol.ChainFixture,
           CharterAgreementProtocol.CharterRevisionFixture,
           CharterAgreementProtocol.ConformanceTest.Builder,
           CharterAgreementProtocol.DescriptorFixture,

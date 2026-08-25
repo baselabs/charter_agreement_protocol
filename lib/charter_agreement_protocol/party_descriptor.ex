@@ -12,6 +12,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     DescriptorFacts,
     Digest,
     Error,
+    Facts,
     Limits,
     Schema,
     Timestamp
@@ -453,16 +454,19 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   end
 
   defp facts(descriptor, party_id, lineage) do
-    %DescriptorFacts{
-      descriptor: descriptor,
-      descriptor_digest: digest(descriptor),
-      party_id: party_id,
-      descriptor_number: descriptor.descriptor_number,
-      prev_descriptor_digest: descriptor.prev_descriptor_digest,
-      signing_key_id: descriptor.envelope.kid,
-      descriptor_position: :head,
-      lineage: lineage
-    }
+    {:ok, facts} =
+      Facts.build(DescriptorFacts, %{
+        descriptor: descriptor,
+        descriptor_digest: digest(descriptor),
+        party_id: party_id,
+        descriptor_number: descriptor.descriptor_number,
+        prev_descriptor_digest: descriptor.prev_descriptor_digest,
+        signing_key_id: descriptor.envelope.kid,
+        descriptor_position: :head,
+        lineage: lineage
+      })
+
+    facts
   end
 
   defp descriptor_error,

@@ -12,7 +12,11 @@ closed unsigned Charter Revisions with exact ABP deployment bindings. Attached
 Acceptances prove exact countersignatures and retain same-signer equivocation
 evidence without selecting a branch. Termination Notices prove that a pinned
 party signed a listed reason and pure effective-time coordinate without
-applying a clock or governance-effect policy.
+applying a clock or governance-effect policy. Set-level verification composes
+both descriptor histories, revisions, acceptances, and notices into redacted
+structural facts; caller-time governing queries enforce bilateral assent,
+effective windows, supersession, termination closure, and no-tie-break fork
+handling.
 See [Protocol foundation](docs/protocol.md).
 
 ## Status
@@ -20,8 +24,9 @@ See [Protocol foundation](docs/protocol.md).
 Foundational codecs, bounded decode limits, the schema engine, corpus loader,
 independent Node integrity harness, Party Descriptor verification, and Charter
 Revision, Acceptance, and Termination Notice engines are implemented.
-Governing-chain and receipt engines remain under construction. The package is
-not published to Hex.
+The governing-chain engine and its cross-language corpus cells are implemented.
+Receipt and report engines remain under construction. The package is not
+published to Hex.
 
 ## Development
 

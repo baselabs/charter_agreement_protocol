@@ -123,6 +123,20 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
     Enum.reverse(findings)
   end
 
+  def facts_constructor_bypass_findings(input) do
+    ast = input |> quoted() |> strip_fact_read_patterns()
+
+    {_ast, findings} =
+      Macro.prewalk(ast, [], fn node, acc ->
+        case facts_constructor_bypass(node) do
+          nil -> {node, acc}
+          finding -> {node, [finding | acc]}
+        end
+      end)
+
+    Enum.reverse(findings)
+  end
+
   defp package_source_ref?(name),
     do: Regex.match?(~r/\bsource_ref\b.*\bv(?:#\{@version\}|\d)/i, name)
 
@@ -197,12 +211,63 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
 
   defp error_constructor_bypass(_node), do: nil
 
+  defp facts_constructor_bypass({:alias, _, [{:__aliases__, _, segments}, options]})
+       when is_list(options) do
+    if fact_module?(segments) and Keyword.has_key?(options, :as),
+      do: :renamed_facts_module
+  end
+
+  defp facts_constructor_bypass({:%, _, [{:__aliases__, _, segments}, {:%{}, _, _fields}]}) do
+    if fact_module?(segments), do: :literal_facts_struct
+  end
+
+  defp facts_constructor_bypass({constructor, _, [{:__aliases__, _, segments} | _arguments]})
+       when constructor in [:struct, :struct!] do
+    if fact_module?(segments), do: :dynamic_facts_struct
+  end
+
+  defp facts_constructor_bypass(
+         {{:., _, [{:__aliases__, _, caller}, constructor]}, _,
+          [{:__aliases__, _, segments} | _arguments]}
+       )
+       when constructor in [:struct, :struct!] do
+    if normalize_elixir_prefix(caller) == [:Kernel] and fact_module?(segments),
+      do: :dynamic_facts_struct
+  end
+
+  defp facts_constructor_bypass(
+         {:apply, _, [{:__aliases__, _, segments}, :__struct__, _arguments]}
+       ) do
+    if fact_module?(segments), do: :applied_facts_constructor
+  end
+
+  defp facts_constructor_bypass(_node), do: nil
+
   defp renamed_constructor(nil), do: nil
   defp renamed_constructor({:__aliases__, _, [:Error]}), do: nil
   defp renamed_constructor(renamed), do: {:renamed_error_constructor, renamed}
 
   defp normalize_elixir_prefix([Elixir | rest]), do: rest
   defp normalize_elixir_prefix(segments), do: segments
+
+  defp fact_module?(segments) do
+    segments = normalize_elixir_prefix(segments)
+
+    segments in [
+      [:AcceptanceFacts],
+      [:ChainFacts],
+      [:DescriptorFacts],
+      [:ForkEvidence],
+      [:RevisionFacts],
+      [:TerminationFacts],
+      [:CharterAgreementProtocol, :AcceptanceFacts],
+      [:CharterAgreementProtocol, :ChainFacts],
+      [:CharterAgreementProtocol, :DescriptorFacts],
+      [:CharterAgreementProtocol, :ForkEvidence],
+      [:CharterAgreementProtocol, :RevisionFacts],
+      [:CharterAgreementProtocol, :TerminationFacts]
+    ]
+  end
 
   defp strip_read_patterns(ast) do
     Macro.prewalk(ast, fn
@@ -217,6 +282,55 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
 
       {kind, meta, [head, body]} when kind in [:def, :defp, :defmacro, :defmacrop] ->
         {kind, meta, [strip_function_head(head), body]}
+
+      node ->
+        node
+    end)
+  end
+
+  defp strip_fact_read_patterns(ast) do
+    Macro.prewalk(ast, fn
+      {:match?, meta, [pattern, value]} ->
+        {:match?, meta, [strip_fact_fields(pattern), value]}
+
+      {:=, meta, [left, right]} ->
+        {:=, meta, [strip_fact_fields(left), right]}
+
+      {:<-, meta, [left, right]} ->
+        {:<-, meta, [strip_fact_fields(left), right]}
+
+      {:->, meta, [patterns, body]} ->
+        {:->, meta, [Enum.map(patterns, &strip_fact_fields/1), body]}
+
+      {kind, meta, [head, body]} when kind in [:def, :defp, :defmacro, :defmacrop] ->
+        {kind, meta, [strip_fact_function_head(head), body]}
+
+      node ->
+        node
+    end)
+  end
+
+  defp strip_fact_function_head({:when, meta, [head | guards]}) do
+    {:when, meta, [strip_fact_function_head(head) | guards]}
+  end
+
+  defp strip_fact_function_head({name, meta, arguments})
+       when is_atom(name) and is_list(arguments) do
+    {name, meta, Enum.map(arguments, &strip_fact_argument/1)}
+  end
+
+  defp strip_fact_function_head(head), do: head
+
+  defp strip_fact_argument({:\\, meta, [pattern, default]}) do
+    {:\\, meta, [strip_fact_fields(pattern), default]}
+  end
+
+  defp strip_fact_argument(pattern), do: strip_fact_fields(pattern)
+
+  defp strip_fact_fields(ast) do
+    Macro.prewalk(ast, fn
+      {:%, _, [{:__aliases__, _, segments}, {:%{}, _, _fields}]} = node ->
+        if fact_module?(segments), do: :fact_pattern, else: node
 
       node ->
         node

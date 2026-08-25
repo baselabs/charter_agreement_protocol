@@ -16,6 +16,7 @@ defmodule CharterAgreementProtocol.Acceptance do
     DescriptorFacts,
     Digest,
     Error,
+    Facts,
     Limits,
     PartyDescriptor,
     Schema,
@@ -282,19 +283,22 @@ defmodule CharterAgreementProtocol.Acceptance do
   end
 
   defp facts(acceptance, descriptor) do
-    %AcceptanceFacts{
-      acceptance: acceptance,
-      acceptance_digest: digest(acceptance),
-      charter_id: acceptance.charter_id,
-      revision_number: acceptance.revision_number,
-      revision_digest: acceptance.revision_digest,
-      prev_revision_digest: acceptance.prev_revision_digest,
-      party_descriptor_digest: acceptance.party_descriptor_digest,
-      party_role: acceptance.party_role,
-      accepted_at: acceptance.accepted_at,
-      signing_key_id: acceptance.envelope.kid,
-      descriptor_position: descriptor.descriptor_position
-    }
+    {:ok, facts} =
+      Facts.build(AcceptanceFacts, %{
+        acceptance: acceptance,
+        acceptance_digest: digest(acceptance),
+        charter_id: acceptance.charter_id,
+        revision_number: acceptance.revision_number,
+        revision_digest: acceptance.revision_digest,
+        prev_revision_digest: acceptance.prev_revision_digest,
+        party_descriptor_digest: acceptance.party_descriptor_digest,
+        party_role: acceptance.party_role,
+        accepted_at: acceptance.accepted_at,
+        signing_key_id: acceptance.envelope.kid,
+        descriptor_position: descriptor.descriptor_position
+      })
+
+    facts
   end
 
   defp same_equivocator?(left, right) do

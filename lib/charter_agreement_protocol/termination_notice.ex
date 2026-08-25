@@ -14,6 +14,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
     DescriptorFacts,
     Digest,
     Error,
+    Facts,
     Limits,
     PartyDescriptor,
     Schema,
@@ -265,20 +266,23 @@ defmodule CharterAgreementProtocol.TerminationNotice do
   end
 
   defp facts(termination, descriptor) do
-    %TerminationFacts{
-      termination: termination,
-      termination_digest: digest(termination),
-      charter_id: termination.charter_id,
-      governing_revision_digest: termination.governing_revision_digest,
-      party_descriptor_digest: termination.party_descriptor_digest,
-      party_role: termination.party_role,
-      reason_code: termination.reason_code,
-      effective_at: termination.effective_at,
-      issued_at: termination.issued_at,
-      detail_digest: termination.detail_digest,
-      signing_key_id: termination.envelope.kid,
-      descriptor_position: descriptor.descriptor_position
-    }
+    {:ok, facts} =
+      Facts.build(TerminationFacts, %{
+        termination: termination,
+        termination_digest: digest(termination),
+        charter_id: termination.charter_id,
+        governing_revision_digest: termination.governing_revision_digest,
+        party_descriptor_digest: termination.party_descriptor_digest,
+        party_role: termination.party_role,
+        reason_code: termination.reason_code,
+        effective_at: termination.effective_at,
+        issued_at: termination.issued_at,
+        detail_digest: termination.detail_digest,
+        signing_key_id: termination.envelope.kid,
+        descriptor_position: descriptor.descriptor_position
+      })
+
+    facts
   end
 
   defp termination_error, do: {:error, Error.new(:termination_invalid, ["termination"])}

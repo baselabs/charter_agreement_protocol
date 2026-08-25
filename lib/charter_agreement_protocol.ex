@@ -12,6 +12,9 @@ defmodule CharterAgreementProtocol do
   alias CharterAgreementProtocol.{
     Acceptance,
     AcceptanceFacts,
+    ArtifactSet,
+    Chain,
+    ChainFacts,
     CharterRevision,
     DescriptorChain,
     DescriptorFacts,
@@ -62,4 +65,23 @@ defmodule CharterAgreementProtocol do
   defdelegate verify_termination(compact, revision, descriptor_chain, limits),
     to: TerminationNotice,
     as: :verify
+
+  @doc "Build a typed set of charter artifacts without verifying them."
+  @spec build_set(term(), term(), term(), term()) ::
+          {:ok, ArtifactSet.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate build_set(revisions, acceptances, terminations, descriptors),
+    to: ArtifactSet,
+    as: :build
+
+  @doc "Verify a complete caller-supplied charter artifact view."
+  @spec verify_chain(term(), term(), term(), term(), Limits.t()) ::
+          {:ok, ChainFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate verify_chain(revisions, acceptances, descriptors, terminations, limits),
+    to: Chain,
+    as: :verify
+
+  @doc "Compute the unique governing revision in a verified view at one UTC instant."
+  @spec governing_revision(term(), term()) ::
+          {:ok, binary() | :contested | :none} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate governing_revision(chain_facts, at), to: Chain
 end

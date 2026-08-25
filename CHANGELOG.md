@@ -34,6 +34,14 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 - Attached Termination Notice verification with exact revision/party binding,
   listed-reason enforcement, pure issue/effective ordering, active descriptor
   key verification, and no clock or governance-effect decision.
+- Pure set-level chain verification and caller-time governing computation with
+  bilateral acceptance, exact revision ancestry, start-inclusive effective
+  windows, retained fork evidence, explicit supersession repair, termination
+  closure without fallback, and no digest tie-break.
+- One redacted facts-construction boundary that forces the twelve-item
+  `not_verified` floor across descriptor, revision, acceptance, termination,
+  fork, and chain facts, plus executable Elixir and Node corpus cells for
+  chain forks, supersession, and temporal precedence.
 - Architecture gates that reject implementation-version tokens everywhere
   except the exact Hex package source reference, reject runtime dependency
   drift away from OTP `:crypto`, and keep declared error codes synchronized

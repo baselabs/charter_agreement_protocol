@@ -247,6 +247,44 @@ not prove delivery, receipt, legal effect, current revocation status, or that
 the requested effective time has arrived. Governing-chain evaluation owns
 those protocol-level effects.
 
+## Chain verification and governing computation
+
+`verify_chain/5` accepts complete caller-supplied lists of canonical revision
+bytes, attached acceptances, Party Descriptor compacts, and termination
+compacts plus explicit limits. It re-decodes and re-verifies every artifact;
+raw routing claims never establish trust. Exactly two distinct descriptor
+histories must match the revision's two bound roles. Revision digests must be
+unique, one genesis must define the charter identity, every successor must bind
+the exact prior-numbered digest, and supersession targets must exist within the
+same charter and at a lower number.
+
+A revision is accepted only when both bound Party Descriptor-and-role pairs
+have one verified Acceptance. Signed same-number siblings remain fork evidence
+and make the active view contested. An accepted successor may explicitly
+supersede accepted lower-numbered branches; this retains historical fork and
+equivocation evidence while removing the named branch residue from current
+precedence. Digest ordering never selects a winner.
+
+The returned `ChainFacts` are structural and view-relative. They contain the
+reverified revision, acceptance, descriptor-chain, termination, supersession,
+and fork facts, but no time-dependent verdict. `governing_revision/2` accepts a
+caller-supplied UTC `DateTime` and returns the highest effective accepted
+revision on one ancestry, `:contested` for multiple eligible branches, or
+`:none`. Effective intervals are start-inclusive and end-exclusive.
+
+A verified notice closes the charter at and after its `effective_at` only when
+the notice names the unique governing revision at that instant. Closure never
+reactivates an older revision. Neither verification function reads a clock,
+performs authorization, or decides legal effect.
+
+`build_set/4` only constructs a typed raw artifact set; it performs no
+verification. All facts records are built through one shared constructor that
+forces the closed twelve-item `not_verified` floor: tenancy, live policy,
+authority, effect ownership, execution, billing, evaluation truth, legal
+validity, term satisfaction, view completeness, counterparty view, and wall
+clock. Additional omissions are unioned and cannot replace that floor. Facts
+implement redacted inspection so logs do not expose retained signed artifacts.
+
 ## Architecture boundaries
 
 Production runtime code uses only OTP `:crypto`. Corpus loading is in-memory and
