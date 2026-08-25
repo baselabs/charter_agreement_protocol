@@ -50,6 +50,10 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 - Exact development/test-only, runtime-disabled ABP 0.1.1 and BAP 0.1.2 Hex
   dependencies with package checksums and frozen/live byte-identity gates; the
   CAP production application remains OTP-crypto-only.
+- Deterministic Party Descriptor, Acceptance, Termination, and Receipt signing
+  inputs plus external-signature-only compact assembly. The set-aware seam
+  refuses false coordinates, equivocation, and stale ancestry while preserving
+  bilateral supersession repair; source and BEAM gates prohibit signing custody.
 - Architecture gates that reject implementation-version tokens everywhere
   except the exact Hex package source reference, reject runtime dependency
   drift away from OTP `:crypto`, and keep declared error codes synchronized

@@ -7,7 +7,7 @@ defmodule CharterAgreementProtocol.CompactJws do
   against its caller-supplied verification context.
   """
 
-  alias CharterAgreementProtocol.{Base64Url, Canonicalization, Error, Json, Limits}
+  alias CharterAgreementProtocol.{Base64Url, Canonicalization, Error, Json, Limits, Signature}
 
   @enforce_keys [
     :kid,
@@ -59,13 +59,8 @@ defmodule CharterAgreementProtocol.CompactJws do
 
   @doc "Verify the envelope signature with one exact raw Ed25519 public key."
   @spec verify_signature(t(), term()) :: :ok | {:error, Error.t()}
-  def verify_signature(%__MODULE__{} = envelope, <<_::256>> = public_key) do
-    if :crypto.verify(:eddsa, :none, envelope.message, envelope.signature, [public_key, :ed25519]),
-       do: :ok,
-       else: signature_error()
-  rescue
-    _exception -> signature_error()
-  end
+  def verify_signature(%__MODULE__{} = envelope, public_key),
+    do: Signature.verify(envelope.message, envelope.signature, public_key)
 
   def verify_signature(_envelope, _public_key), do: signature_error()
 

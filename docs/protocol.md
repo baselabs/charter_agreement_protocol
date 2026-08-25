@@ -3,9 +3,9 @@
 This document defines the implemented byte-level, schema-validation, corpus,
 Party Descriptor, and Charter Revision surfaces of Charter Agreement Protocol.
 Acceptance and Termination Notice evidence verification is also implemented.
-Governing-chain and Receipt verification are implemented. Signing-input
-production, extension profiles, and complete conformance reports are not part
-of the implemented surface yet.
+Governing-chain, Receipt verification, and the external-signature signing seam
+are implemented. Extension profiles and complete conformance reports are not
+part of the implemented surface yet.
 
 ## Tagged JSON values
 
@@ -330,6 +330,30 @@ equality but has no descriptor key or chain view. Its facts therefore add
 governance as undetermined. Host post-sign verification uses full chain context.
 Neither form validates live grant state, authorization, execution, effect truth,
 legal validity, term satisfaction, view completeness, or wall-clock truth.
+
+## Signing inputs and compact assembly
+
+Each producer accepts exactly `%{"kid" => kid, "claims" => claims}`. CAP builds
+the closed `{alg: "EdDSA", typ, kid}` protected header and returns
+`%SigningInput{kind, protected_segment, payload_segment, message}` where
+`message` is the exact RFC 7515 signing input. Descriptor and Receipt producers
+take only that map. Acceptance and Termination producers also take the caller's
+raw `ArtifactSet` and cold-verify it before returning bytes.
+
+The set-aware producers refuse false revision/party coordinates, an acceptance
+at a charter number already occupied by an acceptance for another digest, and
+a candidate whose ancestry excludes any maximum dual-accepted head. A repair
+revision may cover accepted siblings by naming each in `supersedes`; this is the
+only no-tie-break path that lets the honest-signer seam construct fork repair.
+Incomplete ancestry fails closed.
+
+`assemble_compact/2` revalidates the kind/header/payload/message relationship and
+accepts exactly one externally produced raw 64-byte Ed25519 signature. The
+production package has no signing call, private-key parameter, signer callback,
+signer module, or custody handle. Hosts own an atomic kid/key snapshot and must
+post-verify the assembled compact through CAP before returning it. The refusal
+guards constrain honest use relative to the supplied set; they cannot constrain
+a dishonest signer or prove the view complete.
 
 ## Architecture boundaries
 

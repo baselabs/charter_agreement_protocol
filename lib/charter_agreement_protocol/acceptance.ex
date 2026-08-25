@@ -120,6 +120,18 @@ defmodule CharterAgreementProtocol.Acceptance do
 
   def verify(_compact, _revision, _chain, _limits), do: invalid_type()
 
+  @doc false
+  @spec decode_for_signing(term(), Limits.t()) :: {:ok, t()} | {:error, Error.t()}
+  def decode_for_signing(compact, %Limits{} = limits) when is_binary(compact) do
+    if Limits.valid?(limits), do: decode(compact, limits), else: invalid_limits()
+  end
+
+  def decode_for_signing(_compact, %Limits{} = limits) do
+    if Limits.valid?(limits), do: invalid_type(), else: invalid_limits()
+  end
+
+  def decode_for_signing(_compact, _limits), do: invalid_type()
+
   @doc "Return self-contained same-signer equivocation evidence, never a winner."
   @spec equivocation(term(), term()) ::
           {:ok, AcceptanceEquivocation.t()} | {:error, Error.t()}

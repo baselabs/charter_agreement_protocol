@@ -22,6 +22,7 @@ defmodule CharterAgreementProtocol do
     PartyDescriptor,
     Receipt,
     ReceiptFacts,
+    SigningInput,
     TerminationFacts,
     TerminationNotice
   }
@@ -72,6 +73,31 @@ defmodule CharterAgreementProtocol do
   @spec verify_receipt(term(), ChainFacts.t() | CharterRevision.t(), Limits.t()) ::
           {:ok, ReceiptFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_receipt(compact, context, limits), to: Receipt, as: :verify
+
+  @doc "Build a canonical Party Descriptor signing input without signing."
+  @spec descriptor_signing_input(term()) ::
+          {:ok, SigningInput.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate descriptor_signing_input(input), to: SigningInput, as: :descriptor
+
+  @doc "Build a canonical Receipt signing input without signing."
+  @spec receipt_signing_input(term()) ::
+          {:ok, SigningInput.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate receipt_signing_input(input), to: SigningInput, as: :receipt
+
+  @doc "Build an Acceptance signing input after honest-signer set checks."
+  @spec acceptance_signing_input(term(), ArtifactSet.t()) ::
+          {:ok, SigningInput.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate acceptance_signing_input(input, set), to: SigningInput, as: :acceptance
+
+  @doc "Build a Termination signing input after honest-signer set checks."
+  @spec termination_signing_input(term(), ArtifactSet.t()) ::
+          {:ok, SigningInput.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate termination_signing_input(input, set), to: SigningInput, as: :termination
+
+  @doc "Assemble a validated signing input and exact raw 64-byte signature."
+  @spec assemble_compact(term(), term()) ::
+          {:ok, binary()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate assemble_compact(input, signature), to: SigningInput, as: :assemble
 
   @doc "Build a typed set of charter artifacts without verifying them."
   @spec build_set(term(), term(), term(), term()) ::
