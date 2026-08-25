@@ -36,25 +36,15 @@ defmodule CharterAgreementProtocol.Extension do
   @max_namespace_bytes 512
   @max_extensions 32
   @surfaces [:party_descriptor, :charter_revision, :receipt]
-  @placements %{
-    "com.example/pricing-indexed" => :charter_revision,
-    "com.example/pricing-indexed-observation" => :receipt,
-    "com.example.charter/default" => :receipt,
-    "com.example/identity-vlei" => :party_descriptor,
-    "com.example/identity-eidas-qeaa" => :party_descriptor
-  }
 
   @doc "Validate one extension envelope using the compiled schema set."
-  @spec validate(term(), atom(), pos_integer()) :: {:ok, Outcome.t()} | {:error, Error.t()}
-  def validate(envelope, surface, protocol_revision),
-    do: validate(envelope, surface, protocol_revision, ExtensionRegistry.schemas())
+  @spec validate(term(), atom()) :: {:ok, Outcome.t()} | {:error, Error.t()}
+  def validate(envelope, surface),
+    do: validate(envelope, surface, ExtensionRegistry.schemas())
 
   @doc "Validate with an explicit schema view for digest-pinning and conformance probes."
-  @spec validate(term(), atom(), pos_integer(), map()) ::
-          {:ok, Outcome.t()} | {:error, Error.t()}
-  def validate(envelope, surface, protocol_revision, schemas)
-      when surface in @surfaces and is_integer(protocol_revision) and protocol_revision > 0 and
-             is_map(schemas) do
+  @spec validate(term(), atom(), map()) :: {:ok, Outcome.t()} | {:error, Error.t()}
+  def validate(envelope, surface, schemas) when surface in @surfaces and is_map(schemas) do
     with {:ok, critical, optional} <- envelope(envelope),
          :ok <- namespaces(critical, optional),
          :ok <- cardinality(critical, optional),
@@ -70,8 +60,7 @@ defmodule CharterAgreementProtocol.Extension do
     end
   end
 
-  def validate(_envelope, _surface, _protocol_revision, _schemas),
-    do: error(:invalid_type, ["extensions"])
+  def validate(_envelope, _surface, _schemas), do: error(:invalid_type, ["extensions"])
 
   defp envelope({:object, members}) when is_list(members) do
     case members do
@@ -178,9 +167,10 @@ defmodule CharterAgreementProtocol.Extension do
   defp criticality(_entry, _position), do: error(:extension_criticality_conflict)
 
   defp placement(namespace, surface) do
-    if Map.fetch!(@placements, namespace) == surface,
-      do: :ok,
-      else: error(:extension_scope_invalid)
+    case ExtensionRegistry.placement(namespace) do
+      {:ok, ^surface} -> :ok
+      _missing_or_other_surface -> error(:extension_scope_invalid)
+    end
   end
 
   defp schema(%{schema_digest: nil}, _body, _schemas),

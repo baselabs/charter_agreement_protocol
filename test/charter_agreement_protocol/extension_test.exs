@@ -9,7 +9,7 @@ defmodule CharterAgreementProtocol.ExtensionTest do
   test "a registered critical revision profile validates against its digest-bound schema" do
     envelope = envelope(%{@price_terms => price_terms()}, %{})
 
-    assert {:ok, outcome} = Extension.validate(envelope, :charter_revision, 1)
+    assert {:ok, outcome} = Extension.validate(envelope, :charter_revision)
     assert outcome.critical_extensions == [@price_terms]
     assert outcome.optional_retained == []
     assert outcome.optional_quarantined == []
@@ -20,12 +20,12 @@ defmodule CharterAgreementProtocol.ExtensionTest do
     body = {:object, [{"opaque", {:array, [{:integer, 1}, {:string, "two"}]}}]}
 
     assert_error(
-      Extension.validate(envelope(%{unknown => body}, %{}), :charter_revision, 1),
+      Extension.validate(envelope(%{unknown => body}, %{}), :charter_revision),
       :extension_unknown_critical
     )
 
     assert {:ok, outcome} =
-             Extension.validate(envelope(%{}, %{unknown => body}), :charter_revision, 1)
+             Extension.validate(envelope(%{}, %{unknown => body}), :charter_revision)
 
     assert outcome.optional_retained == [unknown]
     assert outcome.optional_quarantined == [unknown]
@@ -47,26 +47,26 @@ defmodule CharterAgreementProtocol.ExtensionTest do
     ]
 
     for value <- malformed do
-      assert {:error, %Error{}} = Extension.validate(value, :charter_revision, 1)
+      assert {:error, %Error{}} = Extension.validate(value, :charter_revision)
     end
 
     reversed =
       {:object, [{"optional", {:object, []}}, {"critical", {:object, []}}]}
 
-    assert {:ok, _outcome} = Extension.validate(reversed, :charter_revision, 1)
-    assert {:error, %Error{code: :invalid_type}} = Extension.validate(reversed, :other, 1)
+    assert {:ok, _outcome} = Extension.validate(reversed, :charter_revision)
+    assert {:error, %Error{code: :invalid_type}} = Extension.validate(reversed, :other)
     assert {:error, %Error{code: :invalid_type}} = Extension.validate(reversed, :receipt, 0)
 
     malformed_entry =
       {:object, [{"critical", {:object, []}}, {"optional", {:object, [:not_a_pair]}}]}
 
     assert_error(
-      Extension.validate(malformed_entry, :charter_revision, 1),
+      Extension.validate(malformed_entry, :charter_revision),
       :extension_namespace_invalid
     )
 
     assert_error(
-      Extension.validate(envelope(%{}, %{"Bad/namespace" => :null}), :charter_revision, 1),
+      Extension.validate(envelope(%{}, %{"Bad/namespace" => :null}), :charter_revision),
       :extension_namespace_invalid
     )
 
@@ -77,7 +77,7 @@ defmodule CharterAgreementProtocol.ExtensionTest do
          {"optional", {:object, [{@price_terms, :null}]}}
        ]}
 
-    assert_error(Extension.validate(duplicate, :charter_revision, 1), :extension_duplicate)
+    assert_error(Extension.validate(duplicate, :charter_revision), :extension_duplicate)
 
     optional =
       1..33
@@ -87,19 +87,18 @@ defmodule CharterAgreementProtocol.ExtensionTest do
     assert {:error, %Error{code: :cardinality_violation}} =
              Extension.validate(
                {:object, [{"critical", {:object, []}}, {"optional", optional}]},
-               :charter_revision,
-               1
+               :charter_revision
              )
   end
 
   test "criticality, artifact placement, schema availability, and schema digest fail closed" do
     assert_error(
-      Extension.validate(envelope(%{}, %{@price_terms => price_terms()}), :charter_revision, 1),
+      Extension.validate(envelope(%{}, %{@price_terms => price_terms()}), :charter_revision),
       :extension_criticality_conflict
     )
 
     assert_error(
-      Extension.validate(envelope(%{@price_terms => price_terms()}, %{}), :party_descriptor, 1),
+      Extension.validate(envelope(%{@price_terms => price_terms()}, %{}), :party_descriptor),
       :extension_scope_invalid
     )
 
@@ -107,7 +106,6 @@ defmodule CharterAgreementProtocol.ExtensionTest do
       Extension.validate(
         envelope(%{@price_terms => price_terms()}, %{}),
         :charter_revision,
-        1,
         %{}
       ),
       :extension_schema_unavailable
@@ -119,7 +117,6 @@ defmodule CharterAgreementProtocol.ExtensionTest do
       Extension.validate(
         envelope(%{@price_terms => price_terms()}, %{}),
         :charter_revision,
-        1,
         wrong_schema
       ),
       :extension_schema_digest_mismatch
@@ -138,14 +135,13 @@ defmodule CharterAgreementProtocol.ExtensionTest do
 
     for terms <- invalid_terms do
       assert {:error, %Error{}} =
-               Extension.validate(envelope(%{@price_terms => terms}, %{}), :charter_revision, 1)
+               Extension.validate(envelope(%{@price_terms => terms}, %{}), :charter_revision)
     end
 
     assert {:ok, outcome} =
              Extension.validate(
                envelope(%{}, %{@price_observation => price_observation()}),
-               :receipt,
-               1
+               :receipt
              )
 
     assert outcome.optional_retained == [@price_observation]
@@ -156,8 +152,7 @@ defmodule CharterAgreementProtocol.ExtensionTest do
     assert {:error, %Error{}} =
              Extension.validate(
                envelope(%{}, %{@price_observation => invalid_observation}),
-               :receipt,
-               1
+               :receipt
              )
   end
 
@@ -166,13 +161,13 @@ defmodule CharterAgreementProtocol.ExtensionTest do
     body = {:object, [{"opaque", {:string, "not interpreted"}}]}
 
     assert {:ok, outcome} =
-             Extension.validate(envelope(%{}, %{namespace => body}), :party_descriptor, 1)
+             Extension.validate(envelope(%{}, %{namespace => body}), :party_descriptor)
 
     assert outcome.optional_retained == [namespace]
     assert outcome.optional_quarantined == [namespace]
 
     assert_error(
-      Extension.validate(envelope(%{namespace => body}, %{}), :party_descriptor, 1),
+      Extension.validate(envelope(%{namespace => body}, %{}), :party_descriptor),
       :extension_unknown_critical
     )
   end
@@ -181,8 +176,7 @@ defmodule CharterAgreementProtocol.ExtensionTest do
     assert_error(
       Extension.validate(
         envelope(%{"com.example/retired-profile" => :null}, %{}),
-        :charter_revision,
-        1
+        :charter_revision
       ),
       :extension_retired
     )
@@ -190,8 +184,7 @@ defmodule CharterAgreementProtocol.ExtensionTest do
     assert_error(
       Extension.validate(
         envelope(%{}, %{"com.example.charter/default" => :null}),
-        :receipt,
-        1
+        :receipt
       ),
       :extension_schema_unavailable
     )

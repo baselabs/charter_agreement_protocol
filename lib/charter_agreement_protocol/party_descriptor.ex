@@ -211,7 +211,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
          :ok <- unique_active_keys(keys),
          {:ok, hints} <- attestation_hints(values["attestation_hints"]),
          {:ok, extension_outcome} <-
-           Extension.validate(values["extensions"], :party_descriptor, 1),
+           Extension.validate(values["extensions"], :party_descriptor),
          {:ok, effective_from} <- Timestamp.parse(effective_from_value),
          :ok <- genesis_shape(descriptor_number, party_id, previous) do
       {:ok,

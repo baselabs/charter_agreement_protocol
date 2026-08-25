@@ -335,7 +335,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
          {:string, receipt_profile} <- values["receipt_profile"],
          {:ok, supersedes} <- supersedes(values),
          {:ok, extension_outcome} <-
-           Extension.validate(values["extensions"], :charter_revision, 1),
+           Extension.validate(values["extensions"], :charter_revision),
          :ok <- receipt_profile_registered(receipt_profile),
          :ok <- genesis_shape(revision_number, charter_id, previous, supersedes),
          :ok <- ordered_interval(effective_from, effective_until),
@@ -512,10 +512,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
   end
 
   defp receipt_profile_registered(namespace) do
-    case ExtensionRegistry.entry(namespace) do
-      {:ok, %{criticality: :optional, state: :active}} -> :ok
-      _unknown_or_inactive -> revision_error()
-    end
+    if ExtensionRegistry.receipt_profile?(namespace), do: :ok, else: revision_error()
   end
 
   defp genesis_shape(1, nil, nil, []), do: :ok

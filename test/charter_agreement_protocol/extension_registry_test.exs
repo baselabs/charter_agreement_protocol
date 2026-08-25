@@ -69,6 +69,28 @@ defmodule CharterAgreementProtocol.ExtensionRegistryTest do
     refute Map.has_key?(schemas, "com.example/identity-vlei")
   end
 
+  test "one compiled profile table owns placement and receipt-profile eligibility" do
+    assert ExtensionRegistry.placement(@price_terms) == {:ok, :charter_revision}
+    assert ExtensionRegistry.placement(@price_observation) == {:ok, :receipt}
+    assert ExtensionRegistry.placement("com.example/identity-vlei") == {:ok, :party_descriptor}
+    assert ExtensionRegistry.placement("com.example/retired-profile") == {:ok, :charter_revision}
+    assert ExtensionRegistry.placement("org.invalid/unknown") == :error
+
+    assert ExtensionRegistry.receipt_profile?(@price_observation)
+    assert ExtensionRegistry.receipt_profile?("com.example.charter/default")
+    refute ExtensionRegistry.receipt_profile?(@price_terms)
+    refute ExtensionRegistry.receipt_profile?("com.example/identity-vlei")
+    refute ExtensionRegistry.receipt_profile?("org.invalid/unknown")
+  end
+
+  test "promotion records remain compatible with the one supported protocol revision" do
+    for entry <- ExtensionRegistry.entries() do
+      assert is_nil(entry.promoted_at_revision) or
+               (is_integer(entry.promoted_at_revision) and entry.promoted_at_revision == 1 and
+                  entry.criticality == :critical)
+    end
+  end
+
   test "schema and registry digests bind canonical compiled content" do
     for namespace <- [@price_terms, @price_observation] do
       {:ok, entry} = ExtensionRegistry.entry(namespace)

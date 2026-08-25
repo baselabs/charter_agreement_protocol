@@ -251,7 +251,7 @@ defmodule CharterAgreementProtocol.Receipt do
          {:ok, revision_digest} <- required_digest(values, "revision_digest"),
          {:ok, deployment_digest} <- required_digest(values, "deployment_digest"),
          {:ok, grant} <- extract_grant(values["grant"]),
-         {:ok, extension_outcome} <- Extension.validate(values["extensions"], :receipt, 1),
+         {:ok, extension_outcome} <- Extension.validate(values["extensions"], :receipt),
          {:ok, occurred_at} <- Timestamp.parse(occurred_value),
          {:ok, recorded_at} <- Timestamp.parse(recorded_value),
          :ok <- recorded_after_occurred(occurred_at, recorded_at) do
