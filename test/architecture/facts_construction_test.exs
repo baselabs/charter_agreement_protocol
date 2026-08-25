@@ -32,6 +32,20 @@ defmodule CharterAgreementProtocol.Architecture.FactsConstructionTest do
     end
   end
 
+  test "post-construction floor suppression makes the gate red" do
+    for source <- [
+          "%{facts | not_verified: []}",
+          "struct(facts, not_verified: [])",
+          "Map.put(facts, :not_verified, [])",
+          "Map.delete(facts, :not_verified)",
+          "Map.merge(facts, %{not_verified: []})",
+          "Map.put(map, :not_verified, Enum.uniq(@not_verified ++ additions))",
+          "put_in(facts.not_verified, [])"
+        ] do
+      assert ArchitectureScan.facts_constructor_bypass_findings(source) != []
+    end
+  end
+
   test "the shared constructor forces the exact floor and additions cannot suppress it" do
     assert Facts.not_verified_floor() == @floor
 

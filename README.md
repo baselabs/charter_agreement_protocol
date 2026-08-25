@@ -28,9 +28,9 @@ CAP never holds or uses a signing key. Verification rejects noncanonical and
 low-order Ed25519 inputs before invoking the runtime crypto primitive.
 The architecture battery keeps every facts record behind one omission-floor
 constructor, rejects authorization and term-evaluation vocabulary, proves the
-runtime cannot reach filesystems or clocks, requires public specifications and
-non-authorizing module stances, and keeps CAP wire identities disjoint from the
-exact ABP and BAP dependency pins.
+runtime cannot reach filesystems, clocks, or shell/OS escape routes, requires
+public specifications and non-authorizing module stances, and keeps CAP wire
+identities disjoint from the exact ABP and BAP dependency pins.
 See [Protocol foundation](docs/protocol.md).
 
 ## Status

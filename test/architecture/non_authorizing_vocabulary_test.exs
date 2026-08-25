@@ -15,10 +15,17 @@ defmodule CharterAgreementProtocol.Architecture.NonAuthorizingVocabularyTest do
 
   test "the executable-identifier walk observes planted authorization vocabulary" do
     identifiers =
-      ArchitectureScan.identifiers_from_source("def authorize_request, do: :authorized")
+      ArchitectureScan.identifiers_from_source("""
+      def authorize_request(input) when is_map(input), do: :authorized
+      defdelegate authorization_delegate(input), to: Other
+      """)
 
-    assert Enum.any?(identifiers, fn {_kind, name} ->
-             ArchitectureScan.authorization_token?(name)
-           end)
+    offenders =
+      for {kind, name} <- identifiers,
+          ArchitectureScan.authorization_token?(name),
+          do: {kind, name}
+
+    assert {:function, "authorize_request"} in offenders
+    assert {:function, "authorization_delegate"} in offenders
   end
 end

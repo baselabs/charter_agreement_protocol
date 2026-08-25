@@ -62,10 +62,10 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   with production emission sites.
 - Architecture gates that force every facts record through the shared
   twelve-item omission floor; reject authorization and term-evaluation
-  vocabulary; prohibit production filesystem, clock, calendar, and dynamic
-  dispatch calls; require public specifications and non-authorizing module
-  stances; and census CAP, ABP, and BAP separators and protected types for
-  completeness and disjointness.
+  vocabulary; prohibit production filesystem, clock, calendar, shell/OS escape,
+  and dynamic-dispatch calls; require public specifications and
+  non-authorizing module stances; and census CAP, ABP, and BAP separators and
+  protected types for completeness and disjointness.
 - Package scaffold: mix project with the complete `mix quality` battery
   (dependency audits, format check, warnings-as-errors compile,
   `credo --strict`, 100% coverage census, dialyzer, warnings-as-errors

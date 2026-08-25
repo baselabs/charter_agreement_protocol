@@ -212,7 +212,7 @@ defmodule CharterAgreementProtocol.Schema do
       member_map,
       fn
         %Field{constraint: nil}, _value -> false
-        %Field{constraint: constraint}, value -> not constraint_satisfied?(constraint, value)
+        %Field{constraint: constraint}, value -> not constraint_matches?(constraint, value)
       end,
       :constraint_violation
     )
@@ -253,7 +253,7 @@ defmodule CharterAgreementProtocol.Schema do
   end
 
   defp validate_cross_field(%Definition{} = definition, member_map) do
-    if Enum.all?(definition.cross_field, &cross_rule_satisfied?(&1, member_map)),
+    if Enum.all?(definition.cross_field, &cross_rule_matches?(&1, member_map)),
       do: :ok,
       else: error(:cross_field_invalid, [definition.name])
   end
@@ -297,27 +297,27 @@ defmodule CharterAgreementProtocol.Schema do
 
   defp valid_name?(name), do: is_binary(name) and name != ""
 
-  defp constraint_satisfied?({:integer_range, minimum, maximum}, {:integer, value}),
+  defp constraint_matches?({:integer_range, minimum, maximum}, {:integer, value}),
     do: value >= minimum and value <= maximum
 
-  defp constraint_satisfied?({:string_bytes, minimum, maximum}, {:string, value}),
+  defp constraint_matches?({:string_bytes, minimum, maximum}, {:string, value}),
     do: byte_size(value) >= minimum and byte_size(value) <= maximum
 
-  defp constraint_satisfied?({:one_of, values}, value), do: value in values
-  defp constraint_satisfied?({:matches, regex}, {:string, value}), do: Regex.match?(regex, value)
+  defp constraint_matches?({:one_of, values}, value), do: value in values
+  defp constraint_matches?({:matches, regex}, {:string, value}), do: Regex.match?(regex, value)
 
-  defp constraint_satisfied?({:all, constraints}, value),
-    do: Enum.all?(constraints, &constraint_satisfied?(&1, value))
+  defp constraint_matches?({:all, constraints}, value),
+    do: Enum.all?(constraints, &constraint_matches?(&1, value))
 
-  defp constraint_satisfied?(_constraint, _value), do: false
+  defp constraint_matches?(_constraint, _value), do: false
 
-  defp cross_rule_satisfied?({:field_equals, field, value}, members),
+  defp cross_rule_matches?({:field_equals, field, value}, members),
     do: Map.get(members, field) == value
 
-  defp cross_rule_satisfied?({:fields_equal, left, right}, members),
+  defp cross_rule_matches?({:fields_equal, left, right}, members),
     do: Map.fetch(members, left) == Map.fetch(members, right) and Map.has_key?(members, left)
 
-  defp cross_rule_satisfied?({:ordered, left, operator, right}, members) do
+  defp cross_rule_matches?({:ordered, left, operator, right}, members) do
     with {:ok, left_value} <- Map.fetch(members, left),
          {:ok, right_value} <- Map.fetch(members, right) do
       ordered?(left_value, operator, right_value)
@@ -326,10 +326,10 @@ defmodule CharterAgreementProtocol.Schema do
     end
   end
 
-  defp cross_rule_satisfied?({:allowed, fields, tuples}, members),
+  defp cross_rule_matches?({:allowed, fields, tuples}, members),
     do: Enum.map(fields, &Map.get(members, &1)) in tuples
 
-  defp cross_rule_satisfied?({:requires, field, value, required_field}, members) do
+  defp cross_rule_matches?({:requires, field, value, required_field}, members) do
     Map.get(members, field) != value or Map.has_key?(members, required_field)
   end
 

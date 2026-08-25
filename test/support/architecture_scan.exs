@@ -57,8 +57,18 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
   def authorization_token?(name) when is_binary(name),
     do: Regex.match?(~r/authoris|authoriz/i, name)
 
-  def term_evaluation_token?(name) when is_binary(name),
-    do: Regex.match?(~r/(^|_)(compliant|within_limit|permitted|satisfied|in_band)($|_)/i, name)
+  def term_evaluation_token?(name) when is_binary(name) do
+    normalized =
+      name
+      |> Macro.underscore()
+      |> String.trim_trailing("?")
+      |> String.trim_trailing("!")
+
+    Regex.match?(
+      ~r/(^|_)(compliant|within_limits?|permitted|satisfied|in_band)($|_)/i,
+      normalized
+    )
+  end
 
   def string_literals(paths) when is_list(paths) do
     paths
@@ -202,16 +212,28 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
   def facts_constructor_bypass_findings(input) do
     ast = input |> quoted() |> strip_fact_read_patterns()
 
+    allow_floor_union? =
+      input == "lib/charter_agreement_protocol/facts.ex" and File.regular?(input)
+
     {_ast, findings} =
       Macro.prewalk(ast, [], fn node, acc ->
         case facts_constructor_bypass(node) do
-          nil -> {node, acc}
-          finding -> {node, [finding | acc]}
+          nil ->
+            {node, acc}
+
+          finding ->
+            {node, add_facts_finding(finding, node, acc, allow_floor_union?)}
         end
       end)
 
     Enum.reverse(findings)
   end
+
+  defp add_facts_finding(:facts_floor_update = finding, node, acc, true) do
+    if canonical_floor_union?(node), do: acc, else: [finding | acc]
+  end
+
+  defp add_facts_finding(finding, _node, acc, _allow_floor_union?), do: [finding | acc]
 
   defp package_source_ref?(name),
     do: Regex.match?(~r/\bsource_ref\b.*\bv(?:#\{@version\}|\d)/i, name)
@@ -321,7 +343,78 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
     if fact_module?(segments), do: :applied_facts_constructor
   end
 
+  defp facts_constructor_bypass({:%{}, _, [{:|, _, [_facts, fields]}]}) do
+    if contains_not_verified?(fields), do: :facts_floor_update
+  end
+
+  defp facts_constructor_bypass({constructor, _, [_facts, attrs]})
+       when constructor in [:struct, :struct!] do
+    if contains_not_verified?(attrs), do: :facts_floor_update
+  end
+
+  defp facts_constructor_bypass(
+         {{:., _, [{:__aliases__, _, caller}, constructor]}, _, [_facts, attrs]}
+       )
+       when constructor in [:struct, :struct!] do
+    if normalize_elixir_prefix(caller) == [:Kernel] and contains_not_verified?(attrs),
+      do: :facts_floor_update
+  end
+
+  defp facts_constructor_bypass({{:., _, [{:__aliases__, _, [:Map]}, operation]}, _, arguments})
+       when operation in [
+              :delete,
+              :drop,
+              :get_and_update,
+              :get_and_update!,
+              :merge,
+              :put,
+              :put_new,
+              :put_new_lazy,
+              :replace,
+              :replace!,
+              :replace_lazy,
+              :take,
+              :update,
+              :update!
+            ] do
+    if contains_not_verified?(arguments), do: :facts_floor_update
+  end
+
+  defp facts_constructor_bypass({operation, _, [access | _arguments]})
+       when operation in [:get_and_update_in, :pop_in, :put_in, :update_in] do
+    if contains_not_verified?(access), do: :facts_floor_update
+  end
+
   defp facts_constructor_bypass(_node), do: nil
+
+  defp contains_not_verified?(:not_verified), do: true
+
+  defp contains_not_verified?(tuple) when is_tuple(tuple),
+    do: tuple |> Tuple.to_list() |> Enum.any?(&contains_not_verified?/1)
+
+  defp contains_not_verified?(list) when is_list(list),
+    do: Enum.any?(list, &contains_not_verified?/1)
+
+  defp contains_not_verified?(_other), do: false
+
+  defp canonical_floor_union?(
+         {{:., _, [{:__aliases__, _, [:Map]}, :put]}, _,
+          [
+            _map,
+            :not_verified,
+            {{:., _, [{:__aliases__, _, [:Enum]}, :uniq]}, _,
+             [
+               {:++, _,
+                [
+                  {:@, _, [{:not_verified, _, _}]},
+                  {:additions, _, _}
+                ]}
+             ]}
+          ]}
+       ),
+       do: true
+
+  defp canonical_floor_union?(_node), do: false
 
   defp renamed_constructor(nil), do: nil
   defp renamed_constructor({:__aliases__, _, [:Error]}), do: nil
@@ -458,9 +551,16 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
     {node, Enum.reverse(names) ++ acc}
   end
 
-  defp collect({kind, _, [{name, _, _} | _]} = node, acc)
-       when kind in [:def, :defp, :defmacro, :defmacrop] and is_atom(name),
-       do: {node, [{:function, Atom.to_string(name)} | acc]}
+  defp collect({kind, _, [head | _]} = node, acc)
+       when kind in [:def, :defdelegate, :defmacro, :defmacrop, :defp] do
+    case definition_name(head) do
+      name when is_atom(name) and not is_nil(name) ->
+        {node, [{:function, Atom.to_string(name)} | acc]}
+
+      nil ->
+        {node, acc}
+    end
+  end
 
   defp collect({kind, _, [name | _]} = node, acc)
        when kind in [:test, :describe] and is_binary(name),
@@ -470,6 +570,10 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
     do: {atom, [{:atom, Atom.to_string(atom)} | acc]}
 
   defp collect(node, acc), do: {node, acc}
+
+  defp definition_name({:when, _, [head | _guards]}), do: definition_name(head)
+  defp definition_name({name, _, _arguments}) when is_atom(name), do: name
+  defp definition_name(_head), do: nil
 
   defp collect_string(value, acc) when is_binary(value), do: {value, [value | acc]}
   defp collect_string(node, acc), do: {node, acc}
@@ -482,6 +586,14 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
 
   defp collect_remote({:apply_last, _arity, _deallocate}, _self, acc),
     do: [{:erlang, :apply} | acc]
+
+  defp collect_remote(tuple, self, acc)
+       when is_tuple(tuple) and tuple_size(tuple) > 0 and
+              elem(tuple, 0) in [:call_fun, :call_fun2] do
+    tuple
+    |> Tuple.to_list()
+    |> Enum.reduce([{:erlang, :call_fun} | acc], &collect_remote(&1, self, &2))
+  end
 
   defp collect_remote({:call, _arity, {module, function, _call_arity}} = instruction, self, acc)
        when is_atom(module) and is_atom(function) do

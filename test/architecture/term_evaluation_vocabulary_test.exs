@@ -13,10 +13,18 @@ defmodule CharterAgreementProtocol.Architecture.TermEvaluationVocabularyTest do
     assert offenders == []
   end
 
-  test "every forbidden verdict family is observable by the identifier gate" do
-    for token <- ~w(compliant within_limit permitted satisfied in_band) do
-      identifiers =
-        ArchitectureScan.identifiers_from_source("def #{token}, do: :#{token}")
+  test "guarded, predicate, plural, and CamelCase verdict forms are observable" do
+    sources = [
+      "def compliant?(input) when is_map(input), do: true",
+      "def within_limits!, do: true",
+      "defdelegate permitted(input), to: Other",
+      "def satisfied?, do: true",
+      "def in_band?, do: true",
+      "defmodule TermsSatisfiedView do end"
+    ]
+
+    for source <- sources do
+      identifiers = ArchitectureScan.identifiers_from_source(source)
 
       assert Enum.any?(identifiers, fn {_kind, name} ->
                ArchitectureScan.term_evaluation_token?(name)
