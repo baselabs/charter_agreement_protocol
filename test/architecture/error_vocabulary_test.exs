@@ -63,6 +63,10 @@ defmodule CharterAgreementProtocol.Architecture.ErrorVocabularyTest do
            ) != []
 
     assert ArchitectureScan.error_constructor_bypass_findings(
+             ":erlang.apply(Error, :new, [:invented, [], rejected])"
+           ) != []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
              "Kernel.struct(Error, code: :invented, subject: [])"
            ) != []
 
@@ -71,6 +75,14 @@ defmodule CharterAgreementProtocol.Architecture.ErrorVocabularyTest do
            ) != []
 
     assert ArchitectureScan.error_constructor_bypass_findings("%Error{} = error") == []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "%CharterAgreementProtocol.Error{code: code} = error"
+           ) == []
+
+    assert ArchitectureScan.error_constructor_bypass_findings(
+             "Function.capture(CharterAgreementProtocol.Error, :new, 3)"
+           ) != []
 
     assert ArchitectureScan.error_constructor_bypass_findings(
              "alias CharterAgreementProtocol.Error\nError.new(:invalid_type)"
@@ -91,9 +103,19 @@ defmodule CharterAgreementProtocol.Architecture.ErrorVocabularyTest do
              ~S|Error.new(:invalid_type, [], "protocol-detail")|
            ) == []
 
+    assert ArchitectureScan.unsafe_error_detail_findings(
+             ~S|Elixir.CharterAgreementProtocol.Error.new(:invalid_type, [], rejected_input)|
+           ) != []
+
     assert Enum.flat_map(
              ArchitectureScan.source_files(["lib"]),
              &ArchitectureScan.unsafe_error_detail_findings/1
            ) == []
+  end
+
+  test "Elixir-prefixed direct calls remain visible to the code-vocabulary census" do
+    assert ArchitectureScan.error_code_calls(
+             ~S|Elixir.CharterAgreementProtocol.Error.new(:invalid_type)|
+           ) == [:invalid_type]
   end
 end

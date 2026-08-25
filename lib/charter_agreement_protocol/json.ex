@@ -49,7 +49,10 @@ defmodule CharterAgreementProtocol.Json do
       array_push: fn value, items -> [sink(value) | items] end,
       array_finish: fn items, parent -> {{:array, Enum.reverse(items)}, parent} end,
       object_start: fn _parent -> [] end,
-      object_push: fn {:string, key}, value, members -> [{key, sink(value)} | members] end,
+      object_push: fn {:string, key}, value, members ->
+        {:string, key} = sink({:string, key})
+        [{key, sink(value)} | members]
+      end,
       object_finish: fn members, parent ->
         ordered = Enum.reverse(members)
         reject_duplicates(ordered)

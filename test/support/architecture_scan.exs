@@ -77,17 +77,12 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
   end
 
   def error_code_calls(path) do
-    ast = path |> File.read!() |> Code.string_to_quoted!(file: path)
+    ast = quoted(path)
 
     {_ast, calls} =
       Macro.prewalk(ast, [], fn
-        {{:., _, [{:__aliases__, _, [:Error]}, :new]}, _, [code | _]} = node, acc ->
-          {node, [code | acc]}
-
-        {{:., _, [{:__aliases__, _, [:CharterAgreementProtocol, :Error]}, :new]}, _, [code | _]} =
-            node,
-        acc ->
-          {node, [code | acc]}
+        {{:., _, [{:__aliases__, _, segments}, :new]}, _, [code | _]} = node, acc ->
+          if error_alias?(segments), do: {node, [code | acc]}, else: {node, acc}
 
         node, acc ->
           {node, acc}
@@ -97,7 +92,7 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
   end
 
   def error_constructor_bypass_findings(input) do
-    ast = quoted(input)
+    ast = input |> quoted() |> strip_read_patterns()
 
     {_ast, findings} =
       Macro.prewalk(ast, [], fn node, acc ->
@@ -115,14 +110,11 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
 
     {_ast, findings} =
       Macro.prewalk(ast, [], fn
-        {{:., _, [{:__aliases__, _, [:Error]}, :new]}, _, [_code, _subject, detail]} = node,
+        {{:., _, [{:__aliases__, _, segments}, :new]}, _, [_code, _subject, detail]} = node,
         acc ->
-          {node, maybe_unsafe_detail(detail, acc)}
-
-        {{:., _, [{:__aliases__, _, [:CharterAgreementProtocol, :Error]}, :new]}, _,
-         [_code, _subject, detail]} = node,
-        acc ->
-          {node, maybe_unsafe_detail(detail, acc)}
+          if error_alias?(segments),
+            do: {node, maybe_unsafe_detail(detail, acc)},
+            else: {node, acc}
 
         node, acc ->
           {node, acc}
@@ -175,6 +167,12 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
   end
 
   defp error_constructor_bypass(
+         {{:., _, [:erlang, :apply]}, _, [{:__aliases__, _, segments}, :new, _arguments]}
+       ) do
+    if error_alias?(segments), do: :applied_error_constructor
+  end
+
+  defp error_constructor_bypass(
          {{:., _, [{:__aliases__, _, [:Kernel]}, constructor]}, _,
           [{:__aliases__, _, segments} | _arguments]}
        )
@@ -188,6 +186,13 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
     if error_alias?(segments), do: :captured_error_constructor
   end
 
+  defp error_constructor_bypass(
+         {{:., _, [{:__aliases__, _, [:Function]}, :capture]}, _,
+          [{:__aliases__, _, segments}, :new, _arity]}
+       ) do
+    if error_alias?(segments), do: :captured_error_constructor
+  end
+
   defp error_constructor_bypass(_node), do: nil
 
   defp renamed_constructor(nil), do: nil
@@ -196,6 +201,23 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
 
   defp normalize_elixir_prefix([Elixir | rest]), do: rest
   defp normalize_elixir_prefix(segments), do: segments
+
+  defp strip_read_patterns(ast) do
+    Macro.prewalk(ast, fn
+      {:=, meta, [left, right]} -> {:=, meta, [strip_error_fields(left), right]}
+      node -> node
+    end)
+  end
+
+  defp strip_error_fields(ast) do
+    Macro.prewalk(ast, fn
+      {:%, meta, [{:__aliases__, _, segments} = name, {:%{}, fields_meta, _fields}]} = node ->
+        if error_alias?(segments), do: {:%, meta, [name, {:%{}, fields_meta, []}]}, else: node
+
+      node ->
+        node
+    end)
+  end
 
   defp strip_docs(ast) do
     Macro.prewalk(ast, fn
