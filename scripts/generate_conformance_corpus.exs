@@ -454,7 +454,146 @@ revision_cases = [
   )
 ]
 
-cases = cases ++ descriptor_cases ++ revision_cases
+acceptance_compact = fn claims, kid, private ->
+  protected = canonical.(%{"alg" => "EdDSA", "kid" => kid, "typ" => "cap+acceptance"})
+  payload = canonical.(claims)
+  protected_segment = Base64Url.encode(protected)
+  payload_segment = Base64Url.encode(payload)
+  message = protected_segment <> "." <> payload_segment
+  signature = :crypto.sign(:eddsa, :none, message, [private, :ed25519])
+
+  %{
+    compact: message <> "." <> Base64Url.encode(signature),
+    digest: :acceptance_content |> Digest.hash(payload) |> Digest.to_tagged()
+  }
+end
+
+acceptance_claims = fn revision, content_digest ->
+  base = %{
+    "protocol_revision" => 1,
+    "charter_id" => revision["charter_id"] || content_digest,
+    "revision_number" => revision["revision_number"],
+    "revision_digest" => content_digest,
+    "party_descriptor_digest" => genesis.digest,
+    "party_role" => "issuer",
+    "accepted_at" => "2026-08-25T13:00:00Z"
+  }
+
+  if revision["revision_number"] == 1,
+    do: base,
+    else: Map.put(base, "prev_revision_digest", revision["prev_revision_digest"])
+end
+
+acceptance_claims_value = acceptance_claims.(revision_claims, revision_digest)
+
+acceptance =
+  acceptance_compact.(acceptance_claims_value, "genesis-key", genesis_private)
+
+mismatched_acceptance =
+  acceptance_claims_value
+  |> Map.put("revision_digest", "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+  |> acceptance_compact.("genesis-key", genesis_private)
+
+wrong_signed_acceptance =
+  acceptance_compact.(acceptance_claims_value, "genesis-key", wrong_private)
+
+successor_revision = fn legal ->
+  revision_claims
+  |> Map.merge(%{
+    "charter_id" => revision_digest,
+    "revision_number" => 2,
+    "prev_revision_digest" => revision_digest,
+    "effective_from" => "2026-08-25T12:00:01Z",
+    "legal_text" => %{
+      "content_digest" => :legal_text |> Digest.hash(legal) |> Digest.to_tagged(),
+      "media_type" => "text/plain"
+    }
+  })
+end
+
+left_revision = successor_revision.("left terms\n")
+right_revision = successor_revision.("right terms\n")
+left_revision_bytes = canonical.(left_revision)
+right_revision_bytes = canonical.(right_revision)
+
+left_revision_digest =
+  :charter_revision_content |> Digest.hash(left_revision_bytes) |> Digest.to_tagged()
+
+right_revision_digest =
+  :charter_revision_content |> Digest.hash(right_revision_bytes) |> Digest.to_tagged()
+
+left_acceptance =
+  left_revision
+  |> acceptance_claims.(left_revision_digest)
+  |> acceptance_compact.("genesis-key", genesis_private)
+
+right_acceptance =
+  right_revision
+  |> acceptance_claims.(right_revision_digest)
+  |> acceptance_compact.("genesis-key", genesis_private)
+
+acceptance_cases = [
+  %{
+    "id" => "acceptance-valid",
+    "surface" => "acceptance.verify",
+    "class" => "valid",
+    "input" => %{
+      "compact" => acceptance.compact,
+      "revision_text" => revision_bytes,
+      "descriptor_compacts" => [genesis.compact]
+    },
+    "expect" =>
+      valid.(%{
+        "acceptance_digest" => acceptance.digest,
+        "revision_digest" => revision_digest,
+        "party_descriptor_digest" => genesis.digest,
+        "descriptor_position" => "head"
+      })
+  },
+  %{
+    "id" => "acceptance-claim-mismatch",
+    "surface" => "acceptance.verify",
+    "class" => "invalid_constraint",
+    "input" => %{
+      "compact" => mismatched_acceptance.compact,
+      "revision_text" => revision_bytes,
+      "descriptor_compacts" => [genesis.compact]
+    },
+    "expect" => invalid.("acceptance_claims_mismatch")
+  },
+  %{
+    "id" => "acceptance-wrong-signature",
+    "surface" => "acceptance.verify",
+    "class" => "signature_invalid",
+    "input" => %{
+      "compact" => wrong_signed_acceptance.compact,
+      "revision_text" => revision_bytes,
+      "descriptor_compacts" => [genesis.compact]
+    },
+    "expect" => invalid.("signature_invalid")
+  },
+  %{
+    "id" => "acceptance-same-signer-equivocation",
+    "surface" => "acceptance.equivocation",
+    "class" => "equivocation",
+    "input" => %{
+      "descriptor_compacts" => [genesis.compact],
+      "signed_revisions" => [
+        %{"compact" => left_acceptance.compact, "revision_text" => left_revision_bytes},
+        %{"compact" => right_acceptance.compact, "revision_text" => right_revision_bytes}
+      ]
+    },
+    "expect" =>
+      valid.(%{
+        "kind" => "acceptance_equivocation",
+        "revision_number" => 2,
+        "revision_digests" => Enum.sort([left_revision_digest, right_revision_digest]),
+        "winner" => nil
+      })
+  }
+]
+
+cases = cases ++ descriptor_cases ++ revision_cases ++ acceptance_cases
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 

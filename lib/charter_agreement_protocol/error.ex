@@ -49,7 +49,10 @@ defmodule CharterAgreementProtocol.Error do
     :descriptor_invalid,
     :descriptor_key_invalid,
     :descriptor_chain_invalid,
-    :revision_invalid
+    :revision_invalid,
+    :acceptance_invalid,
+    :acceptance_claims_mismatch,
+    :acceptance_equivocation_invalid
   ]
 
   @type code ::
@@ -91,6 +94,9 @@ defmodule CharterAgreementProtocol.Error do
           | :descriptor_key_invalid
           | :descriptor_chain_invalid
           | :revision_invalid
+          | :acceptance_invalid
+          | :acceptance_claims_mismatch
+          | :acceptance_equivocation_invalid
   @type subject :: [binary() | non_neg_integer()]
   @type detail :: nil | atom() | binary()
   @type t :: %__MODULE__{code: code(), subject: subject(), detail: detail()}

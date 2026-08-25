@@ -10,6 +10,8 @@ defmodule CharterAgreementProtocol do
   """
 
   alias CharterAgreementProtocol.{
+    Acceptance,
+    AcceptanceFacts,
     CharterRevision,
     DescriptorChain,
     DescriptorFacts,
@@ -44,4 +46,11 @@ defmodule CharterAgreementProtocol do
   @doc "Return one decoded Charter Revision's content digest."
   @spec revision_digest(CharterRevision.t()) :: binary()
   defdelegate revision_digest(revision), to: CharterRevision, as: :digest
+
+  @doc "Verify one Acceptance against exact revision and descriptor-chain facts."
+  @spec verify_acceptance(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t()) ::
+          {:ok, AcceptanceFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate verify_acceptance(compact, revision, descriptor_chain, limits),
+    to: Acceptance,
+    as: :verify
 end

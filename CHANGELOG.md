@@ -28,6 +28,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 - Closed unsigned Charter Revision decoding with raw-byte legal-text digests,
   mandatory precedence, bounded temporal and termination declarations, exact
   ABP 0.1.1 deployment identities, and executable cross-language corpus cells.
+- Attached Acceptance verification with exact revision/party claim equality,
+  reverified descriptor key context, view-relative signer position, and
+  same-signer equivocation evidence that never selects a branch.
 - Architecture gates that reject implementation-version tokens everywhere
   except the exact Hex package source reference, reject runtime dependency
   drift away from OTP `:crypto`, and keep declared error codes synchronized

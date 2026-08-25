@@ -2,8 +2,8 @@
 
 This document defines the implemented byte-level, schema-validation, corpus,
 Party Descriptor, and Charter Revision surfaces of Charter Agreement Protocol.
-Acceptances, terminations, governing-chain evaluation, receipts, and
-conformance reports are not part of the implemented surface yet.
+Terminations, governing-chain evaluation, receipts, and conformance reports are
+not part of the implemented surface yet.
 
 ## Tagged JSON values
 
@@ -198,6 +198,32 @@ extensions remain empty until the compiled registry surface lands. Unknown
 members, missing precedence, duplicate roles, invalid cardinalities, malformed
 digests, widened identifiers, and non-canonical bytes fail closed with
 value-free errors.
+
+## Acceptances
+
+An Acceptance is an attached compact JWS with protected type
+`cap+acceptance`. Its eight closed claims bind the protocol revision, charter
+identity, revision number and digest, conditional predecessor digest, Party
+Descriptor digest and role, and a pure UTC `accepted_at` timestamp.
+
+Verification re-decodes the retained revision bytes and reconstructs the signed
+descriptor view from retained lineages. It requires exact equality with the
+referenced revision's chain coordinates and exact membership in its party
+bindings, resolves the protected `kid` only against a key active in the pinned
+descriptor, and verifies Ed25519 over the attached JWS signing input. A pinned
+descriptor may be head, superseded, or contested; that position is retained as
+a fact and never converted into a freshness-policy decision.
+
+Two individually verified acceptances from the same Party Descriptor and role
+at one charter/revision number, but over different revision digests, produce
+`AcceptanceEquivocation` evidence containing both signed content and revision
+digests. The evidence has no winner. Acceptances by different parties on
+competing branches are set-level contested-view evidence, not proof that one
+signer equivocated.
+
+Acceptance verification proves exact signed assent claims. It does not prove
+legal validity, view completeness, current key revocation, authorization, or
+term satisfaction.
 
 ## Architecture boundaries
 

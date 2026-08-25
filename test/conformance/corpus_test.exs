@@ -5,6 +5,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   alias CharterAgreementProtocol.ConformanceTest.Builder
 
   alias CharterAgreementProtocol.{
+    Acceptance,
     CharterRevision,
     DescriptorChain,
     Error,
@@ -188,6 +189,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
     assert_verify_surface_expectations(cases)
     assert_revision_expectations(cases)
+    assert_acceptance_expectations(cases)
   end
 
   defp shipped_files do
@@ -239,6 +241,62 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp projected_revision_result({:error, %Error{code: code}}),
     do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+
+  defp assert_acceptance_expectations(cases) do
+    acceptance_cases = Enum.filter(cases, &String.starts_with?(&1["surface"], "acceptance."))
+    assert length(acceptance_cases) == 4
+    Enum.each(acceptance_cases, &assert_acceptance_case/1)
+  end
+
+  defp assert_acceptance_case(%{"surface" => "acceptance.verify"} = one) do
+    input = one["input"]
+    {:ok, revision} = CharterRevision.decode(input["revision_text"], Limits.default())
+    {:ok, chain} = DescriptorChain.verify(input["descriptor_compacts"], Limits.default())
+    actual = Acceptance.verify(input["compact"], revision, chain, Limits.default())
+    assert projected_acceptance_result(actual) == one["expect"]
+  end
+
+  defp assert_acceptance_case(%{"surface" => "acceptance.equivocation"} = one) do
+    input = one["input"]
+    {:ok, chain} = DescriptorChain.verify(input["descriptor_compacts"], Limits.default())
+
+    facts =
+      Enum.map(input["signed_revisions"], fn signed ->
+        {:ok, revision} = CharterRevision.decode(signed["revision_text"], Limits.default())
+        {:ok, facts} = Acceptance.verify(signed["compact"], revision, chain, Limits.default())
+        facts
+      end)
+
+    actual = Acceptance.equivocation(Enum.at(facts, 0), Enum.at(facts, 1))
+    assert projected_equivocation_result(actual) == one["expect"]
+  end
+
+  defp projected_acceptance_result({:ok, facts}) do
+    %{
+      "status" => "valid",
+      "output" => %{
+        "acceptance_digest" => facts.acceptance_digest,
+        "revision_digest" => facts.revision_digest,
+        "party_descriptor_digest" => facts.party_descriptor_digest,
+        "descriptor_position" => Atom.to_string(facts.descriptor_position)
+      }
+    }
+  end
+
+  defp projected_acceptance_result({:error, %Error{code: code}}),
+    do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+
+  defp projected_equivocation_result({:ok, evidence}) do
+    %{
+      "status" => "valid",
+      "output" => %{
+        "kind" => Atom.to_string(evidence.kind),
+        "revision_number" => evidence.revision_number,
+        "revision_digests" => evidence.revision_digests,
+        "winner" => evidence.winner
+      }
+    }
+  end
 
   defp assert_verify_case(%{"surface" => "party_descriptor.verify"} = one) do
     actual = PartyDescriptor.verify(one["input"]["compact"], nil, Limits.default())

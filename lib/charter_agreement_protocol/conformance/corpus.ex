@@ -24,7 +24,9 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "schema.validate",
     "party_descriptor.verify",
     "descriptor_chain.verify",
-    "charter_revision.decode"
+    "charter_revision.decode",
+    "acceptance.verify",
+    "acceptance.equivocation"
   ]
 
   @classes [
@@ -43,7 +45,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "signature_invalid",
     "chain_invalid",
     "descriptor_superseded",
-    "descriptor_fork"
+    "descriptor_fork",
+    "equivocation"
   ]
 
   @floor %{
@@ -82,6 +85,16 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       required:
         ~w(valid invalid_type invalid_constraint invalid_cardinality unknown_member missing_required),
       n_a: "signature, chain, and foundational codec-only behavior are outside revision decoding"
+    },
+    "acceptance.verify" => %{
+      required: ~w(valid invalid_constraint signature_invalid),
+      n_a:
+        "set-level equivocation and foundational codec-only behavior are outside one acceptance"
+    },
+    "acceptance.equivocation" => %{
+      required: ~w(equivocation),
+      n_a:
+        "single-artifact and foundational codec-only behavior are outside paired acceptance evidence"
     }
   }
 
