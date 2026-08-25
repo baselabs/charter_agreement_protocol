@@ -165,7 +165,7 @@ defmodule CharterAgreementProtocol.ExtensionRegistry do
       criticality: :optional,
       state: :active,
       schema_digest: nil,
-      a2a_uri: "https://example.com/charter-profiles/charter/default",
+      a2a_uri: "https://example.com/charter-profiles/com.example.charter/default",
       promoted_at_revision: nil,
       schema: nil,
       surface: :receipt,

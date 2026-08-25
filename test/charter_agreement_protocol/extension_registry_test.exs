@@ -40,6 +40,9 @@ defmodule CharterAgreementProtocol.ExtensionRegistryTest do
     assert Enum.all?(entries, &String.starts_with?(&1.namespace, "com.example"))
     assert Enum.all?(entries, &String.starts_with?(&1.a2a_uri, "https://example.com/"))
     assert Enum.all?(entries, &(&1.owner == "Example Charter Profiles"))
+
+    assert Enum.find(entries, &(&1.namespace == "com.example.charter/default")).a2a_uri ==
+             "https://example.com/charter-profiles/com.example.charter/default"
   end
 
   test "registry resolution, schemas, and lifecycle data are closed" do
