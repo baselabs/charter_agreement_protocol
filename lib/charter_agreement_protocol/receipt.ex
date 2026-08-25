@@ -8,6 +8,10 @@ defmodule CharterAgreementProtocol.Receipt do
   charter key or governance view; its facts add `:signature` to `not_verified`
   and report governance as undetermined.
 
+  Only bilaterally accepted revision facts contribute role-to-descriptor
+  mappings in chain context. Proposed revision bytes are unauthenticated data
+  and cannot promote a counterparty key into another charter role.
+
   Grant and deployment fields prove exact digest naming only. They never
   establish live authority, execution, or effect truth.
   """
@@ -387,7 +391,11 @@ defmodule CharterAgreementProtocol.Receipt do
   end
 
   defp project(receipt, {:chain, chain}) do
-    case Enum.find(chain.revision_facts, &(&1.revision_digest == receipt.revision_digest)) do
+    case Enum.find(
+           chain.revision_facts,
+           &(&1.acceptance_status == :accepted and
+               &1.revision_digest == receipt.revision_digest)
+         ) do
       %RevisionFacts{revision: revision} ->
         with :ok <- recognized_claims(receipt, revision) do
           {:ok,
@@ -448,6 +456,7 @@ defmodule CharterAgreementProtocol.Receipt do
 
   defp chain_roles(chain) do
     chain.revision_facts
+    |> Enum.filter(&(&1.acceptance_status == :accepted))
     |> Enum.flat_map(& &1.revision.parties)
     |> MapSet.new(& &1.role)
   end
@@ -476,12 +485,17 @@ defmodule CharterAgreementProtocol.Receipt do
 
   defp signing_keys(chain, receipt) do
     recognized_revision? =
-      Enum.any?(chain.revision_facts, &(&1.revision_digest == receipt.revision_digest))
+      Enum.any?(
+        chain.revision_facts,
+        &(&1.acceptance_status == :accepted and
+            &1.revision_digest == receipt.revision_digest)
+      )
 
     descriptor_digests =
       chain.revision_facts
       |> Enum.filter(fn facts ->
-        facts.revision_digest == receipt.revision_digest or not recognized_revision?
+        facts.acceptance_status == :accepted and
+          (facts.revision_digest == receipt.revision_digest or not recognized_revision?)
       end)
       |> Enum.flat_map(fn facts ->
         facts.revision.parties

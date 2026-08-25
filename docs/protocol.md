@@ -320,6 +320,9 @@ verify, and governance is recomputed at `occurred_at`. An unrecognized revision
 digest at or below the accepted head returns
 `chain_conflict: :fork_evidenced`; no branch is selected. Governance comparison
 is `:match`, `:mismatch`, or `:undetermined` when the view is contested.
+Only bilaterally accepted revisions contribute recognized revision status,
+role membership, or role-to-descriptor key resolution. A proposed revision is
+unsigned data and cannot swap roles to promote a counterparty key.
 
 The approved revision-only API form can prove structural revision/deployment
 equality but has no descriptor key or chain view. Its facts therefore add

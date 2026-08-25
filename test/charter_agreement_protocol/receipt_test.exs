@@ -304,6 +304,43 @@ defmodule CharterAgreementProtocol.ReceiptTest do
              CharterAgreementProtocol.verify_receipt(compact, context.chain, context.limits)
   end
 
+  test "a proposed role-swapped revision cannot promote the counterparty key", context do
+    role_swapped =
+      ChainFixture.successor(context.setup.genesis, 2,
+        claims: %{
+          "parties" => [
+            %{
+              "party_descriptor_digest" => context.setup.acceptor.digest,
+              "role" => "issuer"
+            },
+            %{
+              "party_descriptor_digest" => context.setup.issuer.digest,
+              "role" => "acceptor"
+            }
+          ]
+        }
+      )
+
+    assert {:ok, chain} =
+             CharterAgreementProtocol.verify_chain(
+               [context.setup.genesis.bytes, role_swapped.bytes],
+               context.setup.genesis
+               |> ChainFixture.dual_acceptances(context.setup)
+               |> Enum.map(& &1.compact),
+               ChainFixture.descriptors(context.setup),
+               [],
+               context.limits
+             )
+
+    compact =
+      role_swapped
+      |> ReceiptFixture.claims()
+      |> ReceiptFixture.compact(context.setup.acceptor)
+
+    assert {:error, %Error{code: :signature_invalid}} =
+             CharterAgreementProtocol.verify_receipt(compact, chain, context.limits)
+  end
+
   test "digest decoding and revision re-verification reject canonical-looking bad inputs",
        context do
     noncanonical_digest = "sha-256:" <> String.duplicate("A", 42) <> "B"
