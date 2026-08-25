@@ -1,9 +1,9 @@
 # Protocol foundation
 
-This document defines the implemented byte-level, schema-validation, corpus, and
-Party Descriptor surfaces of Charter Agreement Protocol. Charter revisions,
-acceptances, terminations, governing-chain evaluation, receipts, and conformance
-reports are not part of the implemented surface yet.
+This document defines the implemented byte-level, schema-validation, corpus,
+Party Descriptor, and Charter Revision surfaces of Charter Agreement Protocol.
+Acceptances, terminations, governing-chain evaluation, receipts, and
+conformance reports are not part of the implemented surface yet.
 
 ## Tagged JSON values
 
@@ -168,6 +168,35 @@ accepted and ceiling plus one returns `:limit_exceeded`.
 Descriptor verification proves signed key continuity only. It does not prove
 organizational identity, legal validity, authorization, current revocation
 status, or ownership of an attestation target.
+
+## Charter Revisions
+
+A Charter Revision is unsigned canonical JSON. Its digest is computed over the
+exact canonical bytes under the `charter_revision_content` domain. Genesis is
+revision 1 and omits both `charter_id` and `prev_revision_digest`; every local
+successor shape includes both. Set-level continuity and governance are separate
+verification surfaces.
+
+Every revision contains exactly two uniquely named party roles bound to tagged
+Party Descriptor digests. It declares legal text by a `legal_text` domain digest
+over the raw legal bytes, media type, and optional URI hint. The precedence
+declaration is mandatory and closed to `legal_text_governs` or
+`machine_terms_govern`; no default is inferred. Effective timestamps are pure
+UTC values, and an `effective_until` value must be later than `effective_from`.
+Termination reason codes are non-empty, unique, and bounded.
+
+ABP bindings preserve exact published Agent Blueprint Protocol identities:
+party role, blueprint ID, positive release number, content digest, and deployment
+digest. Decoding does not claim that the named deployment is available or
+authorized. The frozen conformance vector comes from exact package 0.1.1 and
+retains blueprint `example.demo/echo`, release 1, and both package-derived
+digests without re-encoding them.
+
+The extension envelope is closed to `critical` and `optional`. Critical
+extensions remain empty until the compiled registry surface lands. Unknown
+members, missing precedence, duplicate roles, invalid cardinalities, malformed
+digests, widened identifiers, and non-canonical bytes fail closed with
+value-free errors.
 
 ## Architecture boundaries
 

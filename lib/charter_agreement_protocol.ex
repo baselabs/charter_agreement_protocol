@@ -9,7 +9,13 @@ defmodule CharterAgreementProtocol do
   surfaces land on top of this foundation.
   """
 
-  alias CharterAgreementProtocol.{DescriptorChain, DescriptorFacts, Limits, PartyDescriptor}
+  alias CharterAgreementProtocol.{
+    CharterRevision,
+    DescriptorChain,
+    DescriptorFacts,
+    Limits,
+    PartyDescriptor
+  }
 
   @doc "Decode one canonical attached Party Descriptor."
   @spec decode_party_descriptor(term(), Limits.t()) ::
@@ -29,4 +35,13 @@ defmodule CharterAgreementProtocol do
   @spec verify_descriptor_chain(term(), Limits.t()) ::
           {:ok, DescriptorChain.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_descriptor_chain(compacts, limits), to: DescriptorChain, as: :verify
+
+  @doc "Decode one canonical unsigned Charter Revision."
+  @spec decode_charter_revision(term(), Limits.t()) ::
+          {:ok, CharterRevision.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate decode_charter_revision(bytes, limits), to: CharterRevision, as: :decode
+
+  @doc "Return one decoded Charter Revision's content digest."
+  @spec revision_digest(CharterRevision.t()) :: binary()
+  defdelegate revision_digest(revision), to: CharterRevision, as: :digest
 end

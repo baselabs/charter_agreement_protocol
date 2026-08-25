@@ -346,7 +346,98 @@ descriptor_cases = [
   }
 ]
 
-cases = cases ++ descriptor_cases
+legal_text = "Example charter terms\n"
+
+revision_claims = %{
+  "protocol_revision" => 1,
+  "revision_number" => 1,
+  "parties" => [
+    %{"party_descriptor_digest" => genesis.digest, "role" => "issuer"},
+    %{
+      "party_descriptor_digest" =>
+        :party_descriptor_content |> Digest.hash("party:acceptor") |> Digest.to_tagged(),
+      "role" => "acceptor"
+    }
+  ],
+  "legal_text" => %{
+    "content_digest" => :legal_text |> Digest.hash(legal_text) |> Digest.to_tagged(),
+    "media_type" => "text/plain",
+    "uri_hint" => "https://example.com/charter.txt"
+  },
+  "precedence_declaration" => "legal_text_governs",
+  "attribution_declaration" => %{"basis" => "bound_deployments"},
+  "effective_from" => "2026-08-25T12:00:00Z",
+  "termination_rules" => %{"reason_codes" => ["mutual", "breach"]},
+  "abp_bindings" => [
+    %{
+      "party_role" => "issuer",
+      "blueprint_id" => "example.demo/echo",
+      "release_number" => 1,
+      "content_digest" => "sha-256:b1Aw4cU5AbV9k8bdbZkRCsySDHGpTAwB-aQm57Wh7B8",
+      "deployment_digest" => "sha-256:tWFr0caS0AWFJd2UcB9gZv3kNjIUP8xZ08WWM_h8xgo"
+    }
+  ],
+  "receipt_profile" => "com.example.charter/default",
+  "extensions" => %{"critical" => %{}, "optional" => %{}}
+}
+
+revision_bytes = canonical.(revision_claims)
+revision_digest = :charter_revision_content |> Digest.hash(revision_bytes) |> Digest.to_tagged()
+
+revision_case = fn id, class, claims, expectation ->
+  %{
+    "id" => id,
+    "surface" => "charter_revision.decode",
+    "class" => class,
+    "input" => %{"text" => canonical.(claims)},
+    "expect" => expectation
+  }
+end
+
+revision_cases = [
+  revision_case.(
+    "charter-revision-genesis-valid",
+    "valid",
+    revision_claims,
+    valid.(%{
+      "revision_digest" => revision_digest,
+      "revision_number" => 1,
+      "precedence_declaration" => "legal_text_governs",
+      "abp_binding" => %{
+        "blueprint_id" => "example.demo/echo",
+        "release_number" => 1,
+        "content_digest" => "sha-256:b1Aw4cU5AbV9k8bdbZkRCsySDHGpTAwB-aQm57Wh7B8",
+        "deployment_digest" => "sha-256:tWFr0caS0AWFJd2UcB9gZv3kNjIUP8xZ08WWM_h8xgo"
+      }
+    })
+  ),
+  revision_case.(
+    "charter-revision-duplicate-role",
+    "invalid_constraint",
+    put_in(revision_claims, ["parties", Access.at(1), "role"], "issuer"),
+    invalid.("revision_invalid")
+  ),
+  revision_case.(
+    "charter-revision-empty-reasons",
+    "invalid_cardinality",
+    put_in(revision_claims, ["termination_rules", "reason_codes"], []),
+    invalid.("nested_invalid")
+  ),
+  revision_case.(
+    "charter-revision-unknown-member",
+    "unknown_member",
+    Map.put(revision_claims, "unexpected", true),
+    invalid.("unknown_member")
+  ),
+  revision_case.(
+    "charter-revision-missing-precedence",
+    "missing_required",
+    Map.delete(revision_claims, "precedence_declaration"),
+    invalid.("missing_required")
+  )
+]
+
+cases = cases ++ descriptor_cases ++ revision_cases
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 

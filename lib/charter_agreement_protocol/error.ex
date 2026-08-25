@@ -48,7 +48,8 @@ defmodule CharterAgreementProtocol.Error do
     :signature_invalid,
     :descriptor_invalid,
     :descriptor_key_invalid,
-    :descriptor_chain_invalid
+    :descriptor_chain_invalid,
+    :revision_invalid
   ]
 
   @type code ::
@@ -89,6 +90,7 @@ defmodule CharterAgreementProtocol.Error do
           | :descriptor_invalid
           | :descriptor_key_invalid
           | :descriptor_chain_invalid
+          | :revision_invalid
   @type subject :: [binary() | non_neg_integer()]
   @type detail :: nil | atom() | binary()
   @type t :: %__MODULE__{code: code(), subject: subject(), detail: detail()}

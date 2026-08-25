@@ -25,6 +25,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   signed sibling-fork facts, and no winner selection.
 - Elixir and Node corpus coverage for valid descriptors, superseded descriptors,
   and signed sibling forks, with exact applicability-floor enforcement.
+- Closed unsigned Charter Revision decoding with raw-byte legal-text digests,
+  mandatory precedence, bounded temporal and termination declarations, exact
+  ABP 0.1.1 deployment identities, and executable cross-language corpus cells.
 - Architecture gates that reject implementation-version tokens everywhere
   except the exact Hex package source reference, reject runtime dependency
   drift away from OTP `:crypto`, and keep declared error codes synchronized

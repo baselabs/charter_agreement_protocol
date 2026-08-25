@@ -22,6 +22,7 @@ defmodule CharterAgreementProtocol.MixProject do
       test_coverage: [
         summary: [threshold: 100],
         ignore_modules: [
+          CharterAgreementProtocol.CharterRevisionFixture,
           CharterAgreementProtocol.ConformanceTest.Builder,
           CharterAgreementProtocol.DescriptorFixture
         ]

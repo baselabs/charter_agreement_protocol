@@ -3,7 +3,14 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   alias CharterAgreementProtocol.Conformance.Corpus
   alias CharterAgreementProtocol.ConformanceTest.Builder
-  alias CharterAgreementProtocol.{DescriptorChain, Error, Limits, PartyDescriptor}
+
+  alias CharterAgreementProtocol.{
+    CharterRevision,
+    DescriptorChain,
+    Error,
+    Limits,
+    PartyDescriptor
+  }
 
   defp minimal, do: Builder.build()
 
@@ -180,6 +187,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
            end)
 
     assert_verify_surface_expectations(cases)
+    assert_revision_expectations(cases)
   end
 
   defp shipped_files do
@@ -199,6 +207,38 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert length(verify_cases) == 6
     Enum.each(verify_cases, &assert_verify_case/1)
   end
+
+  defp assert_revision_expectations(cases) do
+    revision_cases = Enum.filter(cases, &(&1["surface"] == "charter_revision.decode"))
+    assert length(revision_cases) == 5
+
+    Enum.each(revision_cases, fn one ->
+      actual = CharterRevision.decode(one["input"]["text"], Limits.default())
+      assert projected_revision_result(actual) == one["expect"]
+    end)
+  end
+
+  defp projected_revision_result({:ok, revision}) do
+    [binding] = revision.abp_bindings
+
+    %{
+      "status" => "valid",
+      "output" => %{
+        "revision_digest" => CharterRevision.digest(revision),
+        "revision_number" => revision.revision_number,
+        "precedence_declaration" => Atom.to_string(revision.precedence_declaration),
+        "abp_binding" => %{
+          "blueprint_id" => binding.blueprint_id,
+          "release_number" => binding.release_number,
+          "content_digest" => binding.content_digest,
+          "deployment_digest" => binding.deployment_digest
+        }
+      }
+    }
+  end
+
+  defp projected_revision_result({:error, %Error{code: code}}),
+    do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
 
   defp assert_verify_case(%{"surface" => "party_descriptor.verify"} = one) do
     actual = PartyDescriptor.verify(one["input"]["compact"], nil, Limits.default())

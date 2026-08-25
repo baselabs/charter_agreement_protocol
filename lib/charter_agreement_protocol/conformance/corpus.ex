@@ -23,7 +23,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "digest.hash",
     "schema.validate",
     "party_descriptor.verify",
-    "descriptor_chain.verify"
+    "descriptor_chain.verify",
+    "charter_revision.decode"
   ]
 
   @classes [
@@ -76,6 +77,10 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "descriptor_chain.verify" => %{
       required: ~w(signature_invalid chain_invalid descriptor_superseded descriptor_fork),
       n_a: "single-artifact and foundational codec-only behavior are outside descriptor topology"
+    },
+    "charter_revision.decode" => %{
+      required: ~w(valid invalid_constraint invalid_cardinality unknown_member missing_required),
+      n_a: "signature, chain, and foundational codec-only behavior are outside revision decoding"
     }
   }
 
