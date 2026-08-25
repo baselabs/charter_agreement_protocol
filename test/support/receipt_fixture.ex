@@ -3,10 +3,13 @@ defmodule CharterAgreementProtocol.ReceiptFixture do
 
   alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest}
 
-  @grant_compact "eyJhbGciOiJFZERTQSIsImtpZCI6Imlzc3Vlci0yMDI2LTA3IiwidHlwIjoiYmErY2FwIn0.eyJhdWQiOlsiY29uc3VtZXItaW5zdGFuY2UtMDEiXSwiY25mIjp7ImprdCI6IkZ0SXUtVmJHcmZlX0tCNkNIN0dOd09EQjcyTU54al9tbDExZEV2Ty03a2sifSwiZXhwIjoxNzM1NjkzMjAwLCJpYXQiOjE3MzU2ODk2MDAsImlzcyI6Imh0dHBzOi8vaXNzdWVyLmV4YW1wbGUiLCJqdGkiOiJncmFudC0yMDI2LTA3LTI3LTAwMSIsIm5iZiI6MTczNTY4OTUwMCwib3BlcmF0aW9ucyI6W3sibmFtZSI6InJlYWRfcmVjb3JkIiwic2VsZWN0b3JzIjpbeyJraW5kIjoiZXF1YWxzIiwicGF0aCI6WyJyZWNvcmQiLCJyZWdpb24iXSwidmFsdWUiOiJ1cy1lYXN0In0seyJraW5kIjoib25lX29mIiwicGF0aCI6WyJyZWNvcmQiLCJ0aWVyIl0sInZhbHVlcyI6WyJnb2xkIiwicGxhdGludW0iXX0seyJraW5kIjoiYWxsIn1dfV0sInYiOjF9.znNY0XaPjYZrM71PlkeFqTIVF44GsX-de9c4yNs3ZPxW3mSRU5Fyup2ifIrtTD4UCtRLmog4AB2YSfisK6rPCg"
+  @grant_vector "../../deps/bounded_authority_protocol/priv/conformance/v1/vectors/grant-holder-proof.json"
+                |> Path.expand(__DIR__)
+                |> File.read!()
+                |> :json.decode()
   @grant_ath "5k224cZ_lMI9VoUZ_fYM31ZJAcnJiht0GYEpnhes_ZI"
 
-  def grant_compact, do: @grant_compact
+  def grant_compact, do: get_in(@grant_vector, ["grant", "compact"])
   def grant_ath, do: @grant_ath
   def grant_digest, do: "sha-256:" <> @grant_ath
 
