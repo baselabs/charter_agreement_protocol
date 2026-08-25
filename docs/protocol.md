@@ -138,7 +138,11 @@ A Party Descriptor is an attached compact JWS with protected type
 `cap+party`. Its protected header is closed to `alg`, `kid`, and `typ`; `alg`
 must be `EdDSA`, `kid` uses the bounded ASCII protocol grammar, and the signature
 is exactly 64 Ed25519 bytes. Protected-header and payload bytes must already be
-canonical JSON. The `kid` is only a lookup hint and has no authority by itself.
+canonical JSON. Before runtime signature verification, CAP rejects noncanonical
+point encodings and all eight low-order torsion encodings for both the public
+key and signature `R`. It also rejects signature scalars outside the canonical
+subgroup-order range. The `kid` is only a lookup hint and has no authority by
+itself.
 
 The canonical payload contains exactly these claims:
 
@@ -340,12 +344,20 @@ the closed `{alg: "EdDSA", typ, kid}` protected header and returns
 take only that map. Acceptance and Termination producers also take the caller's
 raw `ArtifactSet` and cold-verify it before returning bytes.
 
-The set-aware producers refuse false revision/party coordinates, an acceptance
-at a charter number already occupied by an acceptance for another digest, and
+The set-aware producers refuse false revision and party coordinates and preserve
+the Artifact Set verifier's typed failures. The Acceptance producer refuses a
+charter number already occupied by an acceptance for another digest and refuses
 a candidate whose ancestry excludes any maximum dual-accepted head. A repair
 revision may cover accepted siblings by naming each in `supersedes`; this is the
 only no-tie-break path that lets the honest-signer seam construct fork repair.
-Incomplete ancestry fails closed.
+Incomplete ancestry fails closed. The Termination producer instead requires its
+named revision to be the unique governing revision at the notice's own
+`effective_at`; it does not read a clock, and a later accepted revision whose
+window has not started does not displace the current governing revision.
+
+Claims accept the same JSON data model as canonicalization, including finite
+floating-point extension values. The artifact codec remains the final closed
+schema and semantic validator.
 
 `assemble_compact/2` revalidates the kind/header/payload/message relationship and
 accepts exactly one externally produced raw 64-byte Ed25519 signature. The

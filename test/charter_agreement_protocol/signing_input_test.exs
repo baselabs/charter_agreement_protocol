@@ -68,6 +68,32 @@ defmodule CharterAgreementProtocol.SigningInputTest do
              CharterAgreementProtocol.verify_receipt(receipt_compact, chain, Limits.default())
   end
 
+  test "descriptor signing retains protocol-valid floating extension values" do
+    descriptor =
+      DescriptorFixture.genesis(
+        claims: %{
+          "extensions" => %{
+            "critical" => %{},
+            "optional" => %{
+              "com.example.observation" => %{"observed_price" => 1.5}
+            }
+          }
+        }
+      )
+
+    assert {:ok, _facts} =
+             CharterAgreementProtocol.verify_descriptor(
+               descriptor.compact,
+               nil,
+               Limits.default()
+             )
+
+    assert {:ok, %SigningInput{kind: :party_descriptor}} =
+             CharterAgreementProtocol.descriptor_signing_input(
+               envelope(descriptor.kid, descriptor.claims)
+             )
+  end
+
   test "acceptance and termination seams compose with verification",
     do: acceptance_and_termination()
 
@@ -128,6 +154,20 @@ defmodule CharterAgreementProtocol.SigningInputTest do
     claims = AcceptanceFixture.claims(stale_candidate, setup.issuer, "issuer")
 
     assert {:error, %Error{code: :signing_refused}} =
+             CharterAgreementProtocol.acceptance_signing_input(
+               envelope(setup.issuer.kid, claims),
+               set
+             )
+  end
+
+  test "ancestry coverage accepts a successor of the retained accepted head" do
+    setup = ChainFixture.base()
+    candidate = ChainFixture.successor(setup.genesis, 2)
+    acceptances = ChainFixture.dual_acceptances(setup.genesis, setup)
+    {:ok, set} = raw_set(setup, [setup.genesis, candidate], acceptances, [])
+    claims = AcceptanceFixture.claims(candidate, setup.issuer, "issuer")
+
+    assert {:ok, %SigningInput{kind: :acceptance}} =
              CharterAgreementProtocol.acceptance_signing_input(
                envelope(setup.issuer.kid, claims),
                set
@@ -318,6 +358,62 @@ defmodule CharterAgreementProtocol.SigningInputTest do
              CharterAgreementProtocol.termination_signing_input(
                envelope(setup.issuer.kid, contested_termination),
                fork_set
+             )
+  end
+
+  test "termination framing requires the claimed revision to govern at effective_at" do
+    setup = ChainFixture.base()
+    proposal = ChainFixture.successor(setup.genesis, 2)
+    genesis_acceptances = ChainFixture.dual_acceptances(setup.genesis, setup)
+
+    {:ok, proposed_set} =
+      raw_set(setup, [setup.genesis, proposal], genesis_acceptances, [])
+
+    proposed_claims = TerminationFixture.claims(proposal, setup.issuer, "issuer")
+
+    assert {:error, %Error{code: :signing_refused}} =
+             CharterAgreementProtocol.termination_signing_input(
+               envelope(setup.issuer.kid, proposed_claims),
+               proposed_set
+             )
+
+    future =
+      ChainFixture.successor(setup.genesis, 2,
+        claims: %{"effective_from" => "2026-08-27T00:00:00Z"}
+      )
+
+    all_acceptances = genesis_acceptances ++ ChainFixture.dual_acceptances(future, setup)
+    {:ok, future_set} = raw_set(setup, [setup.genesis, future], all_acceptances, [])
+
+    governing_claims =
+      TerminationFixture.claims(setup.genesis, setup.issuer, "issuer", %{
+        "effective_at" => "2026-08-26T13:00:00Z"
+      })
+
+    assert {:ok, %SigningInput{kind: :termination}} =
+             CharterAgreementProtocol.termination_signing_input(
+               envelope(setup.issuer.kid, governing_claims),
+               future_set
+             )
+  end
+
+  test "set verification errors remain typed instead of becoming signer refusals" do
+    setup = ChainFixture.base()
+
+    {:ok, malformed_set} =
+      ArtifactSet.build(
+        [setup.genesis.bytes],
+        ["not-a-compact-jws"],
+        [],
+        ChainFixture.descriptors(setup)
+      )
+
+    claims = AcceptanceFixture.claims(setup.genesis, setup.issuer, "issuer")
+
+    assert {:error, %Error{code: :compact_invalid}} =
+             CharterAgreementProtocol.acceptance_signing_input(
+               envelope(setup.issuer.kid, claims),
+               malformed_set
              )
   end
 

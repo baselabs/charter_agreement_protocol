@@ -1,7 +1,16 @@
 defmodule CharterAgreementProtocol.PartyDescriptorTest do
   use ExUnit.Case, async: true
 
-  alias CharterAgreementProtocol.{CompactJws, DescriptorFacts, Error, Limits, PartyDescriptor}
+  alias CharterAgreementProtocol.{
+    Base64Url,
+    CompactJws,
+    DescriptorFacts,
+    Error,
+    Limits,
+    PartyDescriptor,
+    Signature
+  }
+
   alias CharterAgreementProtocol.DescriptorFixture
 
   test "decodes and verifies a canonical self-signed genesis descriptor" do
@@ -144,6 +153,68 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
              PartyDescriptor.decode(:not_bytes, Limits.default())
 
     assert {:error, %Error{}} = PartyDescriptor.decode("not-a-jws", Limits.default())
+  end
+
+  test "rejects the backend's trivial low-order Ed25519 forgery" do
+    {key, private} = DescriptorFixture.key(8, "low-order-key")
+    identity_key = %{key | "public_key" => Base64Url.encode(<<1, 0::248>>)}
+    descriptor = DescriptorFixture.genesis(key: {identity_key, private})
+    [protected, payload, _signature] = String.split(descriptor.compact, ".")
+
+    forged = protected <> "." <> payload <> "." <> Base64Url.encode(<<1, 0::504>>)
+
+    assert {:error, %Error{code: :signature_invalid}} =
+             PartyDescriptor.verify(forged, nil, Limits.default())
+  end
+
+  test "strict Ed25519 verification rejects the complete torsion set and noncanonical inputs" do
+    torsion = [
+      "0100000000000000000000000000000000000000000000000000000000000000",
+      "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "0000000000000000000000000000000000000000000000000000000000000080",
+      "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "0000000000000000000000000000000000000000000000000000000000000000",
+      "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa"
+    ]
+
+    for hex <- torsion do
+      point = Base.decode16!(hex, case: :mixed)
+
+      assert {:error, %Error{code: :signature_invalid}} =
+               Signature.verify("message", point <> <<0::256>>, point)
+    end
+
+    noncanonical_y = Base.decode16!("ed" <> String.duplicate("ff", 30) <> "7f", case: :mixed)
+    negative_zero = <<1, 0::240, 128>>
+
+    for point <- [noncanonical_y, negative_zero] do
+      assert {:error, %Error{code: :signature_invalid}} =
+               Signature.verify("message", point <> <<0::256>>, point)
+    end
+
+    fixture = DescriptorFixture.genesis()
+
+    {:ok, envelope} =
+      CompactJws.parse(fixture.compact, "cap+party", Limits.default())
+
+    {:ok, public_key} =
+      fixture.claims["verification_keys"]
+      |> hd()
+      |> Map.fetch!("public_key")
+      |> Base64Url.decode()
+
+    <<r::binary-size(32), _scalar::binary-size(32)>> = envelope.signature
+
+    subgroup_order =
+      Base.decode16!(
+        "edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010",
+        case: :mixed
+      )
+
+    assert {:error, %Error{code: :signature_invalid}} =
+             Signature.verify(envelope.message, r <> subgroup_order, public_key)
   end
 
   test "compact envelope parser is total across bounds, segment, canonical, header, and key failures" do

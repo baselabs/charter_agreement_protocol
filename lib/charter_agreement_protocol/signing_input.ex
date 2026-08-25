@@ -5,13 +5,14 @@ defmodule CharterAgreementProtocol.SigningInput do
   Callers provide exactly `%{"kid" => kid, "claims" => claims}`. This module
   constructs the closed protected header, canonicalizes and validates the
   payload through the existing artifact codec, and returns only the exact RFC
-  7515 signing bytes. Set-aware acceptance and termination producers also
-  refuse false coordinates, equivocation, and stale ancestry relative to the
-  caller's retained artifact set.
+  7515 signing bytes. The set-aware Acceptance producer refuses false
+  coordinates, equivocation, and ancestry that excludes any maximum accepted
+  head. The set-aware Termination producer refuses every revision except the
+  unique governing revision at the notice's own effective time.
 
   This module never accepts a key, signer, callback, or custody handle and
-  never signs. The refusal triad protects honest signers relative to their
-  supplied view; it cannot constrain a dishonest signer or prove completeness.
+  never signs. These refusal checks protect honest signers relative to their
+  supplied view; they cannot constrain a dishonest signer or prove completeness.
   """
 
   alias CharterAgreementProtocol.{
@@ -63,9 +64,6 @@ defmodule CharterAgreementProtocol.SigningInput do
          :ok <- no_equivocation(acceptance, chain),
          :ok <- current_head_in_ancestry(revision, chain) do
       {:ok, signing_input}
-    else
-      {:error, %Error{code: :signing_input_invalid} = error} -> {:error, error}
-      _failure -> refused()
     end
   end
 
@@ -77,12 +75,8 @@ defmodule CharterAgreementProtocol.SigningInput do
     with {:ok, signing_input, termination} <- build(:termination, input),
          {:ok, chain} <- verify_set(set),
          {:ok, revision} <- termination_revision(termination, chain),
-         :ok <- uncontested_number(revision, chain),
-         :ok <- current_head_in_ancestry(revision, chain) do
+         :ok <- governing_at_effective_time(termination, revision, chain) do
       {:ok, signing_input}
-    else
-      {:error, %Error{code: :signing_input_invalid} = error} -> {:error, error}
-      _failure -> refused()
     end
   end
 
@@ -245,16 +239,13 @@ defmodule CharterAgreementProtocol.SigningInput do
     if conflict?, do: refused(), else: :ok
   end
 
-  defp uncontested_number(revision, chain) do
-    charter_id = revision.charter_id || CharterRevision.digest(revision)
+  defp governing_at_effective_time(termination, revision, chain) do
+    digest = CharterRevision.digest(revision)
 
-    conflict? =
-      Enum.any?(chain.acceptance_facts, fn facts ->
-        facts.charter_id == charter_id and facts.revision_number == revision.revision_number and
-          facts.revision_digest != CharterRevision.digest(revision)
-      end)
-
-    if conflict?, do: refused(), else: :ok
+    case Chain.governing_revision(chain, termination.effective_at) do
+      {:ok, ^digest} -> :ok
+      _not_governing -> refused()
+    end
   end
 
   defp current_head_in_ancestry(revision, chain) do
@@ -327,6 +318,7 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   defp tagged(value) when is_binary(value), do: {:ok, {:string, value}}
   defp tagged(value) when is_integer(value), do: {:ok, {:integer, value}}
+  defp tagged(value) when is_float(value), do: {:ok, {:float, value}}
   defp tagged(value) when is_boolean(value), do: {:ok, {:boolean, value}}
   defp tagged(nil), do: {:ok, :null}
   defp tagged(_value), do: :error

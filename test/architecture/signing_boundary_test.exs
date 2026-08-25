@@ -3,6 +3,8 @@ defmodule CharterAgreementProtocol.Architecture.SigningBoundaryTest do
 
   @forbidden_source [
     ~r/:crypto\.sign\s*\(/,
+    ~r/\bapply\s*\(\s*:crypto\s*,\s*:sign\b/,
+    ~r/&\s*:crypto\.sign(?:\s*\/|\s*\()/,
     ~r/\bprivate_key\b/,
     ~r/\bsigning_callback\b/,
     ~r/\bsigner_module\b/,
@@ -55,42 +57,57 @@ defmodule CharterAgreementProtocol.Architecture.SigningBoundaryTest do
   end
 
   defp forbidden_beam_calls(module) do
-    beam = :code.which(module)
+    beam =
+      Application.app_dir(
+        :charter_agreement_protocol,
+        Path.join("ebin", Atom.to_string(module) <> ".beam")
+      )
 
-    case :beam_lib.chunks(beam, [:abstract_code]) do
+    case :beam_lib.chunks(String.to_charlist(beam), [:abstract_code]) do
       {:ok, {_module, [abstract_code: {_format, forms}]}} when is_list(forms) ->
         forms
-        |> collect_calls([])
-        |> Enum.filter(fn
-          {:crypto, :sign} -> true
-          _call -> false
-        end)
+        |> collect_forbidden([])
         |> Enum.map(&{module, &1})
 
-      _unavailable ->
-        []
+      unavailable ->
+        [{module, {:beam_unavailable, unavailable}}]
     end
   end
 
-  defp collect_calls(
-         {:call, _line,
-          {:remote, _remote_line, {:atom, _module_line, module},
-           {:atom, _function_line, function}}, arguments},
+  defp collect_forbidden(
+         {:call, _line, {:atom, _apply_line, :apply},
+          [{:atom, _module_line, :crypto}, {:atom, _function_line, :sign}, _arguments]} = node,
          calls
        ) do
-    collect_calls(arguments, [{module, function} | calls])
+    descend(node, [{:crypto, :sign} | calls])
   end
 
-  defp collect_calls(tuple, calls) when is_tuple(tuple), do: descend(tuple, calls)
+  defp collect_forbidden(
+         {:call, _line,
+          {:remote, _remote_line, {:atom, _erlang_line, :erlang}, {:atom, _apply_line, :apply}},
+          [{:atom, _module_line, :crypto}, {:atom, _function_line, :sign}, _arguments]} = node,
+         calls
+       ) do
+    descend(node, [{:crypto, :sign} | calls])
+  end
 
-  defp collect_calls(list, calls) when is_list(list),
-    do: Enum.reduce(list, calls, &collect_calls/2)
+  defp collect_forbidden(
+         {:remote, _line, {:atom, _module_line, :crypto}, {:atom, _function_line, :sign}} = node,
+         calls
+       ) do
+    descend(node, [{:crypto, :sign} | calls])
+  end
 
-  defp collect_calls(_leaf, calls), do: calls
+  defp collect_forbidden(tuple, calls) when is_tuple(tuple), do: descend(tuple, calls)
+
+  defp collect_forbidden(list, calls) when is_list(list),
+    do: Enum.reduce(list, calls, &collect_forbidden/2)
+
+  defp collect_forbidden(_leaf, calls), do: calls
 
   defp descend(tuple, calls) when is_tuple(tuple) do
     tuple
     |> Tuple.to_list()
-    |> Enum.reduce(calls, &collect_calls/2)
+    |> Enum.reduce(calls, &collect_forbidden/2)
   end
 end

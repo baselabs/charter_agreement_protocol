@@ -21,9 +21,11 @@ Receipt verification now binds signed issuing-party evidence to exact revision
 coordinates, ABP deployment digests, BAP grant-hash bytes, decision/outcome
 states, and view-relative fork/governance facts.
 The signing seam emits exact RFC 7515 bytes for descriptors, acceptances,
-termination notices, and receipts, refuses equivocation and stale ancestry, and
-assembles only externally supplied raw signatures; CAP never holds or uses a
-signing key.
+termination notices, and receipts. It refuses equivocation, stale Acceptance
+ancestry, and Termination coordinates that are not uniquely governing at the
+notice's effective time. It assembles only externally supplied raw signatures;
+CAP never holds or uses a signing key. Verification rejects noncanonical and
+low-order Ed25519 inputs before invoking the runtime crypto primitive.
 See [Protocol foundation](docs/protocol.md).
 
 ## Status

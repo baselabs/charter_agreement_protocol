@@ -97,5 +97,6 @@ defmodule CharterAgreementProtocol.DescriptorFixture do
   defp tagged(value) when is_list(value), do: {:array, Enum.map(value, &tagged/1)}
   defp tagged(value) when is_binary(value), do: {:string, value}
   defp tagged(value) when is_integer(value), do: {:integer, value}
+  defp tagged(value) when is_float(value), do: {:float, value}
   defp tagged(value) when is_boolean(value), do: {:boolean, value}
 end

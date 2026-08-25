@@ -52,8 +52,10 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   CAP production application remains OTP-crypto-only.
 - Deterministic Party Descriptor, Acceptance, Termination, and Receipt signing
   inputs plus external-signature-only compact assembly. The set-aware seam
-  refuses false coordinates, equivocation, and stale ancestry while preserving
-  bilateral supersession repair; source and BEAM gates prohibit signing custody.
+  refuses false coordinates and equivocation, requires Acceptance ancestry to
+  cover maximum accepted heads while preserving bilateral supersession repair,
+  and requires a Termination to name the unique governing revision at its own
+  effective time; source and BEAM gates prohibit signing custody.
 - Architecture gates that reject implementation-version tokens everywhere
   except the exact Hex package source reference, reject runtime dependency
   drift away from OTP `:crypto`, and keep declared error codes synchronized
@@ -67,6 +69,13 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ### Fixed
 
+- Reject noncanonical Ed25519 points, all eight low-order torsion encodings for
+  public keys and signature `R` values, and out-of-range signature scalars
+  before runtime verification; this closes the identity-key universal forgery
+  accepted by the raw OTP primitive.
+- Preserve typed artifact-set verification failures at the signing seam, accept
+  JSON float values that the canonicalization and extension boundaries support,
+  and make the signing-custody BEAM gate observable under cover compilation.
 - Reject I-JSON noncharacters symmetrically during JSON decoding and constructed
   canonicalization, and close alternate error-construction paths that could
   bypass the declared-code and value-free-detail architecture gates.
