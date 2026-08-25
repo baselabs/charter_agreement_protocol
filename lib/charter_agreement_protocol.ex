@@ -2,7 +2,9 @@ defmodule CharterAgreementProtocol do
   @moduledoc """
   Charter Agreement Protocol.
 
-  Package scaffold — the protocol surface (its artifacts, validation
-  contract, and ADRs) lands with the first implementation slices.
+  The foundational byte-contract modules implement strict base64url,
+  deterministic JSON decoding, RFC 8785 canonicalization, domain-separated
+  tagged digests, and typed value-free errors. Artifact-specific verification
+  surfaces land on top of these codecs.
   """
 end

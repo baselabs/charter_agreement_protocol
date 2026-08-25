@@ -1,12 +1,16 @@
 # Charter Agreement Protocol
 
-Package scaffold for the BaseLabs Charter Agreement Protocol. The protocol
-surface — its artifacts, validation contract, and architecture decision
-records — lands with the first implementation slices.
+Portable, non-authorizing charter-agreement format and verification protocol.
+
+The package now provides the foundational byte contract used by its artifact
+engines: strict unpadded base64url, deterministic JSON decoding, RFC 8785
+canonicalization, domain-separated SHA-256 digests, and typed value-free
+errors. See [Foundational byte contract](docs/protocol.md).
 
 ## Status
 
-Scaffold only. Not yet published to Hex.
+Foundational codecs implemented. Artifact schemas and verification engines are
+not implemented yet. The package is not published to Hex.
 
 ## Development
 

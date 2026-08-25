@@ -34,7 +34,7 @@ reason — document sequence numbers are themselves a versioning axis.
 
 ## Enforcement
 
-Two layers, one landed and one owed:
+Two layers, both landed:
 
 - **Landed now.** The kimosabe durable-identifier sweep
   (`durable-identifier-check.py`) runs on the staged index and the tracked tree.
@@ -42,14 +42,14 @@ Two layers, one landed and one owed:
   which disables only the numbered-version checks so the permitted package-tag
   identity passes; transient `phase`/`task`/`slice`/`sprint`/`step`/`work-order`
   tokens remain blocked regardless of that setting.
-- **Owed by the first protocol slice.** The `test/architecture/`
+- **Landed with the first protocol identifiers.** The `test/architecture/`
   identifier-naming gate re-narrows the numbered-version allowance to exactly the
-  package-tag identity — reding on every conventional token form (leading
+  package-tag identity — failing on every conventional token form (leading
   `v<N>`, snake-boundary `_v<N>`, CamelCase hump `V<N>`) and on path segments,
-  everywhere except the blessed `mix.exs` source reference. Until that gate
-  lands, the numbered-version narrowing is documented here but not yet
-  mechanically enforced. The coverage window is currently empty: no protocol
-  identifiers exist yet — the package carries only its facade module.
+  everywhere except the blessed `mix.exs` source reference. Its scanner covers
+  owned paths plus module, function, macro, atom, struct-key, and test identifiers.
+  A scratch mutation that planted a version-bearing module and path made the exact
+  gate fail before the live tree was accepted.
 
 ## Consequences
 
@@ -58,5 +58,4 @@ digest-covered and negotiation-gated; the code surface stays version-free and
 rename-stable. No module, function, path, config key, test, separator, `typ`,
 or internal compatibility branch may derive its name from a release, task, or
 implementation sequence. Wire revisions remain digest-covered data. The
-architecture gate named above makes any regression loud once it lands, and is a
-required deliverable of the first slice that introduces protocol identifiers.
+architecture gate makes any regression loud.

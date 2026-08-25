@@ -1,0 +1,71 @@
+defmodule CharterAgreementProtocol.Error do
+  @moduledoc """
+  Value-free typed failure returned by the protocol codecs.
+
+  `subject` is built from protocol-owned names, never from rejected input.
+  The implemented code vocabulary is closed and architecture-gated in both
+  directions: an undeclared emission and a declared-but-unemitted code both
+  fail the build.
+  """
+
+  @enforce_keys [:code, :subject]
+  defstruct [:code, :subject, :detail]
+
+  @codes [
+    :base64url_invalid,
+    :base64url_padded,
+    :invalid_syntax,
+    :invalid_encoding,
+    :invalid_number,
+    :number_not_double_expressible,
+    :duplicate_member,
+    :trailing_bytes,
+    :invalid_type,
+    :non_canonical_bytes,
+    :integer_magnitude,
+    :digest_algorithm_unsupported,
+    :digest_encoding_invalid,
+    :digest_mismatch
+  ]
+
+  @type code ::
+          :base64url_invalid
+          | :base64url_padded
+          | :invalid_syntax
+          | :invalid_encoding
+          | :invalid_number
+          | :number_not_double_expressible
+          | :duplicate_member
+          | :trailing_bytes
+          | :invalid_type
+          | :non_canonical_bytes
+          | :integer_magnitude
+          | :digest_algorithm_unsupported
+          | :digest_encoding_invalid
+          | :digest_mismatch
+  @type subject :: [binary() | non_neg_integer()]
+  @type t :: %__MODULE__{code: code(), subject: subject(), detail: nil | map()}
+
+  @doc "The complete implemented error-code vocabulary."
+  @spec codes() :: [code()]
+  def codes, do: @codes
+
+  @doc "Whether a value is a declared error code."
+  @spec declared?(term()) :: boolean()
+  def declared?(code), do: code in @codes
+
+  @doc "Construct a declared value-free error. Unknown codes fail loudly."
+  @spec new(code(), subject(), nil | map()) :: t()
+  def new(code, subject \\ [], detail \\ nil) do
+    if declared?(code) and valid_subject?(subject) do
+      %__MODULE__{code: code, subject: subject, detail: detail}
+    else
+      raise ArgumentError, "undeclared error code or invalid subject"
+    end
+  end
+
+  defp valid_subject?(subject) when is_list(subject),
+    do: Enum.all?(subject, &(is_binary(&1) or (is_integer(&1) and &1 >= 0)))
+
+  defp valid_subject?(_subject), do: false
+end

@@ -58,6 +58,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "LICENSE",
         "NOTICE",
         "SECURITY.md",
+        "docs/protocol.md",
         "docs/adr/no-versioning-rule.md"
       ],
       licenses: ["Apache-2.0"],
@@ -80,6 +81,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "LICENSE",
         "NOTICE",
         "SECURITY.md",
+        "docs/protocol.md",
         "docs/adr/no-versioning-rule.md"
       ]
     ]

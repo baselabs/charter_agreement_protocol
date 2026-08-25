@@ -1,0 +1,136 @@
+defmodule CharterAgreementProtocol.ArchitectureScan do
+  @moduledoc false
+
+  @source_roots ["lib", "test"]
+  @path_roots ["lib", "priv", "test", "docs", "scripts", "verifier", "config"]
+  @non_version_hump_stems ["Base", "Ed", "IPV", "IPv", "Ipv", "RFC", "Sha"]
+  @package_source_identity {"mix.exs", :package_source_ref, ~S(source_ref: "v#{@version}")}
+
+  def source_files(roots \\ @source_roots) do
+    roots
+    |> Enum.flat_map(fn root -> Path.wildcard(Path.join(root, "**/*.{ex,exs}")) end)
+    |> Enum.sort()
+  end
+
+  def owned_paths do
+    root_paths =
+      @path_roots
+      |> Enum.flat_map(fn root -> Path.wildcard(Path.join(root, "**/*"), match_dot: true) end)
+      |> Enum.reject(&File.dir?/1)
+
+    root_files =
+      ["mix.exs", "mix.lock", ".formatter.exs", ".credo.exs"]
+      |> Enum.filter(&File.exists?/1)
+
+    (root_paths ++ root_files) |> Enum.uniq() |> Enum.sort()
+  end
+
+  def path_segments do
+    owned_paths()
+    |> Enum.flat_map(&Path.split/1)
+    |> Enum.map(&Path.rootname/1)
+    |> Enum.uniq()
+  end
+
+  def identifiers(path) do
+    ast = path |> File.read!() |> Code.string_to_quoted!(file: path)
+    {_ast, identifiers} = ast |> strip_docs() |> Macro.prewalk([], &collect/2)
+    Enum.reverse(identifiers)
+  end
+
+  def module_references(path) do
+    ast = path |> File.read!() |> Code.string_to_quoted!(file: path)
+
+    {_ast, references} =
+      Macro.prewalk(ast, [], fn
+        {:__aliases__, _, segments} = node, acc when is_list(segments) ->
+          {node, [Enum.map_join(segments, ".", &Atom.to_string/1) | acc]}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.uniq(references)
+  end
+
+  def package_source_ref_observations do
+    "mix.exs"
+    |> File.read!()
+    |> then(&Regex.scan(~r/source_ref:\s*"v(?:#\{@version\}|\d+)"/, &1))
+    |> Enum.map(fn [name] -> %{path: "mix.exs", kind: :package_source_ref, name: name} end)
+  end
+
+  def version_token?(string) when is_binary(string) do
+    Regex.match?(~r/(^|_)v\d/i, string) or
+      Regex.match?(~r/[a-z0-9]V\d/, string) or
+      version_hump_digit?(string)
+  end
+
+  def check_durable_identifier(%{path: path, kind: kind, name: name}) do
+    if {path, kind, name} == @package_source_identity do
+      :ok
+    else
+      if version_token?(name) or package_source_ref?(name),
+        do: {:error, :implementation_version_identifier},
+        else: :ok
+    end
+  end
+
+  def error_code_calls(path) do
+    ast = path |> File.read!() |> Code.string_to_quoted!(file: path)
+
+    {_ast, calls} =
+      Macro.prewalk(ast, [], fn
+        {{:., _, [{:__aliases__, _, [:Error]}, :new]}, _, [code | _]} = node, acc ->
+          {node, [code | acc]}
+
+        {{:., _, [{:__aliases__, _, [:CharterAgreementProtocol, :Error]}, :new]}, _, [code | _]} =
+            node,
+        acc ->
+          {node, [code | acc]}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    Enum.reverse(calls)
+  end
+
+  defp package_source_ref?(name),
+    do: Regex.match?(~r/\bsource_ref\b.*\bv(?:#\{@version\}|\d)/i, name)
+
+  defp version_hump_digit?(string) do
+    ~r/[A-Z]+[a-z]*\d+/
+    |> Regex.scan(string)
+    |> Enum.map(fn [word] -> Regex.replace(~r/\d+\z/, word, "") end)
+    |> Enum.any?(&(&1 not in @non_version_hump_stems))
+  end
+
+  defp strip_docs(ast) do
+    Macro.prewalk(ast, fn
+      {:@, _, [{doc, _, [_body]}]} when doc in [:moduledoc, :doc, :typedoc, :shortdoc] ->
+        {:@, [], [{doc, [], [true]}]}
+
+      other ->
+        other
+    end)
+  end
+
+  defp collect({:defmodule, _, [{:__aliases__, _, segments} | _]} = node, acc) do
+    names = Enum.map(segments, &{:module, Atom.to_string(&1)})
+    {node, Enum.reverse(names) ++ acc}
+  end
+
+  defp collect({kind, _, [{name, _, _} | _]} = node, acc)
+       when kind in [:def, :defp, :defmacro, :defmacrop] and is_atom(name),
+       do: {node, [{:function, Atom.to_string(name)} | acc]}
+
+  defp collect({kind, _, [name | _]} = node, acc)
+       when kind in [:test, :describe] and is_binary(name),
+       do: {node, [{:test_name, name} | acc]}
+
+  defp collect(atom, acc) when is_atom(atom) and atom not in [nil, true, false],
+    do: {atom, [{:atom, Atom.to_string(atom)} | acc]}
+
+  defp collect(node, acc), do: {node, acc}
+end
