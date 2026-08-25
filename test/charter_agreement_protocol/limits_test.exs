@@ -29,6 +29,8 @@ defmodule CharterAgreementProtocol.LimitsTest do
   test "unknown, duplicate, negative, non-integer, and above-maximum input fails closed" do
     for options <- [
           :not_a_keyword,
+          [1],
+          [{"max_depth", 1}],
           [unknown: 1],
           [max_depth: 1, max_depth: 2],
           [max_depth: -1],

@@ -123,6 +123,11 @@ defmodule CharterAgreementProtocol.SchemaTest do
 
     assert_raise ArgumentError, fn -> Schema.definition("bad", [field, field]) end
     assert_raise ArgumentError, fn -> Schema.field("bad", types: [:string], cardinality: :bad) end
+
+    assert_raise ArgumentError, fn ->
+      Schema.field("bad", types: [:integer], cardinality: {0, 1})
+    end
+
     assert_raise ArgumentError, fn -> Schema.field("bad", types: [:string], nested: :bad) end
 
     assert_raise ArgumentError, fn ->
@@ -140,12 +145,46 @@ defmodule CharterAgreementProtocol.SchemaTest do
     end
 
     assert_raise ArgumentError, fn ->
+      Schema.field("bad", types: [:array, :null], nested: {:array, child_definition()})
+    end
+
+    assert_raise ArgumentError, fn ->
       Schema.definition("bad", [field], cross_field: [{:ordered, "a", :bad, "b"}])
     end
 
     assert_raise ArgumentError, fn ->
       Schema.definition("bad", [field], cross_field: [:bad])
     end
+  end
+
+  test "forged inconsistent definitions return typed errors instead of executing" do
+    child = child_definition()
+    array = Schema.field("items", types: [:array], nested: {:array, child})
+    number = Schema.field("number", types: [:integer])
+
+    nested_forgery =
+      %{
+        Schema.definition("nested_forgery", [array])
+        | fields: [%{array | types: [:array, :null]}]
+      }
+
+    cardinality_forgery =
+      %{
+        Schema.definition("cardinality_forgery", [number])
+        | fields: [%{number | cardinality: {0, 1}}]
+      }
+
+    assert_error(
+      Schema.validate(nested_forgery, {:object, [{"items", :null}]}),
+      :invalid_type,
+      ["schema"]
+    )
+
+    assert_error(
+      Schema.validate(cardinality_forgery, {:object, [{"number", {:integer, 1}}]}),
+      :invalid_type,
+      ["schema"]
+    )
   end
 
   test "optional absence and every tagged scalar type validate" do

@@ -72,13 +72,16 @@ defmodule CharterAgreementProtocol.Limits do
   def valid?(_limits), do: false
 
   defp valid_options?(options) when is_list(options) do
-    keys = Keyword.keys(options)
+    if Keyword.keyword?(options) do
+      keys = Keyword.keys(options)
 
-    Keyword.keyword?(options) and keys == Enum.uniq(keys) and
-      Enum.all?(keys, &(&1 in @fields)) and
-      Enum.all?(options, fn {field, value} ->
-        is_integer(value) and value >= 0 and value <= Map.fetch!(@maximums, field)
-      end)
+      keys == Enum.uniq(keys) and Enum.all?(keys, &(&1 in @fields)) and
+        Enum.all?(options, fn {field, value} ->
+          is_integer(value) and value >= 0 and value <= Map.fetch!(@maximums, field)
+        end)
+    else
+      false
+    end
   end
 
   defp valid_options?(_options), do: false

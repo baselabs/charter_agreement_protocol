@@ -141,6 +141,27 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       end)
 
     deny(missing_surface, :corpus_applicability_incomplete)
+
+    smuggled_key =
+      Builder.update_index(minimal(), fn index ->
+        put_in(index, ["applicability", surface, optional_class], %{
+          "n_a" => "reason",
+          "smuggled" => "note"
+        })
+      end)
+
+    deny(smuggled_key, :corpus_applicability_incomplete)
+  end
+
+  test "unexpected JSON primitive types in the index fail as typed corpus errors" do
+    for primitive <- [nil, true, 1.5] do
+      tampered =
+        Builder.update_index(minimal(), fn index ->
+          Map.put(index, "applicability", %{"unexpected" => primitive})
+        end)
+
+      deny(tampered, :corpus_applicability_incomplete)
+    end
   end
 
   test "the shipped corpus loads through the pure map interface" do

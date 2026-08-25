@@ -89,7 +89,15 @@ defmodule CharterAgreementProtocol.Schema do
   @doc "Validate one tagged object against a protocol-owned definition."
   @spec validate(Definition.t(), CharterAgreementProtocol.Json.value()) ::
           {:ok, CharterAgreementProtocol.Json.value()} | {:error, Error.t()}
-  def validate(%Definition{} = definition, {:object, members} = value) when is_list(members) do
+  def validate(%Definition{} = definition, value) do
+    if valid_definition?(definition),
+      do: validate_value(definition, value),
+      else: error(:invalid_type, ["schema"])
+  end
+
+  def validate(_definition, _value), do: error(:invalid_type, ["schema"])
+
+  defp validate_value(definition, {:object, members} = value) when is_list(members) do
     if valid_members?(members) do
       member_map = Map.new(members)
 
@@ -107,13 +115,14 @@ defmodule CharterAgreementProtocol.Schema do
     end
   end
 
-  def validate(%Definition{name: name}, _value), do: error(:invalid_type, [name])
-  def validate(_definition, _value), do: error(:invalid_type, ["schema"])
+  defp validate_value(%Definition{name: name}, _value), do: error(:invalid_type, [name])
 
   defp valid_field?(%Field{} = field) do
     field.name != "" and field.types != [] and Enum.all?(field.types, &(&1 in @types)) and
       is_boolean(field.required?) and valid_constraint?(field.constraint) and
-      valid_cardinality?(field.cardinality) and valid_nested?(field.nested)
+      valid_cardinality?(field.cardinality) and
+      valid_cardinality_types?(field.cardinality, field.types) and valid_nested?(field.nested) and
+      valid_nested_types?(field.nested, field.types)
   end
 
   defp valid_constraint?(nil), do: true
@@ -140,14 +149,25 @@ defmodule CharterAgreementProtocol.Schema do
 
   defp valid_cardinality?(_cardinality), do: false
 
+  defp valid_cardinality_types?(nil, _types), do: true
+
+  defp valid_cardinality_types?(_cardinality, types),
+    do: Enum.all?(types, &(&1 in [:string, :array, :object]))
+
   defp valid_nested?(nil), do: true
   defp valid_nested?({kind, %Definition{}}), do: kind in [:object, :array]
   defp valid_nested?(_nested), do: false
 
-  defp valid_definition?(%Definition{} = definition) do
-    names = Enum.map(definition.fields, & &1.name)
+  defp valid_nested_types?(nil, _types), do: true
+  defp valid_nested_types?({kind, %Definition{}}, types), do: types == [kind]
 
-    definition.name != "" and Enum.all?(definition.fields, &valid_field?/1) and
+  defp valid_definition?(%Definition{} = definition) do
+    fields_valid? =
+      is_list(definition.fields) and Enum.all?(definition.fields, &match?(%Field{}, &1))
+
+    names = if fields_valid?, do: Enum.map(definition.fields, & &1.name), else: []
+
+    definition.name != "" and fields_valid? and Enum.all?(definition.fields, &valid_field?/1) and
       names == Enum.uniq(names) and valid_cross_rules?(definition.cross_field)
   end
 

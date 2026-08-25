@@ -262,8 +262,10 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       if class in floor.required do
         is_integer(cells[class]) and cells[class] > 0 and cells[class] == count
       else
-        match?(%{"n_a" => reason} when is_binary(reason) and reason != "", cells[class]) and
-          count == 0
+        cell = cells[class]
+
+        is_map(cell) and map_size(cell) == 1 and
+          match?(%{"n_a" => reason} when is_binary(reason) and reason != "", cell) and count == 0
       end
     end)
   end
@@ -271,7 +273,10 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
   defp sorted_keys(map), do: map |> Map.keys() |> Enum.sort()
   defp raw_hash(bytes), do: bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode()
 
+  defp tagged(nil), do: :null
+  defp tagged(value) when is_boolean(value), do: {:boolean, value}
   defp tagged(value) when is_integer(value), do: {:integer, value}
+  defp tagged(value) when is_float(value), do: {:float, value}
   defp tagged(value) when is_binary(value), do: {:string, value}
   defp tagged(value) when is_list(value), do: {:array, Enum.map(value, &tagged/1)}
 
