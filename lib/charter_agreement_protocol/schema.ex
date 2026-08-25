@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Schema do
   @moduledoc """
+  CAP never authorizes.
+
   Closed, table-driven validation for protocol-owned artifact definitions.
 
   Validation always completes one whole stage before entering the next:
@@ -11,7 +13,7 @@ defmodule CharterAgreementProtocol.Schema do
   alias CharterAgreementProtocol.Error
 
   defmodule Field do
-    @moduledoc "A protocol-owned field declaration consumed by `Schema.validate/2`."
+    @moduledoc "A non-authorizing field declaration consumed by `Schema.validate/2`."
     @enforce_keys [:name, :types]
     defstruct [:name, :types, required?: false, constraint: nil, cardinality: nil, nested: nil]
 
@@ -36,7 +38,7 @@ defmodule CharterAgreementProtocol.Schema do
   end
 
   defmodule Definition do
-    @moduledoc "A closed object definition and its final declarative cross-field rules."
+    @moduledoc "A closed, non-authorizing object definition and its cross-field rules."
     @enforce_keys [:name, :fields]
     defstruct [:name, :fields, cross_field: []]
 

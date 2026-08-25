@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Conformance.Corpus do
   @moduledoc """
+  CAP never authorizes.
+
   Pure conformance-corpus integrity loader.
 
   `load/1` accepts a `%{relative_path => bytes}` map and performs no I/O. The

@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Receipt do
   @moduledoc """
+  CAP never authorizes.
+
   Closed Receipt codec and view-relative cross-check verifier.
 
   Chain context re-verifies the retained artifact set, verifies the issuing
@@ -37,7 +39,7 @@ defmodule CharterAgreementProtocol.Receipt do
   }
 
   defmodule Grant do
-    @moduledoc "An exact host- or BAP-scheme grant reference carried by a Receipt."
+    @moduledoc "An exact, non-authorizing host- or BAP-scheme grant reference carried by a Receipt."
     @enforce_keys [:scheme, :id]
     defstruct [:scheme, :id, :grant_digest]
 

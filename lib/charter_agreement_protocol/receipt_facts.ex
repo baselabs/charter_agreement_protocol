@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.ReceiptFacts do
-  @moduledoc "Verified, redacted and view-relative receipt cross-check facts."
+  @moduledoc "Non-authorizing, verified, redacted, view-relative receipt cross-check facts."
 
   alias CharterAgreementProtocol.Timestamp
 

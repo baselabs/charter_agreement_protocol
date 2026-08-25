@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.SigningInput do
   @moduledoc """
+  CAP never authorizes.
+
   Deterministic attached-JWS framing plus the honest-signer refusal boundary.
 
   Callers provide exactly `%{"kid" => kid, "claims" => claims}`. This module

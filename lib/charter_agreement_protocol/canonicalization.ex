@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Canonicalization do
   @moduledoc """
+  CAP never authorizes.
+
   RFC 8785 JSON Canonicalization Scheme over the protocol's tagged JSON algebra.
 
   Object names sort by unsigned UTF-16 code units, strings use the exact JSON

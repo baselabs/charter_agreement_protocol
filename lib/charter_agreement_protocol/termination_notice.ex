@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.TerminationNotice do
   @moduledoc """
+  CAP never authorizes.
+
   Closed termination-notice codec and evidence verifier.
 
   Verification proves one pinned charter party signed a listed termination

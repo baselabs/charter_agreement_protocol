@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.CompactJws do
   @moduledoc """
+  CAP never authorizes.
+
   Bounded parser and verifier for attached compact JWS envelopes.
 
   The parser accepts only canonical protected-header and payload bytes. A key

@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Digest do
   @moduledoc """
+  CAP never authorizes.
+
   Tagged SHA-256 content digests over canonical bytes.
 
   Preimages are `separator || <<0>> || bytes`; the wire form is

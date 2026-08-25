@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.AcceptanceEquivocation do
-  @moduledoc "Same-signer, same-number countersignatures over different revision digests."
+  @moduledoc "Non-authorizing evidence of same-signer countersignatures over different revisions."
 
   @enforce_keys [
     :kind,

@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Limits do
   @moduledoc """
+  CAP never authorizes.
+
   Caller-supplied ceilings for bounded protocol decoding.
 
   Callers may narrow the defaults or widen them only as far as the compiled

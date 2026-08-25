@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.DescriptorChain do
   @moduledoc """
+  CAP never authorizes.
+
   Complete in-view descriptor-chain verification and fork evidence.
 
   A fork is returned as a fact. The verifier never chooses one signed sibling

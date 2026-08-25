@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.ArtifactSet do
-  @moduledoc "Raw caller-supplied artifacts retained for pure set-level verification."
+  @moduledoc "Raw caller-supplied artifacts for pure, non-authorizing set verification."
 
   alias CharterAgreementProtocol.Error
 

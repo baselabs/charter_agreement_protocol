@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.RevisionFacts do
-  @moduledoc "Verified, redacted set facts for one Charter Revision."
+  @moduledoc "Non-authorizing, verified, redacted facts for one Charter Revision."
 
   alias CharterAgreementProtocol.{AcceptanceFacts, CharterRevision}
 

@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.CharterRevision do
   @moduledoc """
+  CAP never authorizes.
+
   Closed codec for one unsigned Charter Revision.
 
   Decoding proves canonical syntax and the revision-local contract. Revision
@@ -18,7 +20,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
   }
 
   defmodule Party do
-    @moduledoc "A revision party binding to one verified descriptor digest."
+    @moduledoc "A non-authorizing revision-party binding to one verified descriptor digest."
     @enforce_keys [:party_descriptor_digest, :role]
     defstruct @enforce_keys
 
@@ -26,7 +28,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
   end
 
   defmodule LegalText do
-    @moduledoc "The raw-byte digest and descriptive metadata for governing legal text."
+    @moduledoc "Non-authorizing digest and descriptive metadata for governing legal text."
     @enforce_keys [:content_digest, :media_type]
     defstruct [:content_digest, :media_type, :uri_hint]
 
@@ -38,7 +40,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
   end
 
   defmodule AttributionDeclaration do
-    @moduledoc "The closed attribution basis declared by a revision."
+    @moduledoc "The closed, non-authorizing attribution basis declared by a revision."
     @enforce_keys [:basis]
     defstruct [:basis, :detail_digest]
 
@@ -49,7 +51,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
   end
 
   defmodule TerminationRules do
-    @moduledoc "The revision-local closed set of termination reason codes."
+    @moduledoc "The revision-local, non-authorizing set of termination reason codes."
     @enforce_keys [:reason_codes]
     defstruct @enforce_keys
 
@@ -57,7 +59,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
   end
 
   defmodule AbpBinding do
-    @moduledoc "One exact Agent Blueprint Protocol deployment binding."
+    @moduledoc "One exact, non-authorizing Agent Blueprint Protocol deployment binding."
     @enforce_keys [
       :party_role,
       :blueprint_id,

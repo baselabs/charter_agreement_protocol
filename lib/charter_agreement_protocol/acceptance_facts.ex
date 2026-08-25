@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.AcceptanceFacts do
-  @moduledoc "Verified, view-relative facts for one countersignature."
+  @moduledoc "Non-authorizing, verified, view-relative facts for one countersignature."
 
   alias CharterAgreementProtocol.{Acceptance, Timestamp}
 

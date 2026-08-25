@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.PartyDescriptor do
   @moduledoc """
+  CAP never authorizes.
+
   Closed Party Descriptor codec and predecessor-bound signature verifier.
 
   Descriptor-chain continuity proves possession linkage between key sets. It
@@ -19,7 +21,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   }
 
   defmodule VerificationKey do
-    @moduledoc "One closed Ed25519 verification-key record."
+    @moduledoc "One closed, non-authorizing Ed25519 verification-key record."
     @enforce_keys [:key_id, :algorithm, :public_key, :status]
     defstruct @enforce_keys
 
@@ -32,7 +34,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   end
 
   defmodule AttestationHint do
-    @moduledoc "One non-normative pointer that CAP never dereferences."
+    @moduledoc "One non-authorizing, non-normative pointer that CAP never dereferences."
     @enforce_keys [:kind, :uri]
     defstruct @enforce_keys
 

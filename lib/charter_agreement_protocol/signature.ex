@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Signature do
   @moduledoc """
+  CAP never authorizes.
+
   Strict Ed25519 verification boundary for already-framed protocol bytes.
 
   Before invoking OTP crypto, this module rejects noncanonical point encodings,

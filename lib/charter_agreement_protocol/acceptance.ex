@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Acceptance do
   @moduledoc """
+  CAP never authorizes.
+
   Closed Acceptance codec, countersignature verifier, and equivocation predicate.
 
   Verification proves one party signed exact revision coordinates with a key

@@ -374,6 +374,15 @@ does not read files. All Mix dependencies are development/test-only and
 `runtime: false`. The build rejects host, transport, database,
 private-authority-runtime, and application-callback coupling.
 
+The compiled-production battery rejects filesystem, calendar, wall-clock, and
+dynamic-dispatch calls. Source gates reject authorization-decision and
+term-evaluation vocabulary, require every explicit module to state its
+non-authorizing boundary, and require a specification for every public
+function, macro, and delegate. Every facts struct is constructed through the
+single shared omission-floor constructor. Exact source censuses pin CAP's
+domain separators and protected types and prove they remain disjoint from the
+consumed ABP and BAP package identities.
+
 Protocol evolution is carried as digest-covered data. Version tokens are rejected
 from durable paths and identifiers; the exact Hex package `source_ref` is the only
 allowlisted identity.

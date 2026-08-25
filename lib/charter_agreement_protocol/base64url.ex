@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Base64Url do
   @moduledoc """
+  CAP never authorizes.
+
   Strict unpadded base64url over the RFC 4648 URL-safe alphabet.
 
   Decoding rejects padding, non-alphabet bytes, impossible lengths, and

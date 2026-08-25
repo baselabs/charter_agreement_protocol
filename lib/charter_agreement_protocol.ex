@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol do
   @moduledoc """
+  CAP never authorizes.
+
   Charter Agreement Protocol.
 
   The implemented foundation provides strict base64url, bounded deterministic

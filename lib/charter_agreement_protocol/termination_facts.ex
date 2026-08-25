@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.TerminationFacts do
-  @moduledoc "Verified, view-relative facts for one termination notice."
+  @moduledoc "Non-authorizing, verified, view-relative facts for one termination notice."
 
   alias CharterAgreementProtocol.{TerminationNotice, Timestamp}
 

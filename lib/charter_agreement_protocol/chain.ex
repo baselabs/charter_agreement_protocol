@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Chain do
   @moduledoc """
+  CAP never authorizes.
+
   Pure set-level charter verification and view-relative governing computation.
 
   Set verification re-verifies every artifact and reports signed conflicts as

@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Error do
   @moduledoc """
+  CAP never authorizes.
+
   Value-free typed failure returned by the protocol codecs.
 
   `subject` is built from protocol-owned names, never from rejected input.

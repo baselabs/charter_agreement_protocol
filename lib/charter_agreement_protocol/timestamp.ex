@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Timestamp do
   @moduledoc """
+  CAP never authorizes.
+
   Pure RFC 3339 UTC timestamp parsing and comparison.
 
   Parsing never reads a clock. The protocol narrows RFC 3339 to uppercase `T`

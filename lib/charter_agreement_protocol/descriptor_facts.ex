@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.DescriptorFacts do
-  @moduledoc "Verified, view-relative facts for one party descriptor."
+  @moduledoc "Non-authorizing, verified, view-relative facts for one party descriptor."
 
   @enforce_keys [
     :descriptor,
@@ -34,7 +34,7 @@ defimpl Inspect, for: CharterAgreementProtocol.DescriptorFacts do
 end
 
 defmodule CharterAgreementProtocol.ForkEvidence do
-  @moduledoc "Signed descriptor, revision, or acceptance conflict evidence."
+  @moduledoc "Non-authorizing signed descriptor, revision, or acceptance conflict evidence."
 
   @enforce_keys [:kind, :not_verified]
   defstruct [

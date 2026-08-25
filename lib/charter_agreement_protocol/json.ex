@@ -1,5 +1,7 @@
 defmodule CharterAgreementProtocol.Json do
   @moduledoc """
+  CAP never authorizes.
+
   Deterministic JSON decoder producing a closed tagged value algebra.
 
   Object order is preserved, duplicate names and trailing non-whitespace are

@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.ChainFacts do
-  @moduledoc "Verified, redacted and view-relative structural charter-set facts."
+  @moduledoc "Non-authorizing, verified, redacted, view-relative charter-set facts."
 
   alias CharterAgreementProtocol.{
     AcceptanceFacts,
