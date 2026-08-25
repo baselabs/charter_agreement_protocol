@@ -12,6 +12,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     Error,
     Limits,
     PartyDescriptor,
+    Receipt,
     TerminationNotice
   }
 
@@ -194,6 +195,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert_acceptance_expectations(cases)
     assert_termination_expectations(cases)
     assert_chain_expectations(cases)
+    assert_receipt_expectations(cases)
   end
 
   defp shipped_files do
@@ -370,6 +372,37 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   defp projected_set_result({:error, %Error{code: code}}),
+    do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+
+  defp assert_receipt_expectations(cases) do
+    receipt_cases = Enum.filter(cases, &(&1["surface"] == "receipt.verify"))
+    assert length(receipt_cases) == 5
+
+    Enum.each(receipt_cases, fn one ->
+      input = one["input"]
+      {:ok, chain} = verify_chain_input(input["chain"])
+      actual = Receipt.verify(input["compact"], chain, Limits.default())
+      assert projected_receipt_result(actual) == one["expect"]
+    end)
+  end
+
+  defp projected_receipt_result({:ok, facts}) do
+    %{
+      "status" => "valid",
+      "output" => %{
+        "receipt_digest" => facts.receipt_digest,
+        "revision_number" => facts.revision_number,
+        "revision_digest" => facts.revision_digest,
+        "decision" => Atom.to_string(facts.decision),
+        "outcome" => Atom.to_string(facts.outcome),
+        "chain_conflict" => Atom.to_string(facts.chain_conflict),
+        "governing_match" => Atom.to_string(facts.governing_match),
+        "deployment_digest_matched" => facts.deployment_digest_matched
+      }
+    }
+  end
+
+  defp projected_receipt_result({:error, %Error{code: code}}),
     do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
 
   defp projected_equivocation_result({:ok, evidence}) do

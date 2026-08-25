@@ -20,6 +20,8 @@ defmodule CharterAgreementProtocol do
     DescriptorFacts,
     Limits,
     PartyDescriptor,
+    Receipt,
+    ReceiptFacts,
     TerminationFacts,
     TerminationNotice
   }
@@ -65,6 +67,11 @@ defmodule CharterAgreementProtocol do
   defdelegate verify_termination(compact, revision, descriptor_chain, limits),
     to: TerminationNotice,
     as: :verify
+
+  @doc "Verify one receipt against revision-only or full-chain context."
+  @spec verify_receipt(term(), ChainFacts.t() | CharterRevision.t(), Limits.t()) ::
+          {:ok, ReceiptFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate verify_receipt(compact, context, limits), to: Receipt, as: :verify
 
   @doc "Build a typed set of charter artifacts without verifying them."
   @spec build_set(term(), term(), term(), term()) ::

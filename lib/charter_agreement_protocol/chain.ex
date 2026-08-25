@@ -71,6 +71,10 @@ defmodule CharterAgreementProtocol.Chain do
     end
   end
 
+  def governing_revision(%ChainFacts{} = facts, %Timestamp{} = at) do
+    if terminated?(facts, at), do: {:ok, :none}, else: {:ok, select(facts, at)}
+  end
+
   def governing_revision(_facts, _at), do: invalid_type()
 
   defp bounded_lists(lists, limits) do

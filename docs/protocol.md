@@ -3,8 +3,9 @@
 This document defines the implemented byte-level, schema-validation, corpus,
 Party Descriptor, and Charter Revision surfaces of Charter Agreement Protocol.
 Acceptance and Termination Notice evidence verification is also implemented.
-Governing-chain evaluation, receipts, and conformance reports are not part of
-the implemented surface yet.
+Governing-chain and Receipt verification are implemented. Signing-input
+production, extension profiles, and complete conformance reports are not part
+of the implemented surface yet.
 
 ## Tagged JSON values
 
@@ -285,6 +286,47 @@ authority, effect ownership, execution, billing, evaluation truth, legal
 validity, term satisfaction, view completeness, counterparty view, and wall
 clock. Additional omissions are unioned and cannot replace that floor. Facts
 implement redacted inspection so logs do not expose retained signed artifacts.
+
+## Receipts
+
+A Receipt is an attached compact JWS with protected type `cap+receipt`, signed
+by the issuing party's charter key. Its closed payload contains the protocol and
+charter identities, revision number and digest, issuing and agent party roles,
+one exact ABP deployment digest, a typed grant reference, an invocation
+identifier, decision and outcome, pure UTC occurrence and recording instants,
+and the receipt-profile extension envelope.
+
+The grant reference is `{scheme, id, grant_digest?}`. A BAP-scheme reference
+requires the digest; a host-scheme reference may omit it. BAP `ath` is the
+unpadded base64url SHA-256 of the complete received grant compact, while CAP
+uses the tagged form, so exact composition is
+`grant_digest = "sha-256:" <> ath`; decoding both yields the identical 32
+digest bytes. The development/test gate recomputes this against exact Hex
+package `bounded_authority_protocol` 0.1.2. It also decodes ABP's published
+golden deployment with exact package `agent_blueprint_protocol` 0.1.1 and
+requires CAP's frozen content and deployment digests to match the package's
+recomputed output. Both dependencies are development/test-only and
+runtime-disabled; production remains OTP-crypto-only.
+
+`verify_receipt/3` enforces the four valid decision/outcome pairs: accepted may
+report `effect_committed`, `no_effect`, or `indeterminate`; rejected requires
+`no_effect`. `recorded_at` may equal but may not precede `occurred_at`. For a
+recognized revision, charter identity, revision number, both party roles, and
+the agent role's deployment binding must match exactly.
+
+Full `ChainFacts` context is reverified from retained bytes before use. The
+issuing role resolves to one active descriptor key, the Ed25519 signature must
+verify, and governance is recomputed at `occurred_at`. An unrecognized revision
+digest at or below the accepted head returns
+`chain_conflict: :fork_evidenced`; no branch is selected. Governance comparison
+is `:match`, `:mismatch`, or `:undetermined` when the view is contested.
+
+The approved revision-only API form can prove structural revision/deployment
+equality but has no descriptor key or chain view. Its facts therefore add
+`:signature` to `not_verified`, set `signing_key_id` to `nil`, and report
+governance as undetermined. Host post-sign verification uses full chain context.
+Neither form validates live grant state, authorization, execution, effect truth,
+legal validity, term satisfaction, view completeness, or wall-clock truth.
 
 ## Architecture boundaries
 

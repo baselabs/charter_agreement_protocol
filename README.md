@@ -17,6 +17,9 @@ both descriptor histories, revisions, acceptances, and notices into redacted
 structural facts; caller-time governing queries enforce bilateral assent,
 effective windows, supersession, termination closure, and no-tie-break fork
 handling.
+Receipt verification now binds signed issuing-party evidence to exact revision
+coordinates, ABP deployment digests, BAP grant-hash bytes, decision/outcome
+states, and view-relative fork/governance facts.
 See [Protocol foundation](docs/protocol.md).
 
 ## Status
@@ -24,8 +27,9 @@ See [Protocol foundation](docs/protocol.md).
 Foundational codecs, bounded decode limits, the schema engine, corpus loader,
 independent Node integrity harness, Party Descriptor verification, and Charter
 Revision, Acceptance, and Termination Notice engines are implemented.
-The governing-chain engine and its cross-language corpus cells are implemented.
-Receipt and report engines remain under construction. The package is not
+The governing-chain and Receipt engines and their corpus cells are implemented.
+Signing-input production, extension profiles, the complete second verifier, and
+the report/release engines remain under construction. The package is not
 published to Hex.
 
 ## Development

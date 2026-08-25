@@ -7,6 +7,7 @@ defmodule CharterAgreementProtocol.Facts do
     DescriptorFacts,
     Error,
     ForkEvidence,
+    ReceiptFacts,
     RevisionFacts,
     TerminationFacts
   }
@@ -17,6 +18,7 @@ defmodule CharterAgreementProtocol.Facts do
     ChainFacts,
     DescriptorFacts,
     ForkEvidence,
+    ReceiptFacts,
     RevisionFacts,
     TerminationFacts
   ]

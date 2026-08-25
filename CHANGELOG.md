@@ -42,6 +42,14 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   `not_verified` floor across descriptor, revision, acceptance, termination,
   fork, and chain facts, plus executable Elixir and Node corpus cells for
   chain forks, supersession, and temporal precedence.
+- Attached Receipt verification with exact revision-number/digest and ABP
+  deployment cross-checks, BAP grant-hash byte identity, total
+  decision/outcome states including indeterminate effects, issuing-party
+  Ed25519 verification under full chain context, view-relative fork/governance
+  facts, redacted ReceiptFacts, and five executable corpus cases.
+- Exact development/test-only, runtime-disabled ABP 0.1.1 and BAP 0.1.2 Hex
+  dependencies with package checksums and frozen/live byte-identity gates; the
+  CAP production application remains OTP-crypto-only.
 - Architecture gates that reject implementation-version tokens everywhere
   except the exact Hex package source reference, reject runtime dependency
   drift away from OTP `:crypto`, and keep declared error codes synchronized

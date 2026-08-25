@@ -29,7 +29,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "acceptance.equivocation",
     "termination.verify",
     "chain.verify",
-    "governing_revision"
+    "governing_revision",
+    "receipt.verify"
   ]
 
   @classes [
@@ -52,7 +53,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "equivocation",
     "chain_fork",
     "supersession",
-    "precedence_selection"
+    "precedence_selection",
+    "outcome_indeterminate"
   ]
 
   @floor %{
@@ -114,6 +116,10 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "governing_revision" => %{
       required: ~w(precedence_selection),
       n_a: "set integrity and single-artifact behavior are outside temporal precedence selection"
+    },
+    "receipt.verify" => %{
+      required: ~w(valid invalid_constraint signature_invalid chain_fork outcome_indeterminate),
+      n_a: "non-receipt codec and set-construction behavior is outside receipt verification"
     }
   }
 

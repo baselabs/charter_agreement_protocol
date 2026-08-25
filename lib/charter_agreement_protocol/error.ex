@@ -56,7 +56,9 @@ defmodule CharterAgreementProtocol.Error do
     :termination_invalid,
     :termination_claims_mismatch,
     :chain_invalid,
-    :governing_invalid
+    :governing_invalid,
+    :receipt_invalid,
+    :receipt_claims_mismatch
   ]
 
   @type code ::
@@ -105,6 +107,8 @@ defmodule CharterAgreementProtocol.Error do
           | :termination_claims_mismatch
           | :chain_invalid
           | :governing_invalid
+          | :receipt_invalid
+          | :receipt_claims_mismatch
   @type subject :: [binary() | non_neg_integer()]
   @type detail :: nil | atom() | binary()
   @type t :: %__MODULE__{code: code(), subject: subject(), detail: detail()}
