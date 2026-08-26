@@ -2,7 +2,7 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
-## [0.1.0] — pending publication
+## [0.1.0] — 2026-08-26
 
 Everything below is the 0.1.0 candidate content, frozen for the
 publication decision; the archive at this commit is the reviewed candidate.

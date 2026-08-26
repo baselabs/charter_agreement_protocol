@@ -105,7 +105,7 @@ their code at runtime.
 
 ## Status
 
-The approved protocol core, certified 57-case corpus, independent second
+The approved protocol core, certified 85-case corpus, independent second
 verifier, 22-mutation battery, and release-candidate gates are implemented and
 green in CI. The package remains an unpublished candidate; see the README
 status section and [Conformance](conformance.md) for the certified identities.
