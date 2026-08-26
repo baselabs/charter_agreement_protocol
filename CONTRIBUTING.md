@@ -30,11 +30,13 @@ The independent Node verifier needs Node 24+.
 - **Mutation receipts.** New verification behavior extends the named mutation
   battery — prove the exact protected defect goes red in an isolated scratch
   copy. Never tamper the live tree to demo a failure.
-- **Corpus changes are certification events.** A deliberate corpus or registry
-  change re-runs `scripts/record_conformance_index.exs` and invalidates the
-  three certified identities (corpus digest, raw index SHA-256, registry
-  digest) in `priv/release-metadata.json`, the Elixir CLI pin, and the
-  TypeScript verifier pin. Conformance, mutations, verifier agreement,
+- **Corpus and spec changes are certification events.** A deliberate corpus or
+  registry change re-runs `scripts/record_conformance_index.exs`; a
+  deliberate spec-byte change re-runs `scripts/record_release_metadata.exs`.
+  Either invalidates the four certified identities (corpus digest, raw index
+  SHA-256, registry digest, specification digest) in
+  `priv/release-metadata.json`, the Elixir CLI pin, and the TypeScript
+  verifier pin. Conformance, mutations, verifier agreement,
   release-candidate, review, and CI must all re-run.
 - **Docs land with the change.** New public behavior ships with its guide
   section, changelog entry, and API documentation in the same landing. Doc

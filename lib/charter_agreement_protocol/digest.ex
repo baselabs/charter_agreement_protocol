@@ -30,7 +30,8 @@ defmodule CharterAgreementProtocol.Digest do
     extension_schema: "charter-agreement-protocol/extension-schema",
     extension_registry: "charter-agreement-protocol/extension-registry",
     conformance_report: "charter-agreement-protocol/conformance-report",
-    corpus_index: "charter-agreement-protocol/corpus-index"
+    corpus_index: "charter-agreement-protocol/corpus-index",
+    specification: "charter-agreement-protocol/specification"
   }
 
   @doc "Hash arbitrary iodata with SHA-256."

@@ -23,6 +23,7 @@ defmodule CharterAgreementProtocol.Architecture.PortfolioIdentityCensusTest do
                charter-agreement-protocol/party-descriptor-content
                charter-agreement-protocol/receipt-content
                charter-agreement-protocol/signature
+               charter-agreement-protocol/specification
                charter-agreement-protocol/termination-content
              ))
 

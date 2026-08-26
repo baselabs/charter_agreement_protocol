@@ -2,7 +2,7 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
   @moduledoc false
 
   @source_roots ["lib", "test"]
-  @path_roots ["lib", "priv", "test", "docs", "scripts", "verifier", "config"]
+  @path_roots ["lib", "priv", "spec", "test", "docs", "scripts", "verifier", "config"]
   @non_version_hump_stems ["Base", "Ed", "IPV", "IPv", "Ipv", "RFC", "Sha"]
   @package_source_identity {"mix.exs", :package_source_ref, ~S(source_ref: "v#{@version}")}
   @stance_terms [

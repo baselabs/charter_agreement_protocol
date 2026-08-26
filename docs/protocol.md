@@ -476,8 +476,9 @@ has undergone CAVP validation. See the
 [NIST Secure Hashing validation page](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/secure-hashing)
 and [FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final).
 
-`mix release.candidate` verifies canonical release metadata, all three certified
-identity pins, development/test-only dependency direction, regular-file package
+`mix release.candidate` verifies canonical release metadata, all four certified
+identity pins (corpus digest, raw index SHA-256, registry digest, and the
+specification digest over the shipped spec set), development/test-only dependency direction, regular-file package
 inputs, two byte-identical independently built archives, and exact unpacked
 archive membership. The explicit package allowlist includes `lib`, the corpus,
 release metadata, and named public documents. It excludes `test`, `scripts`,

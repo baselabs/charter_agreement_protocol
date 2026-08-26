@@ -4,7 +4,9 @@ defmodule CharterAgreementProtocol.Conformance.Cli do
 
   Filesystem adapter for the pure corpus loader, runner, and report. The CLI
   accepts only an explicit corpus directory and refuses bytes whose raw index
-  identity is not the certified release identity.
+  identity is not the certified release identity. The specification digest —
+  the fourth certified identity — is pinned in `priv/release-metadata.json`
+  and enforced by the release-candidate gate, not by corpus verification.
   """
 
   alias CharterAgreementProtocol.Conformance.{Corpus, Report, Runner}

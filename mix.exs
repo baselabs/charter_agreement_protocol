@@ -71,6 +71,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "priv/release-metadata.json",
         ".formatter.exs",
         "mix.exs",
+        "spec",
         "README.md",
         "CHANGELOG.md",
         "CONTRIBUTING.md",
@@ -122,7 +123,13 @@ defmodule CharterAgreementProtocol.MixProject do
         "docs/notebooks/fork-repair.livemd",
         "docs/profiles/indexed-price.md",
         "docs/adr/no-versioning-rule.md",
-        "docs/adr/conformance-release-candidate.md"
+        "docs/adr/conformance-release-candidate.md",
+        "spec/core.md",
+        "spec/requirements.md",
+        "spec/security-considerations.md",
+        "spec/privacy-considerations.md",
+        "spec/registry-policy.md",
+        "spec/evolution.md"
       ],
       groups_for_extras: [
         Guides: [
@@ -147,6 +154,14 @@ defmodule CharterAgreementProtocol.MixProject do
           "docs/profiles/indexed-price.md",
           "docs/adr/no-versioning-rule.md",
           "docs/adr/conformance-release-candidate.md"
+        ],
+        Specification: [
+          "spec/core.md",
+          "spec/requirements.md",
+          "spec/security-considerations.md",
+          "spec/privacy-considerations.md",
+          "spec/registry-policy.md",
+          "spec/evolution.md"
         ]
       ],
       groups_for_modules: [

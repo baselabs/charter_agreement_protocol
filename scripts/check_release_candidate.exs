@@ -1,10 +1,11 @@
 defmodule CharterAgreementProtocol.ReleaseCandidateGate do
-  alias CharterAgreementProtocol.{Canonicalization, Digest}
+  alias CharterAgreementProtocol.{Canonicalization, Digest, SpecificationIdentity}
   alias CharterAgreementProtocol.Conformance.Report
 
   @root Path.expand("..", __DIR__)
   @metadata "priv/release-metadata.json"
   @index "priv/conformance/index.json"
+  @spec_root "spec"
   @forbidden_prefixes [".env", ".kimosabe", "scripts/", "test/", "verifier/"]
 
   def run do
@@ -45,6 +46,7 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
       "package" => "charter_agreement_protocol",
       "package_version" => Mix.Project.config()[:version],
       "registry_digest" => index["registry_digest"],
+      "spec_digest" => live_spec_digest(),
       "verifier_runtime" => "node>=24"
     }
 
@@ -60,6 +62,16 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
       if not String.contains?(File.read!(Path.join(@root, path)), pin),
         do: raise("certified identity missing from #{path}")
     end)
+  end
+
+  defp live_spec_digest do
+    @spec_root
+    |> Path.join("**/*")
+    |> Path.wildcard()
+    |> Enum.reject(&File.dir?/1)
+    |> Enum.map(&{Path.relative_to(&1, @spec_root), File.read!(&1)})
+    |> SpecificationIdentity.digest()
+    |> Digest.to_tagged()
   end
 
   defp verify_project! do

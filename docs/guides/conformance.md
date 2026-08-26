@@ -24,9 +24,9 @@ globally unique case IDs, and **projected outputs for valid cases** — a
 verdict-only green is refused, so a runner that says "valid" without producing
 the exact expected fact document cannot pass.
 
-## The two index identities
+## The certified identities
 
-The release-candidate ADR separates two jobs:
+The release-candidate ADR separates these jobs:
 
 - `corpus_digest` — the domain-separated digest *inside* the canonical corpus
   index. Proves the index is self-consistent.
@@ -42,6 +42,7 @@ For the current candidate:
 | Corpus digest | `sha-256:sLJmUSpiuPoAjoiynGzdNSntQ4V-NV7p0zfeoIsUmaA` |
 | Index SHA-256 (base64url) | `NiSzeS8F0SXS6ddeeQhOBdsG4BQn8jcxb8DSX1q-oLM` |
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
+| Specification digest | `sha-256:O9nzLxQyq6vRb6QrRaos1Se0WG2Whd7BDaIWRvpCTe8` |
 | Certified cases | 57 |
 
 ## The requirements matrix
@@ -65,7 +66,7 @@ $ charter_agreement_protocol --corpus DIRECTORY
 
 Exit `0` — every certified case recomputed and agreed; the canonical JSON
 report on stdout carries per-case actual and expected documents, agreement
-counts, and all three identities. Exit `1` — load or verification failure.
+counts, and all four identities. Exit `1` — load or verification failure.
 Exit `2` — usage. The CLI is the sole filesystem adapter (≤ 64 files,
 ≤ 32 MiB) and refuses any corpus whose raw index identity is not the certified
 pin — including a freshly regenerated, internally consistent one.
