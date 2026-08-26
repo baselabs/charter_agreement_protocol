@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "required": ["critical", "optional"],
+  "properties": {
+    "critical": {"type": "object", "additionalProperties": true},
+    "optional": {"type": "object", "additionalProperties": true}
+  },
+  "additionalProperties": false
+}

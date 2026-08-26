@@ -1,0 +1,59 @@
+{
+  "$defs": {
+    "tagged_digest": {"type": "string", "minLength": 51, "maxLength": 51},
+    "timestamp": {"type": "string", "minLength": 20, "maxLength": 64},
+    "extension_envelope": {
+      "type": "object",
+      "required": ["critical", "optional"],
+      "properties": {
+        "critical": {"type": "object", "additionalProperties": true},
+        "optional": {"type": "object", "additionalProperties": true}
+      },
+      "additionalProperties": false
+    },
+    "grant": {
+      "type": "object",
+      "required": ["scheme", "id"],
+      "properties": {
+        "scheme": {"enum": ["bap", "host"]},
+        "id": {"type": "string", "minLength": 1, "maxLength": 512},
+        "grant_digest": {"$ref": "#/$defs/tagged_digest"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "required": [
+    "protocol_revision",
+    "charter_id",
+    "revision_number",
+    "revision_digest",
+    "issuing_party_role",
+    "agent_party_role",
+    "deployment_digest",
+    "grant",
+    "invocation_id",
+    "decision",
+    "outcome",
+    "occurred_at",
+    "recorded_at",
+    "extensions"
+  ],
+  "properties": {
+    "protocol_revision": {"type": "integer", "minimum": 1, "maximum": 1},
+    "charter_id": {"$ref": "#/$defs/tagged_digest"},
+    "revision_number": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+    "revision_digest": {"$ref": "#/$defs/tagged_digest"},
+    "issuing_party_role": {"type": "string", "minLength": 1, "maxLength": 128},
+    "agent_party_role": {"type": "string", "minLength": 1, "maxLength": 128},
+    "deployment_digest": {"$ref": "#/$defs/tagged_digest"},
+    "grant": {"$ref": "#/$defs/grant"},
+    "invocation_id": {"type": "string", "minLength": 1, "maxLength": 512},
+    "decision": {"enum": ["accepted", "rejected"]},
+    "outcome": {"enum": ["effect_committed", "no_effect", "indeterminate"]},
+    "occurred_at": {"$ref": "#/$defs/timestamp"},
+    "recorded_at": {"$ref": "#/$defs/timestamp"},
+    "extensions": {"$ref": "#/$defs/extension_envelope"}
+  },
+  "additionalProperties": false
+}

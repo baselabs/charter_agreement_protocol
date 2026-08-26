@@ -81,7 +81,30 @@ dialyzer, and docs:
   certified corpus. A closed set of supplemental cross-package and profile
   cases (frozen at their owning boundaries — the exact ABP 0.1.1 deployment
   and BAP 0.1.2 grant vectors) stays frozen and required. The same gate
-  proves the requirements matrix is fresh and bidirectionally covering.
+  proves the requirements matrix is fresh and bidirectionally covering, and
+  enforces the wire grammar schemas.
+
+## Wire grammar schemas
+
+`spec/schemas/` is the single normative machine grammar for every externally
+consumed wire format: the five artifact claim sets, the extension envelope,
+the compact-JWS protected header, the tagged-digest and timestamp grammar,
+and the corpus index and canonical report documents. Every schema is JSON
+Schema 2020-12 restricted to the closed 16-keyword subset validated by the
+pinned `AgentBlueprintProtocol.Schema` — no other dialect file exists and no
+new dependency is introduced. Character-set shape, byte-exact bounds,
+cross-field rules, and conditional member presence stay codec-enforced and
+normative in the spec text; the schema layer expresses member closure,
+types, enumerations, ranges, and cardinalities (see the schema README).
+
+The gate proves both directions: every valid corpus artifact (claim sets,
+protected headers, revision texts, the shipped index, and the live canonical
+report) validates against its schema, and each shipped constraint carries a
+constructed single-defect negative observed to fail. Two completeness floors
+keep the set honest against drift — each artifact schema must declare
+exactly the member and required sets of the codec definition it serves, and
+every properties-bearing schema object must be closed. The extended
+`conformance.verify` completes in ~1.7s against a 3s budget.
 - `mix conformance.mutations` — creates isolated scratch copies and proves all
   **22 named source defects go red**: JCS number defeat, padding acceptance,
   separator collapse, unknown-member acceptance, chain signature skip, digest

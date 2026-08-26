@@ -1,0 +1,56 @@
+{
+  "$defs": {
+    "verdict": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": {"enum": ["valid", "invalid"]},
+        "output": {"type": "object"},
+        "error_code": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "required": ["actual", "agree", "expected", "id", "surface"],
+      "properties": {
+        "actual": {"$ref": "#/$defs/verdict"},
+        "agree": {"type": "boolean"},
+        "expected": {"$ref": "#/$defs/verdict"},
+        "id": {"type": "string", "minLength": 1},
+        "surface": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "required": [
+    "agreement",
+    "agreed",
+    "corpus_digest",
+    "disagreed",
+    "exit_status",
+    "format",
+    "index_sha256_base64url",
+    "registry_digest",
+    "results",
+    "total"
+  ],
+  "properties": {
+    "agreement": {"type": "boolean"},
+    "agreed": {"type": "integer", "minimum": 0},
+    "corpus_digest": {"type": "string", "minLength": 51, "maxLength": 51},
+    "disagreed": {"type": "integer", "minimum": 0},
+    "exit_status": {"type": "integer", "minimum": 0, "maximum": 1},
+    "format": {"const": "charter-agreement-protocol-conformance-report"},
+    "index_sha256_base64url": {"type": "string", "minLength": 43, "maxLength": 43},
+    "registry_digest": {"type": "string", "minLength": 51, "maxLength": 51},
+    "results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/result"}
+    },
+    "total": {"type": "integer", "minimum": 1}
+  },
+  "additionalProperties": false
+}

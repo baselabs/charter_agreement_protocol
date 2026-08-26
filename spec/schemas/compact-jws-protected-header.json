@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "required": ["alg", "kid", "typ"],
+  "properties": {
+    "alg": {"enum": ["EdDSA"]},
+    "kid": {"type": "string", "minLength": 1, "maxLength": 128},
+    "typ": {"enum": ["cap+party", "cap+acceptance", "cap+termination", "cap+receipt"]}
+  },
+  "additionalProperties": false
+}

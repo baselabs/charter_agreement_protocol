@@ -1,0 +1,56 @@
+{
+  "$defs": {
+    "observation_count": {"type": "integer", "minimum": 0},
+    "not_applicable": {
+      "type": "object",
+      "required": ["n_a"],
+      "properties": {"n_a": {"type": "string", "minLength": 1}},
+      "additionalProperties": false
+    },
+    "expectation_cell": {
+      "oneOf": [
+        {"$ref": "#/$defs/observation_count"},
+        {"$ref": "#/$defs/not_applicable"}
+      ]
+    },
+    "surface_map": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/expectation_cell"}
+    },
+    "corpus_file": {
+      "type": "object",
+      "required": ["cases", "path", "sha256_base64url"],
+      "properties": {
+        "cases": {"type": "integer", "minimum": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256_base64url": {"type": "string", "minLength": 43, "maxLength": 43}
+      },
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "required": [
+    "applicability",
+    "corpus_digest",
+    "files",
+    "format",
+    "registry_digest",
+    "total_cases"
+  ],
+  "properties": {
+    "applicability": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/surface_map"}
+    },
+    "corpus_digest": {"type": "string", "minLength": 51, "maxLength": 51},
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/corpus_file"}
+    },
+    "format": {"const": "charter-agreement-protocol-conformance-corpus-index"},
+    "registry_digest": {"type": "string", "minLength": 51, "maxLength": 51},
+    "total_cases": {"type": "integer", "minimum": 1}
+  },
+  "additionalProperties": false
+}
