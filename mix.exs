@@ -80,6 +80,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "SECURITY.md",
         "docs/protocol.md",
         "docs/errata.md",
+        "docs/test-vectors.md",
         "docs/guides",
         "docs/notebooks",
         "docs/profiles/indexed-price.md",
@@ -109,6 +110,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "SECURITY.md",
         "docs/protocol.md",
         "docs/errata.md",
+        "docs/test-vectors.md",
         "docs/guides/getting-started.md",
         "docs/guides/overview.md",
         "docs/guides/artifacts.md",
@@ -153,6 +155,7 @@ defmodule CharterAgreementProtocol.MixProject do
         Reference: [
           "docs/protocol.md",
           "docs/errata.md",
+          "docs/test-vectors.md",
           "docs/profiles/indexed-price.md",
           "docs/adr/no-versioning-rule.md",
           "docs/adr/conformance-release-candidate.md"
