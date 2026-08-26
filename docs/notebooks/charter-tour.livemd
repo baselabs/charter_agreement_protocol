@@ -2,10 +2,6 @@
 
 <!-- livebook:{"file_entities":[]} -->
 
-```elixir
-version
-```
-
 ## Charter Agreement Protocol — a complete bilateral charter, live
 
 This notebook walks the full lifecycle with **real Ed25519 signatures**: two

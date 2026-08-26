@@ -147,13 +147,19 @@ corpus.
 
 ## Run the certified corpus in your CI
 
-From a repository checkout:
+From a repository checkout (or an unpacked package directory):
 
 ```console
 $ mix conformance.verify
 ```
 
-From the published package (the corpus ships in `priv/conformance`):
+From a dependent project, without leaving your application's Mix context:
+
+```console
+$ mix run -e 'CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"])'
+```
+
+The escript form also works from a checkout or unpacked package directory:
 
 ```console
 $ mix escript.build && ./charter_agreement_protocol --corpus priv/conformance

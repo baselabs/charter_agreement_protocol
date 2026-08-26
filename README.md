@@ -59,13 +59,14 @@ package is published, depend on the exact commit your CI verified:
  ref: "f2a6165a4ac58ceb6fca3fd1d0c451b2409ffea6"}
 ```
 
-Then verify the shipped, certified corpus from your dependency:
+Then verify the shipped, certified corpus from your dependent project:
 
 ```console
-$ mix escript.build && ./charter_agreement_protocol --corpus deps/charter_agreement_protocol/priv/conformance
+$ mix run -e 'CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"])'
 ```
 
-Exit `0` means all 57 certified cases recomputed and agreed. Full walkthrough:
+The command prints the canonical JSON report; a returned status of `0` means
+all 57 certified cases recomputed and agreed. Full walkthrough:
 [Getting started](docs/guides/getting-started.md).
 
 ## Try it
@@ -76,7 +77,7 @@ Exit `0` means all 57 certified cases recomputed and agreed. Full walkthrough:
   its countersigned repair.
 - Repository demo: `mix run examples/visa_fork_demo.exs` — equivocation
   evidence, contested governing view, an action receipt inside the fork, and
-  the repair, in ten lines of output.
+  the repair, in nine lines of output.
 
 ## Guarantees at the call boundary
 

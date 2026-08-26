@@ -2,10 +2,6 @@
 
 <!-- livebook:{"file_entities":[]} -->
 
-```elixir
-version
-```
-
 ## Manufacture an equivocation, prove the contested view, repair it
 
 This notebook breaks a bilateral charter on purpose: one party signs two
@@ -323,7 +319,7 @@ governing digest is the repair's.
 
 ## What just happened
 
-- Equocation is **evidence**: both signed positions retained, winner `nil`.
+- Equivocation is **evidence**: both signed positions retained, winner `nil`.
 - A contested view is reported, never adjudicated — no host should act
   unilaterally inside one.
 - Action evidence inside a fork verifies with `governing_match:

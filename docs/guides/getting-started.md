@@ -98,16 +98,24 @@ iex> Limits.default()
 
 The package ships the certified 57-case conformance corpus. The CLI is the sole
 filesystem adapter and refuses any corpus whose raw index identity is not the
-certified release pin:
+certified release pin. From a dependent project (the corpus unpacks with the
+package under its `priv/conformance`):
 
 ```console
-$ mix escript.build && ./charter_agreement_protocol --corpus deps/charter_agreement_protocol/priv/conformance
+$ mix run -e 'CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"])'
 ```
 
-Exit status `0` means every certified case recomputed and agreed. The stdout
+The returned status is `0` when every certified case recomputed and agreed,
+`1` on load or verification failure, and `2` on usage errors. The stdout
 report is canonical JSON carrying the corpus digest, registry digest, and raw
-index identity. From the repository itself the same gate is
-`mix conformance.verify`. See [Conformance](conformance.md).
+index identity. From a repository checkout or an unpacked package directory
+the same gate is `mix conformance.verify`, or the escript directly:
+
+```console
+$ mix escript.build && ./charter_agreement_protocol --corpus priv/conformance
+```
+
+See [Conformance](conformance.md).
 
 ## Sign your first evidence (repository demo)
 
