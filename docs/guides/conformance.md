@@ -44,6 +44,19 @@ For the current candidate:
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
 | Certified cases | 57 |
 
+## The requirements matrix
+
+Every public requirement carries a stable `CAP-<SURFACE>-<kebab-tag>`
+identifier (see the [errata policy](../errata.md)) and compiled evidence
+routing in `CharterAgreementProtocol.RequirementMap`: corpus cells,
+architecture gates, and — for the closed mutation battery — named red-capable
+source mutations. `spec/requirements.md` is generated from that map
+(`mix run scripts/render_requirements.exs`). `mix conformance.verify` rejects
+a stale render and enforces bidirectional coverage: every requirement carries
+evidence, and every corpus cell and named mutation is bound to at least one
+requirement. The matrix today binds 40 requirements over all 53 corpus cells
+(57 cases) and the 22 named mutations.
+
 ## The CLI
 
 ```console
@@ -67,7 +80,8 @@ dialyzer, and docs:
   core cases in a scratch directory**, requiring byte identity with the
   certified corpus. A closed set of supplemental cross-package and profile
   cases (frozen at their owning boundaries — the exact ABP 0.1.1 deployment
-  and BAP 0.1.2 grant vectors) stays frozen and required.
+  and BAP 0.1.2 grant vectors) stays frozen and required. The same gate
+  proves the requirements matrix is fresh and bidirectionally covering.
 - `mix conformance.mutations` — creates isolated scratch copies and proves all
   **22 named source defects go red**: JCS number defeat, padding acceptance,
   separator collapse, unknown-member acceptance, chain signature skip, digest

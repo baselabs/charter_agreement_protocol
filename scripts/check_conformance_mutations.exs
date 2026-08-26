@@ -170,6 +170,7 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     "mix.lock",
     "priv",
     "scripts",
+    "spec",
     "test"
   ]
 

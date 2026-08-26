@@ -139,6 +139,120 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:corpus, ["base64url.decode:valid"]},
        {:gate, CharterAgreementProtocol.Architecture.ReleaseGateTest},
        {:mutation, "corpus-expectation-flip"}
+     ]},
+    {"CAP-ACCEPTANCE-valid-pairing",
+     [
+       {:corpus, ["acceptance.verify:valid"]},
+       {:gate, CharterAgreementProtocol.Architecture.FactsConstructionTest}
+     ]},
+    {"CAP-BASE64URL-exact-boundary",
+     [
+       {:corpus, ["base64url.decode:exact_bound"]},
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
+     ]},
+    {"CAP-CANONICALIZATION-noncanonical-rejected",
+     [
+       {:corpus,
+        [
+          "canonicalization.encode:non_canonical_bytes",
+          "canonicalization.encode:invalid_encoding",
+          "canonicalization.encode:invalid_type"
+        ]},
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
+     ]},
+    {"CAP-CHAIN-valid-topology",
+     [
+       {:corpus, ["chain.verify:valid"]},
+       {:gate, CharterAgreementProtocol.Architecture.ChainRoutingShapeTest}
+     ]},
+    {"CAP-CHARTER-REVISION-valid-genesis",
+     [
+       {:corpus, ["charter_revision.decode:valid"]},
+       {:gate, CharterAgreementProtocol.Architecture.FactsConstructionTest}
+     ]},
+    {"CAP-CHARTER-REVISION-closed-members",
+     [
+       {:corpus,
+        [
+          "charter_revision.decode:unknown_member",
+          "charter_revision.decode:extension_unknown_critical"
+        ]},
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
+     ]},
+    {"CAP-CHARTER-REVISION-claim-constraints",
+     [
+       {:corpus,
+        [
+          "charter_revision.decode:invalid_constraint",
+          "charter_revision.decode:invalid_type",
+          "charter_revision.decode:missing_required",
+          "charter_revision.decode:invalid_cardinality"
+        ]},
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
+     ]},
+    {"CAP-DESCRIPTOR-CHAIN-signature-required",
+     [
+       {:corpus, ["descriptor_chain.verify:signature_invalid"]},
+       {:gate, CharterAgreementProtocol.Architecture.SigningBoundaryTest}
+     ]},
+    {"CAP-DIGEST-bytes-only",
+     [
+       {:corpus, ["digest.hash:invalid_type"]},
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
+     ]},
+    {"CAP-JSON-decoder-closed-grammar",
+     [
+       {:corpus,
+        ["json.decode:valid", "json.decode:invalid_type", "json.decode:invalid_encoding"]},
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
+     ]},
+    {"CAP-JSON-number-boundaries",
+     [
+       {:corpus,
+        ["json.decode:exact_bound", "json.decode:boundary_near", "json.decode:maximum_plus_one"]},
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
+     ]},
+    {"CAP-PARTY-DESCRIPTOR-valid-genesis",
+     [
+       {:corpus, ["party_descriptor.verify:valid"]},
+       {:gate, CharterAgreementProtocol.Architecture.FactsConstructionTest}
+     ]},
+    {"CAP-RECEIPT-signature-required",
+     [
+       {:corpus, ["receipt.verify:signature_invalid"]},
+       {:gate, CharterAgreementProtocol.Architecture.SigningBoundaryTest}
+     ]},
+    {"CAP-RECEIPT-outcome-indeterminate",
+     [
+       {:corpus, ["receipt.verify:outcome_indeterminate"]},
+       {:gate, CharterAgreementProtocol.Architecture.TermEvaluationVocabularyTest}
+     ]},
+    {"CAP-RECEIPT-extension-roundtrip",
+     [
+       {:corpus, ["receipt.verify:extension_optional_roundtrip"]},
+       {:gate, CharterAgreementProtocol.Architecture.FactsConstructionTest}
+     ]},
+    {"CAP-SCHEMA-valid-decode",
+     [
+       {:corpus, ["schema.validate:valid"]},
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
+     ]},
+    {"CAP-SCHEMA-constraint-closed",
+     [
+       {:corpus,
+        [
+          "schema.validate:invalid_constraint",
+          "schema.validate:invalid_type",
+          "schema.validate:invalid_cardinality",
+          "schema.validate:missing_required",
+          "schema.validate:maximum_plus_one"
+        ]},
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
+     ]},
+    {"CAP-TERMINATION-valid-notice",
+     [
+       {:corpus, ["termination.verify:valid"]},
+       {:gate, CharterAgreementProtocol.Architecture.FactsConstructionTest}
      ]}
   ]
 
@@ -147,4 +261,62 @@ defmodule CharterAgreementProtocol.RequirementMap do
           {binary(), [{:corpus, [binary()]} | {:gate, module()} | {:mutation, binary()}]}
         ]
   def entries, do: @entries
+
+  @doc """
+  Render the generated requirements matrix served at `spec/requirements.md`.
+
+  The render is a pure projection of `entries/0`; `mix conformance.verify`
+  rejects a stale or missing copy.
+  """
+  @spec render_markdown() :: binary()
+  def render_markdown do
+    evidence = Enum.flat_map(@entries, &elem(&1, 1))
+
+    corpus_cells =
+      evidence
+      |> Enum.flat_map(fn
+        {:corpus, cells} -> cells
+        _other -> []
+      end)
+      |> Enum.uniq()
+      |> length()
+
+    mutations =
+      Enum.count(evidence, &match?({:mutation, _name}, &1))
+
+    requirements =
+      for {requirement, items} <- @entries do
+        lines = for item <- items, line = evidence_line(item), do: line
+        Enum.join(["### #{requirement}", "" | lines], "\n")
+      end
+      |> Enum.join("\n\n")
+
+    """
+    # Requirements matrix
+
+    CAP never authorizes.
+
+    GENERATED from `CharterAgreementProtocol.RequirementMap` — do not edit by
+    hand. `mix conformance.verify` checks this render is fresh and that
+    coverage is bidirectional: every requirement carries evidence, and every
+    corpus cell and named source mutation is bound to at least one
+    requirement. Regenerate with `mix run scripts/render_requirements.exs`.
+
+    ## Bound evidence
+
+    - Requirements: #{length(@entries)}
+    - Corpus cells: #{corpus_cells}
+    - Named mutations: #{mutations}
+
+    ## Requirements
+
+    #{requirements}
+    """
+  end
+
+  defp evidence_line({:corpus, cells}),
+    do: "- Corpus: " <> Enum.map_join(cells, ", ", &"`#{&1}`")
+
+  defp evidence_line({:gate, module}), do: "- Gate: `#{inspect(module)}`"
+  defp evidence_line({:mutation, name}), do: "- Mutation: `#{name}`"
 end

@@ -49,7 +49,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     assert Mix.Project.config()[:aliases][:quality] == @minimum_quality_steps
   end
 
-  test "every public requirement has corpus, gate, and mutation evidence" do
+  test "every public requirement has corpus and gate evidence" do
     requirements = RequirementMap.entries()
     assert [_first | _rest] = requirements
 
@@ -60,8 +60,12 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
       assert id =~ ~r/\ACAP-[A-Z0-9-]+-[a-z0-9]+(?:-[a-z0-9]+)*\z/
       assert Enum.any?(evidence, &match?({:corpus, [_ | _]}, &1))
       assert Enum.any?(evidence, &match?({:gate, module} when is_atom(module), &1))
-      assert Enum.any?(evidence, &match?({:mutation, name} when is_binary(name), &1))
     end
+  end
+
+  test "the rendered requirements matrix ships fresh" do
+    assert {:ok, contents} = File.read("spec/requirements.md")
+    assert contents == RequirementMap.render_markdown()
   end
 
   test "mutation credit requires the exact scratch environment to be green before mutation" do
@@ -77,11 +81,26 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
 
     evidence = RequirementMap.entries() |> Enum.flat_map(&elem(&1, 1))
 
+    covered_cells =
+      evidence
+      |> Enum.flat_map(fn
+        {:corpus, cells} -> cells
+        _other -> []
+      end)
+      |> MapSet.new()
+
     for {:corpus, cells} <- evidence,
         cell <- cells do
       assert [surface, class] = String.split(cell, ":", parts: 2)
       assert Map.fetch!(observed, {surface, class}) > 0
     end
+
+    observed_cells =
+      observed
+      |> Map.keys()
+      |> MapSet.new(fn {surface, class} -> "#{surface}:#{class}" end)
+
+    assert MapSet.to_list(MapSet.difference(observed_cells, covered_cells)) == []
 
     declared_gate_modules =
       "test/architecture/*.exs"
