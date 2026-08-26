@@ -2,6 +2,42 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
+## [0.2.0] — 2026-08-26
+
+`protocol_revision` 2: the RFC 9864 alg-name bundle.
+
+### Protocol (wire-visible, revision-gated)
+
+- The per-artifact binding rule: `alg: "EdDSA"` is accepted at any
+  accepted revision; `alg: "Ed25519"` requires `protocol_revision >= 2`;
+  unknown revisions fail closed. `(Ed25519, revision 1)` is rejected —
+  no honest producer could have minted it.
+- New minting is exactly (`Ed25519`, `protocol_revision` 2), enforced by
+  construction (the framing-layer binding check runs on the producer's
+  provisional decode).
+- Cross-revision composition: artifacts from revisions 1 and 2 mix freely
+  in one verified view — a revision-2 acceptance anchors a revision-1
+  charter. Decoded artifacts carry their actual `protocol_revision`
+  (structs no longer pin 1).
+
+### Verifiers
+
+- Both implementations enforce the binding rule at the framing layer; the
+  TypeScript reference verifier additionally gained the revision-range
+  check it previously lacked, and its acceptance-revision equality was
+  replaced by the accepted-set semantics the mixed views require.
+
+### Conformance
+
+- Certified corpus regenerated and recertified (90 cases): the
+  revision-2/`Ed25519` population, the revision-2/`EdDSA` compatibility
+  case, the `(revision 1, Ed25519)` per-name negative, the revision-3
+  fail-closed case, and the mixed-revision acceptance view. Legacy
+  fixtures pin revision 1 + `EdDSA` literally, on purpose. All four
+  certified identities re-recorded; the requirements matrix grows
+  `CAP-REVISION-fail-closed` and `CAP-ALG-registry-binding` with the
+  `alg-binding-defeat` source mutation.
+
 ## [0.1.0] — 2026-08-26
 
 Everything below is the 0.1.0 candidate content, frozen for the

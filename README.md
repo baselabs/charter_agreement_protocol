@@ -119,9 +119,10 @@ all 85 certified cases recomputed and agreed. Full walkthrough:
 The approved protocol core, normative specification set, certified corpus
 with four recorded identities, independent second verifier, mutation
 battery, and release-candidate gates are implemented and green in CI. The
-0.1.0 package is the reviewed, certified candidate: the published archive
-is the reproducible build the release gate pins, and building an archive
-remains verification evidence only — never authority to publish.
+0.2.0 package adds `protocol_revision` 2 (the RFC 9864 alg-name bundle —
+`Ed25519` emission, dual-name acceptance, the per-artifact binding rule);
+0.1.0 artifacts remain verifiable. Building an archive remains
+verification evidence only — never authority to publish.
 
 ## Development
 
