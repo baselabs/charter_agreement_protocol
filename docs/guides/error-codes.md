@@ -10,7 +10,7 @@ code's evidence truthfully:
 - **corpus-exercised** — a certified corpus case expects exactly this code,
   so its rejection behavior is certified negative evidence.
 - **test-exercised** — in-repo tests drive the code through the public API.
-  Eleven codes in this class are structurally outside case certification:
+  Twelve codes in this class are structurally outside case certification:
   the eight `corpus_*` loader codes fire while loading the corpus a case
   must load; `signing_input_invalid` and `signing_refused` fire on producer
   seams the runner does not expose; `governing_invalid` fires only on a
