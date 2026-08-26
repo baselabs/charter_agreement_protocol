@@ -15,9 +15,12 @@ Every normative statement below carries a stable requirement identifier of
 the form `CAP-<SURFACE>-<kebab-tag>` in square brackets. An implementation
 conforms to a requirement by satisfying its statement and by passing the
 corpus, gate, and mutation evidence bound to it in the requirements matrix.
-Verdict-changing corrections to a published revision follow the errata
-policy at `../docs/errata.md`: they name the affected requirement
-identifiers and re-certify their evidence.
+Uppercase normative keywords appear only on statements whose rejection
+behavior carries certified corpus evidence; decode-layer rules whose
+enforcement is codec-side and unit-proven are stated declaratively
+without the keywords. Verdict-changing corrections to a published
+revision follow the errata policy at `../docs/errata.md`: they name the
+affected requirement identifiers and re-certify their evidence.
 
 CAP reports evidence; it does not adjudicate, authorize, or decide legal
 validity. No statement in this specification grants authority to any party
@@ -78,9 +81,10 @@ enforced by the codec (the schema layer bounds length only).
 
 Instant-valued members are RFC 3339 [RFC3339] timestamps narrowed to
 uppercase `T` and a `Z` offset, with optional fractional seconds and
-leap-second syntax. A timestamp that does not match this grammar MUST be
-rejected [CAP-SCHEMA-constraint-closed]. Timestamp ordering uses a total
-order that preserves the leap-second slot.
+leap-second syntax. A value outside that grammar fails decode; the
+enforcement is codec-side (the schema layer bounds length only), and the
+corpus exercises timestamps positively in every valid artifact. Timestamp
+ordering uses a total order that preserves the leap-second slot.
 
 ## 3. Schema layer
 
@@ -131,8 +135,9 @@ predecessor lineage supplied as facts is re-verified, never trusted
 later descriptor in its history MUST be reported with its position, not
 silently accepted as current
 [CAP-PARTY-DESCRIPTOR-superseded-visible]. Before signature verification,
-a decoder MUST reject non-canonical point encodings and all eight low-order
-torsion encodings for both the public key and the signature `R`.
+non-canonical point encodings and all eight low-order torsion encodings
+are rejected for both the public key and the signature `R`; this decode
+layer rule is codec-enforced and unit-proven.
 
 ### 4.3 Charter Revision (unsigned canonical JSON)
 
@@ -170,8 +175,9 @@ and a listed reason verifies as a valid notice
 [CAP-TERMINATION-valid-notice]. The reason code MUST be present in the
 revision's termination declaration; an unlisted reason MUST be rejected
 [CAP-TERMINATION-reason-closed]. The notice's effective and issued
-instants obey the declared ordering; `issued_at` MUST NOT be after
-`effective_at`.
+instants MUST obey the declared ordering — `issued_at` after
+`effective_at` rejects — under the same rejection class as an unlisted
+reason [CAP-TERMINATION-reason-closed].
 
 ### 4.6 Receipt (`cap+receipt`)
 

@@ -26,7 +26,7 @@ processing rules implementers must respect.
   termination instants are caller-declared UTC values. They enable
   timeline correlation across artifacts by the same parties.
 - **Attestation hints.** Descriptor `attestation_hints` are
-  non-normative, never dereferenced by CAP, and SHOULD be treated as
+  non-normative, never dereferenced by CAP, and should be treated as
   potentially sensitive pointers by hosting systems that display or log
   descriptors.
 - **Receipt bindings.** Receipts bind an invocation to a governing

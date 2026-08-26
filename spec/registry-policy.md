@@ -8,9 +8,12 @@ the digest-pinned schema layer (`schemas/`).
 
 ## Extension namespaces
 
-Every artifact carries exactly one extension envelope: an object with a
-`critical` and an `optional` region, each mapping namespaces to bodies.
-A namespace is lowercase reverse-DNS-plus-path form with exactly one
+Three artifact surfaces — the party descriptor, the charter revision,
+and the receipt — carry exactly one extension envelope each: an object
+with a `critical` and an `optional` region, each mapping namespaces to
+bodies. The acceptance and termination claim sets are closed without an
+envelope member; extensions for those surfaces are out of model. A
+namespace is lowercase reverse-DNS-plus-path form with exactly one
 slash, at most 512 UTF-8 bytes, at most 32 namespaces per artifact, and
 a namespace never appears in both regions.
 

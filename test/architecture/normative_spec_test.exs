@@ -10,14 +10,18 @@ defmodule CharterAgreementProtocol.Architecture.NormativeSpecTest do
   test "every uppercase normative keyword statement carries a bound requirement ID" do
     assert {:ok, contents} = File.read(@core_path)
 
-    # A normative statement is a paragraph; its requirement ID closes it.
+    # A normative statement is a sentence; its requirement ID closes it. The
+    # exclusion is anchored to the RFC 8174 boilerplate sentence itself, not
+    # to any paragraph mentioning BCP 14.
+    boilerplate = "are to be interpreted as described in BCP 14"
+
     unbound =
       for paragraph <- String.split(contents, "\n\n"),
-          # The RFC 8174 boilerplate paragraph quotes the keywords themselves.
-          not String.contains?(paragraph, "BCP 14"),
-          Regex.match?(@keyword_pattern, paragraph),
-          not Regex.match?(~r/CAP-[A-Z0-9-]+-[a-z0-9]+(?:-[a-z0-9]+)*/, paragraph) do
-        String.split(paragraph, "\n") |> hd() |> String.trim()
+          not String.contains?(paragraph, boilerplate),
+          sentence <- String.split(paragraph, ~r/(?<=\.)\s+/),
+          Regex.match?(@keyword_pattern, sentence),
+          not Regex.match?(~r/CAP-[A-Z0-9-]+-[a-z0-9]+(?:-[a-z0-9]+)*/, sentence) do
+        String.trim(sentence)
       end
 
     assert unbound == []

@@ -86,11 +86,17 @@ the exact schema digest compiled into the registry (see
 ## Resource-exhaustion posture
 
 Every decoder and verifier operates under caller-supplied ceilings
-(bytes, nesting, item counts, string lengths); inputs above a ceiling
-are rejected, not buffered. The schema validator is a closed 16-keyword
-subset with metered complexity and no regular-expression or network
-fetching surface, so a crafted schema cannot become a ReDoS or SSRF
-vector. Verification reads no clock and performs no I/O.
+(bytes, nesting, item counts, string lengths); an input above a ceiling
+is rejected before parsing begins. Inputs arrive as already-materialized
+binaries — CAP never reads streams and never grows a buffer, so the byte
+ceiling bounds parse work; bounding transport and materialization is the
+caller's side of the boundary. There is no runtime schema-intake
+surface: the runtime table-driven validator compiles protocol-owned
+definitions only (it never evaluates an untrusted schema document). The
+2020-12 bounded-subset validator that checks the wire-grammar schemas in
+`schemas/` is development-side tooling with metered complexity and no
+regular-expression or network-fetching surface. Verification reads no
+clock and performs no I/O.
 
 ## Operational notes for implementers
 
