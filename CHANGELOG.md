@@ -2,6 +2,17 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
+## [0.2.1] — 2026-08-26
+
+Documentation-only release: the docs now point hosts at the reviewed
+companion signer — [`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer)
+(atomic kid/key snapshot, wrong-key guard, post-sign verify, refusal
+surfacing) — from four surfaces (README key-custody, protocol.md
+host-obligations, getting-started's new companion section, the charter-tour
+notebook's sign-helper cell). Hosts may always hand-roll per the spec;
+verifiers never depend on the companion. No protocol, corpus, or identity
+changes.
+
 ## [0.2.0] — 2026-08-26
 
 `protocol_revision` 2: the RFC 9864 alg-name bundle.
