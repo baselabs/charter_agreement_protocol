@@ -11,7 +11,7 @@ governing view, and an action receipt whose governing match is undetermined.
 Both parties then countersign a supersession repair, and the governing view
 becomes unique again.
 
-This mirrors `examples/visa_fork_demo.exs` in the repository, step for step,
+This mirrors `examples/supplier_fork_demo.exs` in the repository, step for step,
 with real Ed25519 signatures. Demo keys only — never trust anchors.
 
 ## Setup
@@ -86,7 +86,7 @@ defmodule Fork do
         "legal_text" => %{
           "content_digest" => tagged(:legal_text, legal_text),
           "media_type" => "text/plain",
-          "uri_hint" => "https://example.com/visa-supplier-charter.txt"
+          "uri_hint" => "https://example.com/supplier-charter.txt"
         },
         "precedence_declaration" => "legal_text_governs",
         "attribution_declaration" => %{"basis" => "bound_deployments"},
@@ -147,19 +147,19 @@ acceptor = Fork.descriptor(2, "acceptor-key")
 descriptors = [issuer.compact, acceptor.compact]
 
 genesis =
-  Fork.revision(1, "Visa supplier terms\n", issuer, acceptor, %{
+  Fork.revision(1, "Supplier terms\n", issuer, acceptor, %{
     "effective_from" => "2026-08-25T12:00:00Z"
   })
 
 left =
-  Fork.revision(2, "Visa supplier terms — USD settlement\n", issuer, acceptor, %{
+  Fork.revision(2, "Supplier terms — USD settlement\n", issuer, acceptor, %{
     "charter_id" => genesis.digest,
     "prev_revision_digest" => genesis.digest,
     "effective_from" => "2026-08-25T12:00:01Z"
   })
 
 right =
-  Fork.revision(2, "Visa supplier terms — EUR settlement\n", issuer, acceptor, %{
+  Fork.revision(2, "Supplier terms — EUR settlement\n", issuer, acceptor, %{
     "charter_id" => genesis.digest,
     "prev_revision_digest" => genesis.digest,
     "effective_from" => "2026-08-25T12:00:01Z"
@@ -271,7 +271,7 @@ the honest answer for action evidence inside an unresolved fork.
 
 ```elixir
 repair =
-  Fork.revision(3, "Visa supplier terms — countersigned repair\n", issuer, acceptor, %{
+  Fork.revision(3, "Supplier terms — countersigned repair\n", issuer, acceptor, %{
     "charter_id" => genesis.digest,
     "prev_revision_digest" => left.digest,
     "supersedes" => Enum.sort([left.digest, right.digest]),

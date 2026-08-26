@@ -139,7 +139,7 @@ descriptors, acceptances, a manufactured same-signer equivocation, a contested
 governing view, an action receipt, and a countersigned supersession repair:
 
 ```console
-$ mix run examples/visa_fork_demo.exs
+$ mix run examples/supplier_fork_demo.exs
 equivocation: evidenced
 equivocation winner: nil
 governing before repair: contested
@@ -147,7 +147,7 @@ receipt chain conflict: none
 receipt governing match: undetermined
 receipt action outcome: effect_committed
 repair countersignatures: 2
-governing after repair: sha-256:kUmX34rSCAL4gX7gYuM0rIfoWvE1USlkmDhugn8Uvuk
+governing after repair: sha-256:JEgcYljHUCXtsmsg-EW2Tto2VftJVw6OEYJfHByMES0
 CAP reports evidence; it does not adjudicate or authorize.
 ```
 

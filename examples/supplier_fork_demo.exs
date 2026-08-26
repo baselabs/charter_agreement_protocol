@@ -1,4 +1,4 @@
-defmodule CharterAgreementProtocol.Examples.VisaForkDemo do
+defmodule CharterAgreementProtocol.Examples.SupplierForkDemo do
   @moduledoc false
 
   alias CharterAgreementProtocol.{
@@ -19,19 +19,19 @@ defmodule CharterAgreementProtocol.Examples.VisaForkDemo do
     descriptors = [issuer.compact, acceptor.compact]
 
     genesis =
-      revision(1, "Visa supplier terms\n", issuer, acceptor, %{
+      revision(1, "Supplier terms\n", issuer, acceptor, %{
         "effective_from" => "2026-08-25T12:00:00Z"
       })
 
     left =
-      revision(2, "Visa supplier terms — USD settlement\n", issuer, acceptor, %{
+      revision(2, "Supplier terms — USD settlement\n", issuer, acceptor, %{
         "charter_id" => genesis.charter_id,
         "prev_revision_digest" => genesis.digest,
         "effective_from" => "2026-08-25T12:00:01Z"
       })
 
     right =
-      revision(2, "Visa supplier terms — EUR settlement\n", issuer, acceptor, %{
+      revision(2, "Supplier terms — EUR settlement\n", issuer, acceptor, %{
         "charter_id" => genesis.charter_id,
         "prev_revision_digest" => genesis.digest,
         "effective_from" => "2026-08-25T12:00:01Z"
@@ -65,7 +65,7 @@ defmodule CharterAgreementProtocol.Examples.VisaForkDemo do
       CharterAgreementProtocol.verify_receipt(receipt, contested, Limits.default())
 
     repair =
-      revision(3, "Visa supplier terms — countersigned repair\n", issuer, acceptor, %{
+      revision(3, "Supplier terms — countersigned repair\n", issuer, acceptor, %{
         "charter_id" => genesis.charter_id,
         "prev_revision_digest" => left.digest,
         "supersedes" => Enum.sort([left.digest, right.digest]),
@@ -144,7 +144,7 @@ defmodule CharterAgreementProtocol.Examples.VisaForkDemo do
         "legal_text" => %{
           "content_digest" => tagged(:legal_text, legal_text),
           "media_type" => "text/plain",
-          "uri_hint" => "https://example.com/visa-supplier-charter.txt"
+          "uri_hint" => "https://example.com/supplier-charter.txt"
         },
         "precedence_declaration" => "legal_text_governs",
         "attribution_declaration" => %{"basis" => "bound_deployments"},
@@ -275,4 +275,4 @@ defmodule CharterAgreementProtocol.Examples.VisaForkDemo do
   defp tagged_value(value) when is_integer(value), do: {:integer, value}
 end
 
-CharterAgreementProtocol.Examples.VisaForkDemo.run()
+CharterAgreementProtocol.Examples.SupplierForkDemo.run()

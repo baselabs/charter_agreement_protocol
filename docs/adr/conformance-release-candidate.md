@@ -40,6 +40,6 @@ mutations, verifier agreement, package verification, review, and hosted CI.
 NIST CAVP SHA-256 known-answer vectors check the runtime primitive, but do not
 claim CAVP validation of this package.
 
-The Visa fork demo is a separate repository artifact. It exercises the live
+The supplier fork demo is a separate repository artifact. It exercises the live
 protocol with signed evidence but is neither conformance evidence nor package
 content.

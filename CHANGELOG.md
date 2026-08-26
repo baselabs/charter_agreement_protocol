@@ -104,7 +104,7 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 - Release metadata, errata policy, conformance/release ADR, NIST CAVP SHA-256
   known-answer checks, exact package allowlist verification, reproducible
   archive comparison, and a mechanical no-publication-authority receipt.
-- A separate runnable Visa fork-evidence demo using real signed artifacts. It
+- A separate runnable supplier fork-evidence demo using real signed artifacts. It
   reports same-signer equivocation, a contested governing view, Receipt
   cross-check facts, and a countersigned bilateral supersession repair without
   adjudicating or authorizing.

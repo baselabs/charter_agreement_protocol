@@ -478,9 +478,9 @@ documented at [Publishing packages](https://hex.pm/docs/publish): building or
 unpacking an archive performs no publication. This repository exposes no
 publish alias; `mix hex.publish` requires separate explicit authority.
 
-## Separate Visa evidence demo
+## Separate supplier evidence demo
 
-`mix run examples/visa_fork_demo.exs` constructs deterministic demonstration
+`mix run examples/supplier_fork_demo.exs` constructs deterministic demonstration
 keys and real Ed25519-signed Party Descriptors, Acceptances, and a Receipt. One
 party is made to sign two sibling revisions at the same revision number. CAP
 then reports the paired Acceptance equivocation, a forked chain, a contested

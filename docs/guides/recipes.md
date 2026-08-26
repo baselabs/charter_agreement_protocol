@@ -123,7 +123,7 @@ repair_claims = %{
 ```
 
 The [fork-repair notebook](../notebooks/fork-repair.livemd) and
-`mix run examples/visa_fork_demo.exs` walk the complete sequence with real
+`mix run examples/supplier_fork_demo.exs` walk the complete sequence with real
 signatures — equivocation evidence, contested view, countersigned repair,
 unique governing digest.
 

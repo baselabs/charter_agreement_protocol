@@ -118,9 +118,9 @@ revision_claims = %{
     %{"party_descriptor_digest" => acceptor.digest, "role" => "acceptor"}
   ],
   "legal_text" => %{
-    "content_digest" => Tour.tagged(:legal_text, "Visa supplier terms\n"),
+    "content_digest" => Tour.tagged(:legal_text, "Supplier terms\n"),
     "media_type" => "text/plain",
-    "uri_hint" => "https://example.com/visa-supplier-charter.txt"
+    "uri_hint" => "https://example.com/supplier-charter.txt"
   },
   "precedence_declaration" => "legal_text_governs",
   "attribution_declaration" => %{"basis" => "bound_deployments"},

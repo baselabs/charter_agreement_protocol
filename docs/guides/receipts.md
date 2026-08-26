@@ -92,7 +92,7 @@ issuer's signed claim, not an observed effect. See
 ## Try it
 
 The [charter-tour notebook](../notebooks/charter-tour.livemd) ends with receipt
-verification; the repository demo (`mix run examples/visa_fork_demo.exs`)
+verification; the repository demo (`mix run examples/supplier_fork_demo.exs`)
 cross-checks an action receipt against a contested chain and reports
 `governing_match: :undetermined` with `chain_conflict: :none` — the exact
 signature of action evidence inside an unresolved fork.

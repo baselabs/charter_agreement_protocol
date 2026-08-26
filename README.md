@@ -75,7 +75,7 @@ all 57 certified cases recomputed and agreed. Full walkthrough:
   [fork repair](docs/notebooks/fork-repair.livemd) — a complete bilateral
   charter with real Ed25519 signatures, and a manufactured equivocation with
   its countersigned repair.
-- Repository demo: `mix run examples/visa_fork_demo.exs` — equivocation
+- Repository demo: `mix run examples/supplier_fork_demo.exs` — equivocation
   evidence, contested governing view, an action receipt inside the fork, and
   the repair, in nine lines of output.
 

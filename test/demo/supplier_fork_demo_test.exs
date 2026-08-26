@@ -1,10 +1,10 @@
-defmodule CharterAgreementProtocol.VisaForkDemoTest do
+defmodule CharterAgreementProtocol.SupplierForkDemoTest do
   use ExUnit.Case, async: false
 
   test "the signed fork demo reports contest, receipt cross-check, and countersigned repair" do
     output =
       ExUnit.CaptureIO.capture_io(fn ->
-        Code.eval_file("examples/visa_fork_demo.exs")
+        Code.eval_file("examples/supplier_fork_demo.exs")
       end)
 
     assert output =~ "equivocation: evidenced"
