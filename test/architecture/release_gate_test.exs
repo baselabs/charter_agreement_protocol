@@ -126,11 +126,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     assert mapped_mutations == @mutation_names
 
     source_mutations =
-      ~r/name: "([a-z0-9-]+)"/
-      |> Regex.scan(File.read!("scripts/check_conformance_mutations.exs"),
-        capture: :all_but_first
-      )
-      |> List.flatten()
+      RequirementMap.source_mutation_names(File.read!("scripts/check_conformance_mutations.exs"))
 
     assert source_mutations == @mutation_names
     assert List.last(source_mutations) == "corpus-expectation-flip"

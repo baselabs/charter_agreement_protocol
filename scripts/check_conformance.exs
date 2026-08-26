@@ -63,9 +63,10 @@ defmodule CharterAgreementProtocol.ConformanceMatrixGate do
       |> MapSet.new()
 
     source_mutations =
-      ~r/name: "([a-z0-9-]+)"/
-      |> Regex.scan(File.read!(Path.join(@root, @mutation_source)), capture: :all_but_first)
-      |> List.flatten()
+      @root
+      |> Path.join(@mutation_source)
+      |> File.read!()
+      |> RequirementMap.source_mutation_names()
       |> MapSet.new()
 
     orphan_mutations = MapSet.difference(source_mutations, mapped_mutations)

@@ -263,6 +263,26 @@ defmodule CharterAgreementProtocol.RequirementMap do
   def entries, do: @entries
 
   @doc """
+  Extract declared mutation names, in declaration order, from the conformance
+  mutation gate script source.
+
+  Parsed from the AST, so a commented-out entry cannot masquerade as a
+  declared mutation and names outside kebab-case are still observed.
+  """
+  @spec source_mutation_names(binary()) :: [binary()]
+  def source_mutation_names(source) when is_binary(source) do
+    {_ast, names} =
+      source
+      |> Code.string_to_quoted!()
+      |> Macro.prewalk([], fn
+        {:name, name} = node, acc when is_binary(name) -> {node, [name | acc]}
+        node, acc -> {node, acc}
+      end)
+
+    Enum.reverse(names)
+  end
+
+  @doc """
   Render the generated requirements matrix served at `spec/requirements.md`.
 
   The render is a pure projection of `entries/0`; `mix conformance.verify`
@@ -282,7 +302,13 @@ defmodule CharterAgreementProtocol.RequirementMap do
       |> length()
 
     mutations =
-      Enum.count(evidence, &match?({:mutation, _name}, &1))
+      evidence
+      |> Enum.flat_map(fn
+        {:mutation, name} -> [name]
+        _other -> []
+      end)
+      |> Enum.uniq()
+      |> length()
 
     requirements =
       for {requirement, items} <- @entries do

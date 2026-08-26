@@ -54,8 +54,8 @@ source mutations. `spec/requirements.md` is generated from that map
 (`mix run scripts/render_requirements.exs`). `mix conformance.verify` rejects
 a stale render and enforces bidirectional coverage: every requirement carries
 evidence, and every corpus cell and named mutation is bound to at least one
-requirement. The matrix today binds 40 requirements over all 53 corpus cells
-(57 cases) and the 22 named mutations.
+requirement. The generated matrix carries the exact live counts; the closed
+mutation battery is bound one-to-one to the requirements that name it.
 
 ## The CLI
 
