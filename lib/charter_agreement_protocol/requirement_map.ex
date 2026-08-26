@@ -52,7 +52,8 @@ defmodule CharterAgreementProtocol.RequirementMap do
      ]},
     {"CAP-COMPACT-JWS-type-isolation",
      [
-       {:corpus, ["termination.verify:signature_invalid"]},
+       {:corpus,
+        ["termination.verify:signature_invalid", "party_descriptor.verify:unknown_member"]},
        {:gate, CharterAgreementProtocol.Architecture.PortfolioIdentityCensusTest},
        {:mutation, "typ-confusion"}
      ]},
@@ -253,6 +254,32 @@ defmodule CharterAgreementProtocol.RequirementMap do
      [
        {:corpus, ["termination.verify:valid"]},
        {:gate, CharterAgreementProtocol.Architecture.FactsConstructionTest}
+     ]},
+    {"CAP-ACCEPTANCE-EQUIVOCATION-pairing-required",
+     [
+       {:corpus, ["acceptance.equivocation:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Architecture.SigningBoundaryTest}
+     ]},
+    {"CAP-CHAIN-input-nonempty",
+     [
+       {:corpus, ["chain.verify:chain_invalid"]},
+       {:gate, CharterAgreementProtocol.Architecture.ChainRoutingShapeTest}
+     ]},
+    {"CAP-EXTENSION-envelope-closed",
+     [
+       {:corpus,
+        ["charter_revision.decode:extension_invalid", "receipt.verify:extension_invalid"]},
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
+     ]},
+    {"CAP-PARTY-DESCRIPTOR-decode-shape",
+     [
+       {:corpus, ["party_descriptor.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
+     ]},
+    {"CAP-COMPACT-JWS-envelope-well-formed",
+     [
+       {:corpus, ["party_descriptor.verify:invalid_encoding", "receipt.verify:invalid_encoding"]},
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
      ]}
   ]
 

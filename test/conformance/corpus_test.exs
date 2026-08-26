@@ -213,13 +213,13 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
         &(&1["surface"] in ["party_descriptor.verify", "descriptor_chain.verify"])
       )
 
-    assert length(verify_cases) == 6
+    assert length(verify_cases) == 11
     Enum.each(verify_cases, &assert_verify_case/1)
   end
 
   defp assert_revision_expectations(cases) do
     revision_cases = Enum.filter(cases, &(&1["surface"] == "charter_revision.decode"))
-    assert length(revision_cases) == 10
+    assert length(revision_cases) == 15
 
     Enum.each(revision_cases, fn one ->
       actual = CharterRevision.decode(one["input"]["text"], Limits.default())
@@ -251,7 +251,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_acceptance_expectations(cases) do
     acceptance_cases = Enum.filter(cases, &String.starts_with?(&1["surface"], "acceptance."))
-    assert length(acceptance_cases) == 4
+    assert length(acceptance_cases) == 6
     Enum.each(acceptance_cases, &assert_acceptance_case/1)
   end
 
@@ -326,7 +326,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     chain_cases =
       Enum.filter(cases, &(&1["surface"] in ["chain.verify", "governing_revision"]))
 
-    assert length(chain_cases) == 4
+    assert length(chain_cases) == 5
     Enum.each(chain_cases, &assert_chain_case/1)
   end
 
@@ -377,7 +377,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_receipt_expectations(cases) do
     receipt_cases = Enum.filter(cases, &(&1["surface"] == "receipt.verify"))
-    assert length(receipt_cases) == 6
+    assert length(receipt_cases) == 9
 
     Enum.each(receipt_cases, fn one ->
       input = one["input"]
@@ -405,6 +405,9 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   defp projected_receipt_result({:error, %Error{code: code}}),
+    do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+
+  defp projected_equivocation_result({:error, %Error{code: code}}),
     do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
 
   defp projected_equivocation_result({:ok, evidence}) do

@@ -124,7 +124,10 @@ key history decides which key verifies.
 
 A genesis descriptor (no `party_id`, no `prev_descriptor_digest`) that
 satisfies its closed member set decodes and verifies as a self-standing
-key history [CAP-PARTY-DESCRIPTOR-valid-genesis]. Every attached
+key history [CAP-PARTY-DESCRIPTOR-valid-genesis]. Descriptor claims MUST
+satisfy the successor shape — a genesis carrying predecessor fields
+rejects, the signing `kid` MUST resolve against a declared active key,
+and instant members MUST parse [CAP-PARTY-DESCRIPTOR-decode-shape]. Every attached
 descriptor MUST carry a verifiable Ed25519 signature from an active key
 declared in the descriptor itself (genesis) or in its predecessor
 (successors); a signature that does not verify MUST be rejected
@@ -166,7 +169,9 @@ stale [CAP-SIGNING-branch-freshness]. Given two verified acceptances by
 the same party descriptor and role at the same revision number over
 different digests, a verifier MUST report the pair as equivocation
 evidence and MUST NOT pick a winner
-[CAP-ACCEPTANCE-equivocation-refusal].
+[CAP-ACCEPTANCE-equivocation-refusal]. A pair that is not same-signer,
+same-number, same-role over different digests MUST be rejected as
+unpairable evidence [CAP-ACCEPTANCE-EQUIVOCATION-pairing-required].
 
 ### 4.5 Termination Notice (`cap+termination`)
 
@@ -194,6 +199,17 @@ to an observed fact [CAP-RECEIPT-outcome-indeterminate]. Unknown optional
 extension bodies MUST be retained byte-exactly through verification and
 named as quarantined [CAP-RECEIPT-extension-roundtrip].
 
+### 4.7 Extension envelope
+
+The extension envelope MUST be registry-conformant on every
+envelope-bearing surface: a namespace of the wrong form, the same
+namespace in both regions, a critical namespace that is unknown, reserved,
+retired, declared optional, registered for another surface, or without a
+bound schema MUST be rejected
+[CAP-EXTENSION-envelope-closed]. A compact-JWS envelope MUST be
+well-formed at the segment level — a malformed compact rejects
+[CAP-COMPACT-JWS-envelope-well-formed].
+
 ## 5. Descriptor chains and artifact sets
 
 A descriptor chain MUST verify every descriptor signature in the supplied
@@ -206,7 +222,8 @@ topology with every contested position named.
 
 A set of revisions, acceptances, and descriptors whose acceptances pair
 exactly and whose topology is linear verifies as a valid chain
-[CAP-CHAIN-valid-topology]. A fork between accepted siblings MUST be
+[CAP-CHAIN-valid-topology]. A chain input MUST carry at least one
+revision — an empty revision set rejects [CAP-CHAIN-input-nonempty]. A fork between accepted siblings MUST be
 visible in the verified view — the forked topology and the sibling
 digests are reported, never collapsed
 [CAP-CHAIN-fork-topology]. A governing computation over a contested view

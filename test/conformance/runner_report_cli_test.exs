@@ -11,8 +11,8 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
 
     assert report.agreement
     assert report.exit_status == 0
-    assert report.total == 57
-    assert report.agreed == 57
+    assert report.total == 84
+    assert report.agreed == 84
     assert report.disagreed == 0
 
     assert {:ok, bytes} = Report.to_bytes(corpus, results)

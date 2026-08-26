@@ -166,7 +166,7 @@ The escript form also works from a checkout or unpacked package directory:
 $ mix escript.build && ./charter_agreement_protocol --corpus priv/conformance
 ```
 
-Exit `0` proves all 57 certified cases recomputed and agreed. The CLI refuses
+Exit `0` proves all 84 certified cases recomputed and agreed. The CLI refuses
 any corpus whose raw index identity is not the certified release pin, so a
 tampered or self-consistently-regenerated corpus fails loudly. See
 [Conformance](conformance.md).

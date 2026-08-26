@@ -71,10 +71,13 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   end
 
   defp execute(%{"surface" => "json.decode", "input" => input}) do
-    input
-    |> json_input()
-    |> Json.decode(limits(input))
-    |> project_ok(&json_projection/1)
+    case limits(input) do
+      {:ok, limits} ->
+        input |> json_input() |> Json.decode(limits) |> project_ok(&json_projection/1)
+
+      {:error, %Error{} = error} ->
+        invalid(error.code)
+    end
   end
 
   defp execute(%{"surface" => "canonicalization.encode", "input" => input}) do
@@ -254,11 +257,10 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
 
   defp limits(%{"limits" => selected}) do
     options = Enum.map(selected, fn {name, value} -> {String.to_existing_atom(name), value} end)
-    {:ok, limits} = Limits.new(options)
-    limits
+    Limits.new(options)
   end
 
-  defp limits(_input), do: Limits.default()
+  defp limits(_input), do: {:ok, Limits.default()}
 
   defp json_input(%{"text" => text}), do: text
 
@@ -280,6 +282,9 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     projected = Enum.map(members, fn {name, value} -> [name, json_projection(value)] end)
     %{"tag" => "object", "members" => projected}
   end
+
+  defp canonical_input(%{"tag" => "integer", "text_value" => decimal}),
+    do: {:integer, String.to_integer(decimal)}
 
   defp canonical_input(%{"tag" => "object", "members" => members}) do
     {:object, Enum.map(members, fn [name, value] -> {name, tagged_projection(value)} end)}

@@ -8,6 +8,15 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-08-26 — corpus coverage closure revision
+
+- `core.md`: five new normative statements (equivocation pairing, chain
+  input non-emptiness, the extension envelope closure ladder, descriptor
+  decode shape, compact envelope well-formedness) bound to the five new
+  matrix requirements.
+- `requirements.md`: regenerated — 45 requirements over 61 applicability
+  cells and 84 certified cases.
+
 ## 2026-08-26 — initial specification set
 
 - `core.md`: initial normative core. RFC 2119/8174 conformance language

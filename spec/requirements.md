@@ -10,8 +10,8 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ## Bound evidence
 
-- Requirements: 40
-- Corpus cells: 53
+- Requirements: 45
+- Corpus cells: 61
 - Named mutations: 22
 
 ## Requirements
@@ -60,7 +60,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ### CAP-COMPACT-JWS-type-isolation
 
-- Corpus: `termination.verify:signature_invalid`
+- Corpus: `termination.verify:signature_invalid`, `party_descriptor.verify:unknown_member`
 - Gate: `CharterAgreementProtocol.Architecture.PortfolioIdentityCensusTest`
 - Mutation: `typ-confusion`
 
@@ -237,3 +237,28 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 - Corpus: `termination.verify:valid`
 - Gate: `CharterAgreementProtocol.Architecture.FactsConstructionTest`
+
+### CAP-ACCEPTANCE-EQUIVOCATION-pairing-required
+
+- Corpus: `acceptance.equivocation:invalid_constraint`
+- Gate: `CharterAgreementProtocol.Architecture.SigningBoundaryTest`
+
+### CAP-CHAIN-input-nonempty
+
+- Corpus: `chain.verify:chain_invalid`
+- Gate: `CharterAgreementProtocol.Architecture.ChainRoutingShapeTest`
+
+### CAP-EXTENSION-envelope-closed
+
+- Corpus: `charter_revision.decode:extension_invalid`, `receipt.verify:extension_invalid`
+- Gate: `CharterAgreementProtocol.Architecture.PublicContractCoverageTest`
+
+### CAP-PARTY-DESCRIPTOR-decode-shape
+
+- Corpus: `party_descriptor.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.Architecture.PublicContractCoverageTest`
+
+### CAP-COMPACT-JWS-envelope-well-formed
+
+- Corpus: `party_descriptor.verify:invalid_encoding`, `receipt.verify:invalid_encoding`
+- Gate: `CharterAgreementProtocol.Architecture.PublicContractCoverageTest`

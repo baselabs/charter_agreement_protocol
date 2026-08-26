@@ -65,7 +65,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "precedence_selection",
     "outcome_indeterminate",
     "extension_unknown_critical",
-    "extension_optional_roundtrip"
+    "extension_optional_roundtrip",
+    "extension_invalid"
   ]
 
   @floor %{
@@ -92,7 +93,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       n_a: "byte encoding and digest behavior is outside artifact schema validation"
     },
     "party_descriptor.verify" => %{
-      required: ~w(valid signature_invalid),
+      required: ~w(valid signature_invalid invalid_encoding unknown_member invalid_constraint),
       n_a:
         "set topology and foundational codec-only behavior are outside one descriptor verification"
     },
@@ -102,7 +103,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     },
     "charter_revision.decode" => %{
       required:
-        ~w(valid invalid_type invalid_constraint invalid_cardinality unknown_member missing_required extension_unknown_critical),
+        ~w(valid invalid_type invalid_constraint invalid_cardinality unknown_member missing_required extension_unknown_critical extension_invalid),
       n_a: "signature, chain, and foundational codec-only behavior are outside revision decoding"
     },
     "acceptance.verify" => %{
@@ -111,7 +112,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
         "set-level equivocation and foundational codec-only behavior are outside one acceptance"
     },
     "acceptance.equivocation" => %{
-      required: ~w(equivocation),
+      required: ~w(equivocation invalid_constraint),
       n_a:
         "single-artifact and foundational codec-only behavior are outside paired acceptance evidence"
     },
@@ -121,7 +122,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
         "governance effects and foundational codec-only behavior are outside one termination notice"
     },
     "chain.verify" => %{
-      required: ~w(valid chain_fork supersession),
+      required: ~w(valid chain_fork supersession chain_invalid),
       n_a: "single-artifact and foundational codec-only behavior are outside set verification"
     },
     "governing_revision" => %{
@@ -130,7 +131,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     },
     "receipt.verify" => %{
       required:
-        ~w(valid invalid_constraint signature_invalid chain_fork outcome_indeterminate extension_optional_roundtrip),
+        ~w(valid invalid_constraint signature_invalid chain_fork outcome_indeterminate extension_optional_roundtrip invalid_encoding extension_invalid),
       n_a: "non-receipt codec and set-construction behavior is outside receipt verification"
     }
   }

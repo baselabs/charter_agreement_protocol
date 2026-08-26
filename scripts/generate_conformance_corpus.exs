@@ -899,6 +899,337 @@ unless MapSet.new(supplemental_cases, & &1["id"]) == supplemental_case_ids do
   raise "supplemental conformance case set is incomplete"
 end
 
+coverage_descriptor_compact = fn claims, kid, private, extra_header ->
+  protected =
+    canonical.(Map.merge(%{"alg" => "EdDSA", "kid" => kid, "typ" => "cap+party"}, extra_header))
+
+  payload = canonical.(claims)
+  message = Base64Url.encode(protected) <> "." <> Base64Url.encode(payload)
+  signature = :crypto.sign(:eddsa, :none, message, [private, :ed25519])
+  message <> "." <> Base64Url.encode(signature)
+end
+
+header_extra_descriptor =
+  coverage_descriptor_compact.(genesis_claims, "genesis-key", genesis_private, %{"jwk" => 1})
+
+genesis_with_predecessor =
+  coverage_descriptor_compact.(
+    Map.put(
+      genesis_claims,
+      "prev_descriptor_digest",
+      "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    ),
+    "genesis-key",
+    genesis_private,
+    %{}
+  )
+
+unresolved_kid_descriptor =
+  coverage_descriptor_compact.(genesis_claims, "nonexistent-key", genesis_private, %{})
+
+unparsable_effective_from =
+  coverage_descriptor_compact.(
+    Map.put(genesis_claims, "effective_from", "garbage"),
+    "genesis-key",
+    genesis_private,
+    %{}
+  )
+
+acceptance_without_prev_at_two =
+  acceptance_claims_value
+  |> Map.put("revision_number", 2)
+  |> Map.delete("prev_revision_digest")
+  |> acceptance_compact.("genesis-key", genesis_private)
+
+price_terms_body = %{
+  "base_amount_minor" => 10000,
+  "cap_amount_minor" => 12000,
+  "currency" => "USD",
+  "floor_amount_minor" => 9000,
+  "formula" => "index_plus_spread",
+  "index" => %{
+    "observation_lag_days" => 2,
+    "series_document_digest" => "sha-256:DAb9EB60I7UfAUC37DnTnkuaQd0GC3aUJCd7dMQG0Ck",
+    "series_id" => "EXAMPLE-CPI"
+  },
+  "spread_bps" => 125,
+  "tolerance_bps" => 50
+}
+
+extension_case = fn id, code, critical, optional ->
+  %{
+    "id" => id,
+    "surface" => "charter_revision.decode",
+    "class" => "extension_invalid",
+    "input" => %{
+      "text" =>
+        canonical.(
+          Map.put(revision_claims, "extensions", %{"critical" => critical, "optional" => optional})
+        )
+    },
+    "expect" => invalid.(code)
+  }
+end
+
+receipt_compact = fn claims, kid, private ->
+  protected = canonical.(%{"alg" => "EdDSA", "kid" => kid, "typ" => "cap+receipt"})
+  payload = canonical.(claims)
+  message = Base64Url.encode(protected) <> "." <> Base64Url.encode(payload)
+  signature = :crypto.sign(:eddsa, :none, message, [private, :ed25519])
+  message <> "." <> Base64Url.encode(signature)
+end
+
+receipt_claims = %{
+  "protocol_revision" => 1,
+  "charter_id" => chain_genesis_digest,
+  "revision_number" => 1,
+  "revision_digest" => chain_genesis_digest,
+  "issuing_party_role" => "issuer",
+  "agent_party_role" => "issuer",
+  "deployment_digest" => "sha-256:tWFr0caS0AWFJd2UcB9gZv3kNjIUP8xZ08WWM_h8xgo",
+  "grant" => %{
+    "scheme" => "bap",
+    "id" => "grant-2026-07-27-001",
+    "grant_digest" => "sha-256:5k224cZ_lMI9VoUZ_fYM31ZJAcnJiht0GYEpnhes_ZI"
+  },
+  "invocation_id" => "123e4567-e89b-42d3-a456-426614174000",
+  "decision" => "accepted",
+  "outcome" => "effect_committed",
+  "occurred_at" => "2026-08-25T12:00:01Z",
+  "recorded_at" => "2026-08-25T12:00:02Z",
+  "extensions" => %{"critical" => %{}, "optional" => %{}}
+}
+
+receipt_chain_input = chain_input.([chain_revision])
+
+mismatched_receipt =
+  receipt_claims
+  |> Map.put("revision_digest", "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+  |> Map.put("charter_id", "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+  |> receipt_compact.("genesis-key", genesis_private)
+
+bap_without_grant_digest =
+  receipt_claims
+  |> Map.put("grant", %{"scheme" => "bap", "id" => "grant-2026-07-27-001"})
+  |> receipt_compact.("genesis-key", genesis_private)
+
+schema_unavailable_receipt =
+  receipt_claims
+  |> Map.put("extensions", %{
+    "critical" => %{},
+    "optional" => %{"com.example.charter/default" => %{}}
+  })
+  |> receipt_compact.("genesis-key", genesis_private)
+
+coverage_cases = [
+  %{
+    "id" => "base64url-invalid-character",
+    "surface" => "base64url.decode",
+    "class" => "invalid_encoding",
+    "input" => %{"text" => "A!"},
+    "expect" => invalid.("base64url_invalid")
+  },
+  %{
+    "id" => "json-trailing-bytes",
+    "surface" => "json.decode",
+    "class" => "invalid_encoding",
+    "input" => %{"text" => "{\"a\":1} x"},
+    "expect" => invalid.("trailing_bytes")
+  },
+  %{
+    "id" => "json-invalid-syntax",
+    "surface" => "json.decode",
+    "class" => "invalid_encoding",
+    "input" => %{"text" => "{"},
+    "expect" => invalid.("invalid_syntax")
+  },
+  %{
+    "id" => "json-duplicate-member",
+    "surface" => "json.decode",
+    "class" => "invalid_encoding",
+    "input" => %{"text" => "{\"a\":1,\"a\":2}"},
+    "expect" => invalid.("duplicate_member")
+  },
+  %{
+    "id" => "json-number-not-double-expressible",
+    "surface" => "json.decode",
+    "class" => "invalid_type",
+    "input" => %{"text" => "{\"n\":9007199254740993}"},
+    "expect" => invalid.("number_not_double_expressible")
+  },
+  %{
+    "id" => "json-number-overflow",
+    "surface" => "json.decode",
+    "class" => "invalid_type",
+    "input" => %{"text" => "{\"n\":1e999}"},
+    "expect" => invalid.("invalid_number")
+  },
+  %{
+    "id" => "json-limits-invalid",
+    "surface" => "json.decode",
+    "class" => "invalid_type",
+    "input" => %{"text" => "{}", "limits" => %{"max_bytes" => -1}},
+    "expect" => invalid.("invalid_limits")
+  },
+  %{
+    "id" => "canonical-duplicate-member",
+    "surface" => "canonicalization.encode",
+    "class" => "invalid_encoding",
+    "input" => %{
+      "tag" => "object",
+      "members" => [
+        ["a", %{"tag" => "integer", "value" => 1}],
+        ["a", %{"tag" => "integer", "value" => 2}]
+      ]
+    },
+    "expect" => invalid.("duplicate_member")
+  },
+  %{
+    "id" => "canonical-integer-magnitude",
+    "surface" => "canonicalization.encode",
+    "class" => "invalid_type",
+    "input" => %{"tag" => "integer", "text_value" => "9007199254740993"},
+    "expect" => invalid.("integer_magnitude")
+  },
+  %{
+    "id" => "digest-unsupported-algorithm",
+    "surface" => "digest.hash",
+    "class" => "invalid_type",
+    "input" => %{
+      "domain" => "legal_text",
+      "bytes_base64url" => "eA",
+      "tagged" => "sha-512:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    },
+    "expect" => invalid.("digest_algorithm_unsupported")
+  },
+  %{
+    "id" => "digest-invalid-encoding",
+    "surface" => "digest.hash",
+    "class" => "invalid_type",
+    "input" => %{"domain" => "legal_text", "bytes_base64url" => "eA", "tagged" => "sha-256:@@@"},
+    "expect" => invalid.("digest_encoding_invalid")
+  },
+  %{
+    "id" => "descriptor-compact-malformed",
+    "surface" => "party_descriptor.verify",
+    "class" => "invalid_encoding",
+    "input" => %{"compact" => "abc", "predecessor" => nil},
+    "expect" => invalid.("compact_invalid")
+  },
+  %{
+    "id" => "descriptor-header-extra-member",
+    "surface" => "party_descriptor.verify",
+    "class" => "unknown_member",
+    "input" => %{"compact" => header_extra_descriptor, "predecessor" => nil},
+    "expect" => invalid.("protected_header_invalid")
+  },
+  %{
+    "id" => "descriptor-genesis-with-predecessor",
+    "surface" => "party_descriptor.verify",
+    "class" => "invalid_constraint",
+    "input" => %{"compact" => genesis_with_predecessor, "predecessor" => nil},
+    "expect" => invalid.("descriptor_invalid")
+  },
+  %{
+    "id" => "descriptor-key-id-unresolved",
+    "surface" => "party_descriptor.verify",
+    "class" => "invalid_constraint",
+    "input" => %{"compact" => unresolved_kid_descriptor, "predecessor" => nil},
+    "expect" => invalid.("descriptor_key_invalid")
+  },
+  %{
+    "id" => "descriptor-timestamp-unparsable",
+    "surface" => "party_descriptor.verify",
+    "class" => "invalid_constraint",
+    "input" => %{"compact" => unparsable_effective_from, "predecessor" => nil},
+    "expect" => invalid.("timestamp_invalid")
+  },
+  %{
+    "id" => "acceptance-invalid-coordinates",
+    "surface" => "acceptance.verify",
+    "class" => "invalid_constraint",
+    "input" => %{
+      "compact" => acceptance_without_prev_at_two.compact,
+      "descriptor_compacts" => [genesis.compact],
+      "revision_text" => revision_bytes
+    },
+    "expect" => invalid.("acceptance_invalid")
+  },
+  %{
+    "id" => "acceptance-equivocation-not-pairable",
+    "surface" => "acceptance.equivocation",
+    "class" => "invalid_constraint",
+    "input" => %{
+      "descriptor_compacts" => [genesis.compact],
+      "signed_revisions" => [
+        %{"revision_text" => revision_bytes, "compact" => acceptance.compact},
+        %{"revision_text" => left_revision_bytes, "compact" => left_acceptance.compact}
+      ]
+    },
+    "expect" => invalid.("acceptance_equivocation_invalid")
+  },
+  extension_case.(
+    "revision-extension-criticality-conflict",
+    "extension_criticality_conflict",
+    %{"com.example.charter/default" => %{}},
+    %{}
+  ),
+  extension_case.(
+    "revision-extension-duplicate",
+    "extension_duplicate",
+    %{"com.example/pricing-indexed" => price_terms_body},
+    %{"com.example/pricing-indexed" => price_terms_body}
+  ),
+  extension_case.(
+    "revision-extension-namespace-invalid",
+    "extension_namespace_invalid",
+    %{"Not-A-Ns/body" => %{}},
+    %{}
+  ),
+  extension_case.(
+    "revision-extension-retired-critical",
+    "extension_retired",
+    %{"com.example/retired-profile" => %{}},
+    %{}
+  ),
+  extension_case.("revision-extension-scope-invalid", "extension_scope_invalid", %{}, %{
+    "com.example/pricing-indexed-observation" => %{}
+  }),
+  %{
+    "id" => "receipt-bap-grant-without-digest",
+    "surface" => "receipt.verify",
+    "class" => "invalid_encoding",
+    "input" => %{"chain" => receipt_chain_input, "compact" => bap_without_grant_digest},
+    "expect" => invalid.("receipt_invalid")
+  },
+  %{
+    "id" => "receipt-claims-mismatch",
+    "surface" => "receipt.verify",
+    "class" => "invalid_constraint",
+    "input" => %{"chain" => receipt_chain_input, "compact" => mismatched_receipt},
+    "expect" => invalid.("receipt_claims_mismatch")
+  },
+  %{
+    "id" => "receipt-extension-schema-unavailable",
+    "surface" => "receipt.verify",
+    "class" => "extension_invalid",
+    "input" => %{"chain" => receipt_chain_input, "compact" => schema_unavailable_receipt},
+    "expect" => invalid.("extension_schema_unavailable")
+  },
+  %{
+    "id" => "chain-empty-revisions",
+    "surface" => "chain.verify",
+    "class" => "chain_invalid",
+    "input" => %{
+      "revisions" => [],
+      "acceptances" => [],
+      "descriptors" => [genesis.compact, acceptor.compact],
+      "terminations" => []
+    },
+    "expect" => invalid.("chain_invalid")
+  }
+]
+
 cases =
   cases ++
     descriptor_cases ++
@@ -906,6 +1237,7 @@ cases =
     acceptance_cases ++
     termination_cases ++
     chain_cases ++
+    coverage_cases ++
     supplemental_cases
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
