@@ -48,6 +48,12 @@ defmodule Tour do
 
   # Sign OUTSIDE CAP: take the exact RFC 7515 signing-input bytes, return the raw
   # 64-byte signature, and let CAP assemble the compact.
+  #
+  # This helper IS the host contract. The reviewed companion package
+  # charter_agreement_signer (hex.pm) implements it in full — atomic kid/key
+  # snapshot, wrong-key guard before assembly, post-sign verify through CAP —
+  # so production hosts can depend on it instead of hand-rolling; the tour
+  # hand-rolls so the protocol stays self-contained.
   def sign(signing_input, private) do
     signature = :crypto.sign(:eddsa, :none, signing_input.message, [private, :ed25519])
     {:ok, compact} = CAP.assemble_compact(signing_input, signature)

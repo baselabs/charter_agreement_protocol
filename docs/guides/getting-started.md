@@ -148,6 +148,16 @@ governing after repair: sha-256:JEgcYljHUCXtsmsg-EW2Tto2VftJVw6OEYJfHByMES0
 CAP reports evidence; it does not adjudicate or authorize.
 ```
 
+## A reviewed companion signer
+
+The hand-rolled `sign` helper above is the whole contract — and if you would
+rather not own that glue, [`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer) is the
+reviewed companion: it takes your `{module, ref}` key handle, resolves the
+atomic kid/key snapshot, runs CAP's honest-signer refusals before the key is
+used, guards against wrong-key signatures before assembly, and post-sign
+verifies through CAP before returning the compact. Verifiers never depend on
+it; hosts that hand-roll per the spec remain fully conformant.
+
 ## Where to go next
 
 - [Artifacts](artifacts.md) — every artifact's wire shape and claims

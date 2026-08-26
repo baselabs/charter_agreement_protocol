@@ -87,6 +87,10 @@ all 85 certified cases recomputed and agreed. Full walkthrough:
 - Key custody stays outside the protocol: CAP builds the exact RFC 7515
   signing input, you sign it, `assemble_compact/2` accepts only an external
   raw 64-byte signature, and hosts post-verify before serving the compact.
+  A reviewed companion signer implements that host glue for you —
+  [`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer) (atomic kid/key snapshot,
+  wrong-key guard, post-sign verify, refusal surfacing); verifiers never
+  depend on it, and hosts may always hand-roll per the spec instead.
 
 ## Guides
 

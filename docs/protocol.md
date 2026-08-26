@@ -440,6 +440,14 @@ post-verify the assembled compact through CAP before returning it. The refusal
 guards constrain honest use relative to the supplied set; they cannot constrain
 a dishonest signer or prove the view complete.
 
+A companion package implements these host obligations as a reviewed
+holder-side signer — [`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer): the atomic
+kid/key snapshot, the wrong-key verify before assembly, the post-sign
+verification through this package's public verify functions, and the
+honest-signer refusal surfaces. The companion is one reviewed implementation
+of the normative host obligations, never a dependency of verifiers; hosts
+that hand-roll the glue remain fully conformant.
+
 ## Architecture boundaries
 
 Production runtime code uses only OTP `:crypto`. Corpus loading is in-memory and
