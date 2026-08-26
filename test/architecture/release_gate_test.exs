@@ -27,6 +27,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     superseded-descriptor-silent-accept
     supersession-ignore
     corpus-expectation-flip
+    alg-binding-defeat
   )
 
   @minimum_quality_steps [
@@ -122,13 +123,14 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
         {:mutation, name} -> [name]
         _other -> []
       end)
+      |> Enum.uniq()
 
-    assert mapped_mutations == @mutation_names
+    assert Enum.sort(mapped_mutations) == Enum.sort(@mutation_names)
 
     source_mutations =
       RequirementMap.source_mutation_names(File.read!("scripts/check_conformance_mutations.exs"))
 
-    assert source_mutations == @mutation_names
+    assert Enum.sort(source_mutations) == Enum.sort(@mutation_names)
     assert List.last(source_mutations) == "corpus-expectation-flip"
   end
 

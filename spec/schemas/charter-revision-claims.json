@@ -159,7 +159,7 @@
     "protocol_revision": {
       "type": "integer",
       "minimum": 1,
-      "maximum": 1
+      "maximum": 2
     },
     "charter_id": {
       "$ref": "#/$defs/tagged_digest"

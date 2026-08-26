@@ -15,7 +15,7 @@
     "issued_at"
   ],
   "properties": {
-    "protocol_revision": {"type": "integer", "minimum": 1, "maximum": 1},
+    "protocol_revision": {"type": "integer", "minimum": 1, "maximum": 2},
     "charter_id": {"$ref": "#/$defs/tagged_digest"},
     "governing_revision_digest": {"$ref": "#/$defs/tagged_digest"},
     "party_descriptor_digest": {"$ref": "#/$defs/tagged_digest"},

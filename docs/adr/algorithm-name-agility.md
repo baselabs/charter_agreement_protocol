@@ -4,9 +4,16 @@ Date: 2026-08-26
 
 ## Status
 
-Accepted (decision recorded ahead of implementation; the code slice is
-queued behind the in-flight standards-readiness tickets per operator
-sequencing, 2026-08-26). Governs `protocol_revision` 2.
+Accepted. Governs `protocol_revision` 2. Implemented 2026-08-26 (same day,
+after the standards-readiness tickets landed): the registry module, the
+framing-layer binding rule in both implementations, the schema/spec
+surfaces, and the recertified both-population corpus. One deviation from
+the scouted design, discovered by the mutation gate: the producer's
+explicit emission-revision gate was REMOVED as redundant — the binding
+rule at the provisional decode already makes the producer unable to
+construct a non-conforming artifact (its named mutation survived, which
+the gate discipline treats as dead logic); the mint contract holds by
+construction, not by a redundant check.
 
 ## Context
 

@@ -39,8 +39,8 @@ For the current candidate:
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:ORUavQBNHFZG8XEAsunlHaHXDMMaNMW2ggImIotd-n4` |
-| Index SHA-256 (base64url) | `YLaLsoOJQjHAY2qo1o5wqH-PHc4lpSGRPn0pwjiTRoU` |
+| Corpus digest | `sha-256:nLE8UwbYxyIRG147jhJoQLHf0RpsA4dw8X5ATpJvKK8` |
+| Index SHA-256 (base64url) | `Ty7kChMw3GusTSiJIgkwTCwIs7Ao9rWr8J9ok9oN1FM` |
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
 | Specification digest | `sha-256:JuLNnhAk2rv_kuSoG3HdAKInxKpSftKgNJjhxtlA214` |
 | Certified cases | 85 |

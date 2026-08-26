@@ -16,7 +16,10 @@ registry-and-revision act: a new `alg` value, a new key `algorithm`
 value, new point-encoding rules where the scheme needs them, and a
 `protocol_revision` advance — never a parallel artifact family, media
 type, or header shape. The verification path's algorithm dispatch is
-data-driven so a second algorithm does not fork the code path.
+data-driven so a second algorithm does not fork the code path: the closed
+`alg` name set (with each name's minimum revision and key algorithm) is
+itself the registry — a name or algorithm lands by the same
+registry-and-revision act that added `Ed25519` in revision 2.
 
 ## Named migration target: ML-DSA (RFC 9964)
 

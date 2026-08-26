@@ -213,7 +213,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
         &(&1["surface"] in ["party_descriptor.verify", "descriptor_chain.verify"])
       )
 
-    assert length(verify_cases) == 11
+    assert length(verify_cases) == 15
     Enum.each(verify_cases, &assert_verify_case/1)
   end
 
@@ -251,7 +251,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_acceptance_expectations(cases) do
     acceptance_cases = Enum.filter(cases, &String.starts_with?(&1["surface"], "acceptance."))
-    assert length(acceptance_cases) == 6
+    assert length(acceptance_cases) == 7
     Enum.each(acceptance_cases, &assert_acceptance_case/1)
   end
 

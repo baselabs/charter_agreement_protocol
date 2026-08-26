@@ -18,10 +18,10 @@ recorded value for the current candidate:
 
 | Identity | Value | Job |
 |---|---|---|
-| Corpus digest | `sha-256:ORUavQBNHFZG8XEAsunlHaHXDMMaNMW2ggImIotd-n4` | Domain-separated digest inside the canonical corpus index; proves index self-consistency |
-| Index SHA-256 (base64url) | `YLaLsoOJQjHAY2qo1o5wqH-PHc4lpSGRPn0pwjiTRoU` | Raw SHA-256 of the exact canonical index bytes; pinned by the Elixir CLI and the TypeScript verifier core |
+| Corpus digest | `sha-256:nLE8UwbYxyIRG147jhJoQLHf0RpsA4dw8X5ATpJvKK8` | Domain-separated digest inside the canonical corpus index; proves index self-consistency |
+| Index SHA-256 (base64url) | `Ty7kChMw3GusTSiJIgkwTCwIs7Ao9rWr8J9ok9oN1FM` | Raw SHA-256 of the exact canonical index bytes; pinned by the Elixir CLI and the TypeScript verifier core |
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` | The compiled extension registry identity carried in the index |
-| Specification digest | `sha-256:JuLNnhAk2rv_kuSoG3HdAKInxKpSftKgNJjhxtlA214` | Domain-separated digest over the canonical manifest of the normative spec set (`spec/`); pinned in release metadata |
+| Specification digest | `sha-256:omp4P8VPXArH3eRE0r1bQaUyHALuYPUC00ly2h4kxaE` | Domain-separated digest over the canonical manifest of the normative spec set (`spec/`); pinned in release metadata |
 
 A corpus you built yourself that disagrees with the index SHA-256 is not the
 certified corpus, however internally consistent it is — both runners refuse

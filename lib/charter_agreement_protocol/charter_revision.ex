@@ -120,7 +120,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
 
   @type precedence :: :legal_text_governs | :machine_terms_govern
   @type t :: %__MODULE__{
-          protocol_revision: 1,
+          protocol_revision: 1 | 2,
           charter_id: nil | binary(),
           revision_number: pos_integer(),
           prev_revision_digest: nil | binary(),
@@ -228,7 +228,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
                 Schema.field("protocol_revision",
                   required?: true,
                   types: [:integer],
-                  constraint: {:integer_range, 1, 1}
+                  constraint: {:integer_range, 1, 2}
                 ),
                 Schema.field("charter_id",
                   types: [:string],
@@ -321,6 +321,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
   defp extract({:object, members}, bytes) do
     values = Map.new(members)
     {:integer, revision_number} = values["revision_number"]
+    {:integer, protocol_revision} = values["protocol_revision"]
 
     with {:ok, charter_id} <- optional_digest(values, "charter_id"),
          {:ok, previous} <- optional_digest(values, "prev_revision_digest"),
@@ -343,7 +344,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
          :ok <- binding_roles(bindings, parties) do
       {:ok,
        %__MODULE__{
-         protocol_revision: 1,
+         protocol_revision: protocol_revision,
          charter_id: charter_id,
          revision_number: revision_number,
          prev_revision_digest: previous,

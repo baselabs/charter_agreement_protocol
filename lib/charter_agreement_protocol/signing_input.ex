@@ -19,6 +19,7 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   alias CharterAgreementProtocol.{
     Acceptance,
+    Algorithm,
     ArtifactSet,
     Base64Url,
     Canonicalization,
@@ -134,7 +135,7 @@ defmodule CharterAgreementProtocol.SigningInput do
       Canonicalization.encode(
         {:object,
          [
-           {"alg", {:string, "EdDSA"}},
+           {"alg", {:string, Algorithm.emission_name()}},
            {"kid", {:string, kid}},
            {"typ", {:string, typ}}
          ]}

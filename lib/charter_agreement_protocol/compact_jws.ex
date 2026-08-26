@@ -9,9 +9,18 @@ defmodule CharterAgreementProtocol.CompactJws do
   against its caller-supplied verification context.
   """
 
-  alias CharterAgreementProtocol.{Base64Url, Canonicalization, Error, Json, Limits, Signature}
+  alias CharterAgreementProtocol.{
+    Algorithm,
+    Base64Url,
+    Canonicalization,
+    Error,
+    Json,
+    Limits,
+    Signature
+  }
 
   @enforce_keys [
+    :alg,
     :kid,
     :typ,
     :protected_segment,
@@ -24,6 +33,7 @@ defmodule CharterAgreementProtocol.CompactJws do
   defstruct @enforce_keys
 
   @type t :: %__MODULE__{
+          alg: binary(),
           kid: binary(),
           typ: binary(),
           protected_segment: binary(),
@@ -73,10 +83,12 @@ defmodule CharterAgreementProtocol.CompactJws do
              {:ok, payload_bytes} <- decode_segment(payload_segment),
              {:ok, signature} <- decode_signature(signature_segment),
              {:ok, protected} <- canonical_value(protected_bytes, limits, :protected),
-             {:ok, kid} <- protected_header(protected, expected_typ),
-             {:ok, payload} <- canonical_value(payload_bytes, limits, :payload) do
+             {:ok, {alg, kid}} <- protected_header(protected, expected_typ),
+             {:ok, payload} <- canonical_value(payload_bytes, limits, :payload),
+             :ok <- bind_algorithm(alg, payload) do
           {:ok,
            %__MODULE__{
+             alg: alg,
              kid: kid,
              typ: expected_typ,
              protected_segment: protected_segment,
@@ -120,12 +132,14 @@ defmodule CharterAgreementProtocol.CompactJws do
   defp protected_header({:object, members}, expected_typ) do
     case Map.new(members) do
       %{
-        "alg" => {:string, "EdDSA"},
+        "alg" => {:string, alg},
         "kid" => {:string, kid},
         "typ" => {:string, ^expected_typ}
       }
       when length(members) == 3 ->
-        if valid_kid?(kid), do: {:ok, kid}, else: protected_error()
+        if Algorithm.accepted_name?(alg) and valid_kid?(kid),
+          do: {:ok, {alg, kid}},
+          else: protected_error()
 
       _header ->
         protected_error()
@@ -133,6 +147,23 @@ defmodule CharterAgreementProtocol.CompactJws do
   end
 
   defp protected_header(_value, _expected_typ), do: protected_error()
+
+  # The per-artifact binding rule (docs/adr/algorithm-name-agility.md): the
+  # alg name and the payload's protocol_revision must satisfy the registry
+  # row together — EdDSA at any accepted revision, Ed25519 from revision 2.
+  # Revision range alone is the per-artifact schemas' job; this binds the
+  # pair. This is the one place header and payload coexist.
+  defp bind_algorithm(alg, {:object, members}) do
+    case List.keyfind(members, "protocol_revision", 0) do
+      {"protocol_revision", {:integer, revision}} ->
+        if Algorithm.binds?(alg, revision), do: :ok, else: protected_error()
+
+      _missing_or_wrong_type ->
+        protected_error()
+    end
+  end
+
+  defp bind_algorithm(_alg, _payload), do: protected_error()
 
   defp valid_kid?(kid) when is_binary(kid) and byte_size(kid) in 1..128,
     do: kid_bytes?(kid)

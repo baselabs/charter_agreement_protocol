@@ -219,8 +219,8 @@ descriptor_key = fn byte, key_id ->
    }, private}
 end
 
-descriptor_compact = fn claims, kid, private ->
-  protected = canonical.(%{"alg" => "EdDSA", "kid" => kid, "typ" => "cap+party"})
+sign_compact = fn claims, kid, private, alg, typ, digest_domain ->
+  protected = canonical.(%{"alg" => alg, "kid" => kid, "typ" => typ})
   payload = canonical.(claims)
   protected_segment = Base64Url.encode(protected)
   payload_segment = Base64Url.encode(payload)
@@ -229,8 +229,12 @@ descriptor_compact = fn claims, kid, private ->
 
   %{
     compact: message <> "." <> Base64Url.encode(signature),
-    digest: :party_descriptor_content |> Digest.hash(payload) |> Digest.to_tagged()
+    digest: digest_domain |> Digest.hash(payload) |> Digest.to_tagged()
   }
+end
+
+descriptor_compact = fn claims, kid, private ->
+  sign_compact.(claims, kid, private, "EdDSA", "cap+party", :party_descriptor_content)
 end
 
 {genesis_key, genesis_private} = descriptor_key.(1, "genesis-key")
@@ -253,6 +257,53 @@ genesis =
   )
 
 wrong_signed_genesis = descriptor_compact.(genesis_claims, "genesis-key", wrong_private)
+
+# --- The revision-2 alg-name population (RFC 9864; ADR
+# algorithm-name-agility). The fixtures above pin revision 1 + EdDSA
+# literally, ON PURPOSE: the legacy population is an independent minter of
+# the pre-revision-2 world and must never be re-derived from the shared
+# registry. These mint revision 2 and the binding-rule negatives.
+rev2_claims = Map.put(genesis_claims, "protocol_revision", 2)
+
+rev1_ed25519_descriptor =
+  sign_compact.(
+    genesis_claims,
+    "genesis-key",
+    genesis_private,
+    "Ed25519",
+    "cap+party",
+    :party_descriptor_content
+  )
+
+rev2_ed25519_descriptor =
+  sign_compact.(
+    rev2_claims,
+    "genesis-key",
+    genesis_private,
+    "Ed25519",
+    "cap+party",
+    :party_descriptor_content
+  )
+
+rev2_eddsa_descriptor =
+  sign_compact.(
+    rev2_claims,
+    "genesis-key",
+    genesis_private,
+    "EdDSA",
+    "cap+party",
+    :party_descriptor_content
+  )
+
+rev3_descriptor =
+  sign_compact.(
+    Map.put(genesis_claims, "protocol_revision", 3),
+    "genesis-key",
+    genesis_private,
+    "EdDSA",
+    "cap+party",
+    :party_descriptor_content
+  )
 
 successor = fn byte, key_id, signing_private, previous_digest ->
   {key, _private} = descriptor_key.(byte, key_id)
@@ -297,6 +348,44 @@ descriptor_cases = [
         "party_id" => genesis.digest,
         "descriptor_number" => 1
       })
+  },
+  %{
+    "id" => "descriptor-rev2-ed25519-valid",
+    "surface" => "party_descriptor.verify",
+    "class" => "valid",
+    "input" => %{"compact" => rev2_ed25519_descriptor.compact, "predecessor" => nil},
+    "expect" =>
+      valid.(%{
+        "descriptor_digest" => rev2_ed25519_descriptor.digest,
+        "party_id" => rev2_ed25519_descriptor.digest,
+        "descriptor_number" => 1
+      })
+  },
+  %{
+    "id" => "descriptor-rev2-eddsa-compat-valid",
+    "surface" => "party_descriptor.verify",
+    "class" => "valid",
+    "input" => %{"compact" => rev2_eddsa_descriptor.compact, "predecessor" => nil},
+    "expect" =>
+      valid.(%{
+        "descriptor_digest" => rev2_eddsa_descriptor.digest,
+        "party_id" => rev2_eddsa_descriptor.digest,
+        "descriptor_number" => 1
+      })
+  },
+  %{
+    "id" => "descriptor-rev1-ed25519-rejected",
+    "surface" => "party_descriptor.verify",
+    "class" => "invalid_constraint",
+    "input" => %{"compact" => rev1_ed25519_descriptor.compact, "predecessor" => nil},
+    "expect" => invalid.("protected_header_invalid")
+  },
+  %{
+    "id" => "descriptor-rev3-fails-closed",
+    "surface" => "party_descriptor.verify",
+    "class" => "invalid_constraint",
+    "input" => %{"compact" => rev3_descriptor.compact, "predecessor" => nil},
+    "expect" => invalid.("protected_header_invalid")
   },
   %{
     "id" => "party-descriptor-wrong-signature",
@@ -461,17 +550,7 @@ revision_cases = [
 ]
 
 acceptance_compact = fn claims, kid, private ->
-  protected = canonical.(%{"alg" => "EdDSA", "kid" => kid, "typ" => "cap+acceptance"})
-  payload = canonical.(claims)
-  protected_segment = Base64Url.encode(protected)
-  payload_segment = Base64Url.encode(payload)
-  message = protected_segment <> "." <> payload_segment
-  signature = :crypto.sign(:eddsa, :none, message, [private, :ed25519])
-
-  %{
-    compact: message <> "." <> Base64Url.encode(signature),
-    digest: :acceptance_content |> Digest.hash(payload) |> Digest.to_tagged()
-  }
+  sign_compact.(claims, kid, private, "EdDSA", "cap+acceptance", :acceptance_content)
 end
 
 acceptance_claims = fn revision, content_digest ->
@@ -494,6 +573,19 @@ acceptance_claims_value = acceptance_claims.(revision_claims, revision_digest)
 
 acceptance =
   acceptance_compact.(acceptance_claims_value, "genesis-key", genesis_private)
+
+# The revision-2 acceptance anchoring the revision-1 genesis — the
+# charters-outlive-revisions flow: after cutover, every acceptance of a
+# pre-existing charter is exactly this shape.
+rev2_acceptance =
+  sign_compact.(
+    Map.put(acceptance_claims_value, "protocol_revision", 2),
+    "genesis-key",
+    genesis_private,
+    "Ed25519",
+    "cap+acceptance",
+    :acceptance_content
+  )
 
 mismatched_acceptance =
   acceptance_claims_value
@@ -551,6 +643,23 @@ acceptance_cases = [
     "expect" =>
       valid.(%{
         "acceptance_digest" => acceptance.digest,
+        "revision_digest" => revision_digest,
+        "party_descriptor_digest" => genesis.digest,
+        "descriptor_position" => "head"
+      })
+  },
+  %{
+    "id" => "acceptance-rev2-anchors-rev1-charter",
+    "surface" => "acceptance.verify",
+    "class" => "valid",
+    "input" => %{
+      "compact" => rev2_acceptance.compact,
+      "revision_text" => revision_bytes,
+      "descriptor_compacts" => [genesis.compact]
+    },
+    "expect" =>
+      valid.(%{
+        "acceptance_digest" => rev2_acceptance.digest,
         "revision_digest" => revision_digest,
         "party_descriptor_digest" => genesis.digest,
         "descriptor_position" => "head"

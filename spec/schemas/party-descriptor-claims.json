@@ -42,7 +42,7 @@
     "effective_from"
   ],
   "properties": {
-    "protocol_revision": {"type": "integer", "minimum": 1, "maximum": 1},
+    "protocol_revision": {"type": "integer", "minimum": 1, "maximum": 2},
     "party_id": {"$ref": "#/$defs/tagged_digest"},
     "descriptor_number": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
     "prev_descriptor_digest": {"$ref": "#/$defs/tagged_digest"},

@@ -14,7 +14,7 @@
     "accepted_at"
   ],
   "properties": {
-    "protocol_revision": {"type": "integer", "minimum": 1, "maximum": 1},
+    "protocol_revision": {"type": "integer", "minimum": 1, "maximum": 2},
     "charter_id": {"$ref": "#/$defs/tagged_digest"},
     "revision_number": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
     "revision_digest": {"$ref": "#/$defs/tagged_digest"},

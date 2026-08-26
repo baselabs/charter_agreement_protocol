@@ -106,13 +106,25 @@ MUST verify each attached signature as Ed25519 [RFC8032] over the exact
 compact signing-input bytes with the resolved public key; a signature
 that does not verify under that algorithm and key MUST fail
 [CAP-SIGNATURE-ed25519-verification]. Every attached artifact carries
-`protocol_revision` with the value `1`.
+`protocol_revision`; revisions 1 and 2 are defined (revision 1 closed the
+`alg` name set to `EdDSA`; revision 2 admits the fully-specified `Ed25519`
+name), and a decoder encountering an unknown revision MUST fail closed
+[CAP-REVISION-fail-closed].
 
 ### 4.1 Protected headers
 
-A protected header MUST be closed to exactly `alg` (`EdDSA`), `kid`, and
+A protected header MUST be closed to exactly `alg`, `kid`, and
 `typ`; an unknown header member MUST be rejected
-[CAP-COMPACT-JWS-type-isolation]. The `typ` value MUST be one of the four
+[CAP-COMPACT-JWS-type-isolation]. The `alg` value MUST be one of the two
+registered names, bound per artifact to the payload's `protocol_revision`
+(the algorithm registry): `EdDSA` is accepted at any accepted revision,
+`Ed25519` [RFC9864] is accepted from `protocol_revision` 2, and the pair
+(`Ed25519`, revision 1) MUST be rejected — revision 1's header was closed
+to `EdDSA`, so no honest producer could have minted that pair
+[CAP-ALG-registry-binding]. Producers
+MUST mint exactly (`Ed25519`, `protocol_revision` 2); accepting `EdDSA`
+at revision 2 keeps artifacts from producers that adopt revision 2 before
+renaming their emission verifiable [CAP-ALG-registry-binding]. The `typ` value MUST be one of the four
 registered artifact types (`cap+party`, `cap+acceptance`,
 `cap+termination`, `cap+receipt`), and a verifier MUST NOT accept an
 artifact whose `typ` differs from the expected type for the call
@@ -277,3 +289,5 @@ not expose retained signed artifacts.
   Timestamps", RFC 3339, July 2002.
 - [RFC8032] Josefsson, S. and I. Liusvaara, "Edwards-Curve Digital
   Signature Algorithm (EdDSA)", RFC 8032, January 2017.
+- [RFC9864] "Fully-Specified Algorithms for JOSE and COSE", RFC 9864,
+  October 2025.

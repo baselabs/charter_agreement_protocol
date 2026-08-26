@@ -2,7 +2,7 @@
   "type": "object",
   "required": ["alg", "kid", "typ"],
   "properties": {
-    "alg": {"enum": ["EdDSA"]},
+    "alg": {"enum": ["EdDSA", "Ed25519"]},
     "kid": {"type": "string", "minLength": 1, "maxLength": 128},
     "typ": {"enum": ["cap+party", "cap+acceptance", "cap+termination", "cap+receipt"]}
   },

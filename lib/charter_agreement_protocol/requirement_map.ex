@@ -44,6 +44,18 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:gate, CharterAgreementProtocol.Architecture.ConstantTimeCompareShapeTest},
        {:mutation, "digest-equality-skip"}
      ]},
+    {"CAP-REVISION-fail-closed",
+     [
+       {:corpus, ["party_descriptor.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest},
+       {:mutation, "alg-binding-defeat"}
+     ]},
+    {"CAP-ALG-registry-binding",
+     [
+       {:corpus, ["party_descriptor.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest},
+       {:mutation, "alg-binding-defeat"}
+     ]},
     {"CAP-SIGNATURE-ed25519-verification",
      [
        {:corpus, ["acceptance.verify:signature_invalid"]},

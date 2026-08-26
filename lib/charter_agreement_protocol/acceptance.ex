@@ -48,7 +48,7 @@ defmodule CharterAgreementProtocol.Acceptance do
   ]
 
   @type t :: %__MODULE__{
-          protocol_revision: 1,
+          protocol_revision: 1 | 2,
           charter_id: binary(),
           revision_number: pos_integer(),
           revision_digest: binary(),
@@ -66,7 +66,7 @@ defmodule CharterAgreementProtocol.Acceptance do
                 Schema.field("protocol_revision",
                   required?: true,
                   types: [:integer],
-                  constraint: {:integer_range, 1, 1}
+                  constraint: {:integer_range, 1, 2}
                 ),
                 Schema.field("charter_id",
                   required?: true,
@@ -184,6 +184,7 @@ defmodule CharterAgreementProtocol.Acceptance do
   defp extract({:object, members}, envelope) do
     values = Map.new(members)
     {:integer, revision_number} = values["revision_number"]
+    {:integer, protocol_revision} = values["protocol_revision"]
     {:string, party_role} = values["party_role"]
     {:string, accepted_at_value} = values["accepted_at"]
 
@@ -195,7 +196,7 @@ defmodule CharterAgreementProtocol.Acceptance do
          :ok <- coordinate_shape(revision_number, previous) do
       {:ok,
        %__MODULE__{
-         protocol_revision: 1,
+         protocol_revision: protocol_revision,
          charter_id: charter_id,
          revision_number: revision_number,
          revision_digest: revision_digest,

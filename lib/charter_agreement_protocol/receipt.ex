@@ -72,7 +72,7 @@ defmodule CharterAgreementProtocol.Receipt do
   defstruct @enforce_keys
 
   @type t :: %__MODULE__{
-          protocol_revision: 1,
+          protocol_revision: 1 | 2,
           charter_id: binary(),
           revision_number: pos_integer(),
           revision_digest: binary(),
@@ -116,7 +116,7 @@ defmodule CharterAgreementProtocol.Receipt do
                   Schema.field("protocol_revision",
                     required?: true,
                     types: [:integer],
-                    constraint: {:integer_range, 1, 1}
+                    constraint: {:integer_range, 1, 2}
                   ),
                   Schema.field("charter_id",
                     required?: true,
@@ -242,6 +242,7 @@ defmodule CharterAgreementProtocol.Receipt do
     {:string, issuing_role} = values["issuing_party_role"]
     {:string, agent_role} = values["agent_party_role"]
     {:string, invocation_id} = values["invocation_id"]
+    {:integer, protocol_revision} = values["protocol_revision"]
     {:string, decision_value} = values["decision"]
     {:string, outcome_value} = values["outcome"]
     {:string, occurred_value} = values["occurred_at"]
@@ -257,7 +258,7 @@ defmodule CharterAgreementProtocol.Receipt do
          :ok <- recorded_after_occurred(occurred_at, recorded_at) do
       {:ok,
        %__MODULE__{
-         protocol_revision: 1,
+         protocol_revision: protocol_revision,
          charter_id: charter_id,
          revision_number: revision_number,
          revision_digest: revision_digest,

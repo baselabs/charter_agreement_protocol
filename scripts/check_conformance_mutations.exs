@@ -46,6 +46,13 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       command: ~w(mix test test/charter_agreement_protocol/digest_test.exs --seed 42)
     },
     %{
+      name: "alg-binding-defeat",
+      path: "lib/charter_agreement_protocol/compact_jws.ex",
+      from: "        if Algorithm.binds?(alg, revision), do: :ok, else: protected_error()",
+      to: "        :ok",
+      command: ~w(mix test test/architecture/algorithm_name_agility_test.exs --seed 42)
+    },
+    %{
       name: "ed25519-defeat",
       path: "lib/charter_agreement_protocol/signature.ex",
       from: ":crypto.verify(:eddsa, :none, message, signature, [public_key, :ed25519])",

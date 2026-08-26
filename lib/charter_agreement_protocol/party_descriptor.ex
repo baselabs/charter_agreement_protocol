@@ -68,7 +68,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   ]
 
   @type t :: %__MODULE__{
-          protocol_revision: 1,
+          protocol_revision: 1 | 2,
           party_id: nil | binary(),
           descriptor_number: pos_integer(),
           prev_descriptor_digest: nil | binary(),
@@ -123,7 +123,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
                 Schema.field("protocol_revision",
                   required?: true,
                   types: [:integer],
-                  constraint: {:integer_range, 1, 1}
+                  constraint: {:integer_range, 1, 2}
                 ),
                 Schema.field("party_id",
                   types: [:string],
@@ -204,6 +204,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     values = Map.new(members)
     {:string, effective_from_value} = values["effective_from"]
     {:integer, descriptor_number} = values["descriptor_number"]
+    {:integer, protocol_revision} = values["protocol_revision"]
 
     with {:ok, party_id} <- optional_digest(values, "party_id"),
          {:ok, previous} <- optional_digest(values, "prev_descriptor_digest"),
@@ -216,7 +217,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
          :ok <- genesis_shape(descriptor_number, party_id, previous) do
       {:ok,
        %__MODULE__{
-         protocol_revision: 1,
+         protocol_revision: protocol_revision,
          party_id: party_id,
          descriptor_number: descriptor_number,
          prev_descriptor_digest: previous,

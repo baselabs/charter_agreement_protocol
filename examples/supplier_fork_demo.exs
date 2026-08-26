@@ -103,7 +103,7 @@ defmodule CharterAgreementProtocol.Examples.SupplierForkDemo do
       :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<seed_byte>>, 32))
 
     claims = %{
-      "protocol_revision" => 1,
+      "protocol_revision" => 2,
       "descriptor_number" => 1,
       "verification_keys" => [
         %{
@@ -135,7 +135,7 @@ defmodule CharterAgreementProtocol.Examples.SupplierForkDemo do
   defp revision(number, legal_text, issuer, acceptor, overrides) do
     claims =
       %{
-        "protocol_revision" => 1,
+        "protocol_revision" => 2,
         "revision_number" => number,
         "parties" => [
           %{"party_descriptor_digest" => issuer.digest, "role" => "issuer"},
@@ -176,7 +176,7 @@ defmodule CharterAgreementProtocol.Examples.SupplierForkDemo do
 
   defp acceptance(revision, descriptor, role) do
     claims = %{
-      "protocol_revision" => 1,
+      "protocol_revision" => 2,
       "charter_id" => revision.charter_id,
       "revision_number" => revision.claims["revision_number"],
       "revision_digest" => revision.digest,
@@ -195,7 +195,7 @@ defmodule CharterAgreementProtocol.Examples.SupplierForkDemo do
 
   defp receipt(revision, issuer) do
     claims = %{
-      "protocol_revision" => 1,
+      "protocol_revision" => 2,
       "charter_id" => revision.charter_id,
       "revision_number" => revision.claims["revision_number"],
       "revision_digest" => revision.digest,

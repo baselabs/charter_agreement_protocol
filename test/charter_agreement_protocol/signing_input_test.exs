@@ -24,7 +24,7 @@ defmodule CharterAgreementProtocol.SigningInputTest do
     assert {:ok, %SigningInput{kind: :party_descriptor} = descriptor_input} =
              CharterAgreementProtocol.descriptor_signing_input(%{
                "kid" => descriptor.kid,
-               "claims" => descriptor.claims
+               "claims" => mint(descriptor.claims)
              })
 
     assert descriptor_input.message ==
@@ -55,7 +55,7 @@ defmodule CharterAgreementProtocol.SigningInputTest do
     assert {:ok, %SigningInput{kind: :receipt} = receipt_input} =
              CharterAgreementProtocol.receipt_signing_input(%{
                "kid" => setup.issuer.kid,
-               "claims" => receipt_claims
+               "claims" => mint(receipt_claims)
              })
 
     assert {:ok, receipt_compact} =
@@ -500,7 +500,13 @@ defmodule CharterAgreementProtocol.SigningInputTest do
     )
   end
 
-  defp envelope(kid, claims), do: %{"kid" => kid, "claims" => claims}
+  defp envelope(kid, claims), do: %{"kid" => kid, "claims" => mint(claims)}
+
+  # Producer-side calls mint at the emission revision — exactly what a host
+  # does after revision 2 (docs/adr/algorithm-name-agility.md): new minting
+  # is exactly (Ed25519, 2).
+  defp mint(claims),
+    do: Map.put(claims, "protocol_revision", 2)
 
   defp sign(input, private_key),
     do: :crypto.sign(:eddsa, :none, input.message, [private_key, :ed25519])

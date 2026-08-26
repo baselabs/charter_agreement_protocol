@@ -49,7 +49,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
   ]
 
   @type t :: %__MODULE__{
-          protocol_revision: 1,
+          protocol_revision: 1 | 2,
           charter_id: binary(),
           governing_revision_digest: binary(),
           party_descriptor_digest: binary(),
@@ -67,7 +67,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
                 Schema.field("protocol_revision",
                   required?: true,
                   types: [:integer],
-                  constraint: {:integer_range, 1, 1}
+                  constraint: {:integer_range, 1, 2}
                 ),
                 Schema.field("charter_id",
                   required?: true,
@@ -163,6 +163,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
   defp extract({:object, members}, envelope) do
     values = Map.new(members)
     {:string, party_role} = values["party_role"]
+    {:integer, protocol_revision} = values["protocol_revision"]
     {:string, reason_code} = values["reason_code"]
     {:string, effective_at_value} = values["effective_at"]
     {:string, issued_at_value} = values["issued_at"]
@@ -176,7 +177,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
          :ok <- issued_before_effective(issued_at, effective_at) do
       {:ok,
        %__MODULE__{
-         protocol_revision: 1,
+         protocol_revision: protocol_revision,
          charter_id: charter_id,
          governing_revision_digest: revision_digest,
          party_descriptor_digest: party_digest,
