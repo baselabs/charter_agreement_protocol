@@ -119,10 +119,13 @@ all 57 certified cases recomputed and agreed. Full walkthrough:
 
 ## Status
 
-The approved protocol core, corpus, second verifier, mutation battery, and
-release-candidate gates are implemented and green in CI. The current package
-remains an unpublished candidate; building its archive is not authorization
-to publish it.
+The approved protocol core, normative specification set, certified corpus
+with four recorded identities, independent second verifier, mutation
+battery, and release-candidate gates are implemented and green in CI. The
+0.1.0 package is frozen pending publication: the archive at this commit is
+the reviewed candidate, and building it is still not authorization to
+publish — tagging, pushing, and `mix hex.publish` require explicit
+operator authorization.
 
 ## Development
 
