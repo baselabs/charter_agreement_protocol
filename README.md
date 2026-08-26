@@ -50,13 +50,10 @@ table.
 
 ## Quick start
 
-Elixir ~> 1.20; zero runtime dependencies (OTP `:crypto` only). Until the
-package is published, depend on the exact commit your CI verified:
+Elixir ~> 1.20; zero runtime dependencies (OTP `:crypto` only):
 
 ```elixir
-{:charter_agreement_protocol,
- git: "https://github.com/baselabs/charter_agreement_protocol.git",
- ref: "f2a6165a4ac58ceb6fca3fd1d0c451b2409ffea6"}
+{:charter_agreement_protocol, "~> 0.1.0"}
 ```
 
 Then verify the shipped, certified corpus from your dependent project:

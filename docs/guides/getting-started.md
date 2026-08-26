@@ -11,24 +11,21 @@ Five minutes from install to your first verified artifact evidence.
 
 ## Install
 
-Until the package is published to Hex, depend on the exact remote-durable
-commit your CI verified — the same consumption shape any pre-publication
-reference consumer uses:
+Depend on the published Hex release:
 
 ```elixir
 def deps do
   [
-    {:charter_agreement_protocol,
-     git: "https://github.com/baselabs/charter_agreement_protocol.git",
-     ref: "f2a6165a4ac58ceb6fca3fd1d0c451b2409ffea6"}
+    {:charter_agreement_protocol, "~> 0.1.0"}
   ]
 end
 ```
 
-Pin an exact `ref`, never a branch: protocol conformance is identity-exact, and
-an exact ref is the only durable pre-publication identity. When the package is
-published, replace the git dep with an exact Hex requirement and its registry
-checksum.
+Protocol conformance is identity-exact: the published 0.1.0 registry
+checksum equals the release-candidate gate's archive SHA, so the bytes Hex
+serves are the reviewed, certified bytes. Pin the requirement and verify the
+shipped corpus from your dependent project (the next sections do exactly
+that).
 
 ## First contact, in iex
 
