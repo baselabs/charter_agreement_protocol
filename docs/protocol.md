@@ -1,9 +1,17 @@
-# Charter Agreement Protocol
+# Charter Agreement Protocol — implementation guide
 
-This document defines the complete implemented CAP core: byte and schema
-validation, signed evidence artifacts, set-level facts and governance views,
-the external-signature seam, compiled extensions and profiles, conformance,
-and release-candidate verification. None of these surfaces authorizes.
+The normative specification of CAP lives in the extraction-ready
+specification set under `spec/`: `spec/core.md` (normative core with RFC
+2119/8174 conformance language and stable requirement identifiers),
+`spec/schemas/` (the single normative machine grammar), and the
+security, privacy, registry, and evolution considerations documents.
+This guide is the implementation companion: it documents how the Elixir
+package realizes the specified surface — byte and schema validation,
+signed evidence artifacts, set-level facts and governance views, the
+external-signature seam, compiled extensions and profiles, conformance,
+and release-candidate verification. Where this guide and the
+specification set could disagree, the specification set is normative;
+file it as an erratum. None of these surfaces authorizes.
 
 ## Tagged JSON values
 
