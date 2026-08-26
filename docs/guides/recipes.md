@@ -142,8 +142,9 @@ names and indexes — rejected values never appear, so error logs are safe by
 construction. Match on the codes you treat specially (for example
 `:signature_invalid`, `:extension_unknown_critical`, `:limit_exceeded`) and
 route the rest to your audit surface. The complete code set is visible in
-`CharterAgreementProtocol.Error` and exercised case-by-case in the certified
-corpus.
+`CharterAgreementProtocol.Error`; per-code coverage — 19 corpus-exercised
+codes with certified cases, the remainder exercised by in-repo tests or
+declared-only — is tabulated in the [error-code reference](error-codes.md).
 
 ## Run the certified corpus in your CI
 

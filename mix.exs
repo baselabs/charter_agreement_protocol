@@ -118,6 +118,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "docs/guides/security-model.md",
         "docs/guides/recipes.md",
         "docs/guides/conformance.md",
+        "docs/guides/error-codes.md",
         "docs/guides/faq.md",
         "docs/notebooks/charter-tour.livemd",
         "docs/notebooks/fork-repair.livemd",
@@ -142,6 +143,7 @@ defmodule CharterAgreementProtocol.MixProject do
           "docs/guides/security-model.md",
           "docs/guides/recipes.md",
           "docs/guides/conformance.md",
+          "docs/guides/error-codes.md",
           "docs/guides/faq.md"
         ],
         Notebooks: [
