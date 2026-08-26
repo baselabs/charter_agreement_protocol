@@ -12,11 +12,16 @@ alias CharterAgreementProtocol.{
 index_bytes = File.read!("priv/conformance/index.json")
 index = :json.decode(index_bytes)
 
-spec_digest =
+spec_files =
   "spec/**/*"
-  |> Path.wildcard()
+  |> Path.wildcard(match_dot: true)
   |> Enum.reject(&File.dir?/1)
   |> Enum.map(&{Path.relative_to(&1, "spec"), File.read!(&1)})
+
+if spec_files == [], do: raise("empty specification set: nothing to record")
+
+spec_digest =
+  spec_files
   |> SpecificationIdentity.digest()
   |> Digest.to_tagged()
 

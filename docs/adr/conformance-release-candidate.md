@@ -6,7 +6,7 @@ CAP never authorizes.
 
 ## Decision
 
-The release candidate is certified by two identities with distinct jobs:
+The release candidate is certified by four identities with distinct jobs:
 
 - `corpus_digest` is the domain-separated digest inside the canonical corpus
   index. It proves the index is self-consistent.
@@ -14,6 +14,12 @@ The release candidate is certified by two identities with distinct jobs:
   bytes. The Elixir CLI, independent Node TypeScript verifier, and packaged
   release metadata pin that value. It proves the candidate is the reviewed
   corpus, not merely a newly self-consistent corpus.
+- `registry_digest` is the compiled extension registry digest, carried in the
+  index and pinned alongside it.
+- `spec_digest` is the domain-separated digest over the canonical manifest of
+  the normative specification set (per file: sorted path, byte length, raw
+  SHA-256). The release metadata pins it and the release-candidate gate
+  recomputes it, so any spec byte change without re-recording fails the gate.
 
 The pure corpus loader, runner, and report perform no I/O. The CLI is the sole
 filesystem adapter. Reports compare every complete projected output or typed

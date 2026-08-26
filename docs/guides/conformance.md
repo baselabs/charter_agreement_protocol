@@ -66,7 +66,9 @@ $ charter_agreement_protocol --corpus DIRECTORY
 
 Exit `0` — every certified case recomputed and agreed; the canonical JSON
 report on stdout carries per-case actual and expected documents, agreement
-counts, and all four identities. Exit `1` — load or verification failure.
+counts, and all three report identities. Exit `1` — load or verification
+failure. The fourth certified identity — the specification digest — is
+pinned in the release metadata and enforced by the release-candidate gate.
 Exit `2` — usage. The CLI is the sole filesystem adapter (≤ 64 files,
 ≤ 32 MiB) and refuses any corpus whose raw index identity is not the certified
 pin — including a freshly regenerated, internally consistent one.

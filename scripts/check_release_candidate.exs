@@ -65,13 +65,22 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
   end
 
   defp live_spec_digest do
-    @spec_root
-    |> Path.join("**/*")
-    |> Path.wildcard()
-    |> Enum.reject(&File.dir?/1)
-    |> Enum.map(&{Path.relative_to(&1, @spec_root), File.read!(&1)})
+    files = spec_files()
+
+    if files == [],
+      do: raise("empty specification set: nothing to certify")
+
+    files
     |> SpecificationIdentity.digest()
     |> Digest.to_tagged()
+  end
+
+  defp spec_files do
+    @root
+    |> Path.join(@spec_root <> "/**/*")
+    |> Path.wildcard(match_dot: true)
+    |> Enum.reject(&File.dir?/1)
+    |> Enum.map(&{Path.relative_to(&1, Path.join(@root, @spec_root)), File.read!(&1)})
   end
 
   defp verify_project! do

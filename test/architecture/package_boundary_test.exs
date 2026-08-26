@@ -32,7 +32,7 @@ defmodule CharterAgreementProtocol.Architecture.PackageBoundaryTest do
 
     live =
       "spec/**/*"
-      |> Path.wildcard()
+      |> Path.wildcard(match_dot: true)
       |> Enum.reject(&File.dir?/1)
       |> Enum.map(&{Path.relative_to(&1, "spec"), File.read!(&1)})
       |> CharterAgreementProtocol.SpecificationIdentity.digest()

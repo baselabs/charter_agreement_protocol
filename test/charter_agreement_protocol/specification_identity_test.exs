@@ -21,7 +21,7 @@ defmodule CharterAgreementProtocol.SpecificationIdentityTest do
     edited_path =
       SpecificationIdentity.manifest([
         {"spec/core.md", <<1, 2, 3>>},
-        {"spec/schemas/README.md\0x", "grammar notes"},
+        {"spec/schemas/README.mdx", "grammar notes"},
         {"spec/requirements.md", ""}
       ])
 
@@ -34,6 +34,19 @@ defmodule CharterAgreementProtocol.SpecificationIdentityTest do
 
     assert original != edited_path
     assert original != edited_length
+  end
+
+  test "a NUL-bearing path is rejected, not silently hashed" do
+    forged_path = "a" <> <<0>> <> "3" <> <<0>> <> Map.fetch!(Digest.of("xxx"), :bytes) <> "b"
+
+    assert_raise ArgumentError,
+                 ~r/specification path must not contain a null byte/,
+                 fn ->
+                   SpecificationIdentity.manifest([
+                     {forged_path, "yyy"},
+                     {"b", "yyy"}
+                   ])
+                 end
   end
 
   test "any byte change moves the specification digest" do

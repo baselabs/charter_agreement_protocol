@@ -15,14 +15,23 @@ defmodule CharterAgreementProtocol.SpecificationIdentity do
   Build the canonical manifest bytes for a specification file set.
 
   Each entry is `path`, a null byte, the decimal byte length, a null byte,
-  and the 32-byte raw SHA-256 — self-delimiting in every component, so no
-  file set ambiguity survives a length or boundary edit.
+  and the 32-byte raw SHA-256 — self-delimiting in every component. Paths
+  containing a null byte are rejected loudly: a NUL-bearing path can forge
+  another file set's manifest bytes, so ambiguity is refused at the input,
+  not hashed.
   """
   @spec manifest([{binary(), binary()}]) :: binary()
   def manifest(files) do
     files
     |> Enum.sort_by(&elem(&1, 0))
     |> Enum.map_join(fn {path, bytes} ->
+      if String.contains?(path, <<0>>),
+        do:
+          raise(
+            ArgumentError,
+            "specification path must not contain a null byte: #{inspect(path)}"
+          )
+
       path <>
         <<0>> <>
         Integer.to_string(byte_size(bytes)) <>
