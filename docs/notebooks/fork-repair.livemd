@@ -1,0 +1,334 @@
+# Fork repair
+
+<!-- livebook:{"file_entities":[]} -->
+
+```elixir
+version
+```
+
+## Manufacture an equivocation, prove the contested view, repair it
+
+This notebook breaks a bilateral charter on purpose: one party signs two
+different revisions at the same revision number. CAP must then report —
+never adjudicate — the equivocation evidence, the forked chain, the contested
+governing view, and an action receipt whose governing match is undetermined.
+Both parties then countersign a supersession repair, and the governing view
+becomes unique again.
+
+This mirrors `examples/visa_fork_demo.exs` in the repository, step for step,
+with real Ed25519 signatures. Demo keys only — never trust anchors.
+
+## Setup
+
+Same helpers as the [charter tour](charter-tour.livemd):
+
+```elixir
+Mix.install(
+  [
+    {:charter_agreement_protocol, path: Path.expand("../..", __DIR__)}
+  ],
+  consolidate_protocols: false
+)
+```
+
+```elixir
+alias CharterAgreementProtocol.{Acceptance, Base64Url, Canonicalization, Digest, Limits}
+alias CharterAgreementProtocol, as: CAP
+
+defmodule Fork do
+  def tagged_value(value) when is_map(value),
+    do: {:object, Enum.map(value, fn {k, v} -> {k, tagged_value(v)} end)}
+
+  def tagged_value(value) when is_list(value), do: {:array, Enum.map(value, &tagged_value/1)}
+  def tagged_value(value) when is_binary(value), do: {:string, value}
+  def tagged_value(value) when is_integer(value), do: {:integer, value}
+
+  def canonical!(plain) do
+    {:ok, bytes} = Canonicalization.encode(tagged_value(plain))
+    bytes
+  end
+
+  def tagged(domain, bytes), do: domain |> Digest.hash(bytes) |> Digest.to_tagged()
+
+  def sign(signing_input, private) do
+    signature = :crypto.sign(:eddsa, :none, signing_input.message, [private, :ed25519])
+    {:ok, compact} = CAP.assemble_compact(signing_input, signature)
+    compact
+  end
+
+  def descriptor(seed_byte, kid) do
+    {public, private} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<seed_byte>>, 32))
+
+    claims = %{
+      "protocol_revision" => 1,
+      "descriptor_number" => 1,
+      "verification_keys" => [
+        %{"key_id" => kid, "algorithm" => "Ed25519",
+          "public_key" => Base64Url.encode(public), "status" => "active"}
+      ],
+      "attestation_hints" => [],
+      "extensions" => %{"critical" => %{}, "optional" => %{}},
+      "effective_from" => "2026-08-25T10:00:00Z"
+    }
+
+    {:ok, signing_input} = CAP.descriptor_signing_input(%{"kid" => kid, "claims" => claims})
+    compact = sign(signing_input, private)
+    {:ok, decoded} = CAP.decode_party_descriptor(compact, Limits.default())
+
+    %{compact: compact, digest: CAP.descriptor_digest(decoded), kid: kid, private: private}
+  end
+
+  def revision(number, legal_text, issuer, acceptor, overrides) do
+    claims =
+      %{
+        "protocol_revision" => 1,
+        "revision_number" => number,
+        "parties" => [
+          %{"party_descriptor_digest" => issuer.digest, "role" => "issuer"},
+          %{"party_descriptor_digest" => acceptor.digest, "role" => "acceptor"}
+        ],
+        "legal_text" => %{
+          "content_digest" => tagged(:legal_text, legal_text),
+          "media_type" => "text/plain",
+          "uri_hint" => "https://example.com/visa-supplier-charter.txt"
+        },
+        "precedence_declaration" => "legal_text_governs",
+        "attribution_declaration" => %{"basis" => "bound_deployments"},
+        "termination_rules" => %{"reason_codes" => ["mutual", "breach"]},
+        "abp_bindings" => [
+          %{"party_role" => "issuer", "blueprint_id" => "example.demo/echo",
+            "release_number" => 1,
+            "content_digest" => "sha-256:b1Aw4cU5AbV9k8bdbZkRCsySDHGpTAwB-aQm57Wh7B8",
+            "deployment_digest" => "sha-256:tWFr0caS0AWFJd2UcB9gZv3kNjIUP8xZ08WWM_h8xgo"}
+        ],
+        "receipt_profile" => "com.example.charter/default",
+        "extensions" => %{"critical" => %{}, "optional" => %{}}
+      }
+      |> Map.merge(overrides)
+
+    bytes = canonical!(claims)
+
+    %{
+      bytes: bytes,
+      claims: claims,
+      digest: tagged(:charter_revision_content, bytes),
+      charter_id: Map.get(claims, "charter_id", nil)
+    }
+  end
+
+  def acceptance(revision_fixture, descriptor, role) do
+    claims = %{
+      "protocol_revision" => 1,
+      "charter_id" => revision_fixture.claims["charter_id"] || revision_fixture.digest,
+      "revision_number" => revision_fixture.claims["revision_number"],
+      "revision_digest" => revision_fixture.digest,
+      "party_descriptor_digest" => descriptor.digest,
+      "party_role" => role,
+      "accepted_at" => "2026-08-25T13:00:00Z"
+    }
+
+    claims =
+      if revision_fixture.claims["revision_number"] == 1,
+        do: claims,
+        else: Map.put(claims, "prev_revision_digest", revision_fixture.claims["prev_revision_digest"])
+
+    protected = canonical!(%{"alg" => "EdDSA", "kid" => descriptor.kid, "typ" => "cap+acceptance"})
+    payload = canonical!(claims)
+    message = Base64Url.encode(protected) <> "." <> Base64Url.encode(payload)
+    signature = :crypto.sign(:eddsa, :none, message, [descriptor.private, :ed25519])
+    message <> "." <> Base64Url.encode(signature)
+  end
+end
+
+:ok
+```
+
+## The fork: one party signs two sibling revisions
+
+```elixir
+issuer = Fork.descriptor(1, "issuer-key")
+acceptor = Fork.descriptor(2, "acceptor-key")
+descriptors = [issuer.compact, acceptor.compact]
+
+genesis =
+  Fork.revision(1, "Visa supplier terms\n", issuer, acceptor, %{
+    "effective_from" => "2026-08-25T12:00:00Z"
+  })
+
+left =
+  Fork.revision(2, "Visa supplier terms — USD settlement\n", issuer, acceptor, %{
+    "charter_id" => genesis.digest,
+    "prev_revision_digest" => genesis.digest,
+    "effective_from" => "2026-08-25T12:00:01Z"
+  })
+
+right =
+  Fork.revision(2, "Visa supplier terms — EUR settlement\n", issuer, acceptor, %{
+    "charter_id" => genesis.digest,
+    "prev_revision_digest" => genesis.digest,
+    "effective_from" => "2026-08-25T12:00:01Z"
+  })
+
+left.digest != right.digest
+```
+
+Same charter, same predecessor, same revision number, different bytes. Both
+parties now sign acceptances for all three revisions:
+
+```elixir
+contested_revisions = [genesis, left, right]
+
+contested_acceptances =
+  Enum.flat_map(contested_revisions, fn one ->
+    [Fork.acceptance(one, issuer, "issuer"), Fork.acceptance(one, acceptor, "acceptor")]
+  end)
+
+length(contested_acceptances)
+```
+
+## Equivocation evidence, with no winner
+
+```elixir
+{:ok, descriptor_chain} = CAP.verify_descriptor_chain([issuer.compact], Limits.default())
+{:ok, revision} = CAP.decode_charter_revision(left.bytes, Limits.default())
+
+{:ok, facts_left} =
+  CAP.verify_acceptance(Enum.at(contested_acceptances, 2), revision, descriptor_chain, Limits.default())
+
+facts_left
+```
+
+```elixir
+{:ok, revision_right} = CAP.decode_charter_revision(right.bytes, Limits.default())
+
+{:ok, facts_right} =
+  CAP.verify_acceptance(Enum.at(contested_acceptances, 4), revision_right, descriptor_chain, Limits.default())
+
+{:ok, evidence} = Acceptance.equivocation(facts_left, facts_right)
+
+%{kind: evidence.kind,
+  winner: evidence.winner,
+  revision_digests: evidence.revision_digests}
+```
+
+The same Party Descriptor and role signed revision number 2 twice, over
+different digests. `winner` is `nil` — CAP retains both signed positions as
+evidence and refuses to pick.
+
+## The contested view
+
+```elixir
+{:ok, contested} =
+  CAP.verify_chain(
+    Enum.map(contested_revisions, & &1.bytes),
+    contested_acceptances,
+    descriptors,
+    [],
+    Limits.default()
+  )
+
+{:ok, :contested} =
+  CAP.governing_revision(contested, ~U[2026-08-25 12:00:01Z])
+```
+
+Two accepted branches are eligible at that instant. No digest ordering, no
+freshness policy, no tie-break — the view is contested, full stop.
+
+## A receipt inside the fork
+
+```elixir
+receipt_claims = %{
+  "protocol_revision" => 1,
+  "charter_id" => genesis.digest,
+  "revision_number" => 2,
+  "revision_digest" => left.digest,
+  "issuing_party_role" => "issuer",
+  "agent_party_role" => "issuer",
+  "deployment_digest" => "sha-256:tWFr0caS0AWFJd2UcB9gZv3kNjIUP8xZ08WWM_h8xgo",
+  "grant" => %{"scheme" => "bap", "id" => "grant-2026-07-27-001",
+               "grant_digest" => "sha-256:5k224cZ_lMI9VoUZ_fYM31ZJAcnJiht0GYEpnhes_ZI"},
+  "invocation_id" => "123e4567-e89b-42d3-a456-426614174000",
+  "decision" => "accepted",
+  "outcome" => "effect_committed",
+  "occurred_at" => "2026-08-25T12:00:01Z",
+  "recorded_at" => "2026-08-25T12:00:02Z",
+  "extensions" => %{"critical" => %{}, "optional" => %{}}
+}
+
+{:ok, receipt_input} =
+  CAP.receipt_signing_input(%{"kid" => issuer.kid, "claims" => receipt_claims})
+
+receipt = Fork.sign(receipt_input, issuer.private)
+
+{:ok, receipt_facts} = CAP.verify_receipt(receipt, contested, Limits.default())
+
+%{chain_conflict: receipt_facts.chain_conflict,
+  governing_match: receipt_facts.governing_match,
+  outcome: receipt_facts.outcome}
+```
+
+The receipt itself verifies — signature, coordinates, deployment, grant — and
+its governance is `:undetermined` because the chain view is contested. That is
+the honest answer for action evidence inside an unresolved fork.
+
+## The repair: countersigned supersession
+
+```elixir
+repair =
+  Fork.revision(3, "Visa supplier terms — countersigned repair\n", issuer, acceptor, %{
+    "charter_id" => genesis.digest,
+    "prev_revision_digest" => left.digest,
+    "supersedes" => Enum.sort([left.digest, right.digest]),
+    "effective_from" => "2026-08-25T12:00:02Z"
+  })
+
+repair_acceptances =
+  for {descriptor, role} <- [{issuer, "issuer"}, {acceptor, "acceptor"}] do
+    claims = %{
+      "protocol_revision" => 1,
+      "charter_id" => genesis.digest,
+      "revision_number" => 3,
+      "revision_digest" => repair.digest,
+      "prev_revision_digest" => left.digest,
+      "party_descriptor_digest" => descriptor.digest,
+      "party_role" => role,
+      "accepted_at" => "2026-08-25T13:00:00Z"
+    }
+
+    protected = Fork.canonical!(%{"alg" => "EdDSA", "kid" => descriptor.kid, "typ" => "cap+acceptance"})
+    payload = Fork.canonical!(claims)
+    message = Base64Url.encode(protected) <> "." <> Base64Url.encode(payload)
+    signature = :crypto.sign(:eddsa, :none, message, [descriptor.private, :ed25519])
+    message <> "." <> Base64Url.encode(signature)
+  end
+
+{:ok, repaired} =
+  CAP.verify_chain(
+    Enum.map(contested_revisions ++ [repair], & &1.bytes),
+    contested_acceptances ++ repair_acceptances,
+    descriptors,
+    [],
+    Limits.default()
+  )
+
+{:ok, governing_after} = CAP.governing_revision(repaired, ~U[2026-08-25 12:00:02Z])
+
+%{governing_after: governing_after, equals_repair: governing_after == repair.digest}
+```
+
+The repair names **both** siblings in `supersedes` and both parties
+countersign it. The fork and equivocation evidence is retained in the facts —
+history is never rewritten — but current precedence is unique again: the
+governing digest is the repair's.
+
+## What just happened
+
+- Equocation is **evidence**: both signed positions retained, winner `nil`.
+- A contested view is reported, never adjudicated — no host should act
+  unilaterally inside one.
+- Action evidence inside a fork verifies with `governing_match:
+  :undetermined` — honest, not broken.
+- The only no-tie-break repair is bilateral: a later countersigned revision
+  superseding every contested sibling.
+
+Your host owns every decision along the way. CAP reported the evidence.

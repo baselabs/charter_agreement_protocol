@@ -4,6 +4,18 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+### Documentation
+
+- A complete documentation corpus for integrators and evaluators: ten guides
+  (overview, getting started, artifacts, verification semantics, receipts,
+  extensions, security model, recipes, conformance, FAQ), two runnable
+  Livebook notebooks (charter tour and fork repair, executed against the live
+  package), a rewritten landing README, and a contributor guide stating the
+  change bar and invariants.
+- The package archive now ships the guides and notebooks alongside the
+  normative protocol specification; the API reference is grouped by surface
+  (artifacts, facts, verification, primitives, extensions, conformance).
+
 ### Added
 
 - Foundational byte-contract modules for strict unpadded base64url,

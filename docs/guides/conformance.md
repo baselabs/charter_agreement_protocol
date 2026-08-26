@@ -1,0 +1,105 @@
+# Conformance
+
+How CAP proves — to two independent implementations, under deliberate defects,
+and against the exact bytes that would be published — that the protocol you
+read about is the protocol you run.
+
+## The certified corpus
+
+The shipped corpus (`priv/conformance`, included in the package archive)
+contains 57 certified cases across 14 case files, covering every compiled
+applicability surface: foundational codecs (base64url, JSON, canonicalization,
+digests), schema validation, party descriptors, descriptor chains, charter
+revisions, acceptances and equivocation, terminations, chain verification,
+governing revision, and receipts — including fork, quarantine, and profile
+cases. Completion is by obligation, not count: every required applicability
+cell has executed cases, every not-applicable cell carries a non-empty reason,
+and counts must equal observations.
+
+The corpus is self-digesting. Loading (`Conformance.Corpus.load/1`, pure — a
+complete `map of relative path to bytes`, no file I/O) requires canonical index
+and case bytes, a recomputed domain-separated corpus digest, exact
+declared/observed file-set equality with per-file SHA-256 hashes, exact counts,
+globally unique case IDs, and **projected outputs for valid cases** — a
+verdict-only green is refused, so a runner that says "valid" without producing
+the exact expected fact document cannot pass.
+
+## The two index identities
+
+The release-candidate ADR separates two jobs:
+
+- `corpus_digest` — the domain-separated digest *inside* the canonical corpus
+  index. Proves the index is self-consistent.
+- `index_sha256_base64url` — the raw SHA-256 of the exact canonical index
+  bytes. Pinned by the Elixir CLI, the independent TypeScript verifier, and
+  the packaged release metadata. Proves the candidate **is the reviewed
+  corpus**, not merely a newly self-consistent one.
+
+For the current candidate:
+
+| Identity | Value |
+|---|---|
+| Corpus digest | `sha-256:sLJmUSpiuPoAjoiynGzdNSntQ4V-NV7p0zfeoIsUmaA` |
+| Index SHA-256 (base64url) | `NiSzeS8F0SXS6ddeeQhOBdsG4BQn8jcxb8DSX1q-oLM` |
+| Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
+| Certified cases | 57 |
+
+## The CLI
+
+```console
+$ charter_agreement_protocol --corpus DIRECTORY
+```
+
+Exit `0` — every certified case recomputed and agreed; the canonical JSON
+report on stdout carries per-case actual and expected documents, agreement
+counts, and all three identities. Exit `1` — load or verification failure.
+Exit `2` — usage. The CLI is the sole filesystem adapter (≤ 64 files,
+≤ 32 MiB) and refuses any corpus whose raw index identity is not the certified
+pin — including a freshly regenerated, internally consistent one.
+
+## The gate battery
+
+`mix quality` runs everything below plus audits, formatting, warnings-as-errors
+compile, strict credo, the full test suite with its coverage threshold,
+dialyzer, and docs:
+
+- `mix conformance.verify` — runs the certified corpus and **regenerates the
+  core cases in a scratch directory**, requiring byte identity with the
+  certified corpus. A closed set of supplemental cross-package and profile
+  cases (frozen at their owning boundaries — the exact ABP 0.1.1 deployment
+  and BAP 0.1.2 grant vectors) stays frozen and required.
+- `mix conformance.mutations` — creates isolated scratch copies and proves all
+  **22 named source defects go red**: JCS number defeat, padding acceptance,
+  separator collapse, unknown-member acceptance, chain signature skip, digest
+  equality skip, Ed25519 defeat, typ confusion, reason-code uncheck, precedence
+  collapse, facts-union suppression, fork-topology suppression, contested
+  tie-resolution, equivocation guard removal, receipt conflict silencing, and
+  more — with `corpus-expectation-flip` running last. Each run first proves
+  the unmodified baseline green.
+- `mix verifier.agreement` — the builtins-only Node 24+ TypeScript verifier
+  independently recomputes every certified case (including Ed25519 evidence,
+  forks, supersession, governing views, receipt fact JSON) and must produce
+  reports **byte-identical** to the Elixir runner over both the repository
+  corpus and the corpus unpacked from the Hex archive. Directional seeded
+  reds (verdict inversion, report-format drift, certified-index drift) prove
+  the comparison can fail.
+- `mix release.candidate` — verifies canonical release metadata, all three
+  certified identity pins inside the CLI and the TypeScript verifier core,
+  development/test-only dependency direction, regular-file package inputs,
+  **two independently built byte-identical archives**, and exact unpacked
+  archive membership.
+
+## Cryptographic known answers
+
+The SHA-256 gate uses current NIST CAVP byte-oriented vectors (empty input,
+`d3`, `b4190e`) under FIPS 180-4. These verify the runtime primitive against
+published answers; they do not claim CAP has undergone CAVP validation.
+
+## Changing the corpus deliberately
+
+`scripts/record_conformance_index.exs` is the full-corpus index recorder after
+a deliberate case change. Any corpus, registry, report, or package-boundary
+change invalidates the recorded identities and requires re-running
+conformance, all named mutations, verifier agreement, package verification,
+review, and hosted CI. Verdict-changing corrections to a published protocol
+follow the [errata policy](../errata.md).

@@ -73,11 +73,14 @@ defmodule CharterAgreementProtocol.MixProject do
         "mix.exs",
         "README.md",
         "CHANGELOG.md",
+        "CONTRIBUTING.md",
         "LICENSE",
         "NOTICE",
         "SECURITY.md",
         "docs/protocol.md",
         "docs/errata.md",
+        "docs/guides",
+        "docs/notebooks",
         "docs/profiles/indexed-price.md",
         "docs/adr/no-versioning-rule.md",
         "docs/adr/conformance-release-candidate.md"
@@ -99,14 +102,100 @@ defmodule CharterAgreementProtocol.MixProject do
       extras: [
         "README.md",
         "CHANGELOG.md",
+        "CONTRIBUTING.md",
         "LICENSE",
         "NOTICE",
         "SECURITY.md",
         "docs/protocol.md",
         "docs/errata.md",
+        "docs/guides/getting-started.md",
+        "docs/guides/overview.md",
+        "docs/guides/artifacts.md",
+        "docs/guides/verification.md",
+        "docs/guides/receipts.md",
+        "docs/guides/extensions.md",
+        "docs/guides/security-model.md",
+        "docs/guides/recipes.md",
+        "docs/guides/conformance.md",
+        "docs/guides/faq.md",
+        "docs/notebooks/charter-tour.livemd",
+        "docs/notebooks/fork-repair.livemd",
         "docs/profiles/indexed-price.md",
         "docs/adr/no-versioning-rule.md",
         "docs/adr/conformance-release-candidate.md"
+      ],
+      groups_for_extras: [
+        Guides: [
+          "docs/guides/getting-started.md",
+          "docs/guides/overview.md",
+          "docs/guides/artifacts.md",
+          "docs/guides/verification.md",
+          "docs/guides/receipts.md",
+          "docs/guides/extensions.md",
+          "docs/guides/security-model.md",
+          "docs/guides/recipes.md",
+          "docs/guides/conformance.md",
+          "docs/guides/faq.md"
+        ],
+        Notebooks: [
+          "docs/notebooks/charter-tour.livemd",
+          "docs/notebooks/fork-repair.livemd"
+        ],
+        Reference: [
+          "docs/protocol.md",
+          "docs/errata.md",
+          "docs/profiles/indexed-price.md",
+          "docs/adr/no-versioning-rule.md",
+          "docs/adr/conformance-release-candidate.md"
+        ]
+      ],
+      groups_for_modules: [
+        Artifacts: [
+          CharterAgreementProtocol.PartyDescriptor,
+          CharterAgreementProtocol.DescriptorChain,
+          CharterAgreementProtocol.CharterRevision,
+          CharterAgreementProtocol.Acceptance,
+          CharterAgreementProtocol.AcceptanceEquivocation,
+          CharterAgreementProtocol.TerminationNotice,
+          CharterAgreementProtocol.Receipt,
+          CharterAgreementProtocol.ArtifactSet
+        ],
+        Facts: [
+          CharterAgreementProtocol.DescriptorFacts,
+          CharterAgreementProtocol.AcceptanceFacts,
+          CharterAgreementProtocol.RevisionFacts,
+          CharterAgreementProtocol.TerminationFacts,
+          CharterAgreementProtocol.ChainFacts,
+          CharterAgreementProtocol.ReceiptFacts
+        ],
+        Verification: [
+          CharterAgreementProtocol.Chain,
+          CharterAgreementProtocol.Facts,
+          CharterAgreementProtocol.Signature,
+          CharterAgreementProtocol.SigningInput,
+          CharterAgreementProtocol.CompactJws
+        ],
+        Primitives: [
+          CharterAgreementProtocol.Base64Url,
+          CharterAgreementProtocol.Json,
+          CharterAgreementProtocol.Canonicalization,
+          CharterAgreementProtocol.Digest,
+          CharterAgreementProtocol.Error,
+          CharterAgreementProtocol.Limits,
+          CharterAgreementProtocol.Timestamp,
+          CharterAgreementProtocol.Schema
+        ],
+        Extensions: [
+          CharterAgreementProtocol.Extension,
+          CharterAgreementProtocol.ExtensionRegistry,
+          CharterAgreementProtocol.RequirementMap
+        ],
+        Conformance: [
+          CharterAgreementProtocol.Conformance.Corpus,
+          CharterAgreementProtocol.Conformance.Runner,
+          CharterAgreementProtocol.Conformance.Report,
+          CharterAgreementProtocol.Conformance.Cli
+        ]
       ]
     ]
   end

@@ -1,59 +1,127 @@
 # Charter Agreement Protocol
 
-Portable, non-authorizing charter-agreement format and verification protocol.
+Portable, non-authorizing charter-agreement format and verification protocol
+for bilateral commercial agreements. CAP verifies signed, byte-exact evidence
+of what two parties agreed, which revision governed a given instant, and which
+agreement state governed a signed action — without a central authority, and
+without ever making the decision for you.
 
-The package provides the complete approved core: strict unpadded base64url,
-deterministic JSON decoding,
-RFC 8785 canonicalization, domain-separated SHA-256 digests, typed value-free
-errors, table-driven closed schemas, and a self-digesting conformance corpus.
-The artifact engines verify signed Party Descriptors, predecessor-bound key
-transitions, linear descriptor history, signed sibling-fork evidence, and
-closed unsigned Charter Revisions with exact ABP deployment bindings. Attached
-Acceptances prove exact countersignatures and retain same-signer equivocation
-evidence without selecting a branch. Termination Notices prove that a pinned
-party signed a listed reason and pure effective-time coordinate without
-applying a clock or governance-effect policy. Set-level verification composes
-both descriptor histories, revisions, acceptances, and notices into redacted
-structural facts; caller-time governing queries enforce bilateral assent,
-effective windows, supersession, termination closure, and no-tie-break fork
-handling.
-Receipt verification now binds signed issuing-party evidence to exact revision
-coordinates, ABP deployment digests, BAP grant-hash bytes, decision/outcome
-states, and view-relative fork/governance facts.
-The signing seam emits exact RFC 7515 bytes for descriptors, acceptances,
-termination notices, and receipts. It refuses equivocation, stale Acceptance
-ancestry, and Termination coordinates that are not uniquely governing at the
-notice's effective time. It assembles only externally supplied raw signatures;
-CAP never holds or uses a signing key. Verification rejects noncanonical and
-low-order Ed25519 inputs before invoking the runtime crypto primitive.
-The architecture battery keeps every facts record behind one omission-floor
-constructor, rejects authorization and term-evaluation vocabulary, proves the
-runtime cannot reach filesystems, clocks, or shell/OS escape routes, requires
-public specifications and non-authorizing module stances, and keeps CAP wire
-identities disjoint from the exact ABP and BAP dependency pins.
-The compiled extension registry now enforces exact critical/optional envelopes,
-schema-digest binding, unknown-critical rejection, and verbatim optional
-quarantine. Its RFC 2606 example-class indexed-price profile carries closed
-revision terms and separate receipt observations while CAP leaves term
-evaluation to each host.
-The certified 57-case corpus executes every compiled applicability obligation.
-Its pure Elixir runner and builtins-only Node TypeScript verifier independently
-recompute every certified case's complete projected fact document and emit
-byte-identical canonical reports over both repository and unpacked-package
-corpora. Twenty-two named
-source mutations, three directional verifier reds, exact package-boundary
-checks, SHA-256 known-answer tests, and reproducible archive builds close the
-release-candidate gate.
-The separate runnable Visa fork demo constructs real signed artifacts, exposes
-a manufactured same-signer equivocation and contested governing view,
-cross-checks an action Receipt, and verifies a countersigned superseding repair.
-See [Protocol foundation](docs/protocol.md).
+**CAP verifies. It never authorizes.** Every facts record carries a closed
+twelve-item `not_verified` floor — authority, execution, billing, term
+satisfaction, legal validity, and more — that no API can shrink. Hosts read
+the evidence and decide.
+
+## What it does
+
+| Artifact | Form | Proves |
+|---|---|---|
+| Party Descriptor | signed JWS (`cap+party`) | A party's Ed25519 key history with predecessor-bound transitions and fork evidence |
+| Charter Revision | canonical JSON | Agreed terms: parties, roles, legal-text digest, precedence, effective window, termination reasons, exact deployment bindings |
+| Acceptance | signed JWS (`cap+acceptance`) | Bilateral signed assent to exact revision bytes |
+| Termination Notice | signed JWS (`cap+termination`) | Signed closure of the charter at a pure UTC instant |
+| Receipt | signed JWS (`cap+receipt`) | A signed action bound to exact revision coordinates, deployment digest, and grant evidence |
+
+Set-level verification composes the artifacts into structural facts:
+`verify_chain/5` re-verifies everything from raw bytes;
+`governing_revision/2` answers "which revision governed at this instant" with
+a digest, `:contested`, or `:none` — never a silent tie-break. Same-signer
+equivocation is retained as signed evidence with no winner. The only repair
+for a contested view is a countersigned supersession revision.
+
+The foundation is byte-exact by construction: strict unpadded base64url,
+deterministic tagged JSON decoding, RFC 8785 canonicalization, and
+domain-separated SHA-256 digests. A certified 57-case corpus runs through a
+pure Elixir runner and a builtins-only Node TypeScript verifier that must
+produce byte-identical canonical reports — two independent implementations,
+zero shared code.
+
+## When to use it — and when not
+
+Use CAP when two independent parties need portable, re-verifiable agreement
+evidence exchanged as bytes: agent commerce charters, bilateral supplier
+terms, key-history continuity proofs, action receipts for audit.
+
+Do not use CAP for authorization decisions, live revocation checks, term
+evaluation (CAP leaves `term_satisfaction` in its omission floor), legal
+adjudication, or single-party self-attestation — every one of those is
+explicitly outside what verification proves. See the
+[security model](docs/guides/security-model.md) for the full proves/never-proves
+table.
+
+## Quick start
+
+Elixir ~> 1.20; zero runtime dependencies (OTP `:crypto` only). Until the
+package is published, depend on the exact commit your CI verified:
+
+```elixir
+{:charter_agreement_protocol,
+ git: "https://github.com/baselabs/charter_agreement_protocol.git",
+ ref: "f2a6165a4ac58ceb6fca3fd1d0c451b2409ffea6"}
+```
+
+Then verify the shipped, certified corpus from your dependency:
+
+```console
+$ mix escript.build && ./charter_agreement_protocol --corpus deps/charter_agreement_protocol/priv/conformance
+```
+
+Exit `0` means all 57 certified cases recomputed and agreed. Full walkthrough:
+[Getting started](docs/guides/getting-started.md).
+
+## Try it
+
+- Runnable notebooks: [charter tour](docs/notebooks/charter-tour.livemd) and
+  [fork repair](docs/notebooks/fork-repair.livemd) — a complete bilateral
+  charter with real Ed25519 signatures, and a manufactured equivocation with
+  its countersigned repair.
+- Repository demo: `mix run examples/visa_fork_demo.exs` — equivocation
+  evidence, contested governing view, an action receipt inside the fork, and
+  the repair, in ten lines of output.
+
+## Guarantees at the call boundary
+
+- Failures are typed and **value-free** — closed error codes, protocol-owned
+  subjects, never rejected input — so verification failures are safe to log.
+- Facts implement **redacted inspection** — retained signed artifacts never
+  appear in logs.
+- Verification is **pure**: no clock, filesystem, network, or environment.
+  Callers supply time, limits, trust anchors, and keys.
+- Key custody stays outside the protocol: CAP builds the exact RFC 7515
+  signing input, you sign it, `assemble_compact/2` accepts only an external
+  raw 64-byte signature, and hosts post-verify before serving the compact.
+
+## Guides
+
+- [Overview](docs/guides/overview.md) — the problem, the artifact family, the
+  design principles
+- [Getting started](docs/guides/getting-started.md) — install, first
+  verification, first signature
+- [Artifacts](docs/guides/artifacts.md) — every artifact's wire shape and
+  closed claim set
+- [Verification semantics](docs/guides/verification.md) — forks, contested
+  views, supersession, governing computation
+- [Receipts](docs/guides/receipts.md) — binding actions to agreements; ABP
+  and BAP identity composition
+- [Extensions and profiles](docs/guides/extensions.md) — the registry,
+  criticality, quarantine
+- [Security model](docs/guides/security-model.md) — proves / never proves,
+  the omission floor, architecture enforcement
+- [Recipes](docs/guides/recipes.md) — end-to-end integration patterns
+- [Conformance](docs/guides/conformance.md) — the certified corpus, the gate
+  battery, the certified identities
+- [FAQ](docs/guides/faq.md)
+- [Protocol foundation](docs/protocol.md) — the normative specification
+- [Indexed-price profile](docs/profiles/indexed-price.md),
+  [errata policy](docs/errata.md), ADRs:
+  [no version tokens in identifiers](docs/adr/no-versioning-rule.md),
+  [conformance and release-candidate boundary](docs/adr/conformance-release-candidate.md)
 
 ## Status
 
 The approved protocol core, corpus, second verifier, mutation battery, and
-release-candidate gates are implemented. The current package remains an
-unpublished candidate; building its archive is not authorization to publish it.
+release-candidate gates are implemented and green in CI. The current package
+remains an unpublished candidate; building its archive is not authorization
+to publish it.
 
 ## Development
 
@@ -62,29 +130,13 @@ mix deps.get
 mix quality
 ```
 
-Run the separate evidence demo with:
-
-```
-mix run examples/visa_fork_demo.exs
-```
-
-The demo reports signed evidence and structural facts. It never adjudicates a
-fork or authorizes an effect, and it is intentionally excluded from the package
-archive and conformance corpus.
-
-`mix quality` is the complete gate, run locally and in CI:
-
-- `hex.audit`, `deps.unlock --check-unused`, `deps.audit`
-- `format --check-formatted`
-- `compile --warnings-as-errors`
-- `credo --strict`
-- `test --cover --seed 42` (100% coverage census)
-- `conformance.verify`
-- `conformance.mutations` (22 named source breaks; expectation flip last)
-- `verifier.agreement` (Elixir/TypeScript, repository/archive, byte-identical)
-- `dialyzer`
-- `docs --warnings-as-errors`
-- `release.candidate`
+`mix quality` is the complete gate — audits, formatting, warnings-as-errors
+compile, strict credo, the full test suite with its coverage threshold,
+certified-conformance verification and regeneration identity, all 22 named
+source mutations, Elixir/TypeScript verifier agreement over repository and
+unpacked-package corpora, dialyzer, docs, and the reproducible
+release-candidate archive. Contribution bar and invariants:
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

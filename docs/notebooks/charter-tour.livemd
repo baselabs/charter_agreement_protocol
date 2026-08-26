@@ -1,0 +1,251 @@
+# Charter tour
+
+<!-- livebook:{"file_entities":[]} -->
+
+```elixir
+version
+```
+
+## Charter Agreement Protocol — a complete bilateral charter, live
+
+This notebook walks the full lifecycle with **real Ed25519 signatures**: two
+party descriptor histories, a charter revision, bilateral acceptance, chain
+verification, governing computation, and an action receipt.
+
+CAP never authorizes: every cell below produces *evidence* and structural
+*facts*; nothing here decides, effects, or adjudicates.
+
+Run it from a checkout of this repository (or an unpacked package archive)
+with [Livebook](https://livebook.dev). Keys generated here are demo fixtures —
+never trust anchors.
+
+## Setup
+
+```elixir
+Mix.install(
+  [
+    {:charter_agreement_protocol, path: Path.expand("../..", __DIR__)}
+  ],
+  consolidate_protocols: false
+)
+```
+
+```elixir
+alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest, Limits}
+alias CharterAgreementProtocol, as: CAP
+
+# Canonical-encoding helpers over the tagged JSON algebra.
+defmodule Tour do
+  def tagged_value(value) when is_map(value),
+    do: {:object, Enum.map(value, fn {k, v} -> {k, tagged_value(v)} end)}
+
+  def tagged_value(value) when is_list(value), do: {:array, Enum.map(value, &tagged_value/1)}
+  def tagged_value(value) when is_binary(value), do: {:string, value}
+  def tagged_value(value) when is_integer(value), do: {:integer, value}
+
+  def canonical!(plain) do
+    {:ok, bytes} = Canonicalization.encode(tagged_value(plain))
+    bytes
+  end
+
+  def tagged(domain, bytes), do: domain |> Digest.hash(bytes) |> Digest.to_tagged()
+
+  # Sign OUTSIDE CAP: take the exact RFC 7515 signing-input bytes, return the raw
+  # 64-byte signature, and let CAP assemble the compact.
+  def sign(signing_input, private) do
+    signature = :crypto.sign(:eddsa, :none, signing_input.message, [private, :ed25519])
+    {:ok, compact} = CAP.assemble_compact(signing_input, signature)
+    compact
+  end
+
+  def descriptor(seed_byte, kid) do
+    {public, private} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<seed_byte>>, 32))
+
+    claims = %{
+      "protocol_revision" => 1,
+      "descriptor_number" => 1,
+      "verification_keys" => [
+        %{"key_id" => kid, "algorithm" => "Ed25519",
+          "public_key" => Base64Url.encode(public), "status" => "active"}
+      ],
+      "attestation_hints" => [],
+      "extensions" => %{"critical" => %{}, "optional" => %{}},
+      "effective_from" => "2026-08-25T10:00:00Z"
+    }
+
+    {:ok, signing_input} = CAP.descriptor_signing_input(%{"kid" => kid, "claims" => claims})
+    compact = sign(signing_input, private)
+    {:ok, decoded} = CAP.decode_party_descriptor(compact, Limits.default())
+
+    %{compact: compact, digest: CAP.descriptor_digest(decoded), kid: kid, private: private}
+  end
+
+  # Frozen cross-protocol vectors (exact ABP 0.1.1 / BAP 0.1.2 identities).
+  @abp_content_digest "sha-256:b1Aw4cU5AbV9k8bdbZkRCsySDHGpTAwB-aQm57Wh7B8"
+  @abp_deployment_digest "sha-256:tWFr0caS0AWFJd2UcB9gZv3kNjIUP8xZ08WWM_h8xgo"
+  @grant_digest "sha-256:5k224cZ_lMI9VoUZ_fYM31ZJAcnJiht0GYEpnhes_ZI"
+  def abp_content_digest, do: @abp_content_digest
+  def abp_deployment_digest, do: @abp_deployment_digest
+  def grant_digest, do: @grant_digest
+end
+
+:ok
+```
+
+## Two parties, two key histories
+
+```elixir
+issuer = Tour.descriptor(1, "issuer-key")
+acceptor = Tour.descriptor(2, "acceptor-key")
+
+# Each party owns an INDEPENDENT descriptor history — verify them separately.
+{:ok, issuer_chain} = CAP.verify_descriptor_chain([issuer.compact], Limits.default())
+{:ok, acceptor_chain} = CAP.verify_descriptor_chain([acceptor.compact], Limits.default())
+
+%{issuer_topology: issuer_chain.topology, acceptor_topology: acceptor_chain.topology}
+```
+
+Each descriptor is self-signed at genesis; the party's identifier *is* the
+descriptor's domain-separated content digest. A single reachable history is
+`:linear`. Later, `build_set/4` and `verify_chain/5` take both parties'
+compacts together — set-level verification pairs the two histories with the
+revision's two bound roles.
+
+## The charter revision — agreed terms as canonical bytes
+
+```elixir
+revision_claims = %{
+  "protocol_revision" => 1,
+  "revision_number" => 1,
+  "parties" => [
+    %{"party_descriptor_digest" => issuer.digest, "role" => "issuer"},
+    %{"party_descriptor_digest" => acceptor.digest, "role" => "acceptor"}
+  ],
+  "legal_text" => %{
+    "content_digest" => Tour.tagged(:legal_text, "Visa supplier terms\n"),
+    "media_type" => "text/plain",
+    "uri_hint" => "https://example.com/visa-supplier-charter.txt"
+  },
+  "precedence_declaration" => "legal_text_governs",
+  "attribution_declaration" => %{"basis" => "bound_deployments"},
+  "termination_rules" => %{"reason_codes" => ["mutual", "breach"]},
+  "abp_bindings" => [
+    %{"party_role" => "issuer", "blueprint_id" => "example.demo/echo",
+      "release_number" => 1,
+      "content_digest" => Tour.abp_content_digest(),
+      "deployment_digest" => Tour.abp_deployment_digest()}
+  ],
+  "receipt_profile" => "com.example.charter/default",
+  "extensions" => %{"critical" => %{}, "optional" => %{}},
+  "effective_from" => "2026-08-25T12:00:00Z"
+}
+
+revision_bytes = Tour.canonical!(revision_claims)
+{:ok, revision} = CAP.decode_charter_revision(revision_bytes, Limits.default())
+revision_digest = CAP.revision_digest(revision)
+%{charter_id: revision_digest, digest: revision_digest}
+```
+
+Genesis carries no `charter_id` or `prev_revision_digest` — the genesis
+digest **is** the charter identity.
+
+## Bilateral acceptance
+
+The acceptance producer cold-verifies the caller's `ArtifactSet` before
+returning bytes, so build the raw set first:
+
+```elixir
+descriptors = [issuer.compact, acceptor.compact]
+
+{:ok, set} = CAP.build_set([revision_bytes], [], [], descriptors)
+:ok
+```
+
+```elixir
+acceptance_claims = fn descriptor, role ->
+  %{
+    "protocol_revision" => 1,
+    "charter_id" => revision_digest,
+    "revision_number" => 1,
+    "revision_digest" => revision_digest,
+    "party_descriptor_digest" => descriptor.digest,
+    "party_role" => role,
+    "accepted_at" => "2026-08-25T13:00:00Z"
+  }
+end
+
+acceptances =
+  for {descriptor, role} <- [{issuer, "issuer"}, {acceptor, "acceptor"}] do
+    {:ok, input} =
+      CAP.acceptance_signing_input(
+        %{"kid" => descriptor.kid, "claims" => acceptance_claims.(descriptor, role)},
+        set
+      )
+
+    Tour.sign(input, descriptor.private)
+  end
+
+{:ok, facts} = CAP.verify_acceptance(hd(acceptances), revision, issuer_chain, Limits.default())
+%{party_role: facts.party_role, revision_digest: facts.revision_digest}
+```
+
+Both parties signed the exact same revision coordinates — that is what makes
+the revision **accepted** at chain level.
+
+## Chain verification and governing revision
+
+```elixir
+{:ok, chain_facts} =
+  CAP.verify_chain([revision_bytes], acceptances, descriptors, [], Limits.default())
+
+{:ok, governing} = CAP.governing_revision(chain_facts, ~U[2026-08-25 12:00:00Z])
+%{governing: governing, chain_topology: chain_facts.chain_topology}
+```
+
+## An action receipt, verified in full context
+
+```elixir
+receipt_claims = %{
+  "protocol_revision" => 1,
+  "charter_id" => revision_digest,
+  "revision_number" => 1,
+  "revision_digest" => revision_digest,
+  "issuing_party_role" => "issuer",
+  "agent_party_role" => "issuer",
+  "deployment_digest" => Tour.abp_deployment_digest(),
+  "grant" => %{"scheme" => "bap", "id" => "grant-2026-07-27-001",
+               "grant_digest" => Tour.grant_digest()},
+  "invocation_id" => "123e4567-e89b-42d3-a456-426614174000",
+  "decision" => "accepted",
+  "outcome" => "effect_committed",
+  "occurred_at" => "2026-08-25T12:00:01Z",
+  "recorded_at" => "2026-08-25T12:00:02Z",
+  "extensions" => %{"critical" => %{}, "optional" => %{}}
+}
+
+{:ok, receipt_input} =
+  CAP.receipt_signing_input(%{"kid" => issuer.kid, "claims" => receipt_claims})
+
+receipt = Tour.sign(receipt_input, issuer.private)
+
+{:ok, receipt_facts} = CAP.verify_receipt(receipt, chain_facts, Limits.default())
+%{governing_match: receipt_facts.governing_match,
+  chain_conflict: receipt_facts.chain_conflict,
+  outcome: receipt_facts.outcome,
+  signature_verified: :signature not in receipt_facts.not_verified,
+  not_verified: receipt_facts.not_verified}
+```
+
+## What you just proved — and what you did not
+
+You proved: both parties' declared key histories verify; the revision's
+canonical bytes are the exact accepted bytes; the unique governing digest at
+the asked instant; and that the issuer's active charter key signed a receipt
+claiming `effect_committed` under that revision, deployment, and grant.
+
+You did **not** prove: authorization, effect truth, term satisfaction, legal
+validity, or view completeness — those stay on every facts record's
+`not_verified` floor. Your host decides. That is the protocol.
+
+Next: the [fork-repair notebook](fork-repair.livemd) breaks this charter on
+purpose and repairs it with the only no-tie-break path CAP allows.
