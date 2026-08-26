@@ -330,7 +330,7 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
     Enum.each(members, fn {_key, value} -> assert_closed(name, value) end)
   end
 
-  defp assert_closed(_name, {:array, items}), do: Enum.each(items, &assert_closed(_name, &1))
+  defp assert_closed(name, {:array, items}), do: Enum.each(items, &assert_closed(name, &1))
   defp assert_closed(_name, _scalar), do: :ok
 
   # AST extraction of the module's @definition Schema.field declarations —
@@ -360,7 +360,7 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
 
   defp field_calls(field_calls) do
     Enum.flat_map(field_calls, fn
-      {{:., _, [{:__aliases__, _, [:Schema]}, :field]}, _, [name, options]} = node ->
+      {{:., _, [{:__aliases__, _, [:Schema]}, :field]}, _, [name, options]} ->
         required? =
           case List.keyfind(options, :required?, 0) do
             {:required?, true} -> true
@@ -519,6 +519,21 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
            end
          end)}
 
+      {{:object, _} = schema, {:array, []}} ->
+        # An empty items-typed array leaves its whole item subtree without a
+        # positive or a defect path — seed it with one grammar-valid item.
+        case schema_member(schema, "items") do
+          nil ->
+            instance
+
+          items_sub ->
+            max = schema_member(schema, "maxItems") |> unwrap_integer()
+
+            if max == nil or max >= 1,
+              do: {:array, [complete_node(document, items_sub, derive(document, items_sub))]},
+              else: instance
+        end
+
       {{:object, _} = schema, {:array, items}} ->
         case schema_member(schema, "items") do
           nil ->
@@ -566,7 +581,12 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
   defp derive_for_type(_document, _sub, "null"), do: :null
 
   defp derive_for_type(_document, sub, "string") do
-    lo = sub |> schema_member("minLength") |> unwrap_integer() |> max(1)
+    lo =
+      case sub |> schema_member("minLength") |> unwrap_integer() do
+        nil -> 1
+        bound -> max(bound, 1)
+      end
+
     hi = sub |> schema_member("maxLength") |> unwrap_integer()
     length = if hi == nil, do: lo, else: min(lo, hi)
     {:string, String.duplicate("x", length)}
@@ -602,7 +622,9 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
 
   defp defects(document, node, instance, path) do
     node = resolve(document, node)
-    object_defects(document, node, instance, path) ++ scalar_defects(document, node, path)
+
+    object_defects(document, node, instance, path) ++
+      scalar_defects(document, node, instance, path)
   end
 
   defp object_defects(document, schema, instance, path) do
@@ -668,7 +690,7 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
     end
   end
 
-  defp scalar_defects(document, schema, path) do
+  defp scalar_defects(document, schema, instance, path) do
     type_defect(schema, path) ++
       enum_defect(schema, path) ++
       const_defect(schema, path) ++
@@ -676,8 +698,8 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
       maximum_defect(schema, path) ++
       min_length_defect(schema, path) ++
       max_length_defect(schema, path) ++
-      min_items_defect(schema, path) ++
-      max_items_defect(schema, path) ++
+      min_items_defect(instance, schema, path) ++
+      max_items_defect(document, instance, schema, path) ++
       one_of_defect(document, schema, path)
   end
 
@@ -748,23 +770,35 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
     end
   end
 
-  defp min_items_defect(schema, path) do
-    case schema_member(schema, "minItems") do
-      {:integer, bound} when bound > 0 ->
-        [{"minItems", {:set, path, {:array, List.duplicate({:integer, 1}, bound - 1)}}}]
+  # Single-defect cardinality negatives: the truncated or extended array
+  # keeps items that satisfy the item schema, so only the bound is violated.
+  defp min_items_defect(instance, schema, path) do
+    case {schema_member(schema, "minItems"), instance} do
+      {{:integer, bound}, {:array, items}} when bound > 0 ->
+        [{"minItems", {:set, path, {:array, Enum.take(items, bound - 1)}}}]
 
-      _absent_or_zero ->
+      _absent_zero_or_non_array ->
         []
     end
   end
 
-  defp max_items_defect(schema, path) do
-    case schema_member(schema, "maxItems") do
-      {:integer, bound} ->
-        [{"maxItems", {:set, path, {:array, List.duplicate({:integer, 1}, bound + 1)}}}]
+  defp max_items_defect(document, instance, schema, path) do
+    case {schema_member(schema, "maxItems"), instance} do
+      {{:integer, bound}, {:array, items}} ->
+        filler = array_filler(document, schema, items)
+        [{"maxItems", {:set, path, {:array, Enum.take(Stream.cycle(filler), bound + 1)}}}]
 
-      _absent ->
+      _absent_or_non_array ->
         []
+    end
+  end
+
+  defp array_filler(_document, _schema, [first | rest]), do: [first | rest]
+
+  defp array_filler(document, schema, []) do
+    case schema_member(schema, "items") do
+      nil -> [{:integer, 1}]
+      items_sub -> [derive(document, items_sub)]
     end
   end
 
@@ -793,7 +827,7 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
 
   ## Defect application over the tagged algebra
 
-  defp apply_defect(seed, {:set, [], value}), do: value
+  defp apply_defect(_seed, {:set, [], value}), do: value
   defp apply_defect(seed, {:set, path, value}), do: set_at(seed, path, value)
   defp apply_defect(seed, {:delete, path}), do: delete_at(seed, path)
 
@@ -968,12 +1002,16 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
     |> Enum.sort()
   end
 
-  defp case_of({:object, _members} = case_value), do: case_value
-
+  # A positive artifact is one whose verdict is valid — the case's `class`
+  # names the scenario (fork, supersession, indeterminate outcome), not
+  # whether the artifacts inside are well-formed.
   defp valid_case?({:object, members}) do
-    case List.keyfind(members, "class", 0) do
-      {_, {:string, "valid"}} -> true
-      _other -> false
+    case List.keyfind(members, "expect", 0) do
+      {_, {:object, expect_members}} ->
+        List.keyfind(expect_members, "status", 0) == {"status", {:string, "valid"}}
+
+      _other ->
+        false
     end
   end
 
