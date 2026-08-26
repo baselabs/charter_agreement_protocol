@@ -15,7 +15,7 @@ release.
   decode shape, compact envelope well-formedness) bound to the five new
   matrix requirements.
 - `requirements.md`: regenerated — 45 requirements over 61 applicability
-  cells and 84 certified cases.
+  cells and 85 certified cases.
 
 ## 2026-08-26 — initial specification set
 

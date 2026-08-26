@@ -30,7 +30,7 @@ for a contested view is a countersigned supersession revision.
 
 The foundation is byte-exact by construction: strict unpadded base64url,
 deterministic tagged JSON decoding, RFC 8785 canonicalization, and
-domain-separated SHA-256 digests. A certified 84-case corpus runs through a
+domain-separated SHA-256 digests. A certified 85-case corpus runs through a
 pure Elixir runner and a builtins-only Node TypeScript verifier that must
 produce byte-identical canonical reports — two independent implementations,
 zero shared code.
@@ -66,7 +66,7 @@ $ mix run -e 'CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/ch
 ```
 
 The command prints the canonical JSON report; a returned status of `0` means
-all 84 certified cases recomputed and agreed. Full walkthrough:
+all 85 certified cases recomputed and agreed. Full walkthrough:
 [Getting started](docs/guides/getting-started.md).
 
 ## Try it

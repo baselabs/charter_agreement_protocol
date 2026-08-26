@@ -18,10 +18,10 @@ recorded value for the current candidate:
 
 | Identity | Value | Job |
 |---|---|---|
-| Corpus digest | `sha-256:hZPH5yw_6vWWTj-NuSjlDItK-e8oiGKvjpCXvb24j-0` | Domain-separated digest inside the canonical corpus index; proves index self-consistency |
-| Index SHA-256 (base64url) | `SiGK6zgrI9Rv5BvBPgj3-EexxJ1udz8-XtDDjeOiRv0` | Raw SHA-256 of the exact canonical index bytes; pinned by the Elixir CLI and the TypeScript verifier core |
+| Corpus digest | `sha-256:ORUavQBNHFZG8XEAsunlHaHXDMMaNMW2ggImIotd-n4` | Domain-separated digest inside the canonical corpus index; proves index self-consistency |
+| Index SHA-256 (base64url) | `YLaLsoOJQjHAY2qo1o5wqH-PHc4lpSGRPn0pwjiTRoU` | Raw SHA-256 of the exact canonical index bytes; pinned by the Elixir CLI and the TypeScript verifier core |
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` | The compiled extension registry identity carried in the index |
-| Specification digest | `sha-256:dAKqvu-7sO5tMxjrN8qeisHHanxTWKOLhZyBPIr-FaE` | Domain-separated digest over the canonical manifest of the normative spec set (`spec/`); pinned in release metadata |
+| Specification digest | `sha-256:JuLNnhAk2rv_kuSoG3HdAKInxKpSftKgNJjhxtlA214` | Domain-separated digest over the canonical manifest of the normative spec set (`spec/`); pinned in release metadata |
 
 A corpus you built yourself that disagrees with the index SHA-256 is not the
 certified corpus, however internally consistent it is — both runners refuse
@@ -30,7 +30,7 @@ it.
 ## Corpus layout
 
 The corpus ships at `priv/conformance/`: one canonical `index.json` plus 14
-case files under `cases/` (84 certified cases total). Each case file is
+case files under `cases/` (85 certified cases total). Each case file is
 `cases/<surface-with-dashes>.json` with the closed members `format`, and
 `cases`; each case carries `id`, `surface`, `class`, `input`, and `expect`.
 Inputs are exact wire bytes (compact strings, canonical revision text,
@@ -83,4 +83,4 @@ the report is the normative `spec/schemas/corpus-index.json` and
 The Node verifier (`verifier/check-corpus.mjs`, run as
 `node verifier/check-corpus.mjs priv/conformance`) is the worked reference
 for steps 2–4: same canonical JSON encoder rules, same domain separators,
-same report serialization, byte-identical to Elixir on all 84 cases.
+same report serialization, byte-identical to Elixir on all 85 cases.

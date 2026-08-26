@@ -7,7 +7,7 @@ read about is the protocol you run.
 ## The certified corpus
 
 The shipped corpus (`priv/conformance`, included in the package archive)
-contains 84 certified cases across 14 case files, covering every compiled
+contains 85 certified cases across 14 case files, covering every compiled
 applicability surface: foundational codecs (base64url, JSON, canonicalization,
 digests), schema validation, party descriptors, descriptor chains, charter
 revisions, acceptances and equivocation, terminations, chain verification,
@@ -39,11 +39,11 @@ For the current candidate:
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:hZPH5yw_6vWWTj-NuSjlDItK-e8oiGKvjpCXvb24j-0` |
-| Index SHA-256 (base64url) | `SiGK6zgrI9Rv5BvBPgj3-EexxJ1udz8-XtDDjeOiRv0` |
+| Corpus digest | `sha-256:ORUavQBNHFZG8XEAsunlHaHXDMMaNMW2ggImIotd-n4` |
+| Index SHA-256 (base64url) | `YLaLsoOJQjHAY2qo1o5wqH-PHc4lpSGRPn0pwjiTRoU` |
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:dAKqvu-7sO5tMxjrN8qeisHHanxTWKOLhZyBPIr-FaE` |
-| Certified cases | 84 |
+| Specification digest | `sha-256:JuLNnhAk2rv_kuSoG3HdAKInxKpSftKgNJjhxtlA214` |
+| Certified cases | 85 |
 
 ## The requirements matrix
 

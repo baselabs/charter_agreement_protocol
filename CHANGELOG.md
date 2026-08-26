@@ -9,15 +9,15 @@ publication decision; the archive at this commit is the reviewed candidate.
 
 ### Conformance
 
-- The certified corpus closes its error-code coverage gap: 27 new cases
+- The certified corpus closes its error-code coverage gap: 28 new cases
   across every surface lift corpus-exercised codes from 19 to 45 of the
-  closed 57; the remaining twelve are structurally outside case
+  closed 57 (two codes gain cases on a second surface); the remaining twelve are structurally outside case
   certification (corpus loader, producer seams, typed query arguments,
   and the explicit schema-view seam), stated with reasons in the
   error-code reference. The requirements matrix grows to 45 bound
-  requirements over 61 applicability cells, the independent TypeScript
-  verifier implements every newly certified failure path, and all four
-  certified identities are re-recorded.
+  requirements over 61 applicability cells and 85 certified cases; the
+  independent TypeScript verifier implements every newly certified
+  failure path, and all four certified identities are re-recorded.
 
 ### Documentation
 

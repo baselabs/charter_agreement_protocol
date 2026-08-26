@@ -132,7 +132,7 @@ contain only definition and field names from the protocol-owned table.
   observations and whose not-applicable cells carry non-empty reasons; and
 - projected outputs for valid cases, so a verdict-only green is refused.
 
-The shipped corpus contains 84 cases. Completion is determined by the compiled
+The shipped corpus contains 85 cases. Completion is determined by the compiled
 surface/class obligation floor, not a target count: every required cell has one
 or more executed cases, every other cell has a non-empty not-applicable reason,
 and counts must equal observations. The index also binds the compiled extension

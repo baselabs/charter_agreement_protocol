@@ -377,7 +377,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_receipt_expectations(cases) do
     receipt_cases = Enum.filter(cases, &(&1["surface"] == "receipt.verify"))
-    assert length(receipt_cases) == 9
+    assert length(receipt_cases) == 10
 
     Enum.each(receipt_cases, fn one ->
       input = one["input"]

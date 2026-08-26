@@ -1196,6 +1196,13 @@ coverage_cases = [
     "com.example/pricing-indexed-observation" => %{}
   }),
   %{
+    "id" => "receipt-compact-malformed",
+    "surface" => "receipt.verify",
+    "class" => "invalid_encoding",
+    "input" => %{"chain" => receipt_chain_input, "compact" => "abc"},
+    "expect" => invalid.("compact_invalid")
+  },
+  %{
     "id" => "receipt-bap-grant-without-digest",
     "surface" => "receipt.verify",
     "class" => "invalid_encoding",
