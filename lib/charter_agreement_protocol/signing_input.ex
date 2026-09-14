@@ -4,7 +4,10 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   Deterministic attached-JWS framing plus the honest-signer refusal boundary.
 
-  Callers provide exactly `%{"kid" => kid, "claims" => claims}`. This module
+  Callers provide exactly `%{"kid" => kid, "claims" => claims}` with an
+  optional `"algorithm"` member selecting the emission pair — `"Ed25519"`
+  (protocol_revision 2, the default) or `"ML-DSA-65"` (protocol_revision 3).
+  This module
   constructs the closed protected header, canonicalizes and validates the
   payload through the existing artifact codec, and returns only the exact RFC
   7515 signing bytes. The set-aware Acceptance producer refuses false
@@ -32,12 +35,13 @@ defmodule CharterAgreementProtocol.SigningInput do
     TerminationNotice
   }
 
-  @enforce_keys [:kind, :protected_segment, :payload_segment, :message]
+  @enforce_keys [:kind, :alg, :protected_segment, :payload_segment, :message]
   defstruct @enforce_keys
 
   @type kind :: :party_descriptor | :acceptance | :termination | :receipt
   @type t :: %__MODULE__{
           kind: kind(),
+          alg: binary(),
           protected_segment: binary(),
           payload_segment: binary(),
           message: binary()
@@ -85,22 +89,32 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   def termination(_input, _set), do: invalid()
 
-  @doc "Assemble a validated signing input and exact raw 64-byte signature."
-  @spec assemble(term(), term()) :: {:ok, binary()} | {:error, Error.t()}
-  def assemble(%__MODULE__{} = input, <<_::512>> = signature) do
-    compact = input.message <> "." <> Base64Url.encode(signature)
+  @doc """
+  Assemble a validated signing input and its exact raw signature.
 
-    with true <- valid_fields?(input),
+  The signature byte length must equal the registry row's value for the
+  input's emission alg (64 for the classical names, 3309 for ML-DSA-65).
+  """
+  @spec assemble(term(), term()) :: {:ok, binary()} | {:error, Error.t()}
+  def assemble(%__MODULE__{} = input, signature) when is_binary(signature) do
+    with %{signature_bytes: length} <- Algorithm.row_for(input.alg),
+         :ok <- exact_signature_length(signature, length),
+         compact <- input.message <> "." <> Base64Url.encode(signature),
+         true <- valid_fields?(input),
          {:ok, _artifact} <- decode_kind(input.kind, compact, Limits.default()),
          true <- byte_size(compact) <= Limits.default().max_bytes do
       {:ok, compact}
     else
+      :signature_length -> signature_invalid()
       _failure -> invalid()
     end
   end
 
-  def assemble(%__MODULE__{}, signature) when is_binary(signature), do: signature_invalid()
   def assemble(_input, _signature), do: invalid()
+
+  defp exact_signature_length(signature, length) do
+    if byte_size(signature) == length, do: :ok, else: :signature_length
+  end
 
   defp build_only(kind, input) do
     case build(kind, input) do
@@ -111,15 +125,27 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   defp build(kind, %{"claims" => claims, "kid" => kid} = input)
        when map_size(input) == 2 and is_map(claims) and is_binary(kid) do
+    build(kind, Map.put(input, "algorithm", Algorithm.default_emission_name()))
+  end
+
+  defp build(kind, %{"claims" => claims, "kid" => kid, "algorithm" => alg} = input)
+       when map_size(input) == 3 and is_map(claims) and is_binary(kid) and is_binary(alg) do
     limits = Limits.default()
 
-    with {:ok, claims_value} <- tagged(claims),
+    with {:ok, revision} <- emission_revision(alg),
+         {:ok, claims_value} <- tagged(claims),
+         true <- claims_revision(claims_value, revision),
          {:ok, payload_bytes} <- Canonicalization.encode(claims_value),
-         {:ok, protected_bytes} <- protected(kind, kid),
-         signing_input <- frame(kind, protected_bytes, payload_bytes),
+         {:ok, protected_bytes} <- protected(kind, kid, alg),
+         signing_input <- frame(kind, alg, protected_bytes, payload_bytes),
          true <- valid_fields?(signing_input),
-         true <- byte_size(signing_input.message) + 1 + 86 <= limits.max_bytes,
-         provisional <- signing_input.message <> "." <> Base64Url.encode(<<0::512>>),
+         %{signature_bytes: signature_bytes} <- Algorithm.row_for(alg),
+         signature_segment_length <- Kernel.trunc(Float.ceil(signature_bytes * 4 / 3)),
+         true <-
+           byte_size(signing_input.message) + 1 + signature_segment_length <=
+             limits.max_bytes,
+         provisional <-
+           signing_input.message <> "." <> Base64Url.encode(<<0::size(signature_bytes)-unit(8)>>),
          {:ok, artifact} <- decode_kind(kind, provisional, limits) do
       {:ok, signing_input, artifact}
     else
@@ -129,13 +155,31 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   defp build(_kind, _input), do: invalid()
 
-  defp protected(kind, kid) do
+  # The closed mint set: each emission alg names mints at exactly its emission
+  # revision, and the claims must already carry that revision — the
+  # provisional decode below re-enforces the full binding rule by construction.
+  defp emission_revision(alg) do
+    case Map.fetch(Algorithm.emissions(), alg) do
+      {:ok, revision} -> {:ok, revision}
+      :error -> :error
+    end
+  end
+
+  defp claims_revision({:object, members}, revision) do
+    case List.keyfind(members, "protocol_revision", 0) do
+      {"protocol_revision", {:integer, ^revision}} -> true
+      _other -> false
+    end
+  end
+
+  defp protected(kind, kid, alg) do
     with typ when is_binary(typ) <- Map.get(@types, kind),
+         true <- Map.has_key?(Algorithm.emissions(), alg),
          true <- valid_kid?(kid) do
       Canonicalization.encode(
         {:object,
          [
-           {"alg", {:string, Algorithm.emission_name()}},
+           {"alg", {:string, alg}},
            {"kid", {:string, kid}},
            {"typ", {:string, typ}}
          ]}
@@ -145,12 +189,13 @@ defmodule CharterAgreementProtocol.SigningInput do
     end
   end
 
-  defp frame(kind, protected_bytes, payload_bytes) do
+  defp frame(kind, alg, protected_bytes, payload_bytes) do
     protected_segment = Base64Url.encode(protected_bytes)
     payload_segment = Base64Url.encode(payload_bytes)
 
     %__MODULE__{
       kind: kind,
+      alg: alg,
       protected_segment: protected_segment,
       payload_segment: payload_segment,
       message: protected_segment <> "." <> payload_segment

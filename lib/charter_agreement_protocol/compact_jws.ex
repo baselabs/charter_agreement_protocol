@@ -39,7 +39,7 @@ defmodule CharterAgreementProtocol.CompactJws do
           protected_segment: binary(),
           payload_segment: binary(),
           message: binary(),
-          signature: <<_::512>>,
+          signature: binary(),
           payload: Json.value(),
           payload_bytes: binary()
         }
@@ -69,23 +69,37 @@ defmodule CharterAgreementProtocol.CompactJws do
   def parse(_compact, _expected_typ, _limits),
     do: {:error, Error.new(:invalid_type, ["limits"])}
 
-  @doc "Verify the envelope signature with one exact raw Ed25519 public key."
-  @spec verify_signature(t(), term()) :: :ok | {:error, Error.t()}
-  def verify_signature(%__MODULE__{} = envelope, public_key),
-    do: Signature.verify(envelope.message, envelope.signature, public_key)
+  @doc """
+  Verify the envelope signature with one exact raw public key.
 
-  def verify_signature(_envelope, _public_key), do: signature_error()
+  Dispatch follows the registry row for the envelope's `alg`: the supplied
+  key algorithm must equal the row's `key_algorithm`, and the signature
+  length was already checked against the row at parse time.
+  """
+  @spec verify_signature(t(), term(), term()) :: :ok | {:error, Error.t()}
+  def verify_signature(%__MODULE__{} = envelope, public_key, key_algorithm) do
+    case Algorithm.row_for(envelope.alg) do
+      %{key_algorithm: ^key_algorithm} = row ->
+        Signature.verify(envelope.message, envelope.signature, public_key, row.name)
+
+      _row_mismatch ->
+        signature_error()
+    end
+  end
+
+  def verify_signature(_envelope, _public_key, _key_algorithm), do: signature_error()
 
   defp parse_segments(compact, expected_typ, limits) do
     case :binary.split(compact, ".", [:global]) do
       [protected_segment, payload_segment, signature_segment] ->
         with {:ok, protected_bytes} <- decode_segment(protected_segment),
              {:ok, payload_bytes} <- decode_segment(payload_segment),
-             {:ok, signature} <- decode_signature(signature_segment),
+             {:ok, signature_raw} <- decode_signature_segment(signature_segment),
              {:ok, protected} <- canonical_value(protected_bytes, limits, :protected),
              {:ok, {alg, kid}} <- protected_header(protected, expected_typ),
              {:ok, payload} <- canonical_value(payload_bytes, limits, :payload),
-             :ok <- bind_algorithm(alg, payload) do
+             :ok <- bind_algorithm(alg, payload),
+             {:ok, signature} <- bounded_signature(signature_raw, alg) do
           {:ok,
            %__MODULE__{
              alg: alg,
@@ -105,6 +119,17 @@ defmodule CharterAgreementProtocol.CompactJws do
     end
   end
 
+  # The signature segment decodes first but is length-checked only after the
+  # protected header names the algorithm: each registry row carries its own
+  # exact signature length (64 for the classical names, 2420/3309/4627 for
+  # the ML-DSA parameterizations).
+  defp bounded_signature(signature, alg) do
+    case Algorithm.row_for(alg) do
+      %{signature_bytes: length} when byte_size(signature) == length -> {:ok, signature}
+      _row_or_length -> signature_error()
+    end
+  end
+
   defp decode_segment(segment) do
     case Base64Url.decode(segment) do
       {:ok, bytes} -> {:ok, bytes}
@@ -112,9 +137,9 @@ defmodule CharterAgreementProtocol.CompactJws do
     end
   end
 
-  defp decode_signature(segment) do
+  defp decode_signature_segment(segment) do
     case Base64Url.decode(segment) do
-      {:ok, <<_::512>> = signature} -> {:ok, signature}
+      {:ok, signature} when is_binary(signature) -> {:ok, signature}
       _error -> signature_error()
     end
   end

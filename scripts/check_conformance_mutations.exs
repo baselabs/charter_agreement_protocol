@@ -34,8 +34,9 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       name: "chain-signature-skip",
       path: "lib/charter_agreement_protocol/compact_jws.ex",
       from:
-        "  def verify_signature(%__MODULE__{} = envelope, public_key),\n    do: Signature.verify(envelope.message, envelope.signature, public_key)",
-      to: "  def verify_signature(%__MODULE__{} = _envelope, _public_key),\n    do: :ok",
+        "  def verify_signature(%__MODULE__{} = envelope, public_key, key_algorithm) do\n    case Algorithm.row_for(envelope.alg) do\n      %{key_algorithm: ^key_algorithm} = row ->\n        Signature.verify(envelope.message, envelope.signature, public_key, row.name)\n\n      _row_mismatch ->\n        signature_error()\n    end\n  end",
+      to:
+        "  def verify_signature(%__MODULE__{} = _envelope, _public_key, _key_algorithm),\n    do: :ok",
       command: ~w(mix test test/charter_agreement_protocol/descriptor_chain_test.exs --seed 42)
     },
     %{
@@ -99,7 +100,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "contested-tie-resolved",
       path: "lib/charter_agreement_protocol/chain.ex",
-      from: "      _siblings ->\n        :contested\n    end\n  end\n\n  defp max_numbered(facts) do",
+      from:
+        "      _siblings ->\n        :contested\n    end\n  end\n\n  defp max_numbered(facts) do",
       to:
         "      [_first | _siblings] ->\n        hd(candidates).revision_digest\n    end\n  end\n\n  defp max_numbered(facts) do",
       command: ~w(mix test test/charter_agreement_protocol/chain_test.exs --seed 42)
@@ -160,6 +162,22 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       from: "    accepted\n    |> Enum.flat_map(& &1.revision.supersedes)\n    |> MapSet.new()",
       to: "    MapSet.new()",
       command: ~w(mix test test/charter_agreement_protocol/chain_test.exs --seed 42)
+    },
+    %{
+      name: "mldsa-binding-defeat",
+      path: "lib/charter_agreement_protocol/algorithm.ex",
+      from:
+        "    %{\n      name: \"ML-DSA-44\",\n      min_protocol_revision: 3,\n      key_algorithm: \"ML-DSA-44\",\n      public_key_bytes: 1312,\n      signature_bytes: 2420\n    },",
+      to: " ",
+      command: ~w(mix test test/architecture/algorithm_name_agility_test.exs --seed 42)
+    },
+    %{
+      name: "mldsa-key-grammar-gate-defeat",
+      path: "lib/charter_agreement_protocol/party_descriptor.ex",
+      from:
+        "  defp key_revision_gate(\"Ed25519\", _protocol_revision), do: :ok\n\n  defp key_revision_gate(_ml_dsa, protocol_revision) when protocol_revision >= 3, do: :ok\n\n  defp key_revision_gate(_ml_dsa, _protocol_revision), do: {:error, :key_invalid}",
+      to: "  defp key_revision_gate(_algorithm, _protocol_revision), do: :ok",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
       name: "corpus-expectation-flip",

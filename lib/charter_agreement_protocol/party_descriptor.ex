@@ -9,6 +9,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   """
 
   alias CharterAgreementProtocol.{
+    Algorithm,
     Base64Url,
     CompactJws,
     DescriptorFacts,
@@ -28,8 +29,8 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
     @type t :: %__MODULE__{
             key_id: binary(),
-            algorithm: :ed25519,
-            public_key: <<_::256>>,
+            algorithm: binary(),
+            public_key: binary(),
             status: :active | :retired
           }
   end
@@ -68,7 +69,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   ]
 
   @type t :: %__MODULE__{
-          protocol_revision: 1 | 2,
+          protocol_revision: 1 | 2 | 3,
           party_id: nil | binary(),
           descriptor_number: pos_integer(),
           prev_descriptor_digest: nil | binary(),
@@ -81,7 +82,11 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
         }
 
   @key_id ~r/\A[A-Za-z0-9._~-]{1,128}\z/
-  @b64url_32 ~r/\A[A-Za-z0-9_-]{43}\z/
+  # Length-only union of the legal key encodings (43, 1750, 2603, or 3456
+  # base64url characters for the four registry key algorithms); the codec
+  # binds the exact length, the algorithm member, and the descriptor's
+  # protocol_revision together.
+  @b64url_key ~r/\A(?:[A-Za-z0-9_-]{43}|[A-Za-z0-9_-]{1750}|[A-Za-z0-9_-]{2603}|[A-Za-z0-9_-]{3456})\z/
 
   @key_definition Schema.definition("verification_key", [
                     Schema.field("key_id",
@@ -92,12 +97,19 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
                     Schema.field("algorithm",
                       required?: true,
                       types: [:string],
-                      constraint: {:one_of, [{:string, "Ed25519"}]}
+                      constraint:
+                        {:one_of,
+                         [
+                           {:string, "Ed25519"},
+                           {:string, "ML-DSA-44"},
+                           {:string, "ML-DSA-65"},
+                           {:string, "ML-DSA-87"}
+                         ]}
                     ),
                     Schema.field("public_key",
                       required?: true,
                       types: [:string],
-                      constraint: {:matches, @b64url_32}
+                      constraint: {:matches, @b64url_key}
                     ),
                     Schema.field("status",
                       required?: true,
@@ -123,7 +135,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
                 Schema.field("protocol_revision",
                   required?: true,
                   types: [:integer],
-                  constraint: {:integer_range, 1, 2}
+                  constraint: {:integer_range, 1, 3}
                 ),
                 Schema.field("party_id",
                   types: [:string],
@@ -208,7 +220,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
     with {:ok, party_id} <- optional_digest(values, "party_id"),
          {:ok, previous} <- optional_digest(values, "prev_descriptor_digest"),
-         {:ok, keys} <- verification_keys(values["verification_keys"]),
+         {:ok, keys} <- verification_keys(values["verification_keys"], protocol_revision),
          :ok <- unique_active_keys(keys),
          {:ok, hints} <- attestation_hints(values["attestation_hints"]),
          {:ok, extension_outcome} <-
@@ -233,18 +245,19 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     end
   end
 
-  defp verification_keys({:array, values}) do
+  defp verification_keys({:array, values}, protocol_revision) do
     Enum.reduce_while(values, {:ok, []}, fn {:object, members}, {:ok, keys} ->
       value = Map.new(members)
 
       with {:string, key_id} <- value["key_id"],
-           {:string, "Ed25519"} <- value["algorithm"],
+           {:string, algorithm} <- value["algorithm"],
            {:string, encoded} <- value["public_key"],
-           {:ok, <<_::256>> = public_key} <- Base64Url.decode(encoded),
+           {:ok, public_key} <- decode_verification_key(encoded, algorithm),
+           :ok <- key_revision_gate(algorithm, protocol_revision),
            {:ok, status} <- key_status(value["status"]) do
         key = %VerificationKey{
           key_id: key_id,
-          algorithm: :ed25519,
+          algorithm: algorithm,
           public_key: public_key,
           status: status
         }
@@ -256,6 +269,30 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     end)
     |> reverse_keys()
   end
+
+  defp decode_verification_key(encoded, algorithm) do
+    case Algorithm.key_row_for(algorithm) do
+      %{public_key_bytes: length} ->
+        with {:ok, public_key} <- Base64Url.decode(encoded),
+             true <- byte_size(public_key) == length do
+          {:ok, public_key}
+        else
+          _failure -> {:error, :key_invalid}
+        end
+
+      nil ->
+        {:error, :key_invalid}
+    end
+  end
+
+  # The key-grammar gate mirrors the alg-name binding rule one layer down: an
+  # ML-DSA key inside a revision-1 or revision-2 descriptor rejects, because no
+  # honest producer could have minted it (docs/adr/ml-dsa-admission.md).
+  defp key_revision_gate("Ed25519", _protocol_revision), do: :ok
+
+  defp key_revision_gate(_ml_dsa, protocol_revision) when protocol_revision >= 3, do: :ok
+
+  defp key_revision_gate(_ml_dsa, _protocol_revision), do: {:error, :key_invalid}
 
   defp reverse_keys({:ok, keys}), do: {:ok, Enum.reverse(keys)}
   defp reverse_keys({:error, %Error{}} = error), do: error
@@ -284,9 +321,10 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   defp do_verify(compact, predecessor, limits) do
     with {:ok, verified_predecessor} <- verify_predecessor(predecessor, limits),
          {:ok, descriptor} <- decode(compact, limits),
-         {:ok, party_id, public_key, lineage} <-
+         {:ok, party_id, public_key, key_algorithm, lineage} <-
            verification_context(descriptor, verified_predecessor, compact),
-         :ok <- CompactJws.verify_signature(descriptor.envelope, public_key) do
+         :ok <-
+           CompactJws.verify_signature(descriptor.envelope, public_key, key_algorithm) do
       {:ok, facts(descriptor, party_id, lineage)}
     end
   end
@@ -410,9 +448,10 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   end
 
   defp verify_decoded(descriptor, compact, predecessor) do
-    with {:ok, party_id, public_key, lineage} <-
+    with {:ok, party_id, public_key, key_algorithm, lineage} <-
            verification_context(descriptor, predecessor, compact),
-         :ok <- CompactJws.verify_signature(descriptor.envelope, public_key) do
+         :ok <-
+           CompactJws.verify_signature(descriptor.envelope, public_key, key_algorithm) do
       {:ok, facts(descriptor, party_id, lineage)}
     end
   end
@@ -424,7 +463,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
   defp verification_context(%__MODULE__{descriptor_number: 1} = descriptor, nil, compact) do
     with {:ok, key} <- active_key(descriptor.verification_keys, descriptor.envelope.kid) do
-      {:ok, digest(descriptor), key.public_key, [compact]}
+      {:ok, digest(descriptor), key.public_key, key.algorithm, [compact]}
     end
   end
 
@@ -439,7 +478,8 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
          descriptor.party_id == predecessor.party_id do
       with {:ok, key} <-
              active_key(predecessor.descriptor.verification_keys, descriptor.envelope.kid) do
-        {:ok, predecessor.party_id, key.public_key, [compact | predecessor.lineage]}
+        {:ok, predecessor.party_id, key.public_key, key.algorithm,
+         [compact | predecessor.lineage]}
       end
     else
       chain_error()

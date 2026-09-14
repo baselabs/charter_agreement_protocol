@@ -183,7 +183,7 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
       point = Base.decode16!(hex, case: :mixed)
 
       assert {:error, %Error{code: :signature_invalid}} =
-               Signature.verify("message", point <> <<0::256>>, point)
+               Signature.verify("message", point <> <<0::256>>, point, "EdDSA")
     end
 
     noncanonical_y = Base.decode16!("ed" <> String.duplicate("ff", 30) <> "7f", case: :mixed)
@@ -191,7 +191,7 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
 
     for point <- [noncanonical_y, negative_zero] do
       assert {:error, %Error{code: :signature_invalid}} =
-               Signature.verify("message", point <> <<0::256>>, point)
+               Signature.verify("message", point <> <<0::256>>, point, "EdDSA")
     end
 
     fixture = DescriptorFixture.genesis()
@@ -214,7 +214,7 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
       )
 
     assert {:error, %Error{code: :signature_invalid}} =
-             Signature.verify(envelope.message, r <> subgroup_order, public_key)
+             Signature.verify(envelope.message, r <> subgroup_order, public_key, "Ed25519")
   end
 
   test "compact envelope parser is total across bounds, segment, canonical, header, and key failures" do
@@ -282,16 +282,68 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
       )
     end
 
-    assert_error_code(CompactJws.verify_signature(%{}, <<0::256>>), :signature_invalid)
+    assert_error_code(
+      CompactJws.verify_signature(%{}, <<0::256>>, "Ed25519"),
+      :signature_invalid
+    )
+
     {:ok, envelope} = CompactJws.parse(valid.compact, "cap+party", Limits.default())
-    assert_error_code(CompactJws.verify_signature(envelope, <<0>>), :signature_invalid)
+
+    assert_error_code(
+      CompactJws.verify_signature(envelope, <<0>>, "Ed25519"),
+      :signature_invalid
+    )
 
     malformed_envelope = %{envelope | signature: :not_signature_bytes}
 
     assert_error_code(
-      CompactJws.verify_signature(malformed_envelope, <<0::256>>),
+      CompactJws.verify_signature(malformed_envelope, <<0::256>>, "Ed25519"),
       :signature_invalid
     )
+
+    # The resolved key's algorithm must equal the envelope row's key algorithm.
+    assert_error_code(
+      CompactJws.verify_signature(envelope, <<0::512>>, "ML-DSA-65"),
+      :signature_invalid
+    )
+
+    [header, payload | _rest] = String.split(valid.compact, ".")
+
+    bad_signature = header <> "." <> payload <> ".!!!"
+
+    assert_error_code(
+      CompactJws.parse(bad_signature, "cap+party", Limits.default()),
+      :signature_invalid
+    )
+  end
+
+  test "a key whose encoding length contradicts its declared algorithm rejects" do
+    {_ed_public, ed_private} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<1>>, 32))
+    {ml_public, _} = :crypto.generate_key(:mldsa65, [])
+
+    fixture =
+      DescriptorFixture.compact(
+        %{
+          "protocol_revision" => 3,
+          "descriptor_number" => 1,
+          "verification_keys" => [
+            %{
+              "key_id" => "k",
+              "algorithm" => "Ed25519",
+              "public_key" => Base64Url.encode(ml_public),
+              "status" => "active"
+            }
+          ],
+          "attestation_hints" => [],
+          "extensions" => %{"critical" => %{}, "optional" => %{}},
+          "effective_from" => "2026-08-25T10:00:00Z"
+        },
+        "k",
+        ed_private
+      )
+
+    assert {:error, %Error{code: :descriptor_invalid}} =
+             CharterAgreementProtocol.decode_party_descriptor(fixture.compact, Limits.default())
   end
 
   test "descriptor extraction and predecessor revalidation fail closed on forged edge shapes" do

@@ -198,6 +198,9 @@ tagged = fn plain ->
 
     recur, value when is_map(value) ->
       {:object, Enum.map(value, fn {key, item} -> {key, recur.(recur, item)} end)}
+
+    _recur, :null ->
+      :null
   end
 
   recur.(recur, plain)
@@ -305,6 +308,16 @@ rev3_descriptor =
     :party_descriptor_content
   )
 
+rev4_descriptor =
+  sign_compact.(
+    Map.put(genesis_claims, "protocol_revision", 4),
+    "genesis-key",
+    genesis_private,
+    "EdDSA",
+    "cap+party",
+    :party_descriptor_content
+  )
+
 successor = fn byte, key_id, signing_private, previous_digest ->
   {key, _private} = descriptor_key.(byte, key_id)
 
@@ -381,10 +394,22 @@ descriptor_cases = [
     "expect" => invalid.("protected_header_invalid")
   },
   %{
-    "id" => "descriptor-rev3-fails-closed",
+    "id" => "descriptor-rev3-eddsa-valid",
+    "surface" => "party_descriptor.verify",
+    "class" => "valid",
+    "input" => %{"compact" => rev3_descriptor.compact, "predecessor" => nil},
+    "expect" =>
+      valid.(%{
+        "descriptor_digest" => rev3_descriptor.digest,
+        "party_id" => rev3_descriptor.digest,
+        "descriptor_number" => 1
+      })
+  },
+  %{
+    "id" => "descriptor-rev4-fails-closed",
     "surface" => "party_descriptor.verify",
     "class" => "invalid_constraint",
-    "input" => %{"compact" => rev3_descriptor.compact, "predecessor" => nil},
+    "input" => %{"compact" => rev4_descriptor.compact, "predecessor" => nil},
     "expect" => invalid.("protected_header_invalid")
   },
   %{
@@ -995,6 +1020,15 @@ supplemental_case_ids =
     receipt-signature-invalid
     receipt-hidden-sibling-conflict
     receipt-indexed-price-observation-quarantine
+    descriptor-mldsa65-rev3-valid
+    descriptor-mldsa65-rev2-rejected
+    descriptor-mldsa-key-in-rev2-rejected
+    descriptor-mldsa65-key-length-rejected
+    descriptor-mldsa65-signature-length-rejected
+    chain-pq-key-bridge
+    chain-mldsa-mixed-revision
+    acceptance-mldsa65-rev3-valid
+    receipt-mldsa65-rev3-valid
   ))
 
 supplemental_cases =

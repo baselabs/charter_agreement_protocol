@@ -56,6 +56,23 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:gate, CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest},
        {:mutation, "alg-binding-defeat"}
      ]},
+    {"CAP-ALG-mldsa-registry-rows",
+     [
+       {:corpus, ["party_descriptor.verify:valid", "chain.verify:valid"]},
+       {:gate, CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest},
+       {:mutation, "mldsa-binding-defeat"}
+     ]},
+    {"CAP-PARTY-DESCRIPTOR-key-grammar-gate",
+     [
+       {:corpus, ["party_descriptor.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest},
+       {:mutation, "mldsa-key-grammar-gate-defeat"}
+     ]},
+    {"CAP-SIGNATURE-mldsa-lengths",
+     [
+       {:corpus, ["party_descriptor.verify:signature_invalid"]},
+       {:gate, CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest}
+     ]},
     {"CAP-SIGNATURE-ed25519-verification",
      [
        {:corpus, ["acceptance.verify:signature_invalid"]},

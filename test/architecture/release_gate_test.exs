@@ -28,6 +28,8 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     supersession-ignore
     corpus-expectation-flip
     alg-binding-defeat
+    mldsa-binding-defeat
+    mldsa-key-grammar-gate-defeat
   )
 
   @minimum_quality_steps [

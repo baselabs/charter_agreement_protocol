@@ -500,6 +500,97 @@ defmodule CharterAgreementProtocol.SigningInputTest do
     )
   end
 
+  test "the producer mints the ML-DSA-65 emission pair and refuses the others" do
+    {ml_public, ml_private} = :crypto.generate_key(:mldsa65, [])
+
+    claims = %{
+      "protocol_revision" => 3,
+      "descriptor_number" => 1,
+      "verification_keys" => [
+        %{
+          "key_id" => "pq-key",
+          "algorithm" => "ML-DSA-65",
+          "public_key" => Base64Url.encode(ml_public),
+          "status" => "active"
+        }
+      ],
+      "attestation_hints" => [],
+      "extensions" => %{"critical" => %{}, "optional" => %{}},
+      "effective_from" => "2026-08-25T10:00:00Z"
+    }
+
+    assert {:ok, input} =
+             CharterAgreementProtocol.descriptor_signing_input(%{
+               "kid" => "pq-key",
+               "claims" => claims,
+               "algorithm" => "ML-DSA-65"
+             })
+
+    assert input.alg == "ML-DSA-65"
+
+    {:ok, protected} = Base64Url.decode(input.protected_segment)
+    assert protected == "{\"alg\":\"ML-DSA-65\",\"kid\":\"pq-key\",\"typ\":\"cap+party\"}"
+
+    signature = :crypto.sign(:mldsa65, :none, input.message, ml_private)
+    assert byte_size(signature) == 3309
+
+    assert {:ok, compact} = CharterAgreementProtocol.assemble_compact(input, signature)
+
+    assert {:ok, decoded} =
+             CharterAgreementProtocol.decode_party_descriptor(compact, Limits.default())
+
+    assert decoded.protocol_revision == 3
+
+    # wrong emission revision for the selected algorithm
+    assert {:error, %Error{code: :signing_input_invalid}} =
+             CharterAgreementProtocol.descriptor_signing_input(%{
+               "kid" => "pq-key",
+               "claims" => Map.put(claims, "protocol_revision", 2),
+               "algorithm" => "ML-DSA-65"
+             })
+
+    # a non-emission registry name is never mintable
+    assert {:error, %Error{code: :signing_input_invalid}} =
+             CharterAgreementProtocol.descriptor_signing_input(%{
+               "kid" => "pq-key",
+               "claims" => claims,
+               "algorithm" => "ML-DSA-87"
+             })
+
+    # classical emission still defaults
+    {public, private} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<1>>, 32))
+
+    classical = %{
+      "protocol_revision" => 2,
+      "descriptor_number" => 1,
+      "verification_keys" => [
+        %{
+          "key_id" => "k",
+          "algorithm" => "Ed25519",
+          "public_key" => Base64Url.encode(public),
+          "status" => "active"
+        }
+      ],
+      "attestation_hints" => [],
+      "extensions" => %{"critical" => %{}, "optional" => %{}},
+      "effective_from" => "2026-08-25T10:00:00Z"
+    }
+
+    assert {:ok, default_input} =
+             CharterAgreementProtocol.descriptor_signing_input(%{
+               "kid" => "k",
+               "claims" => classical
+             })
+
+    assert default_input.alg == "Ed25519"
+
+    assert {:error, %Error{code: :signature_invalid}} =
+             CharterAgreementProtocol.assemble_compact(default_input, <<0::512, 0>>)
+
+    signed = :crypto.sign(:eddsa, :none, default_input.message, [private, :ed25519])
+    assert {:ok, _compact} = CharterAgreementProtocol.assemble_compact(default_input, signed)
+  end
+
   defp envelope(kid, claims), do: %{"kid" => kid, "claims" => mint(claims)}
 
   # Producer-side calls mint at the emission revision — exactly what a host

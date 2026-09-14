@@ -20,30 +20,76 @@ defmodule CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest do
 
   alias CharterAgreementProtocol, as: CAP
 
-  test "the registry is the closed two-row set with the binding columns" do
+  test "the registry is the closed five-row set with the binding columns" do
     assert CAP.Algorithm.registry() == [
-             %{name: "EdDSA", min_protocol_revision: 1, key_algorithm: "Ed25519"},
-             %{name: "Ed25519", min_protocol_revision: 2, key_algorithm: "Ed25519"}
+             %{
+               name: "EdDSA",
+               min_protocol_revision: 1,
+               key_algorithm: "Ed25519",
+               public_key_bytes: 32,
+               signature_bytes: 64
+             },
+             %{
+               name: "Ed25519",
+               min_protocol_revision: 2,
+               key_algorithm: "Ed25519",
+               public_key_bytes: 32,
+               signature_bytes: 64
+             },
+             %{
+               name: "ML-DSA-44",
+               min_protocol_revision: 3,
+               key_algorithm: "ML-DSA-44",
+               public_key_bytes: 1312,
+               signature_bytes: 2420
+             },
+             %{
+               name: "ML-DSA-65",
+               min_protocol_revision: 3,
+               key_algorithm: "ML-DSA-65",
+               public_key_bytes: 1952,
+               signature_bytes: 3309
+             },
+             %{
+               name: "ML-DSA-87",
+               min_protocol_revision: 3,
+               key_algorithm: "ML-DSA-87",
+               public_key_bytes: 2592,
+               signature_bytes: 4627
+             }
            ]
 
-    assert CAP.Algorithm.accepted_protocol_revisions() == [1, 2]
-    assert CAP.Algorithm.emission_name() == "Ed25519"
-    assert CAP.Algorithm.emission_protocol_revision() == 2
+    assert CAP.Algorithm.accepted_protocol_revisions() == [1, 2, 3]
+    assert CAP.Algorithm.emissions() == %{"Ed25519" => 2, "ML-DSA-65" => 3}
+    assert CAP.Algorithm.default_emission_name() == "Ed25519"
   end
 
   test "the binding rule binds the name to the revision, per artifact" do
-    # EdDSA: any accepted revision
+    # EdDSA: any accepted revision — including revision 3, the deliberate
+    # revision-3 widening (docs/adr/ml-dsa-admission.md)
     assert CAP.Algorithm.binds?("EdDSA", 1)
     assert CAP.Algorithm.binds?("EdDSA", 2)
+    assert CAP.Algorithm.binds?("EdDSA", 3)
 
     # Ed25519: from revision 2 only — the rule's red edge
     assert CAP.Algorithm.binds?("Ed25519", 2)
+    assert CAP.Algorithm.binds?("Ed25519", 3)
     refute CAP.Algorithm.binds?("Ed25519", 1)
 
+    # ML-DSA: from revision 3 only — each name below its minimum stays red
+    for name <- ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"] do
+      assert CAP.Algorithm.binds?(name, 3)
+      refute CAP.Algorithm.binds?(name, 1)
+      refute CAP.Algorithm.binds?(name, 2)
+      refute CAP.Algorithm.binds?(name, 4)
+    end
+
     # Unknown revisions fail closed; unknown names are not registry rows
-    refute CAP.Algorithm.binds?("EdDSA", 3)
-    refute CAP.Algorithm.binds?("Ed25519", 3)
-    refute CAP.Algorithm.binds?("Ed448", 2)
+    refute CAP.Algorithm.binds?("EdDSA", 4)
+    refute CAP.Algorithm.binds?("Ed25519", 4)
+    refute CAP.Algorithm.binds?("ml-dsa-65", 3)
+    refute CAP.Algorithm.binds?("Ed448", 3)
+    refute CAP.Algorithm.binds?("HashML-DSA-65", 3)
     refute CAP.Algorithm.binds?("edsa", 1)
     refute CAP.Algorithm.binds?(42, 1)
     refute CAP.Algorithm.binds?("EdDSA", "1")
@@ -115,13 +161,23 @@ defmodule CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest do
              CAP.decode_party_descriptor(forged, Limits.default())
   end
 
-  test "revision 3 fails closed at the framing layer" do
+  test "revision 4 fails closed at the framing layer" do
+    descriptor = DescriptorFixture.genesis()
+    claims4 = Map.put(descriptor.claims, "protocol_revision", 4)
+
+    compact = DescriptorFixture.compact(claims4, descriptor.kid, descriptor.private).compact
+
+    assert {:error, %Error{}} = CAP.decode_party_descriptor(compact, Limits.default())
+  end
+
+  test "(EdDSA, revision 3) verifies — the deliberate revision-3 widening" do
     descriptor = DescriptorFixture.genesis()
     claims3 = Map.put(descriptor.claims, "protocol_revision", 3)
 
-    compact = DescriptorFixture.compact(claims3, descriptor.kid, descriptor.private).compact
+    fixture = DescriptorFixture.compact(claims3, descriptor.kid, descriptor.private)
 
-    assert {:error, %Error{}} = CAP.decode_party_descriptor(compact, Limits.default())
+    assert {:ok, decoded} = CAP.decode_party_descriptor(fixture.compact, Limits.default())
+    assert decoded.protocol_revision == 3
   end
 
   test "the producer refuses to mint at a non-current revision" do

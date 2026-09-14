@@ -10,9 +10,9 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ## Bound evidence
 
-- Requirements: 47
+- Requirements: 50
 - Corpus cells: 61
-- Named mutations: 23
+- Named mutations: 25
 
 ## Requirements
 
@@ -63,6 +63,23 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Corpus: `party_descriptor.verify:invalid_constraint`
 - Gate: `CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest`
 - Mutation: `alg-binding-defeat`
+
+### CAP-ALG-mldsa-registry-rows
+
+- Corpus: `party_descriptor.verify:valid`, `chain.verify:valid`
+- Gate: `CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest`
+- Mutation: `mldsa-binding-defeat`
+
+### CAP-PARTY-DESCRIPTOR-key-grammar-gate
+
+- Corpus: `party_descriptor.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest`
+- Mutation: `mldsa-key-grammar-gate-defeat`
+
+### CAP-SIGNATURE-mldsa-lengths
+
+- Corpus: `party_descriptor.verify:signature_invalid`
+- Gate: `CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest`
 
 ### CAP-SIGNATURE-ed25519-verification
 

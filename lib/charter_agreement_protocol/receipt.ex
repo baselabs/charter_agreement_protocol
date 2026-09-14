@@ -72,7 +72,7 @@ defmodule CharterAgreementProtocol.Receipt do
   defstruct @enforce_keys
 
   @type t :: %__MODULE__{
-          protocol_revision: 1 | 2,
+          protocol_revision: 1 | 2 | 3,
           charter_id: binary(),
           revision_number: pos_integer(),
           revision_digest: binary(),
@@ -116,7 +116,7 @@ defmodule CharterAgreementProtocol.Receipt do
                   Schema.field("protocol_revision",
                     required?: true,
                     types: [:integer],
-                    constraint: {:integer_range, 1, 2}
+                    constraint: {:integer_range, 1, 3}
                   ),
                   Schema.field("charter_id",
                     required?: true,
@@ -504,7 +504,9 @@ defmodule CharterAgreementProtocol.Receipt do
       chain
       |> signing_keys(receipt)
       |> Enum.uniq()
-      |> Enum.filter(&(CompactJws.verify_signature(receipt.envelope, &1) == :ok))
+      |> Enum.filter(fn {public_key, algorithm} ->
+        CompactJws.verify_signature(receipt.envelope, public_key, algorithm) == :ok
+      end)
 
     if length(verified_keys) == 1,
       do: :ok,
@@ -538,7 +540,7 @@ defmodule CharterAgreementProtocol.Receipt do
     |> Enum.flat_map(fn facts ->
       facts.descriptor.verification_keys
       |> Enum.filter(&(&1.key_id == receipt.envelope.kid and &1.status == :active))
-      |> Enum.map(& &1.public_key)
+      |> Enum.map(&{&1.public_key, &1.algorithm})
     end)
   end
 

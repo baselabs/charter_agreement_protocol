@@ -21,9 +21,9 @@ data-driven so a second algorithm does not fork the code path: the closed
 itself the registry — a name or algorithm lands by the same
 registry-and-revision act that added `Ed25519` in revision 2.
 
-## Named migration target: ML-DSA (RFC 9964)
+## The second algorithm: ML-DSA (RFC 9964), admitted at revision 3
 
-The anticipated second signature algorithm is ML-DSA, the post-quantum
+The second signature algorithm is ML-DSA, the post-quantum
 Module-Lattice Digital Signature Standard (NIST FIPS 204, final August
 2024). RFC 9964 ("ML-DSA for JOSE and COSE", Proposed Standard, May
 2026) registers the JOSE identifiers `ML-DSA-44`, `ML-DSA-65`, and
@@ -31,15 +31,16 @@ Module-Lattice Digital Signature Standard (NIST FIPS 204, final August
 1952, and 2592 bytes and signatures of 2420, 3309, and 4627 bytes;
 pure ML-DSA only — the pre-hashed HashML-DSA variants are out of scope
 of that registration, and the `ctx` parameter is the empty string). A
-future protocol revision that adds ML-DSA cites those identifiers and
-extends the descriptor key grammar's `algorithm` enumeration and byte
-bounds accordingly; the compact-JWS envelope, digest domains, and
-canonicalization are unchanged.
+registry rows carry those identifiers and exact byte bounds; the
+descriptor key grammar's `algorithm` enumeration is widened to the four
+key algorithms, gated on the descriptor's revision
+(docs/adr/ml-dsa-admission.md); the compact-JWS envelope, digest
+domains, and canonicalization are unchanged.
 
 **Post-quantum hybrid note.** Hybrid PQ/T composite signatures for
 JOSE/COSE are still Internet-Drafts (draft-ietf-jose-pq-composite-sigs).
 This specification does not adopt composites; when a composite reaches
-RFC, its `alg` values land in the same agility slot as ML-DSA would,
+RFC, its `alg` values land in the same agility slot ML-DSA occupies,
 and a revisited revision decides between pure-PQ and hybrid adoption on
 the then-current guidance.
 

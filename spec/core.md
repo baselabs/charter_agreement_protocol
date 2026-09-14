@@ -100,15 +100,18 @@ this document's artifact sections.
 
 ## 4. Artifacts
 
-Four artifacts are attached compact JWS [RFC7515] with Ed25519
-signatures; the charter revision is canonical unsigned JSON. A verifier
-MUST verify each attached signature as Ed25519 [RFC8032] over the exact
-compact signing-input bytes with the resolved public key; a signature
-that does not verify under that algorithm and key MUST fail
+Four artifacts are attached compact JWS [RFC7515] whose signatures verify
+under the algorithm their registry row names; the charter revision is
+canonical unsigned JSON. A verifier MUST verify each attached signature
+over the exact compact signing-input bytes with the resolved public key
+under the row's key algorithm — Ed25519 [RFC8032] or pure ML-DSA
+(FIPS 204, context the empty string) [RFC9964]; a signature that does not
+verify under that algorithm and key MUST fail
 [CAP-SIGNATURE-ed25519-verification]. Every attached artifact carries
-`protocol_revision`; revisions 1 and 2 are defined (revision 1 closed the
-`alg` name set to `EdDSA`; revision 2 admits the fully-specified `Ed25519`
-name), and a decoder encountering an unknown revision MUST fail closed
+`protocol_revision`; revisions 1, 2, and 3 are defined (revision 1 closed
+the `alg` name set to `EdDSA`; revision 2 admits the fully-specified
+`Ed25519` name; revision 3 admits the ML-DSA names), and a decoder
+encountering an unknown revision MUST fail closed
 [CAP-REVISION-fail-closed].
 
 ### 4.1 Protected headers
@@ -118,13 +121,17 @@ A protected header MUST be closed to exactly `alg`, `kid`, and
 [CAP-COMPACT-JWS-type-isolation]. The `alg` value MUST be one of the two
 registered names, bound per artifact to the payload's `protocol_revision`
 (the algorithm registry): `EdDSA` is accepted at any accepted revision,
-`Ed25519` [RFC9864] is accepted from `protocol_revision` 2, and the pair
-(`Ed25519`, revision 1) MUST be rejected — revision 1's header was closed
-to `EdDSA`, so no honest producer could have minted that pair
-[CAP-ALG-registry-binding]. Producers
-MUST mint exactly (`Ed25519`, `protocol_revision` 2); accepting `EdDSA`
-at revision 2 keeps artifacts from producers that adopt revision 2 before
-renaming their emission verifiable [CAP-ALG-registry-binding]. The `typ` value MUST be one of the four
+`Ed25519` [RFC9864] is accepted from `protocol_revision` 2, and the three
+fully-specified JOSE names `ML-DSA-44`, `ML-DSA-65`, and `ML-DSA-87`
+[RFC9964] are accepted from `protocol_revision` 3, each verifying with a
+key of its own parameterization whose public-key and signature byte
+lengths are the registry row's exact values; a name below its row's
+minimum revision MUST be rejected — no honest producer could have minted
+the pair [CAP-ALG-registry-binding] [CAP-ALG-mldsa-registry-rows].
+Producers MUST mint exactly (`Ed25519`, `protocol_revision` 2) or
+(`ML-DSA-65`, `protocol_revision` 3); accepting `EdDSA`
+at revisions 2 and 3 keeps artifacts from producers that adopt a revision
+before renaming their emission verifiable [CAP-ALG-registry-binding]. The `typ` value MUST be one of the four
 registered artifact types (`cap+party`, `cap+acceptance`,
 `cap+termination`, `cap+receipt`), and a verifier MUST NOT accept an
 artifact whose `typ` differs from the expected type for the call
@@ -152,7 +159,13 @@ silently accepted as current
 [CAP-PARTY-DESCRIPTOR-superseded-visible]. Before signature verification,
 non-canonical point encodings and all eight low-order torsion encodings
 are rejected for both the public key and the signature `R`; this decode
-layer rule is codec-enforced and unit-proven.
+layer rule is codec-enforced and unit-proven. An ML-DSA key or signature
+whose byte length differs from its parameterization's registry row is
+rejected before cryptographic work; the exact per-name lengths are
+registry data [CAP-SIGNATURE-mldsa-lengths]. A descriptor at a
+`protocol_revision` below 3 that declares an ML-DSA verification key MUST
+be rejected — the key grammar is gated on the descriptor's revision
+exactly as the `alg` name is [CAP-PARTY-DESCRIPTOR-key-grammar-gate].
 
 ### 4.3 Charter Revision (unsigned canonical JSON)
 
@@ -291,3 +304,5 @@ not expose retained signed artifacts.
   Signature Algorithm (EdDSA)", RFC 8032, January 2017.
 - [RFC9864] "Fully-Specified Algorithms for JOSE and COSE", RFC 9864,
   October 2025.
+- [RFC9964] "ML-DSA for JSON Object Signing and Encryption (JOSE) and
+  CBOR Object Signing and Encryption (COSE)", RFC 9964, May 2026.

@@ -49,7 +49,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
   ]
 
   @type t :: %__MODULE__{
-          protocol_revision: 1 | 2,
+          protocol_revision: 1 | 2 | 3,
           charter_id: binary(),
           governing_revision_digest: binary(),
           party_descriptor_digest: binary(),
@@ -67,7 +67,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
                 Schema.field("protocol_revision",
                   required?: true,
                   types: [:integer],
-                  constraint: {:integer_range, 1, 2}
+                  constraint: {:integer_range, 1, 3}
                 ),
                 Schema.field("charter_id",
                   required?: true,
@@ -177,8 +177,9 @@ defmodule CharterAgreementProtocol.TerminationNotice do
          {:ok, termination} <- decode(compact, limits),
          :ok <- claims_match(termination, revision),
          {:ok, descriptor} <- pinned_descriptor(termination, revision, chain),
-         {:ok, public_key} <- active_key(descriptor, termination.envelope.kid),
-         :ok <- CompactJws.verify_signature(termination.envelope, public_key) do
+         {:ok, key} <- active_key(descriptor, termination.envelope.kid),
+         :ok <-
+           CompactJws.verify_signature(termination.envelope, key.public_key, key.algorithm) do
       {:ok, facts(termination, descriptor)}
     end
   end
@@ -190,8 +191,9 @@ defmodule CharterAgreementProtocol.TerminationNotice do
     with {:ok, termination} <- decode(compact, limits),
          :ok <- claims_match(termination, revision),
          {:ok, descriptor} <- pinned_descriptor(termination, revision, chain),
-         {:ok, public_key} <- active_key(descriptor, termination.envelope.kid),
-         :ok <- CompactJws.verify_signature(termination.envelope, public_key) do
+         {:ok, key} <- active_key(descriptor, termination.envelope.kid),
+         :ok <-
+           CompactJws.verify_signature(termination.envelope, key.public_key, key.algorithm) do
       {:ok, facts(termination, descriptor)}
     end
   end
@@ -318,7 +320,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
 
   defp active_key(%DescriptorFacts{descriptor: %PartyDescriptor{} = descriptor}, kid) do
     case Enum.find(descriptor.verification_keys, &(&1.key_id == kid and &1.status == :active)) do
-      %PartyDescriptor.VerificationKey{public_key: public_key} -> {:ok, public_key}
+      %PartyDescriptor.VerificationKey{} = key -> {:ok, key}
       nil -> termination_error()
     end
   end

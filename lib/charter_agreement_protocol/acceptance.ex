@@ -48,7 +48,7 @@ defmodule CharterAgreementProtocol.Acceptance do
   ]
 
   @type t :: %__MODULE__{
-          protocol_revision: 1 | 2,
+          protocol_revision: 1 | 2 | 3,
           charter_id: binary(),
           revision_number: pos_integer(),
           revision_digest: binary(),
@@ -66,7 +66,7 @@ defmodule CharterAgreementProtocol.Acceptance do
                 Schema.field("protocol_revision",
                   required?: true,
                   types: [:integer],
-                  constraint: {:integer_range, 1, 2}
+                  constraint: {:integer_range, 1, 3}
                 ),
                 Schema.field("charter_id",
                   required?: true,
@@ -194,8 +194,9 @@ defmodule CharterAgreementProtocol.Acceptance do
          {:ok, acceptance} <- decode(compact, limits),
          :ok <- claims_match(acceptance, revision),
          {:ok, descriptor} <- pinned_descriptor(acceptance, revision, chain),
-         {:ok, public_key} <- active_key(descriptor, acceptance.envelope.kid),
-         :ok <- CompactJws.verify_signature(acceptance.envelope, public_key) do
+         {:ok, key} <- active_key(descriptor, acceptance.envelope.kid),
+         :ok <-
+           CompactJws.verify_signature(acceptance.envelope, key.public_key, key.algorithm) do
       {:ok, facts(acceptance, descriptor)}
     end
   end
@@ -208,8 +209,9 @@ defmodule CharterAgreementProtocol.Acceptance do
     with {:ok, acceptance} <- decode(compact, limits),
          :ok <- claims_match(acceptance, revision),
          {:ok, descriptor} <- pinned_descriptor(acceptance, revision, chain),
-         {:ok, public_key} <- active_key(descriptor, acceptance.envelope.kid),
-         :ok <- CompactJws.verify_signature(acceptance.envelope, public_key) do
+         {:ok, key} <- active_key(descriptor, acceptance.envelope.kid),
+         :ok <-
+           CompactJws.verify_signature(acceptance.envelope, key.public_key, key.algorithm) do
       {:ok, facts(acceptance, descriptor)}
     end
   end
@@ -332,7 +334,7 @@ defmodule CharterAgreementProtocol.Acceptance do
 
   defp active_key(%DescriptorFacts{descriptor: %PartyDescriptor{} = descriptor}, kid) do
     case Enum.find(descriptor.verification_keys, &(&1.key_id == kid and &1.status == :active)) do
-      %PartyDescriptor.VerificationKey{public_key: public_key} -> {:ok, public_key}
+      %PartyDescriptor.VerificationKey{} = key -> {:ok, key}
       nil -> acceptance_error()
     end
   end

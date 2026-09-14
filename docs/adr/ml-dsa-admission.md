@@ -113,9 +113,12 @@ define. No parallel artifact family, media type, or header shape.
 - Corpus: the ML-DSA population (primary mint `(ML-DSA-65, 3)`, mixed-key
   bridge descriptor, mixed-revision view), the per-name negatives above, and
   revision-4 fail-closed — legacy `(EdDSA, 1)` fixtures stay literally pinned.
-  Named mutations join the battery for the new guards (binding row, key-grammar
-  gate, per-name lengths); the pinned mutation list in the release gate moves in
-  lockstep.
+  Named mutations join the battery for the binding rows and the key-grammar
+  gate; the pinned mutation list in the release gate moves in lockstep. The
+  per-name length pre-checks earned no mutation of their own: the seeded
+  mutation survived because the crypto layer already rejects wrong-length
+  inputs with the same code — verdict-redundant by the revision-2 ADR's
+  dead-logic discipline, the checks remain as pre-crypto work bounds.
 - Identities: `corpus_digest`, `index_sha256_base64url`, `spec_digest` re-pin
   (spec/core.md's Ed25519-specific signature prose generalizes to the registry;
   `spec/evolution.md`'s migration-target section becomes the record of the act).
