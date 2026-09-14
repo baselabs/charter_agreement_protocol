@@ -27,7 +27,10 @@ defmodule CharterAgreementProtocol.ArchitectureScan do
     root_paths =
       @path_roots
       |> Enum.flat_map(fn root -> Path.wildcard(Path.join(root, "**/*"), match_dot: true) end)
-      |> Enum.reject(&File.dir?/1)
+      |> Enum.reject(fn path ->
+        File.dir?(path) or String.contains?(path, "/node_modules/") or
+          String.contains?(path, "/dist/")
+      end)
 
     root_files =
       ["mix.exs", "mix.lock", ".formatter.exs", ".credo.exs"]

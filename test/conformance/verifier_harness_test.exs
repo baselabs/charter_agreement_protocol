@@ -34,12 +34,17 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
     assert exit_status != 0
   end
 
-  test "the harness has no package manager surface or third-party imports" do
+  test "the harness has no third-party imports and the npm manifest stays repo-side" do
     source = File.read!("verifier/check-corpus.mjs")
-    refute File.exists?("verifier/package.json")
 
     assert Regex.scan(~r/from "([^"]+)"/, source)
            |> Enum.all?(fn [_, import] -> String.starts_with?(import, "node:") end)
+
+    # The npm package manifest exists in-tree (Phase A of the npm deployment,
+    # graduated to its own repository on first publication). It must never
+    # ship inside the Hex package.
+    assert File.exists?("verifier/package.json")
+    assert "verifier" not in Mix.Project.config()[:package][:files]
   end
 
   test "the Node verifiers reject a non-regular certified path before reading it" do

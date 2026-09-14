@@ -8,8 +8,10 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
     %{
       name: "verdict-comparison-inverted",
       path: "core.ts",
-      from: "agree: canonical(actual) === canonical(one.expect)",
-      to: "agree: canonical(actual) !== canonical(one.expect)",
+      from:
+        "agree: canonical(actual as unknown as CanonicalValue) === canonical(one.expect as unknown as CanonicalValue)",
+      to:
+        "agree: canonical(actual as unknown as CanonicalValue) !== canonical(one.expect as unknown as CanonicalValue)",
       exit: 1
     },
     %{
@@ -31,6 +33,7 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
   ]
 
   def run do
+    verify_vendored_corpus_snapshot()
     node = find_node!()
     build_escript!()
 
@@ -157,6 +160,32 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
     major = version |> String.split(".") |> hd() |> String.to_integer()
     if major < 24, do: raise("Node >= 24 is required; found #{major}")
     path
+  end
+
+  # The npm package's vendored corpus snapshot must be byte-identical to the
+  # Elixir package's certified corpus: a drifted snapshot ships verdicts the
+  # reference repository never certified.
+  defp verify_vendored_corpus_snapshot do
+    source = "priv/conformance"
+    vendored = "verifier/conformance"
+
+    source_files =
+      source
+      |> Path.join("**/*")
+      |> Path.wildcard()
+      |> Enum.filter(&File.regular?/1)
+      |> Map.new(fn path -> {Path.relative_to(path, source), File.read!(path)} end)
+
+    vendored_files =
+      vendored
+      |> Path.join("**/*")
+      |> Path.wildcard()
+      |> Enum.filter(&File.regular?/1)
+      |> Map.new(fn path -> {Path.relative_to(path, vendored), File.read!(path)} end)
+
+    unless source_files == vendored_files do
+      raise "vendored verifier corpus snapshot diverged from priv/conformance"
+    end
   end
 end
 
