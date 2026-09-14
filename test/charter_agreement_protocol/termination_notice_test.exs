@@ -149,6 +149,46 @@ defmodule CharterAgreementProtocol.TerminationNoticeTest do
                invalid_limits
              )
 
+    assert {:ok, _facts} =
+             TerminationNotice.verify_verified(
+               setup.notice.compact,
+               setup.revision,
+               setup.chain,
+               Limits.default()
+             )
+
+    assert {:error, %Error{code: :invalid_type}} =
+             TerminationNotice.verify_verified(
+               :not_bytes,
+               setup.revision,
+               setup.chain,
+               Limits.default()
+             )
+
+    assert {:error, %Error{code: :invalid_type}} =
+             TerminationNotice.verify_verified(
+               setup.notice.compact,
+               setup.revision,
+               setup.chain,
+               %{}
+             )
+
+    assert {:error, %Error{code: :invalid_limits}} =
+             TerminationNotice.verify_verified(
+               setup.notice.compact,
+               setup.revision,
+               setup.chain,
+               invalid_limits
+             )
+
+    assert {:error, %Error{code: :invalid_limits}} =
+             TerminationNotice.verify_verified(
+               setup.notice.compact,
+               :not_a_revision,
+               setup.chain,
+               invalid_limits
+             )
+
     non_canonical_digest = "sha-256:" <> String.duplicate("A", 42) <> "B"
     invalid_digest = signed_notice(setup, %{"detail_digest" => non_canonical_digest})
 

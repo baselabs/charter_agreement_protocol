@@ -77,9 +77,9 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       name: "precedence-lowest",
       path: "lib/charter_agreement_protocol/chain.ex",
       from:
-        "  defp select_candidates(candidates, accepted) do\n    maximum = candidates |> Enum.map(& &1.revision_number) |> Enum.max()",
+        "  defp max_numbered(facts) do\n    maximum = facts |> Enum.map(& &1.revision_number) |> Enum.max()",
       to:
-        "  defp select_candidates(candidates, accepted) do\n    maximum = candidates |> Enum.map(& &1.revision_number) |> Enum.min()",
+        "  defp max_numbered(facts) do\n    maximum = facts |> Enum.map(& &1.revision_number) |> Enum.min()",
       command: ~w(mix test test/charter_agreement_protocol/chain_test.exs --seed 42)
     },
     %{
@@ -99,9 +99,9 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "contested-tie-resolved",
       path: "lib/charter_agreement_protocol/chain.ex",
-      from: "      _siblings ->\n        :contested\n    end\n  end\n\n  defp linear_candidates?",
+      from: "      _siblings ->\n        :contested\n    end\n  end\n\n  defp max_numbered(facts) do",
       to:
-        "      [first | _siblings] ->\n        first.revision_digest\n    end\n  end\n\n  defp linear_candidates?",
+        "      [_first | _siblings] ->\n        hd(candidates).revision_digest\n    end\n  end\n\n  defp max_numbered(facts) do",
       command: ~w(mix test test/charter_agreement_protocol/chain_test.exs --seed 42)
     },
     %{

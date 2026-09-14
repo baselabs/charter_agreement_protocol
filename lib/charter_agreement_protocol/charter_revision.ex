@@ -266,8 +266,15 @@ defmodule CharterAgreementProtocol.CharterRevision do
                   types: [:object],
                   nested: {:object, @attribution_definition}
                 ),
-                Schema.field("effective_from", required?: true, types: [:string]),
-                Schema.field("effective_until", types: [:string]),
+                Schema.field("effective_from",
+                  required?: true,
+                  types: [:string],
+                  constraint: {:string_bytes, 1, 64}
+                ),
+                Schema.field("effective_until",
+                  types: [:string],
+                  constraint: {:string_bytes, 1, 64}
+                ),
                 Schema.field("termination_rules",
                   required?: true,
                   types: [:object],

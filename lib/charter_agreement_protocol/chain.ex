@@ -33,8 +33,7 @@ defmodule CharterAgreementProtocol.Chain do
       when is_list(revisions) and is_list(acceptances) and is_list(descriptors) and
              is_list(terminations) do
     with true <- Limits.valid?(limits),
-         :ok <- bounded_lists([revisions, acceptances, descriptors, terminations], limits),
-         :ok <- binary_lists([revisions, acceptances, descriptors, terminations]),
+         :ok <- bounded_input([revisions, acceptances, descriptors, terminations], limits),
          {:ok, descriptor_chains} <- verify_descriptor_chains(descriptors, limits),
          {:ok, indexed_revisions, revision_index, charter_id} <-
            verify_revisions(revisions, limits),
@@ -79,15 +78,45 @@ defmodule CharterAgreementProtocol.Chain do
 
   def governing_revision(_facts, _at), do: invalid_type()
 
-  defp bounded_lists(lists, limits) do
-    if Enum.all?(lists, &(length(&1) <= limits.max_artifact_set_items)),
-      do: :ok,
-      else: {:error, Error.new(:limit_exceeded, ["chain", "artifacts"])}
+  # One traversal bounds the whole input: every list must be proper and binary,
+  # each list within max_artifact_set_items, and the aggregate byte sum within
+  # max_artifact_set_bytes — checked before any decode or crypto runs.
+  defp bounded_input(lists, limits) do
+    lists
+    |> Enum.reduce_while({:ok, 0}, &accumulate_list(&1, &2, limits))
+    |> case do
+      {:ok, _total} -> :ok
+      {:error, %Error{} = error} -> {:error, error}
+    end
   end
 
-  defp binary_lists(lists) do
-    if Enum.all?(List.flatten(lists), &is_binary/1), do: :ok, else: invalid_type()
+  defp accumulate_list(list, {:ok, bytes}, limits) do
+    case bounded_list(list, 0, 0, limits) do
+      {:ok, size} -> accumulate_bytes(bytes + size, limits)
+      {:error, %Error{} = error} -> {:halt, {:error, error}}
+    end
   end
+
+  defp accumulate_bytes(total, limits) do
+    if total <= limits.max_artifact_set_bytes,
+      do: {:cont, {:ok, total}},
+      else: {:halt, {:error, Error.new(:limit_exceeded, ["chain", "bytes"])}}
+  end
+
+  defp bounded_list([], _count, bytes, _limits), do: {:ok, bytes}
+
+  defp bounded_list([item | rest], count, bytes, limits)
+       when is_binary(item) and count < limits.max_artifact_set_items do
+    bounded_list(rest, count + 1, bytes + byte_size(item), limits)
+  end
+
+  defp bounded_list([_item | _rest], count, _bytes, limits)
+       when count >= limits.max_artifact_set_items,
+       do: {:error, Error.new(:limit_exceeded, ["chain", "artifacts"])}
+
+  defp bounded_list([_item | _rest], _count, _bytes, _limits), do: invalid_type()
+
+  defp bounded_list(_improper, _count, _bytes, _limits), do: invalid_type()
 
   defp verify_descriptor_chains([], _limits), do: chain_error()
 
@@ -211,7 +240,7 @@ defmodule CharterAgreementProtocol.Chain do
            route_claims(compact, "cap+acceptance", "revision_digest", limits),
          %CharterRevision{} = revision <- Map.get(revision_index, revision_digest),
          %DescriptorChain{} = chain <- chain_for_descriptor(descriptor_chains, descriptor_digest) do
-      Acceptance.verify(compact, revision, chain, limits)
+      Acceptance.verify_verified(compact, revision, chain, limits)
     else
       {:error, %Error{} = error} -> {:error, error}
       _failure -> chain_error()
@@ -229,7 +258,7 @@ defmodule CharterAgreementProtocol.Chain do
            route_claims(compact, "cap+termination", "governing_revision_digest", limits),
          %CharterRevision{} = revision <- Map.get(revision_index, revision_digest),
          %DescriptorChain{} = chain <- chain_for_descriptor(descriptor_chains, descriptor_digest) do
-      TerminationNotice.verify(compact, revision, chain, limits)
+      TerminationNotice.verify_verified(compact, revision, chain, limits)
     else
       {:error, %Error{} = error} -> {:error, error}
       _failure -> chain_error()
@@ -391,32 +420,46 @@ defmodule CharterAgreementProtocol.Chain do
 
   defp current_revision_fork?(accepted, superseded) do
     active = Enum.reject(accepted, &MapSet.member?(superseded, &1.revision_digest))
-    not linear_candidates?(active, accepted)
+    by_digest = Map.new(accepted, &{&1.revision_digest, &1})
+
+    case max_numbered(active) do
+      [head] ->
+        ancestry = build_ancestry(active, by_digest)
+        head_set = Map.get(ancestry, head.revision_digest) || MapSet.new()
+
+        covered? =
+          Enum.all?(active, fn facts ->
+            facts.revision_digest == head.revision_digest or
+              MapSet.member?(head_set, facts.revision_digest)
+          end)
+
+        not covered?
+
+      _siblings ->
+        true
+    end
   end
 
   defp select(facts, at) do
-    accepted = accepted_revisions(facts.revision_facts)
+    do_select(facts, at, view_context(facts))
+  end
 
+  defp do_select(_facts, at, ctx) do
     candidates =
-      accepted
-      |> Enum.reject(
-        &MapSet.member?(MapSet.new(facts.superseded_revision_digests), &1.revision_digest)
-      )
+      ctx.accepted
+      |> Enum.reject(&MapSet.member?(ctx.superseded, &1.revision_digest))
       |> Enum.filter(&effective?(&1.revision, at))
 
     case candidates do
       [] -> :none
-      _facts -> select_candidates(candidates, accepted)
+      _facts -> select_candidates(candidates, ctx)
     end
   end
 
-  defp select_candidates(candidates, accepted) do
-    maximum = candidates |> Enum.map(& &1.revision_number) |> Enum.max()
-    heads = Enum.filter(candidates, &(&1.revision_number == maximum))
-
-    case heads do
+  defp select_candidates(candidates, ctx) do
+    case max_numbered(candidates) do
       [head] ->
-        if linear_from_head?(head, candidates, accepted),
+        if covers_head?(head, candidates, ctx),
           do: head.revision_digest,
           else: :contested
 
@@ -425,33 +468,75 @@ defmodule CharterAgreementProtocol.Chain do
     end
   end
 
-  defp linear_candidates?(candidates, accepted) do
-    maximum = candidates |> Enum.map(& &1.revision_number) |> Enum.max()
-
-    case Enum.filter(candidates, &(&1.revision_number == maximum)) do
-      [head] -> linear_from_head?(head, candidates, accepted)
-      _siblings -> false
-    end
+  defp max_numbered(facts) do
+    maximum = facts |> Enum.map(& &1.revision_number) |> Enum.max()
+    Enum.filter(facts, &(&1.revision_number == maximum))
   end
 
-  defp linear_from_head?(head, candidates, accepted) do
+  # A head uniquely governs only when every eligible candidate is the head or
+  # an ancestor of it along an unbroken accepted chain. Ancestry is precomputed
+  # once per context (memoized walk) instead of re-walked per candidate pair.
+  defp covers_head?(head, candidates, ctx) do
+    head_set = Map.get(ctx.ancestry, head.revision_digest) || MapSet.new()
+
+    Enum.all?(candidates, fn facts ->
+      facts.revision_digest == head.revision_digest or
+        MapSet.member?(head_set, facts.revision_digest)
+    end)
+  end
+
+  defp view_context(facts) do
+    accepted = accepted_revisions(facts.revision_facts)
     by_digest = Map.new(accepted, &{&1.revision_digest, &1})
-    Enum.all?(candidates, &ancestor_or_self?(&1, head, by_digest))
+
+    %{
+      accepted: accepted,
+      ancestry: build_ancestry(accepted, by_digest),
+      superseded: MapSet.new(facts.superseded_revision_digests)
+    }
   end
 
-  defp ancestor_or_self?(candidate, head, by_digest) do
-    candidate.revision_digest == head.revision_digest or
-      ancestor?(candidate.revision_digest, head.prev_revision_digest, by_digest)
+  defp build_ancestry(facts, by_digest) do
+    {sets, _memo} =
+      Enum.reduce(facts, {%{}, %{}}, fn element, {sets, memo} ->
+        digest = element.revision_digest
+        {set, memo} = ancestry_set(digest, by_digest, memo)
+        {Map.put(sets, digest, set), memo}
+      end)
+
+    sets
   end
 
-  defp ancestor?(_candidate, nil, _by_digest), do: false
-  defp ancestor?(candidate, candidate, _by_digest), do: true
-
-  defp ancestor?(candidate, current, by_digest) do
-    case Map.get(by_digest, current) do
-      %RevisionFacts{prev_revision_digest: previous} -> ancestor?(candidate, previous, by_digest)
-      nil -> false
+  defp ancestry_set(digest, by_digest, memo) do
+    case memo do
+      %{^digest => set} -> {set, memo}
+      _ -> ancestry_walk(digest, by_digest, memo)
     end
+  end
+
+  defp ancestry_walk(digest, by_digest, memo) do
+    case Map.get(by_digest, digest) do
+      %RevisionFacts{prev_revision_digest: previous} when is_binary(previous) ->
+        linked_ancestry(digest, previous, by_digest, memo)
+
+      _root_or_missing ->
+        unreachable_set(digest, memo)
+    end
+  end
+
+  defp linked_ancestry(digest, previous, by_digest, memo) do
+    if Map.has_key?(by_digest, previous) do
+      {parent_set, memo} = ancestry_set(previous, by_digest, memo)
+      set = MapSet.put(parent_set, digest)
+      {set, Map.put(memo, digest, set)}
+    else
+      unreachable_set(digest, memo)
+    end
+  end
+
+  defp unreachable_set(digest, memo) do
+    set = MapSet.new([digest])
+    {set, Map.put(memo, digest, set)}
   end
 
   defp effective?(revision, at) do
@@ -464,11 +549,13 @@ defmodule CharterAgreementProtocol.Chain do
   end
 
   defp terminated?(facts, at) do
+    ctx = view_context(facts)
+
     Enum.any?(facts.termination_facts, fn %TerminationFacts{} = termination ->
       effective = Timestamp.compare(termination.effective_at, at) in [:lt, :eq]
 
       effective and
-        select(facts, termination.effective_at) == termination.governing_revision_digest
+        do_select(facts, termination.effective_at, ctx) == termination.governing_revision_digest
     end)
   end
 

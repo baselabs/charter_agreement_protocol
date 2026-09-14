@@ -265,6 +265,20 @@ defmodule CharterAgreementProtocol.ChainTest do
     assert {:error, %Error{code: :invalid_type}} =
              Chain.verify([:not_bytes], [], [], [], Limits.default())
 
+    assert {:error, %Error{code: :invalid_type}} =
+             Chain.verify([setup.genesis.bytes | :tail], [], [], [], Limits.default())
+
+    tiny_bytes = %{Limits.default() | max_artifact_set_bytes: 2}
+
+    assert {:error, %Error{code: :limit_exceeded, subject: ["chain", "bytes"]}} =
+             Chain.verify(
+               [setup.genesis.bytes],
+               Enum.map(ChainFixture.dual_acceptances(setup.genesis, setup), & &1.compact),
+               ChainFixture.descriptors(setup),
+               [],
+               tiny_bytes
+             )
+
     assert_chain_error([], [], [], [])
     assert_chain_error([], [], ChainFixture.descriptors(setup), [])
     assert_chain_error([setup.genesis.bytes], [], [setup.issuer.compact], [])

@@ -14,6 +14,17 @@ defmodule CharterAgreementProtocol.Json do
 
   @ijson_max 9_007_199_254_740_991
 
+  # An integer lexeme longer than 21 digits can never round-trip: ECMAScript
+  # prints doubles below 1e21 in full digits (at most 21) and switches to
+  # exponent spelling at 1e21, so the canonical re-encoding never equals a
+  # longer lexeme. Rejecting by digit count bounds conversion cost linearly
+  # without changing any accepted value. A float lexeme longer than 32 bytes is
+  # likewise never the canonical spelling of its double (longest is ~25), so the
+  # bound only rejects non-canonical spellings — recorded as a deliberate
+  # standalone-decoder tightening.
+  @integer_lexeme_digit_limit 21
+  @float_lexeme_byte_limit 32
+
   @type value ::
           :null
           | {:boolean, boolean()}
@@ -131,19 +142,21 @@ defmodule CharterAgreementProtocol.Json do
 
   defp sink(value), do: value
 
+  defp resolve_integer("-" <> digits) when byte_size(digits) > @integer_lexeme_digit_limit,
+    do: throw({:cap_error, :number_not_double_expressible})
+
+  defp resolve_integer(lexeme) when byte_size(lexeme) > @integer_lexeme_digit_limit + 1,
+    do: throw({:cap_error, :number_not_double_expressible})
+
   defp resolve_integer(lexeme) do
     integer = String.to_integer(lexeme)
 
     if abs(integer) <= @ijson_max do
       {:integer, integer}
     else
-      case Float.parse(lexeme) do
-        {float, ""} ->
-          resolve_large_integer(lexeme, float)
-
-        _error ->
-          throw({:cap_error, :number_not_double_expressible})
-      end
+      # A digit-only lexeme within the 21-digit bound converts exactly;
+      # Float.parse would be equivalent here and can no longer fail.
+      resolve_large_integer(lexeme, integer * 1.0)
     end
   end
 
@@ -153,6 +166,9 @@ defmodule CharterAgreementProtocol.Json do
       _error -> throw({:cap_error, :number_not_double_expressible})
     end
   end
+
+  defp resolve_float(lexeme) when byte_size(lexeme) > @float_lexeme_byte_limit,
+    do: throw({:cap_error, :number_not_double_expressible})
 
   defp resolve_float(lexeme) do
     case Float.parse(lexeme) do

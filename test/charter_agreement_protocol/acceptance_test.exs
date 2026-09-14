@@ -159,6 +159,47 @@ defmodule CharterAgreementProtocol.AcceptanceTest do
              )
   end
 
+  test "the verified-context seam keeps its typed guards and verifies identically" do
+    setup = setup_acceptance()
+
+    assert {:ok, %AcceptanceFacts{}} =
+             Acceptance.verify_verified(
+               setup.acceptance.compact,
+               setup.revision,
+               setup.chain,
+               Limits.default()
+             )
+
+    assert {:error, %Error{code: :invalid_type}} =
+             Acceptance.verify_verified(:not_bytes, setup.revision, setup.chain, Limits.default())
+
+    assert {:error, %Error{code: :invalid_type}} =
+             Acceptance.verify_verified(
+               setup.acceptance.compact,
+               setup.revision,
+               setup.chain,
+               %{}
+             )
+
+    invalid_limits = %{Limits.default() | max_bytes: -1}
+
+    assert {:error, %Error{code: :invalid_limits}} =
+             Acceptance.verify_verified(
+               setup.acceptance.compact,
+               setup.revision,
+               setup.chain,
+               invalid_limits
+             )
+
+    assert {:error, %Error{code: :invalid_limits}} =
+             Acceptance.verify_verified(
+               setup.acceptance.compact,
+               :not_a_revision,
+               setup.chain,
+               invalid_limits
+             )
+  end
+
   test "retains superseded and contested descriptor positions without choosing freshness" do
     issuer = DescriptorFixture.genesis()
     successor = DescriptorFixture.successor(issuer, 2)

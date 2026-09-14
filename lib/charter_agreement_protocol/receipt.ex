@@ -174,8 +174,16 @@ defmodule CharterAgreementProtocol.Receipt do
                          {:string, "indeterminate"}
                        ]}
                   ),
-                  Schema.field("occurred_at", required?: true, types: [:string]),
-                  Schema.field("recorded_at", required?: true, types: [:string]),
+                  Schema.field("occurred_at",
+                    required?: true,
+                    types: [:string],
+                    constraint: {:string_bytes, 1, 64}
+                  ),
+                  Schema.field("recorded_at",
+                    required?: true,
+                    types: [:string],
+                    constraint: {:string_bytes, 1, 64}
+                  ),
                   Schema.field("extensions", required?: true, types: [:object])
                 ],
                 cross_field: [

@@ -42,6 +42,22 @@ defmodule CharterAgreementProtocol.JsonTest do
     assert_error(Json.decode("1e999"), :invalid_number)
   end
 
+  test "rejects oversized number lexemes before conversion" do
+    twenty_one = "100000000000000000000"
+    assert {:ok, {:float, 1.0e20}} = Json.decode(twenty_one)
+    assert {:ok, {:float, -1.0e20}} = Json.decode("-" <> twenty_one)
+    assert_error(Json.decode("1" <> twenty_one), :number_not_double_expressible)
+    assert_error(Json.decode("-" <> "1" <> twenty_one), :number_not_double_expressible)
+    assert_error(Json.decode(String.duplicate("9", 22)), :number_not_double_expressible)
+
+    assert {:ok, {:float, 1.0e-25}} = Json.decode("0.0000000000000000000000001")
+
+    assert_error(
+      Json.decode("0." <> String.duplicate("0", 40) <> "1"),
+      :number_not_double_expressible
+    )
+  end
+
   test "rejects non-binary input with a value-free typed error" do
     assert {:error, %Error{code: :invalid_type, subject: ["json"], detail: nil}} =
              Json.decode(%{credential: "do-not-echo"})

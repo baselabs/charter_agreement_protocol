@@ -17,7 +17,8 @@ defmodule CharterAgreementProtocol.Limits do
     :max_object_members,
     :max_array_items,
     :max_string_bytes,
-    :max_artifact_set_items
+    :max_artifact_set_items,
+    :max_artifact_set_bytes
   ]
 
   @defaults [
@@ -26,7 +27,8 @@ defmodule CharterAgreementProtocol.Limits do
     max_object_members: 1_024,
     max_array_items: 4_096,
     max_string_bytes: 65_536,
-    max_artifact_set_items: 1_024
+    max_artifact_set_items: 1_024,
+    max_artifact_set_bytes: 67_108_864
   ]
 
   @maximums %{
@@ -35,7 +37,8 @@ defmodule CharterAgreementProtocol.Limits do
     max_object_members: 65_536,
     max_array_items: 65_536,
     max_string_bytes: 1_048_576,
-    max_artifact_set_items: 4_096
+    max_artifact_set_items: 4_096,
+    max_artifact_set_bytes: 1_073_741_824
   }
 
   @enforce_keys @fields
@@ -47,7 +50,8 @@ defmodule CharterAgreementProtocol.Limits do
           max_object_members: non_neg_integer(),
           max_array_items: non_neg_integer(),
           max_string_bytes: non_neg_integer(),
-          max_artifact_set_items: non_neg_integer()
+          max_artifact_set_items: non_neg_integer(),
+          max_artifact_set_bytes: non_neg_integer()
         }
 
   @doc "The closed limit-field set."
