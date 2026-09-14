@@ -52,7 +52,7 @@ defmodule CharterAgreementProtocol.MixProject do
 
   defp deps do
     [
-      {:agent_blueprint_protocol, "== 0.1.1", only: [:dev, :test], runtime: false},
+      {:agent_blueprint_protocol, "== 0.4.1", only: [:dev, :test], runtime: false},
       {:bounded_authority_protocol, "== 0.1.2", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
