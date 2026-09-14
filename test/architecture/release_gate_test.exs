@@ -43,6 +43,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     "conformance.verify",
     "conformance.mutations",
     "verifier.agreement",
+    "differential.check",
     "dialyzer",
     "docs --warnings-as-errors",
     "release.candidate"

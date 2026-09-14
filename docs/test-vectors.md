@@ -30,7 +30,7 @@ it.
 ## Corpus layout
 
 The corpus ships at `priv/conformance/`: one canonical `index.json` plus 14
-case files under `cases/` (85 certified cases total). Each case file is
+case files under `cases/` (100 certified cases total). Each case file is
 `cases/<surface-with-dashes>.json` with the closed members `format`, and
 `cases`; each case carries `id`, `surface`, `class`, `input`, and `expect`.
 Inputs are exact wire bytes (compact strings, canonical revision text,
@@ -83,4 +83,4 @@ the report is the normative `spec/schemas/corpus-index.json` and
 The Node verifier (`verifier/check-corpus.mjs`, run as
 `node verifier/check-corpus.mjs priv/conformance`) is the worked reference
 for steps 2–4: same canonical JSON encoder rules, same domain separators,
-same report serialization, byte-identical to Elixir on all 85 cases.
+same report serialization, byte-identical to Elixir on all 100 cases.

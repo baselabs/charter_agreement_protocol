@@ -4,7 +4,8 @@
 
 | Version | Supported |
 | --- | --- |
-| 0.1.x | yes |
+| 0.3.x | yes |
+| 0.1.x – 0.2.x | verification only |
 
 ## Reporting a vulnerability
 
@@ -19,5 +20,9 @@ result.
 
 ## Security boundary
 
-The package is currently a scaffold and ships no runtime behavior. The
-protocol's security boundary is stated here as its surface lands.
+The package is a pure verification library: it decodes and verifies signed
+charter evidence (Ed25519 and, from `protocol_revision` 3, ML-DSA) and never
+signs, authorizes, reads a clock, or performs I/O. The full proves / never-proves
+boundary is documented in the shipped security model
+(`docs/guides/security-model.md`) and the normative security considerations
+(`spec/security-considerations.md`).

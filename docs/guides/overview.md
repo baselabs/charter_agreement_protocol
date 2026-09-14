@@ -105,7 +105,7 @@ their code at runtime.
 
 ## Status
 
-The approved protocol core, certified 85-case corpus, independent second
+The approved protocol core, certified 100-case corpus, independent second
 verifier, 22-mutation battery, and release-candidate gates are implemented and
 green in CI. The package is published on Hex as 0.1.0 - the registry
 checksum equals the release gate's archive SHA; see the README status

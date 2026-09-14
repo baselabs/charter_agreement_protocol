@@ -271,17 +271,14 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   end
 
   defp decode_verification_key(encoded, algorithm) do
-    case Algorithm.key_row_for(algorithm) do
-      %{public_key_bytes: length} ->
-        with {:ok, public_key} <- Base64Url.decode(encoded),
-             true <- byte_size(public_key) == length do
-          {:ok, public_key}
-        else
-          _failure -> {:error, :key_invalid}
-        end
+    length = Algorithm.key_length(algorithm)
 
-      nil ->
-        {:error, :key_invalid}
+    with true <- is_integer(length),
+         {:ok, public_key} <- Base64Url.decode(encoded),
+         true <- byte_size(public_key) == length do
+      {:ok, public_key}
+    else
+      _failure -> {:error, :key_invalid}
     end
   end
 

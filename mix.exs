@@ -1,7 +1,7 @@
 defmodule CharterAgreementProtocol.MixProject do
   use Mix.Project
 
-  @version "0.2.1"
+  @version "0.3.0"
   @source_url "https://github.com/baselabs/charter_agreement_protocol"
 
   def project do
@@ -85,7 +85,9 @@ defmodule CharterAgreementProtocol.MixProject do
         "docs/notebooks",
         "docs/profiles/indexed-price.md",
         "docs/adr/no-versioning-rule.md",
-        "docs/adr/conformance-release-candidate.md"
+        "docs/adr/conformance-release-candidate.md",
+        "docs/adr/algorithm-name-agility.md",
+        "docs/adr/ml-dsa-admission.md"
       ],
       licenses: ["Apache-2.0"],
       links: %{
@@ -127,6 +129,9 @@ defmodule CharterAgreementProtocol.MixProject do
         "docs/profiles/indexed-price.md",
         "docs/adr/no-versioning-rule.md",
         "docs/adr/conformance-release-candidate.md",
+        "docs/adr/algorithm-name-agility.md",
+        "docs/adr/ml-dsa-admission.md",
+        "docs/release-runbook.md",
         "spec/core.md",
         "spec/requirements.md",
         "spec/security-considerations.md",
@@ -158,7 +163,10 @@ defmodule CharterAgreementProtocol.MixProject do
           "docs/test-vectors.md",
           "docs/profiles/indexed-price.md",
           "docs/adr/no-versioning-rule.md",
-          "docs/adr/conformance-release-candidate.md"
+          "docs/adr/conformance-release-candidate.md",
+          "docs/adr/algorithm-name-agility.md",
+          "docs/adr/ml-dsa-admission.md",
+          "docs/release-runbook.md"
         ],
         Specification: [
           "spec/core.md",
@@ -226,6 +234,7 @@ defmodule CharterAgreementProtocol.MixProject do
       "conformance.verify": "run --no-start scripts/check_conformance.exs",
       "conformance.mutations": "run --no-start scripts/check_conformance_mutations.exs",
       "verifier.agreement": "run --no-start scripts/check_verifier_agreement.exs",
+      "differential.check": "run --no-start scripts/check_differential.exs",
       "release.candidate": "run --no-start scripts/check_release_candidate.exs",
       quality: [
         "hex.audit",
@@ -238,6 +247,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "conformance.verify",
         "conformance.mutations",
         "verifier.agreement",
+        "differential.check",
         "dialyzer",
         "docs --warnings-as-errors",
         "release.candidate"

@@ -136,6 +136,15 @@ defmodule CharterAgreementProtocol.Algorithm do
   def accepted_name?(name) when is_binary(name), do: row_for(name) != nil
   def accepted_name?(_name), do: false
 
+  @doc false
+  @spec key_length(term()) :: non_neg_integer() | nil
+  def key_length(key_algorithm) do
+    case key_row_for(key_algorithm) do
+      %{public_key_bytes: length} -> length
+      nil -> nil
+    end
+  end
+
   @doc "The emission name producers use when the caller selects none."
   @spec default_emission_name() :: binary()
   def default_emission_name, do: "Ed25519"

@@ -132,7 +132,7 @@ contain only definition and field names from the protocol-owned table.
   observations and whose not-applicable cells carry non-empty reasons; and
 - projected outputs for valid cases, so a verdict-only green is refused.
 
-The shipped corpus contains 85 cases. Completion is determined by the compiled
+The shipped corpus contains 100 cases. Completion is determined by the compiled
 surface/class obligation floor, not a target count: every required cell has one
 or more executed cases, every other cell has a non-empty not-applicable reason,
 and counts must equal observations. The index also binds the compiled extension
@@ -166,20 +166,24 @@ does ship.
 
 A Party Descriptor is an attached compact JWS with protected type
 `cap+party`. Its protected header is closed to `alg`, `kid`, and `typ`; `alg`
-must be `EdDSA`, `kid` uses the bounded ASCII protocol grammar, and the signature
-is exactly 64 Ed25519 bytes. Protected-header and payload bytes must already be
-canonical JSON. Before runtime signature verification, CAP rejects noncanonical
+must be a registry name (`EdDSA` at any accepted revision, `Ed25519` from
+revision 2, `ML-DSA-44/65/87` from revision 3), `kid` uses the bounded ASCII
+protocol grammar, and the signature length is the registry row's exact value
+(64 bytes for the classical names, 2420/3309/4627 for the ML-DSA
+parameterizations). Protected-header and payload bytes must already be
+canonical JSON. Before runtime signature verification on the Ed25519 rows, CAP rejects noncanonical
 point encodings and all eight low-order torsion encodings for both the public
-key and signature `R`. It also rejects signature scalars outside the canonical
-subgroup-order range. The `kid` is only a lookup hint and has no authority by
-itself.
+key and signature `R`, and signature scalars outside the canonical
+subgroup-order range; the ML-DSA rows enforce the registry's exact public-key
+and signature byte lengths before cryptographic work. The `kid` is only a lookup
+hint and has no authority by itself.
 
 The canonical payload contains exactly these claims:
 
-- `protocol_revision`, fixed at the protocol data value `1`;
+- `protocol_revision`, 1 through 3, carried verbatim from the payload;
 - conditional `party_id` and `prev_descriptor_digest` tagged digests;
 - `descriptor_number`, beginning at 1 and increasing by exactly one;
-- 1–32 unique Ed25519 verification keys, with at least one active key;
+- 1–32 unique verification keys (Ed25519, or ML-DSA from `protocol_revision` 3; mixed sets are legal), with at least one active key;
 - 0–16 non-normative attestation hints, which this library never dereferences;
 - a closed `extensions` envelope with `critical` and `optional` objects,
   validated against the compiled registry; and
@@ -410,8 +414,10 @@ and compare prices.
 
 ## Signing inputs and compact assembly
 
-Each producer accepts exactly `%{"kid" => kid, "claims" => claims}`. CAP builds
-the closed `{alg: "EdDSA", typ, kid}` protected header and returns
+Each producer accepts `%{"kid" => kid, "claims" => claims}` with an optional
+`"algorithm"` member selecting the emission pair — `"Ed25519"` (the default,
+`protocol_revision` 2) or `"ML-DSA-65"` (`protocol_revision` 3). CAP builds
+the closed `{alg, typ, kid}` protected header with the selected name and returns
 `%SigningInput{kind, protected_segment, payload_segment, message}` where
 `message` is the exact RFC 7515 signing input. Descriptor and Receipt producers
 take only that map. Acceptance and Termination producers also take the caller's
@@ -471,7 +477,7 @@ allowlisted identity.
 ## Conformance and release candidate
 
 `mix conformance.verify` runs the certified corpus through the Elixir CLI.
-`mix conformance.mutations` creates isolated scratch copies and proves all 22
+`mix conformance.mutations` creates isolated scratch copies and proves all 25
 named source defects go red; each command first proves the unmodified baseline
 green, and `corpus-expectation-flip` runs last. `mix verifier.agreement` proves
 repository and unpacked-package report identity, executes independent verifier

@@ -14,7 +14,7 @@ $ mix quality
 `mix quality` is the complete gate battery, identical locally and in CI:
 dependency audits, format check, warnings-as-errors compile, strict credo,
 the full test suite with its coverage threshold, the certified conformance
-corpus (with regeneration byte-identity), all 22 named source mutations,
+corpus (with regeneration byte-identity), all 25 named source mutations,
 Elixir/TypeScript verifier agreement over repository and unpacked-package
 corpora, dialyzer, docs with warnings-as-errors, and the release-candidate
 gate (reproducible archive, exact package boundary). See
@@ -84,3 +84,10 @@ what and the why in the commit body. CI must be green at the exact pushed SHA.
 
 See [SECURITY.md](SECURITY.md) — do not open a public issue for security
 content.
+
+## Releasing
+
+The operator sequence for cutting a package release — gates, identity
+recording, archive-digest verification, tag, publish authority, and
+post-publish re-verification — lives in
+[docs/release-runbook.md](docs/release-runbook.md).

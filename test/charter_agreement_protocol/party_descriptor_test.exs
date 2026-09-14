@@ -317,6 +317,72 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
     )
   end
 
+  test "registry lookups fail closed for unknown names and shapes" do
+    alias CharterAgreementProtocol.Algorithm
+
+    assert Algorithm.row_for("NotAName") == nil
+    assert Algorithm.row_for(42) == nil
+    assert Algorithm.key_row_for("NotAName") == nil
+    assert Algorithm.key_row_for(%{}) == nil
+    assert Algorithm.key_length("Ed25519") == 32
+    assert Algorithm.key_length("ML-DSA-87") == 2592
+    assert Algorithm.key_length("NotAName") == nil
+    assert Algorithm.key_length(7) == nil
+    assert Algorithm.accepted_name?(42) == false
+
+    assert {:error, %Error{code: :signature_invalid}} =
+             CharterAgreementProtocol.Signature.verify(
+               :not_binary,
+               <<0::512>>,
+               <<0::256>>,
+               "Ed25519"
+             )
+
+    assert {:error, %Error{code: :signature_invalid}} =
+             CharterAgreementProtocol.Signature.verify(
+               "message",
+               <<0::512>>,
+               <<0::256>>,
+               "NotAName"
+             )
+  end
+
+  test "all three ML-DSA parameterizations verify with their own key and signature sizes" do
+    for {algorithm, crypto, key_bytes, sig_bytes} <- [
+          {"ML-DSA-44", :mldsa44, 1312, 2420},
+          {"ML-DSA-65", :mldsa65, 1952, 3309},
+          {"ML-DSA-87", :mldsa87, 2592, 4627}
+        ] do
+      {public, private} = :crypto.generate_key(crypto, [])
+      assert byte_size(public) == key_bytes
+
+      message = "verification boundary probe"
+      sig = :crypto.sign(crypto, :none, message, private)
+      assert byte_size(sig) == sig_bytes
+
+      assert :ok == CharterAgreementProtocol.Signature.verify(message, sig, public, algorithm)
+
+      assert {:error, %Error{code: :signature_invalid}} =
+               CharterAgreementProtocol.Signature.verify(
+                 message,
+                 sig,
+                 binary_part(public, 0, key_bytes - 1),
+                 algorithm
+               )
+
+      assert {:error, %Error{code: :signature_invalid}} =
+               CharterAgreementProtocol.Signature.verify(
+                 message,
+                 binary_part(sig, 0, sig_bytes - 1),
+                 public,
+                 algorithm
+               )
+
+      assert {:error, %Error{code: :signature_invalid}} =
+               CharterAgreementProtocol.Signature.verify("tampered", sig, public, algorithm)
+    end
+  end
+
   test "a key whose encoding length contradicts its declared algorithm rejects" do
     {_ed_public, ed_private} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<1>>, 32))
     {ml_public, _} = :crypto.generate_key(:mldsa65, [])

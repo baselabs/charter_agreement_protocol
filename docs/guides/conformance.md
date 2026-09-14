@@ -7,7 +7,7 @@ read about is the protocol you run.
 ## The certified corpus
 
 The shipped corpus (`priv/conformance`, included in the package archive)
-contains 85 certified cases across 14 case files, covering every compiled
+contains 100 certified cases across 14 case files, covering every compiled
 applicability surface: foundational codecs (base64url, JSON, canonicalization,
 digests), schema validation, party descriptors, descriptor chains, charter
 revisions, acceptances and equivocation, terminations, chain verification,
@@ -43,7 +43,7 @@ For the current candidate:
 | Index SHA-256 (base64url) | `Ty7kChMw3GusTSiJIgkwTCwIs7Ao9rWr8J9ok9oN1FM` |
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
 | Specification digest | `sha-256:JuLNnhAk2rv_kuSoG3HdAKInxKpSftKgNJjhxtlA214` |
-| Certified cases | 85 |
+| Certified cases | 100 |
 
 ## The requirements matrix
 
@@ -109,7 +109,7 @@ exactly the member and required sets of the codec definition it serves, and
 every properties-bearing schema object must be closed. The extended
 `conformance.verify` completes in ~1.7s against a 3s budget.
 - `mix conformance.mutations` — creates isolated scratch copies and proves all
-  **22 named source defects go red**: JCS number defeat, padding acceptance,
+  **25 named source defects go red**: JCS number defeat, padding acceptance,
   separator collapse, unknown-member acceptance, chain signature skip, digest
   equality skip, Ed25519 defeat, typ confusion, reason-code uncheck, precedence
   collapse, facts-union suppression, fork-topology suppression, contested

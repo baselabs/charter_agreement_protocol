@@ -34,7 +34,7 @@ metadata = %{
   "package_version" => Mix.Project.config()[:version],
   "registry_digest" => index["registry_digest"],
   "spec_digest" => spec_digest,
-  "verifier_runtime" => "node>=24"
+  "verifier_runtime" => "node>=24.8"
 }
 
 tag_value = fn
@@ -42,6 +42,26 @@ tag_value = fn
   value when is_binary(value) -> {:string, value}
   nil -> :null
 end
+
+# The archive identity is pinned repository-side (.release-archive.sha256),
+# never inside the packaged metadata: a tarball cannot carry its own digest
+# without changing it. The release-candidate gate rebuilds the archive twice,
+# requires reproducibility, and requires both builds to equal this pin.
+archive_path = Path.join(System.tmp_dir!(), "cap-metadata-archive.tar")
+
+{output, status} =
+  System.cmd("mix", ["hex.build", "--output", archive_path], stderr_to_stdout: true)
+
+if status != 0, do: raise("archive build failed\n#{output}")
+
+archive_sha =
+  archive_path
+  |> File.read!()
+  |> then(&:crypto.hash(:sha256, &1))
+  |> Base.url_encode64(padding: false)
+
+File.rm!(archive_path)
+File.write!(".release-archive.sha256", archive_sha <> "\n")
 
 {:ok, bytes} =
   Canonicalization.encode(

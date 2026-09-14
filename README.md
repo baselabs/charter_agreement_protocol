@@ -30,7 +30,7 @@ for a contested view is a countersigned supersession revision.
 
 The foundation is byte-exact by construction: strict unpadded base64url,
 deterministic tagged JSON decoding, RFC 8785 canonicalization, and
-domain-separated SHA-256 digests. A certified 85-case corpus runs through a
+domain-separated SHA-256 digests. A certified 100-case corpus runs through a
 pure Elixir runner and a builtins-only Node TypeScript verifier that must
 produce byte-identical canonical reports — two independent implementations,
 zero shared code.
@@ -63,7 +63,7 @@ $ mix run -e 'CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/ch
 ```
 
 The command prints the canonical JSON report; a returned status of `0` means
-all 85 certified cases recomputed and agreed. Full walkthrough:
+all 100 certified cases recomputed and agreed. Full walkthrough:
 [Getting started](docs/guides/getting-started.md).
 
 ## Try it
@@ -123,10 +123,13 @@ all 85 certified cases recomputed and agreed. Full walkthrough:
 The approved protocol core, normative specification set, certified corpus
 with four recorded identities, independent second verifier, mutation
 battery, and release-candidate gates are implemented and green in CI. The
-0.2.0 package adds `protocol_revision` 2 (the RFC 9864 alg-name bundle —
-`Ed25519` emission, dual-name acceptance, the per-artifact binding rule);
-0.1.0 artifacts remain verifiable. Building an archive remains
-verification evidence only — never authority to publish.
+0.3.0 package adds `protocol_revision` 3 — the ML-DSA registry act
+(RFC 9964): the `ML-DSA-44/65/87` names verify from revision 3, the
+descriptor key grammar admits ML-DSA keys gated on revision, producers
+mint `ML-DSA-65` at revision 3 alongside `Ed25519` at revision 2, and the
+resource boundary is byte-weighted for PQ-sized artifacts. `protocol_revision`
+2 (RFC 9864 alg names) and revision-1 artifacts remain verifiable. Building
+an archive remains verification evidence only — never authority to publish.
 
 ## Development
 
@@ -137,7 +140,7 @@ mix quality
 
 `mix quality` is the complete gate — audits, formatting, warnings-as-errors
 compile, strict credo, the full test suite with its coverage threshold,
-certified-conformance verification and regeneration identity, all 22 named
+certified-conformance verification and regeneration identity, all 25 named
 source mutations, Elixir/TypeScript verifier agreement over repository and
 unpacked-package corpora, dialyzer, docs, and the reproducible
 release-candidate archive. Contribution bar and invariants:

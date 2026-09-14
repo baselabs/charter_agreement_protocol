@@ -500,6 +500,67 @@ defmodule CharterAgreementProtocol.SigningInputTest do
     )
   end
 
+  test "the producer input shape fails closed on malformed claims and kids" do
+    descriptor = DescriptorFixture.genesis()
+
+    assert {:error, %Error{code: :signing_input_invalid}} =
+             CharterAgreementProtocol.descriptor_signing_input(%{
+               "kid" => descriptor.kid,
+               "claims" => Map.put(mint(descriptor.claims), :atom_key, 1)
+             })
+
+    assert {:error, %Error{code: :signing_input_invalid}} =
+             CharterAgreementProtocol.descriptor_signing_input(%{
+               "kid" => "",
+               "claims" => mint(descriptor.claims)
+             })
+
+    assert {:error, %Error{code: :signing_input_invalid}} =
+             CharterAgreementProtocol.descriptor_signing_input(%{
+               "kid" => 5,
+               "claims" => mint(descriptor.claims)
+             })
+
+    assert {:error, %Error{code: :signing_input_invalid}} =
+             CharterAgreementProtocol.descriptor_signing_input(%{
+               "kid" => "bad kid!",
+               "claims" => mint(descriptor.claims)
+             })
+  end
+
+  test "set-aware producers refuse coordinates the verified set cannot resolve" do
+    setup = ChainFixture.base()
+    {:ok, genesis_set} = raw_set(setup, [setup.genesis], [], [])
+
+    missing_digest =
+      CharterAgreementProtocol.CharterRevisionFixture.tagged(
+        :charter_revision_content,
+        "not-in-set"
+      )
+
+    missing_acceptance =
+      AcceptanceFixture.claims(setup.genesis, setup.issuer, "issuer", %{
+        "revision_digest" => missing_digest
+      })
+
+    assert {:error, %Error{code: :signing_refused}} =
+             CharterAgreementProtocol.acceptance_signing_input(
+               envelope(setup.issuer.kid, missing_acceptance),
+               genesis_set
+             )
+
+    missing_termination =
+      TerminationFixture.claims(setup.genesis, setup.issuer, "issuer", %{
+        "governing_revision_digest" => missing_digest
+      })
+
+    assert {:error, %Error{code: :signing_refused}} =
+             CharterAgreementProtocol.termination_signing_input(
+               envelope(setup.issuer.kid, missing_termination),
+               genesis_set
+             )
+  end
+
   test "the producer mints the ML-DSA-65 emission pair and refuses the others" do
     {ml_public, ml_private} = :crypto.generate_key(:mldsa65, [])
 

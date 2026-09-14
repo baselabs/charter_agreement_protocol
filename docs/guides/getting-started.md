@@ -93,7 +93,7 @@ iex> Limits.default()
 
 ## Verify the certified corpus from your dependency
 
-The package ships the certified 85-case conformance corpus. The CLI is the sole
+The package ships the certified 100-case conformance corpus. The CLI is the sole
 filesystem adapter and refuses any corpus whose raw index identity is not the
 certified release pin. From a dependent project (the corpus unpacks with the
 package under its `priv/conformance`):

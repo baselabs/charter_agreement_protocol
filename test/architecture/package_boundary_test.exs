@@ -25,6 +25,17 @@ defmodule CharterAgreementProtocol.Architecture.PackageBoundaryTest do
     assert metadata["registry_digest"] == index["registry_digest"]
     assert metadata["index_sha256_base64url"] == @index_sha
     assert metadata["archive_is_publication_authorization"] == false
+
+    assert metadata["verifier_runtime"] == "node>=24.8"
+  end
+
+  test "the repository pins the release archive digest outside the package" do
+    pin = File.read!(".release-archive.sha256") |> String.trim()
+
+    assert String.match?(pin, ~r/^[A-Za-z0-9_-]{43}$/)
+
+    assert "priv/release-metadata.json" in Mix.Project.config()[:package][:files]
+    refute ".release-archive.sha256" in Mix.Project.config()[:package][:files]
   end
 
   test "release metadata pins the live specification digest" do

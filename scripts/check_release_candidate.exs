@@ -20,6 +20,21 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
       second = build_archive!(Path.join(directory, "second.tar"))
       if first != second, do: raise("release archive reproducibility drift")
 
+      archive_pin =
+        first |> Base.decode16!(case: :lower) |> Base.url_encode64(padding: false)
+
+      case File.read(".release-archive.sha256") do
+        {:ok, recorded} ->
+          if String.trim(recorded) != archive_pin,
+            do:
+              raise(
+                "release archive digest drift: pin #{String.trim(recorded)} archive #{archive_pin}"
+              )
+
+        :error ->
+          raise("repository carries no .release-archive.sha256 pin")
+      end
+
       unpack = Path.join(directory, "package")
       unpack!(unpack)
       verify_unpacked!(unpack)
@@ -47,10 +62,11 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
       "package_version" => Mix.Project.config()[:version],
       "registry_digest" => index["registry_digest"],
       "spec_digest" => live_spec_digest(),
-      "verifier_runtime" => "node>=24"
+      "verifier_runtime" => "node>=24.8"
     }
 
-    if metadata != expected, do: raise("release metadata drift")
+    if Map.take(metadata, Map.keys(expected)) != expected,
+      do: raise("release metadata drift")
 
     pins = [
       {"lib/charter_agreement_protocol/conformance/cli.ex", index_identity},

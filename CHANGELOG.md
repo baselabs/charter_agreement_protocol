@@ -2,6 +2,69 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
+## [0.3.0] — 2026-09-14
+
+The standards-release: `protocol_revision` 3 (the ML-DSA registry act) plus
+the audit hardening batch.
+
+### Protocol (wire-visible, revision-gated)
+
+- ML-DSA admission (RFC 9964; ADR `ml-dsa-admission.md`): the registry gains
+  `ML-DSA-44`, `ML-DSA-65`, and `ML-DSA-87` at `protocol_revision` 3, each
+  with its exact public-key and signature byte lengths as registry data.
+  Verification dispatches per registry row on both implementations; the
+  descriptor key grammar admits ML-DSA keys gated on descriptor revision
+  (an ML-DSA key in a revision-1/2 descriptor rejects), and mixed-algorithm
+  key sets are legal with the Ed25519→ML-DSA bridge exercised by the corpus.
+  Producers mint exactly (`Ed25519`, revision 2) or (`ML-DSA-65`,
+  revision 3) via the optional `"algorithm"` input member.
+- Verdict audit: red→green — (ML-DSA names, revision 3), (EdDSA, revision 3),
+  (Ed25519, revision 3), mixed-revision ML-DSA views. Nothing green→red on
+  the wire. Unknown revisions still fail closed (revision 4 carries the
+  fail-closed corpus probe).
+
+### Resource boundary (not wire-visible; recorded policy)
+
+- `Limits` gains `max_artifact_set_bytes` (default 64 MiB, compiled maximum
+  1 GiB); set verification bounds items, bytes, proper-list shape, and
+  binaries in one pre-decode traversal — improper lists return typed errors.
+- `Chain.verify` passes its own verified facts to the acceptance and
+  termination seams, removing the O(A×D) per-artifact re-verification;
+  governing computation memoizes ancestry per view.
+- The JSON decoder rejects integer lexemes over 21 digits and float lexemes
+  over 32 bytes before conversion (linear-time rejection; no accepted value
+  changes — oversized spellings could never round-trip).
+- Timestamp-valued members carry 1..64 string-byte schema constraints.
+
+### Second verifier parity
+
+- The TypeScript verifier now mirrors the reference implementation: strict
+  I-JSON strings (noncharacters, lone surrogates), lexeme-faithful float
+  tagging, bounded JWS decode, strict Ed25519 pre-checks, exact timestamps
+  (real calendar, the June/December leap-second slot, untruncated
+  fractions), the full chain battery (predecessor linkage, one genesis,
+  supersession shape, unique acceptance coordinates, role-pair dual
+  acceptance, terminations, `effective_until`, ancestry-coverage governing),
+  the closed receipt decision/outcome matrix, the ML-DSA registry, and the
+  compiled limit maximums.
+
+### Conformance and certification
+
+- Certified corpus regenerated and recertified at 100 cases: the frozen
+  ML-DSA population (descriptor positives and per-name negatives, the
+  PQ key bridge, the mixed-revision view, ML-DSA acceptance and receipt),
+  revision-4 fail-closed, and the (EdDSA, 3) compatibility flip. All four
+  certified identities and the archive digest re-recorded; the named
+  mutation battery grows to 25.
+
+### Runtime floors
+
+- OTP ≥ 28.1 (the corpus contains ML-DSA cases and report byte-identity
+  forbids runtime-conditional verification; `:crypto` ML-DSA landed in
+  OTP 28.1). The Node verifier floor rises to 24.8 (ML-DSA in the builtins
+  landed across 24.6–24.8). CI now tests the floor toolchain alongside the
+  pinned current one.
+
 ## [0.2.1] — 2026-08-26
 
 Documentation-only release: the docs now point hosts at the reviewed

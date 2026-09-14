@@ -37,3 +37,22 @@ release.
   as the sole version vehicle, and the revisited spec-technology bets.
 - `docs/protocol.md` demoted from normative text to the implementation
   guide, cross-linked to this set.
+## Revision 3 record — 2026-09-14
+
+`protocol_revision` 3 (the ML-DSA registry act, ADR `ml-dsa-admission.md`):
+
+- `core.md` §4/§4.1: the registry gains the RFC 9964 names `ML-DSA-44/65/87`
+  at revision 3 with exact per-name key and signature byte lengths as
+  registry data; the mint set is (Ed25519, 2) and (ML-DSA-65, 3). New
+  requirements `CAP-ALG-mldsa-registry-rows`,
+  `CAP-PARTY-DESCRIPTOR-key-grammar-gate`, and `CAP-SIGNATURE-mldsa-lengths`.
+- `core.md` §4.2: the key grammar is gated on descriptor revision — an
+  ML-DSA key in a revision-1/2 descriptor rejects.
+- `core.md` §10 and `evolution.md`: RFC 9964 reference added; the migration
+  target section becomes the record of the admitted act.
+- `security-considerations.md`: unchanged threat model; ML-DSA rows enforce
+  exact lengths, no torsion surface exists in lattice schemes.
+- `schemas/`: the protected-header `alg` enum, the key `algorithm` enum, the
+  key-encoding length window, and the per-artifact `protocol_revision`
+  maximums widen to revision 3.
+- `requirements.md` regenerated (50 bound requirements).
