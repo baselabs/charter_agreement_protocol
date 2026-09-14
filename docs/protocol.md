@@ -483,6 +483,15 @@ green, and `corpus-expectation-flip` runs last. `mix verifier.agreement` proves
 repository and unpacked-package report identity, executes independent verifier
 self-checks, and fires directional seeded reds.
 
+The TypeScript verifier is also published as the npm package
+[`charter-agreement-protocol`](https://www.npmjs.com/package/charter-agreement-protocol)
+(from its own repository,
+[`baselabs/charter_agreement_protocol_typescript`](https://github.com/baselabs/charter_agreement_protocol_typescript)),
+carrying the certified corpus vendored beside the built CLI. This repository
+authors the reference side; the npm repository owns the package from first
+publication forward, and the verifier-agreement gate byte-compares the
+vendored snapshot against `priv/conformance` so the two never drift.
+
 The SHA-256 known-answer gate uses the current NIST CAVP byte-oriented vectors
 for empty input, `d3`, and `b4190e` under FIPS 180-4. These vectors verify the
 runtime primitive against published answers; they do not claim that CAP itself

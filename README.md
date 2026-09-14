@@ -68,6 +68,9 @@ all 100 certified cases recomputed and agreed. Full walkthrough:
 
 ## Try it
 
+- TypeScript verifier on npm: `npm install charter-agreement-protocol` —
+  the independent second verifier as a standalone package, with the
+  certified corpus vendored inside.
 - Runnable notebooks: [charter tour](docs/notebooks/charter-tour.livemd) and
   [fork repair](docs/notebooks/fork-repair.livemd) — a complete bilateral
   charter with real Ed25519 signatures, and a manufactured equivocation with
