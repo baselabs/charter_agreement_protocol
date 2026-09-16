@@ -46,11 +46,12 @@ end
 # The release identity is pinned repository-side (.release-archive.sha256),
 # never inside the packaged metadata: a tarball cannot carry its own digest
 # without changing it. The pin is the package CONTENT identity — the SHA-256
-# over the unpacked archive's sorted path+bytes — because hex.build's gzip
-# layer is not reproducible across OSes (macOS and Linux build different
-# byte tarballs from identical content). The release-candidate gate rebuilds
-# the archive twice, requires byte reproducibility within the run, and
-# requires the unpacked content identity to equal this pin on any platform.
+# over the unpacked archive's sorted path+bytes, excluding hex_metadata.config
+# (whose embedded file list follows filesystem enumeration order, which
+# differs across filesystems; its inputs — mix.exs and the hashed file set —
+# are fully covered). The release-candidate gate rebuilds the archive twice,
+# requires byte reproducibility within the run, and requires this content
+# identity to equal the pin on any platform.
 archive_path = Path.join(System.tmp_dir!(), "cap-metadata-archive.tar")
 
 {output, status} =
@@ -72,6 +73,7 @@ content_pin =
   |> Path.wildcard(match_dot: true)
   |> Enum.reject(&File.dir?/1)
   |> Enum.map(&{Path.relative_to(&1, unpack), File.read!(&1)})
+  |> Enum.reject(fn {path, _bytes} -> path == "hex_metadata.config" end)
   |> Enum.sort()
   |> Enum.map_join(fn {path, bytes} -> path <> <<0>> <> <<byte_size(bytes)::64>> <> bytes end)
   |> then(&:crypto.hash(:sha256, &1))

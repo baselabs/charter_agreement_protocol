@@ -26,14 +26,16 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   release archive pin is re-recorded for the packaged-docs change. No corpus
   verdict, error code, or assertion changed.
 - The release-candidate gate now pins the package CONTENT identity (the
-  SHA-256 over the unpacked archive's sorted path+bytes) instead of the
-  tarball bytes: `mix hex.build`'s gzip layer is reproducible within one OS
-  but not across OSes, so the 0.3.0 byte pin — recorded locally, never
-  before exercised in CI — could not match a Linux CI rebuild of identical
-  content. The gate still requires byte reproducibility between its two
-  in-run builds and still verifies the unpacked boundary and metadata; the
-  content pin passes identically on every platform. `record_release_metadata`
-  records the same identity.
+  SHA-256 over the unpacked archive's sorted path+bytes, excluding
+  `hex_metadata.config`) instead of the tarball bytes: `mix hex.build`'s
+  gzip layer is reproducible within one OS but not across OSes, and the
+  generated metadata embeds its file list in filesystem enumeration order —
+  so the 0.3.0 byte pin, recorded locally and never before exercised in CI,
+  could not match a Linux CI rebuild of identical content. The gate still
+  requires byte reproducibility between its two in-run builds and still
+  verifies the unpacked boundary and metadata; the content pin hashes only
+  git-tracked bytes and passes identically on every platform.
+  `record_release_metadata` records the same identity.
 
 ## [0.3.0] — 2026-09-14
 

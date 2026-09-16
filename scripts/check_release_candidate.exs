@@ -24,13 +24,14 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
       unpack!(unpack)
       verify_unpacked!(unpack)
 
-      # The pin is the package CONTENT identity (sorted unpacked path+bytes),
-      # not the tarball bytes: hex.build's gzip layer is reproducible within
-      # one OS but not across OSes (the macOS and Linux runners build
-      # different byte-identical-content tarballs), so a byte pin recorded on
-      # one OS can never pass a gate on the other. Content identity is
-      # byte-order- and platform-independent and still detects any content
-      # change.
+      # The pin is the package CONTENT identity (sorted unpacked path+bytes,
+      # excluding hex_metadata.config), not the tarball bytes: hex.build's
+      # gzip layer is reproducible within one OS but not across OSes, and
+      # hex_metadata.config itself embeds the file list in filesystem
+      # enumeration order, which differs between filesystems. Every other
+      # file is git-tracked content, and hex_metadata.config is a pure
+      # function of mix.exs (packaged and hashed) plus that hashed file set,
+      # so the identity still detects any content change on any platform.
       content_pin = content_identity!(unpack)
 
       case File.read(".release-archive.sha256") do
@@ -59,6 +60,7 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
     |> Path.wildcard(match_dot: true)
     |> Enum.reject(&File.dir?/1)
     |> Enum.map(&{Path.relative_to(&1, unpack), File.read!(&1)})
+    |> Enum.reject(fn {path, _bytes} -> path == "hex_metadata.config" end)
     |> Enum.sort()
     |> Enum.map_join(fn {path, bytes} -> path <> <<0>> <> <<byte_size(bytes)::64>> <> bytes end)
     |> then(&:crypto.hash(:sha256, &1))
