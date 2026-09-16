@@ -20,7 +20,10 @@ substrate links OpenSSL 3.0.x and could neither generate nor verify ML-DSA
 the distro `libcrypto.so.3`. No decision changes; decision 8's declared floor
 is corrected to OTP ≥ 28.1 with a linked OpenSSL ≥ 3.5, and CI runs the
 quality gate on ubuntu-26.04 (OpenSSL 3.5.x). The corpus and verdict surface
-are untouched.
+are untouched; the repository's two ML-DSA test sign calls pass the
+documented `mldsa_private` tuple form so crypto 5.7 (OTP 28.1) can sign —
+verification needs no accommodation and the corpus agrees 100/100 at the
+floor.
 
 ## Context
 

@@ -357,7 +357,10 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
       assert byte_size(public) == key_bytes
 
       message = "verification boundary probe"
-      sig = :crypto.sign(crypto, :none, message, private)
+      # crypto 5.7 (OTP 28.1, the declared floor) accepts the mldsa private
+      # key only in its documented tuple form; later cryptos also accept the
+      # raw binary.
+      sig = :crypto.sign(crypto, :none, message, {:expandedkey, private})
       assert byte_size(sig) == sig_bytes
 
       assert :ok == CharterAgreementProtocol.Signature.verify(message, sig, public, algorithm)

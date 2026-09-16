@@ -592,7 +592,10 @@ defmodule CharterAgreementProtocol.SigningInputTest do
     {:ok, protected} = Base64Url.decode(input.protected_segment)
     assert protected == "{\"alg\":\"ML-DSA-65\",\"kid\":\"pq-key\",\"typ\":\"cap+party\"}"
 
-    signature = :crypto.sign(:mldsa65, :none, input.message, ml_private)
+    # crypto 5.7 (OTP 28.1, the declared floor) accepts the mldsa private
+    # key only in its documented tuple form; later cryptos also accept the
+    # raw binary.
+    signature = :crypto.sign(:mldsa65, :none, input.message, {:expandedkey, ml_private})
     assert byte_size(signature) == 3309
 
     assert {:ok, compact} = CharterAgreementProtocol.assemble_compact(input, signature)

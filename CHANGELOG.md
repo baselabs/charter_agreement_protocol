@@ -18,8 +18,13 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   runtime linked against OpenSSL 3.6. bob's OTP builds dynamically link the
   distro `libcrypto.so.3` and bundle nothing, so the distro library was the
   only variable. The quality gate now runs on ubuntu-26.04 (OpenSSL 3.5.x)
-  with the pinned and floor matrix legs unchanged. No test, corpus verdict,
-  error code, or assertion changed.
+  with the pinned and floor matrix legs unchanged. On the floor leg
+  (OTP 28.1 / crypto 5.7) the two ML-DSA test sign calls now pass the
+  documented `mldsa_private` tuple form (`{:expandedkey, binary}`) — crypto
+  5.7 rejects the raw binary that later cryptos accept; verification itself
+  needs no accommodation (the corpus agrees 100/100 at the floor). The
+  release archive pin is re-recorded for the packaged-docs change. No corpus
+  verdict, error code, or assertion changed.
 
 ## [0.3.0] — 2026-09-14
 
