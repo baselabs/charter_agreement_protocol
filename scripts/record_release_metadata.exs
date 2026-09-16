@@ -43,10 +43,14 @@ tag_value = fn
   nil -> :null
 end
 
-# The archive identity is pinned repository-side (.release-archive.sha256),
+# The release identity is pinned repository-side (.release-archive.sha256),
 # never inside the packaged metadata: a tarball cannot carry its own digest
-# without changing it. The release-candidate gate rebuilds the archive twice,
-# requires reproducibility, and requires both builds to equal this pin.
+# without changing it. The pin is the package CONTENT identity — the SHA-256
+# over the unpacked archive's sorted path+bytes — because hex.build's gzip
+# layer is not reproducible across OSes (macOS and Linux build different
+# byte tarballs from identical content). The release-candidate gate rebuilds
+# the archive twice, requires byte reproducibility within the run, and
+# requires the unpacked content identity to equal this pin on any platform.
 archive_path = Path.join(System.tmp_dir!(), "cap-metadata-archive.tar")
 
 {output, status} =
@@ -54,14 +58,28 @@ archive_path = Path.join(System.tmp_dir!(), "cap-metadata-archive.tar")
 
 if status != 0, do: raise("archive build failed\n#{output}")
 
-archive_sha =
-  archive_path
-  |> File.read!()
+unpack = Path.join(System.tmp_dir!(), "cap-metadata-unpack-#{System.unique_integer([:positive])}")
+File.mkdir_p!(unpack)
+
+{output, status} =
+  System.cmd("mix", ["hex.build", "--unpack", "--output", unpack], stderr_to_stdout: true)
+
+if status != 0, do: raise("archive unpack failed\n#{output}")
+
+content_pin =
+  unpack
+  |> Path.join("**/*")
+  |> Path.wildcard(match_dot: true)
+  |> Enum.reject(&File.dir?/1)
+  |> Enum.map(&{Path.relative_to(&1, unpack), File.read!(&1)})
+  |> Enum.sort()
+  |> Enum.map_join(fn {path, bytes} -> path <> <<0>> <> <<byte_size(bytes)::64>> <> bytes end)
   |> then(&:crypto.hash(:sha256, &1))
   |> Base.url_encode64(padding: false)
 
+File.rm_rf!(unpack)
 File.rm!(archive_path)
-File.write!(".release-archive.sha256", archive_sha <> "\n")
+File.write!(".release-archive.sha256", content_pin <> "\n")
 
 {:ok, bytes} =
   Canonicalization.encode(

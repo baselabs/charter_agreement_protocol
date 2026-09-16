@@ -20,29 +20,49 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
       second = build_archive!(Path.join(directory, "second.tar"))
       if first != second, do: raise("release archive reproducibility drift")
 
-      archive_pin =
-        first |> Base.decode16!(case: :lower) |> Base.url_encode64(padding: false)
+      unpack = Path.join(directory, "package")
+      unpack!(unpack)
+      verify_unpacked!(unpack)
+
+      # The pin is the package CONTENT identity (sorted unpacked path+bytes),
+      # not the tarball bytes: hex.build's gzip layer is reproducible within
+      # one OS but not across OSes (the macOS and Linux runners build
+      # different byte-identical-content tarballs), so a byte pin recorded on
+      # one OS can never pass a gate on the other. Content identity is
+      # byte-order- and platform-independent and still detects any content
+      # change.
+      content_pin = content_identity!(unpack)
 
       case File.read(".release-archive.sha256") do
         {:ok, recorded} ->
-          if String.trim(recorded) != archive_pin,
+          if String.trim(recorded) != content_pin,
             do:
               raise(
-                "release archive digest drift: pin #{String.trim(recorded)} archive #{archive_pin}"
+                "release content identity drift: pin #{String.trim(recorded)} content #{content_pin}"
               )
 
         :error ->
           raise("repository carries no .release-archive.sha256 pin")
       end
 
-      unpack = Path.join(directory, "package")
-      unpack!(unpack)
-      verify_unpacked!(unpack)
-
-      IO.puts("release candidate: archive_sha256=#{first} publication_authorized=false")
+      IO.puts(
+        "release candidate: content_sha256=#{content_pin} archive_sha256=#{first} publication_authorized=false"
+      )
     after
       File.rm_rf!(directory)
     end
+  end
+
+  defp content_identity!(unpack) do
+    unpack
+    |> Path.join("**/*")
+    |> Path.wildcard(match_dot: true)
+    |> Enum.reject(&File.dir?/1)
+    |> Enum.map(&{Path.relative_to(&1, unpack), File.read!(&1)})
+    |> Enum.sort()
+    |> Enum.map_join(fn {path, bytes} -> path <> <<0>> <> <<byte_size(bytes)::64>> <> bytes end)
+    |> then(&:crypto.hash(:sha256, &1))
+    |> Base.url_encode64(padding: false)
   end
 
   defp verify_metadata! do

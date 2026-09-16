@@ -29,7 +29,7 @@ defmodule CharterAgreementProtocol.Architecture.PackageBoundaryTest do
     assert metadata["verifier_runtime"] == "node>=24.8"
   end
 
-  test "the repository pins the release archive digest outside the package" do
+  test "the repository pins the release content identity outside the package" do
     pin = File.read!(".release-archive.sha256") |> String.trim()
 
     assert String.match?(pin, ~r/^[A-Za-z0-9_-]{43}$/)
