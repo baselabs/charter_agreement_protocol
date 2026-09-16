@@ -4,9 +4,13 @@ Five minutes from install to your first verified artifact evidence.
 
 ## Requirements
 
-- Elixir ~> 1.20 (Erlang/OTP 28 or newer recommended; only OTP `:crypto` is used)
-- Node 24+ only if you run the repository-side TypeScript verifier yourself —
-  it is not needed to use the package
+- Elixir ~> 1.20; Erlang/OTP ≥ 28.1 with the runtime linked against
+  OpenSSL ≥ 3.5 — the corpus and every ML-DSA surface need it (FIPS 204
+  reached OpenSSL in 3.5.0; a runtime linked against OpenSSL 3.0.x cannot
+  generate or verify ML-DSA keys). Only OTP `:crypto` is used.
+- Node ≥ 24.8 only if you run the repository-side TypeScript verifier yourself —
+  it is not needed to use the package (24.8 is the verifier's declared floor;
+  ML-DSA in the Node builtins landed across the 24.6–24.8 minors)
 - No runtime dependencies: the package is OTP-crypto-only
 
 ## Install
@@ -16,12 +20,12 @@ Depend on the published Hex release:
 ```elixir
 def deps do
   [
-    {:charter_agreement_protocol, "~> 0.1.0"}
+    {:charter_agreement_protocol, "~> 0.3.0"}
   ]
 end
 ```
 
-Protocol conformance is identity-exact: the published 0.1.0 registry
+Protocol conformance is identity-exact: the published registry
 checksum equals the release-candidate gate's archive SHA, so the bytes Hex
 serves are the reviewed, certified bytes. Pin the requirement and verify the
 shipped corpus from your dependent project (the next sections do exactly
@@ -87,7 +91,8 @@ iex> Limits.default()
   max_object_members: 1024,
   max_array_items: 4096,
   max_string_bytes: 65536,
-  max_artifact_set_items: 1024
+  max_artifact_set_items: 1024,
+  max_artifact_set_bytes: 67108864
 }
 ```
 
@@ -99,14 +104,18 @@ certified release pin. From a dependent project (the corpus unpacks with the
 package under its `priv/conformance`):
 
 ```console
-$ mix run -e 'CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"])'
+$ mix run -e 'System.halt(CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"]))'
 ```
 
-The returned status is `0` when every certified case recomputed and agreed,
-`1` on load or verification failure, and `2` on usage errors. The stdout
+The process exits `0` when every certified case recomputed and agreed,
+`1` on load or verification failure, and `2` on usage errors (wrap the call
+in `System.halt/1` as shown — a bare `mix run -e` drops the returned status).
+The stdout
 report is canonical JSON carrying the corpus digest, registry digest, and raw
-index identity. From a repository checkout or an unpacked package directory
-the same gate is `mix conformance.verify`, or the escript directly:
+index identity. From a repository checkout the same gate is
+`mix conformance.verify`; the alias's script is repository-only (the package
+does not ship `scripts/`), so from an unpacked package directory use the
+escript directly:
 
 ```console
 $ mix escript.build && ./charter_agreement_protocol --corpus priv/conformance

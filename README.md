@@ -50,19 +50,25 @@ table.
 
 ## Quick start
 
-Elixir ~> 1.20; zero runtime dependencies (OTP `:crypto` only):
+Elixir ~> 1.20; zero runtime dependencies (OTP `:crypto` only). From
+`protocol_revision` 3 the runtime floor has a second axis: ML-DSA verification
+needs an OTP runtime whose linked crypto library is OpenSSL ≥ 3.5 (FIPS 204
+landed there; OTP ≥ 28.1 with OpenSSL ≥ 3.5 is the declared floor — a runtime
+linked against OpenSSL 3.0.x cannot generate or verify ML-DSA keys). The
+shipped corpus contains ML-DSA cases, so the quick-start verification below
+needs that floor too:
 
 ```elixir
-{:charter_agreement_protocol, "~> 0.1.0"}
+{:charter_agreement_protocol, "~> 0.3.0"}
 ```
 
 Then verify the shipped, certified corpus from your dependent project:
 
 ```console
-$ mix run -e 'CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"])'
+$ mix run -e 'System.halt(CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"]))'
 ```
 
-The command prints the canonical JSON report; a returned status of `0` means
+The command prints the canonical JSON report and exits `0` when
 all 100 certified cases recomputed and agreed. Full walkthrough:
 [Getting started](docs/guides/getting-started.md).
 

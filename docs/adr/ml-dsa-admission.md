@@ -11,6 +11,17 @@ by substrate probes (executed 2026-09-14 on the CI-pinned Elixir 1.20.3 / OTP 29
 This ADR records the wire-visible decisions; the audit-remediation items riding the
 same package release are engineering work, not ADR scope.
 
+Amended 2026-09-15: the substrate claim below understated one axis — "OTP's
+`:crypto` verifies `mldsa44/65/87` from OTP 28.1" holds only when the runtime
+links OpenSSL ≥ 3.5 (FIPS 204 landed in OpenSSL 3.5.0). The 2026-09-14 probes
+ran on a local toolchain linked against OpenSSL 3.6.3; CI's ubuntu-24.04
+substrate links OpenSSL 3.0.x and could neither generate nor verify ML-DSA
+(the `Bad key type` CI failures), because bob's OTP builds dynamically link
+the distro `libcrypto.so.3`. No decision changes; decision 8's declared floor
+is corrected to OTP ≥ 28.1 with a linked OpenSSL ≥ 3.5, and CI runs the
+quality gate on ubuntu-26.04 (OpenSSL 3.5.x). The corpus and verdict surface
+are untouched.
+
 ## Context
 
 Revision 2 closed the alg-name question for the classical operation: RFC 9864
@@ -99,7 +110,9 @@ define. No parallel artifact family, media type, or header shape.
    runtime-conditional cases, so the package's own gates need it) and the Node
    floor rises to the probed minor that satisfies the verifier's calling
    convention. Both are stated in the README and CHANGELOG and matrix-tested in
-   CI at the floor.
+   CI at the floor. (Amendment 2026-09-15: the declared floor also requires the
+   runtime's linked crypto library to be OpenSSL ≥ 3.5 — see the Status
+   amendment above.)
 
 ## Consequences
 

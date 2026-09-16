@@ -46,7 +46,15 @@ jobs:
 
   quality:
     name: Complete quality gate
-    runs-on: ubuntu-24.04
+    # The revision-3 corpus needs a linked OpenSSL >= 3.5: FIPS 204 (ML-DSA)
+    # reached OpenSSL in 3.5.0, bob's OTP builds dynamically link the distro
+    # libcrypto.so.3 with nothing bundled, and ubuntu-24.04 ships OpenSSL
+    # 3.0.x, which cannot generate or verify ML-DSA keys at all (EVP
+    # "Bad key type"; the corpus fail-closes every ML-DSA verdict as
+    # signature_invalid). ubuntu-26.04 ships OpenSSL 3.5.x, and setup-beam
+    # resolves the matching bob build per distro, so both matrix legs keep
+    # their pinned OTP/Elixir versions.
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:

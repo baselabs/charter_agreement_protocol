@@ -2,6 +2,25 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
+## [Unreleased]
+
+### CI substrate correction — the runtime floor's second axis
+
+- The 0.3.0 runtime-floor statement named OTP ≥ 28.1 but omitted the linked
+  crypto library. ML-DSA (FIPS 204) reached OpenSSL in 3.5.0, and OTP's
+  `:crypto` exposes ML-DSA key generation and verification only when the
+  runtime's libcrypto is ≥ 3.5. The declared floor is therefore OTP ≥ 28.1
+  with a linked OpenSSL ≥ 3.5.
+- CI ran the quality gate on ubuntu-24.04, whose OpenSSL 3.0.x cannot
+  generate or verify ML-DSA keys: 7 of 268 tests failed with the OpenSSL
+  `Bad key type` error and the corpus's valid ML-DSA verdicts fail-closed as
+  `signature_invalid`, while the same tree passed every local gate on a
+  runtime linked against OpenSSL 3.6. bob's OTP builds dynamically link the
+  distro `libcrypto.so.3` and bundle nothing, so the distro library was the
+  only variable. The quality gate now runs on ubuntu-26.04 (OpenSSL 3.5.x)
+  with the pinned and floor matrix legs unchanged. No test, corpus verdict,
+  error code, or assertion changed.
+
 ## [0.3.0] — 2026-09-14
 
 The standards-release: `protocol_revision` 3 (the ML-DSA registry act) plus
