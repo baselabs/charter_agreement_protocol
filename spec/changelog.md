@@ -8,6 +8,16 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-09-15 — signature-prose generalization correction
+
+- `core.md`: the party-descriptor and receipt signature MUST-clauses state
+  the registry row's key algorithm instead of naming Ed25519 — completing
+  the revision-3 act's recorded consequence ("`spec/core.md`'s
+  Ed25519-specific signature prose generalizes to the registry",
+  `docs/adr/ml-dsa-admission.md`), which the 0.3.0 release left unfinished
+  in these two clauses. No requirement identifier, schema byte, or verdict
+  changes; the specification digest re-records.
+
 ## 2026-08-26 — corpus coverage closure revision
 
 - `core.md`: five new normative statements (equivocation pairing, chain
@@ -37,6 +47,7 @@ release.
   as the sole version vehicle, and the revisited spec-technology bets.
 - `docs/protocol.md` demoted from normative text to the implementation
   guide, cross-linked to this set.
+
 ## Revision 3 record — 2026-09-14
 
 `protocol_revision` 3 (the ML-DSA registry act, ADR `ml-dsa-admission.md`):

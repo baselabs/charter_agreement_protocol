@@ -15,7 +15,7 @@ the evidence and decide.
 
 | Artifact | Form | Proves |
 |---|---|---|
-| Party Descriptor | signed JWS (`cap+party`) | A party's Ed25519 key history with predecessor-bound transitions and fork evidence |
+| Party Descriptor | signed JWS (`cap+party`) | A party's declared key history (Ed25519, and ML-DSA from `protocol_revision` 3) with predecessor-bound transitions and fork evidence |
 | Charter Revision | canonical JSON | Agreed terms: parties, roles, legal-text digest, precedence, effective window, termination reasons, exact deployment bindings |
 | Acceptance | signed JWS (`cap+acceptance`) | Bilateral signed assent to exact revision bytes |
 | Termination Notice | signed JWS (`cap+termination`) | Signed closure of the charter at a pure UTC instant |
@@ -97,7 +97,9 @@ all 100 certified cases recomputed and agreed. Full walkthrough:
   Callers supply time, limits, trust anchors, and keys.
 - Key custody stays outside the protocol: CAP builds the exact RFC 7515
   signing input, you sign it, `assemble_compact/2` accepts only an external
-  raw 64-byte signature, and hosts post-verify before serving the compact.
+  raw signature at the registry row's exact length (64 bytes for `Ed25519`;
+  2420/3309/4627 for the ML-DSA parameterizations), and hosts post-verify
+  before serving the compact.
   A reviewed companion signer implements that host glue for you —
   [`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer) (atomic kid/key snapshot,
   wrong-key guard, post-sign verify, refusal surfacing); verifiers never
@@ -134,13 +136,17 @@ all 100 certified cases recomputed and agreed. Full walkthrough:
 The approved protocol core, normative specification set, certified corpus
 with four recorded identities, independent second verifier, mutation
 battery, and release-candidate gates are implemented and green in CI. The
-0.3.0 package adds `protocol_revision` 3 — the ML-DSA registry act
+0.3.x line carries `protocol_revision` 3 — the ML-DSA registry act
 (RFC 9964): the `ML-DSA-44/65/87` names verify from revision 3, the
 descriptor key grammar admits ML-DSA keys gated on revision, producers
 mint `ML-DSA-65` at revision 3 alongside `Ed25519` at revision 2, and the
-resource boundary is byte-weighted for PQ-sized artifacts. `protocol_revision`
-2 (RFC 9864 alg names) and revision-1 artifacts remain verifiable. Building
-an archive remains verification evidence only — never authority to publish.
+resource boundary is byte-weighted for PQ-sized artifacts. 0.3.1 corrects
+the declared runtime floor (OTP ≥ 28.1 **with a linked OpenSSL ≥ 3.5**),
+runs CI on an ML-DSA-capable substrate, and re-trues the shipped
+documentation to the revision-3 surface. `protocol_revision` 2
+(RFC 9864 alg names) and revision-1 artifacts remain verifiable. Building
+an archive remains verification evidence only — never authority to
+publish.
 
 ## Development
 

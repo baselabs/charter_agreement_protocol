@@ -19,9 +19,9 @@ Protocol conformance here is identity-exact: the certified corpus freezes real
 ABP deployment digests and BAP grant bytes, and the release gate pins the exact
 index bytes. A loose pin would let verification silently cover different bytes
 than the ones certified. The durable identity is the exact Hex requirement
-plus its registry checksum — and the published 0.1.0 checksum equals the
-release gate's archive SHA, so the registry serves exactly the reviewed
-bytes. See [Getting started](getting-started.md).
+plus its registry checksum — the release gate certifies the package's content
+identity, so the registry serves exactly the reviewed contents. See
+[Getting started](getting-started.md).
 
 **How do I iterate against sibling repositories during development?**
 Temporarily point the dependency at a local path in your working tree. The
@@ -71,8 +71,9 @@ See [SECURITY.md](../../SECURITY.md).
 
 **Where is the package published?**
 On Hex: [hex.pm/packages/charter_agreement_protocol](https://hex.pm/packages/charter_agreement_protocol).
-The published 0.1.0 inner checksum equals the release-candidate gate's
-archive SHA — the reviewed bytes are the shipped bytes. Building an archive
+The release-candidate gate certifies the package's content identity — the
+platform-independent SHA-256 over the unpacked archive — so the reviewed
+contents are the shipped contents. Building an archive
 remains verification evidence only, never publication authority: the
 repository still exposes no publish alias, and future releases require
 separate explicit authorization.

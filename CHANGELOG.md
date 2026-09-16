@@ -2,15 +2,18 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
-## [Unreleased]
+## [0.3.1] — 2026-09-15
 
-### CI substrate correction — the runtime floor's second axis
+Docs-and-tooling correction release; no wire-visible or library-code change
+(`lib/` is byte-identical to 0.3.0).
 
-- The 0.3.0 runtime-floor statement named OTP ≥ 28.1 but omitted the linked
-  crypto library. ML-DSA (FIPS 204) reached OpenSSL in 3.5.0, and OTP's
-  `:crypto` exposes ML-DSA key generation and verification only when the
-  runtime's libcrypto is ≥ 3.5. The declared floor is therefore OTP ≥ 28.1
-  with a linked OpenSSL ≥ 3.5.
+### Fixed
+
+- The runtime floor's second axis. The 0.3.0 floor statement named
+  OTP ≥ 28.1 but omitted the linked crypto library. ML-DSA (FIPS 204)
+  reached OpenSSL in 3.5.0, and OTP's `:crypto` exposes ML-DSA key
+  generation and verification only when the runtime's libcrypto is ≥ 3.5.
+  The declared floor is therefore OTP ≥ 28.1 with a linked OpenSSL ≥ 3.5.
 - CI ran the quality gate on ubuntu-24.04, whose OpenSSL 3.0.x cannot
   generate or verify ML-DSA keys: 7 of 268 tests failed with the OpenSSL
   `Bad key type` error and the corpus's valid ML-DSA verdicts fail-closed as
@@ -22,9 +25,7 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   (OTP 28.1 / crypto 5.7) the two ML-DSA test sign calls now pass the
   documented `mldsa_private` tuple form (`{:expandedkey, binary}`) — crypto
   5.7 rejects the raw binary that later cryptos accept; verification itself
-  needs no accommodation (the corpus agrees 100/100 at the floor). The
-  release archive pin is re-recorded for the packaged-docs change. No corpus
-  verdict, error code, or assertion changed.
+  needs no accommodation (the corpus agrees 100/100 at the floor).
 - The release-candidate gate now pins the package CONTENT identity (the
   SHA-256 over the unpacked archive's sorted path+bytes, excluding
   `hex_metadata.config`) instead of the tarball bytes: `mix hex.build`'s
@@ -36,6 +37,25 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   verifies the unpacked boundary and metadata; the content pin hashes only
   git-tracked bytes and passes identically on every platform.
   `record_release_metadata` records the same identity.
+- Documentation re-trued to the revision-3 surface (the corpus, guides,
+  notebooks, and reference tables had drifted): the certified identities in
+  Conformance and Test vectors now carry the live 0.3.0-recertified values;
+  the security model's primitives section admits ML-DSA (it still said
+  "Ed25519 only"); signature-length and key-history prose states the
+  registry-row rule instead of a universal 64-byte/Ed25519 claim;
+  `protocol_revision` tables accept 1–3; the error-code reference carries
+  the live per-code corpus counts; the corpus quick-start commands
+  propagate the CLI exit status through `System.halt/1` and no longer claim
+  the repository-only `mix conformance.verify` alias works from an unpacked
+  package; install examples carry `~> 0.3.0`; the npm family paragraph notes
+  the published companion signer package; the Node verifier floor reads
+  ≥ 24.8; the limits table gains the byte-weighted artifact-set ceiling; the
+  party-descriptor and receipt signature MUST-clauses in `spec/core.md`
+  state the registry row's key algorithm (completing the revision-3 ADR's
+  recorded consequence, with the specification digest re-recorded); the
+  release-candidate gate now pins the docs' certified-identity tables to
+  the live values so a truncated transcription cannot ship; and
+  the release runbook describes the content-identity pin.
 
 ## [0.3.0] — 2026-09-14
 

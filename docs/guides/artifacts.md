@@ -1,9 +1,12 @@
 # Artifacts
 
-CAP has five artifact types. Four are attached compact JWS (RFC 7515) with
-Ed25519 signatures; one is canonical unsigned JSON. Every signed artifact's
-protected header is closed to exactly `alg` (`EdDSA`), `kid` (a bounded-ASCII
-lookup hint with no authority by itself), and `typ`. Every artifact carries
+CAP has five artifact types. Four are attached compact JWS (RFC 7515) whose
+signatures verify under the algorithm their registry row names — Ed25519,
+and pure ML-DSA from `protocol_revision` 3; one is canonical unsigned JSON.
+Every signed artifact's protected header is closed to exactly `alg` (a
+registry name: `EdDSA` at any accepted revision, `Ed25519` from revision 2,
+`ML-DSA-44/65/87` from revision 3), `kid` (a bounded-ASCII lookup hint with
+no authority by itself), and `typ`. Every artifact carries
 `protocol_revision` as a digest-covered member. All bytes — headers and
 payloads — must already be canonical JSON.
 
@@ -13,25 +16,27 @@ sets (see [Protocol foundation](../protocol.md) for the full contract).
 
 ## Party Descriptor — `cap+party`
 
-A party's declared Ed25519 key history. Genesis is self-signed by an active key
+A party's declared key history. Genesis is self-signed by an active key
 declared in the descriptor itself; the party's identifier is the descriptor's
 domain-separated content digest.
 
 | Member | Contract |
 |---|---|
-| `protocol_revision` | fixed protocol data value `1` |
+| `protocol_revision` | `1` through `3`; unknown revisions fail closed |
 | `party_id` | conditional; tagged digest, present on successors |
 | `prev_descriptor_digest` | conditional; exact predecessor digest, present on successors |
 | `descriptor_number` | starts at 1, increases by exactly one |
-| `verification_keys` | 1–32 unique Ed25519 keys, each with `key_id`, `algorithm`, base64url `public_key`, `status`; at least one `active` |
+| `verification_keys` | 1–32 unique keys, each with `key_id`, `algorithm` (`Ed25519`, or an ML-DSA name gated on `protocol_revision` 3; mixed sets are legal), base64url `public_key` at the algorithm's exact length, `status`; at least one `active` |
 | `attestation_hints` | 0–16 non-normative hints; never dereferenced |
 | `extensions` | closed envelope, registry-validated |
 | `effective_from` | uppercase UTC RFC 3339 ending in `Z` |
 
 A successor is signed by a key active in its predecessor; predecessor lineage
 supplied as facts is reverified, never trusted. Before runtime signature
-verification, CAP rejects noncanonical point encodings and all eight low-order
-torsion encodings for both the public key and the signature `R`.
+verification on the Ed25519 rows, CAP rejects noncanonical point encodings
+and all eight low-order torsion encodings for both the public key and the
+signature `R`; the ML-DSA rows enforce the registry's exact public-key and
+signature byte lengths before cryptographic work.
 
 ## Charter Revision — unsigned canonical JSON
 
@@ -41,7 +46,7 @@ the `charter_revision_content` domain. Genesis is revision 1 and carries no
 
 | Member | Contract |
 |---|---|
-| `protocol_revision` | protocol data value `1` |
+| `protocol_revision` | `1` through `3` |
 | `revision_number` | 1 at genesis, exactly one more per successor |
 | `charter_id` | conditional; the genesis revision's digest on successors |
 | `prev_revision_digest` | conditional; exact prior-numbered revision digest |

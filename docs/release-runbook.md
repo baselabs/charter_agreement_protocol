@@ -31,11 +31,14 @@ mix run --no-start scripts/record_release_metadata.exs    # four identities + ar
 ```
 
 `priv/release-metadata.json` carries `corpus_digest`,
-`index_sha256_base64url`, `registry_digest`, `spec_digest`,
-`verifier_runtime`, and `archive_sha256_base64url` — the digest of the exact
-archive bytes produced by `mix hex.build` on this tree. The release-candidate
-gate rebuilds the archive twice, requires the builds to be identical, and
-requires both to equal the recorded pin.
+`index_sha256_base64url`, `registry_digest`, `spec_digest`, and
+`verifier_runtime`. The release pin lives in `.release-archive.sha256`: the
+package CONTENT identity — the SHA-256 over the unpacked archive's sorted
+path+bytes, excluding the order-generated `hex_metadata.config`. The
+release-candidate gate rebuilds the archive twice, requires the builds to be
+byte-identical within the run, and requires the unpacked content identity to
+equal the pin (the tarball bytes themselves are not reproducible across
+operating systems, so the pin is defined over content, which is).
 
 ## 3. Version and records
 
@@ -51,8 +54,11 @@ git tag vX.Y.Z
 mix hex.build
 ```
 
-Verify the built archive's SHA-256 equals `archive_sha256_base64url` in
-`priv/release-metadata.json` (base64url, unpadded) before anything else.
+`mix quality` (step 1) already verified the content pin against this exact
+tree; the gate's success line prints both the content identity and the local
+archive byte digest. Record the archive byte digest from the release
+platform in the release record — it is informational; the pin that CI
+re-verifies is the content identity.
 
 ## 5. Publish (separate authority)
 
@@ -65,9 +71,10 @@ and archive digest, nothing more.
 From a clean directory, add the package as a dependency, then:
 
 ```
-mix run -e 'CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"])'
+mix run -e 'System.halt(CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"]))'
 ```
 
-A returned status of `0` proves the published corpus recomputes and agrees
-with the certified identity. Record the published hex checksum beside the
+A process exit status of `0` proves the published corpus recomputes and agrees
+with the certified identity (`System.halt/1` propagates the CLI's returned
+status — a bare `mix run -e` drops it). Record the published hex checksum beside the
 release tag and close the CHANGELOG entry.

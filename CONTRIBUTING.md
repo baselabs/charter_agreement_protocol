@@ -20,7 +20,9 @@ corpora, dialyzer, docs with warnings-as-errors, and the release-candidate
 gate (reproducible archive, exact package boundary). See
 [Conformance](docs/guides/conformance.md).
 
-The independent Node verifier needs Node 24+.
+The independent Node verifier needs Node ≥ 24.8 (ML-DSA in the Node
+builtins landed across the 24.6–24.8 minors; the verifier's engines floor
+is 24.8).
 
 ## The bar for a change
 

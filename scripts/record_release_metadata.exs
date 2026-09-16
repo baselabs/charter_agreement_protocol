@@ -1,7 +1,7 @@
 # Records priv/release-metadata.json from the live corpus index and the
 # normative specification tree. Run from the repository root after any
 # deliberate spec-byte or corpus change:
-#     mix run scripts/record_release_metadata.exs
+#     mix run --no-start scripts/record_release_metadata.exs
 alias CharterAgreementProtocol.{
   Canonicalization,
   Conformance.Report,
@@ -49,9 +49,20 @@ end
 # over the unpacked archive's sorted path+bytes, excluding hex_metadata.config
 # (whose embedded file list follows filesystem enumeration order, which
 # differs across filesystems; its inputs — mix.exs and the hashed file set —
-# are fully covered). The release-candidate gate rebuilds the archive twice,
-# requires byte reproducibility within the run, and requires this content
-# identity to equal the pin on any platform.
+# are fully covered). priv/release-metadata.json is part of the package, so
+# it is written FIRST — the pin must cover the final metadata bytes, or the
+# next gate run drifts against the stale content it certified. The
+# release-candidate gate rebuilds the archive twice, requires byte
+# reproducibility within the run, and requires this content identity to
+# equal the pin on any platform.
+
+{:ok, bytes} =
+  Canonicalization.encode(
+    {:object, Enum.map(metadata, fn {key, value} -> {key, tag_value.(value)} end)}
+  )
+
+File.write!("priv/release-metadata.json", bytes)
+
 archive_path = Path.join(System.tmp_dir!(), "cap-metadata-archive.tar")
 
 {output, status} =
@@ -83,10 +94,4 @@ File.rm_rf!(unpack)
 File.rm!(archive_path)
 File.write!(".release-archive.sha256", content_pin <> "\n")
 
-{:ok, bytes} =
-  Canonicalization.encode(
-    {:object, Enum.map(metadata, fn {key, value} -> {key, tag_value.(value)} end)}
-  )
-
-File.write!("priv/release-metadata.json", bytes)
 IO.puts("recorded priv/release-metadata.json spec_digest=#{spec_digest}")

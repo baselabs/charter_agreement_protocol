@@ -43,6 +43,7 @@ values are:
 | items per array | 4,096 | 65,536 |
 | decoded bytes per string or member name | 65,536 | 1,048,576 |
 | artifacts per set-level verification input | 1,024 | 4,096 |
+| aggregate supplied artifact bytes per set-level verification input | 67,108,864 | 1,073,741,824 |
 
 Container counts are per container. String limits apply after JSON unescaping and
 count UTF-8 bytes. The exact bound is accepted; maximum plus one returns the
@@ -155,8 +156,8 @@ index recorder after a deliberate case change.
 
 `verifier/check-corpus.mjs` independently checks corpus integrity. The
 builtins-only Node TypeScript verifier independently recomputes every certified
-corpus verdict, including Ed25519 evidence, forks, supersession, governing
-views, and Receipt fact JSON. Node 24 or newer is required. Elixir and
+corpus verdict, including Ed25519 and ML-DSA evidence, forks, supersession,
+governing views, and Receipt fact JSON. Node ≥ 24.8 is required. Elixir and
 TypeScript reports must be
 byte-identical over the repository corpus and the corpus unpacked from the Hex
 archive. The verifier is repository-side and never ships; `priv/conformance`
@@ -253,7 +254,7 @@ Verification re-decodes the retained revision bytes and reconstructs the signed
 descriptor view from retained lineages. It requires exact equality with the
 referenced revision's chain coordinates and exact membership in its party
 bindings, resolves the protected `kid` only against a key active in the pinned
-descriptor, and verifies Ed25519 over the attached JWS signing input. A pinned
+descriptor, and verifies the signature under the registry row's key algorithm. A pinned
 descriptor may be head, superseded, or contested; that position is retained as
 a fact and never converted into a freshness-policy decision.
 
@@ -281,7 +282,8 @@ signed descriptor view before use. The notice must bind the exact charter,
 revision, party digest, and party role; its reason must be present in the
 revision's termination declaration; `issued_at` may equal but may not follow
 `effective_at`; and the protected `kid` must resolve to an active key in the
-pinned descriptor before Ed25519 verification. The returned facts retain the
+pinned descriptor before signature verification under the registry row's key
+algorithm. The returned facts retain the
 descriptor's view-relative position and never select a fresher branch.
 
 The verifier reads no clock. A valid notice proves signed evidence only: it does
@@ -356,8 +358,9 @@ recognized revision, charter identity, revision number, both party roles, and
 the agent role's deployment binding must match exactly.
 
 Full `ChainFacts` context is reverified from retained bytes before use. The
-issuing role resolves to one active descriptor key, the Ed25519 signature must
-verify, and governance is recomputed at `occurred_at`. An unrecognized revision
+issuing role resolves to one active descriptor key, the signature must verify
+under the registry row's key algorithm, and governance is recomputed at
+`occurred_at`. An unrecognized revision
 digest at or below the accepted head returns
 `chain_conflict: :fork_evidenced`; no branch is selected. Governance comparison
 is `:match`, `:mismatch`, or `:undetermined` when the view is contested.
@@ -439,7 +442,9 @@ floating-point extension values. The artifact codec remains the final closed
 schema and semantic validator.
 
 `assemble_compact/2` revalidates the kind/header/payload/message relationship and
-accepts exactly one externally produced raw 64-byte Ed25519 signature. The
+accepts exactly one externally produced raw signature at the registry row's
+exact length (64 bytes for `Ed25519`; 2420/3309/4627 for the ML-DSA
+parameterizations). The
 production package has no signing call, private-key parameter, signer callback,
 signer module, or custody handle. Hosts own an atomic kid/key snapshot and must
 post-verify the assembled compact through CAP before returning it. The refusal
@@ -489,10 +494,11 @@ The TypeScript verifier is also published as the npm package
 [`baselabs/charter_agreement_protocol_typescript`](https://github.com/baselabs/charter_agreement_protocol_typescript)),
 carrying the certified corpus vendored beside the built CLI. The
 `charter-agreement-protocol` npm organization hosts the family's TypeScript
-packages — the verifier today, and `@charter-agreement-protocol/signer`
-reserved for the holder-side companion signer's TypeScript package. This
-repository authors the reference side; the npm repository owns the package
-from first publication forward, and the verifier-agreement gate
+packages — the verifier, and the holder-side companion signer
+(`@charter-agreement-protocol/signer`, published as 0.1.0 from
+[`baselabs/charter_agreement_signer_typescript`](https://github.com/baselabs/charter_agreement_signer_typescript)).
+This repository authors the reference side; the npm repositories own the
+packages from first publication forward, and the verifier-agreement gate
 byte-compares the vendored snapshot against `priv/conformance` so the two
 never drift.
 
@@ -506,8 +512,10 @@ and [FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final).
 `mix release.candidate` verifies canonical release metadata, all four certified
 identity pins (corpus digest, raw index SHA-256, registry digest, and the
 specification digest over the shipped spec set), development/test-only dependency direction, regular-file package
-inputs, two byte-identical independently built archives, and exact unpacked
-archive membership. The explicit package allowlist includes `lib`, the corpus,
+inputs, two byte-identical independently built archives, exact unpacked
+archive membership, and equality between the repository's release pin and
+the archive's content identity — the platform-independent SHA-256 over the
+unpacked archive's sorted path+bytes. The explicit package allowlist includes `lib`, the corpus,
 release metadata, and named public documents. It excludes `test`, `scripts`,
 `verifier`, lifecycle records, and environment files. The Hex build contract is
 documented at [Publishing packages](https://hex.pm/docs/publish): building or

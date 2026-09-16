@@ -79,8 +79,8 @@ cannot verify green.
 
 The `charter-agreement-protocol` npm organization hosts this protocol family's
 TypeScript packages: `@charter-agreement-protocol/verifier` (this package) and
-`@charter-agreement-protocol/signer` (reserved for the holder-side companion
-signer's TypeScript package).
+`@charter-agreement-protocol/signer` (the holder-side companion signer's
+TypeScript package, published from its own repository).
 
 ## SemVer
 

@@ -118,7 +118,7 @@ encountering an unknown revision MUST fail closed
 
 A protected header MUST be closed to exactly `alg`, `kid`, and
 `typ`; an unknown header member MUST be rejected
-[CAP-COMPACT-JWS-type-isolation]. The `alg` value MUST be one of the two
+[CAP-COMPACT-JWS-type-isolation]. The `alg` value MUST be one of the
 registered names, bound per artifact to the payload's `protocol_revision`
 (the algorithm registry): `EdDSA` is accepted at any accepted revision,
 `Ed25519` [RFC9864] is accepted from `protocol_revision` 2, and the three
@@ -147,9 +147,9 @@ key history [CAP-PARTY-DESCRIPTOR-valid-genesis]. Descriptor claims MUST
 satisfy the successor shape — a genesis carrying predecessor fields
 rejects, the signing `kid` MUST resolve against a declared active key,
 and instant members MUST parse [CAP-PARTY-DESCRIPTOR-decode-shape]. Every attached
-descriptor MUST carry a verifiable Ed25519 signature from an active key
+descriptor MUST carry a verifiable signature from an active key
 declared in the descriptor itself (genesis) or in its predecessor
-(successors); a signature that does not verify MUST be rejected
+(successors) — verified under the registry row's key algorithm; a signature that does not verify MUST be rejected
 [CAP-PARTY-DESCRIPTOR-signature-required]. A successor MUST name its
 exact predecessor by digest, and the lineage so named MUST re-verify —
 predecessor lineage supplied as facts is re-verified, never trusted
@@ -211,7 +211,8 @@ reason [CAP-TERMINATION-reason-closed].
 
 ### 4.6 Receipt (`cap+receipt`)
 
-Every receipt MUST carry a verifiable Ed25519 signature from an active
+Every receipt MUST carry a verifiable signature — under the registry
+row's key algorithm — from an active
 charter key of the issuing role; an unverifiable signature MUST be
 rejected [CAP-RECEIPT-signature-required]. The receipt's revision number
 MUST equal the number of the revision it names; a cross-number mismatch

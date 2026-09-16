@@ -39,7 +39,7 @@ whether evidence is sufficient.
 
 | Artifact | Form | Proves |
 |---|---|---|
-| Party Descriptor | signed compact JWS (`cap+party`) | A party's declared Ed25519 key history, with predecessor-bound key transitions and fork evidence |
+| Party Descriptor | signed compact JWS (`cap+party`) | A party's declared key history — Ed25519, and ML-DSA from `protocol_revision` 3 — with predecessor-bound key transitions and fork evidence |
 | Charter Revision | canonical JSON (unsigned) | The agreed terms: parties, roles, legal-text digest, precedence, effective window, termination reasons, deployment bindings |
 | Acceptance | signed compact JWS (`cap+acceptance`) | One party's signed assent to one exact revision, tied to its descriptor key history |
 | Termination Notice | signed compact JWS (`cap+termination`) | A pinned party's signed notice that a listed reason takes effect at a pure UTC instant |
@@ -106,7 +106,8 @@ their code at runtime.
 ## Status
 
 The approved protocol core, certified 100-case corpus, independent second
-verifier, 22-mutation battery, and release-candidate gates are implemented and
-green in CI. The package is published on Hex as 0.1.0 - the registry
-checksum equals the release gate's archive SHA; see the README status
-section and [Conformance](conformance.md) for the certified identities.
+verifier, 25-mutation battery, and release-candidate gates are implemented
+and green in CI. The package is published on Hex — the 0.3.x line carries
+the revision-3 ML-DSA registry act, and the release gate certifies the
+exact package content identity; see the README status section and
+[Conformance](conformance.md) for the certified identities.

@@ -39,10 +39,10 @@ For the current candidate:
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:nLE8UwbYxyIRG147jhJoQLHf0RpsA4dw8X5ATpJvKK8` |
-| Index SHA-256 (base64url) | `Ty7kChMw3GusTSiJIgkwTCwIs7Ao9rWr8J9ok9oN1FM` |
+| Corpus digest | `sha-256:9t3IsUcPMqtZiJE9wlYchjDJNoSpO4RbOte26RqgEqc` |
+| Index SHA-256 (base64url) | `SQYrs8WyUX4Bj_QlupjB_KYaMyjVjrnwvQ79sNkyIao` |
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:JuLNnhAk2rv_kuSoG3HdAKInxKpSftKgNJjhxtlA214` |
+| Specification digest | `sha-256:6bHRyRsti3Q08Ta1oJcp4By0cbAF14w5erKyf7wjKkQ` |
 | Certified cases | 100 |
 
 ## The requirements matrix
@@ -116,9 +116,10 @@ every properties-bearing schema object must be closed. The extended
   tie-resolution, equivocation guard removal, receipt conflict silencing, and
   more — with `corpus-expectation-flip` running last. Each run first proves
   the unmodified baseline green.
-- `mix verifier.agreement` — the builtins-only Node 24+ TypeScript verifier
-  independently recomputes every certified case (including Ed25519 evidence,
-  forks, supersession, governing views, receipt fact JSON) and must produce
+- `mix verifier.agreement` — the builtins-only Node ≥ 24.8 TypeScript
+  verifier independently recomputes every certified case (including Ed25519
+  and ML-DSA evidence, forks, supersession, governing views, receipt fact
+  JSON) and must produce
   reports **byte-identical** to the Elixir runner over both the repository
   corpus and the corpus unpacked from the Hex archive. Directional seeded
   reds (verdict inversion, report-format drift, certified-index drift) prove
@@ -126,8 +127,10 @@ every properties-bearing schema object must be closed. The extended
 - `mix release.candidate` — verifies canonical release metadata, all three
   certified identity pins inside the CLI and the TypeScript verifier core,
   development/test-only dependency direction, regular-file package inputs,
-  **two independently built byte-identical archives**, and exact unpacked
-  archive membership.
+  **two independently built byte-identical archives**, exact unpacked
+  archive membership, and the repository's release pin equal to the
+  archive's content identity (the platform-independent SHA-256 over the
+  unpacked sorted path+bytes).
 
 ## Cryptographic known answers
 

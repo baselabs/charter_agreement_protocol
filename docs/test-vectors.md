@@ -6,7 +6,7 @@ This manifest is what a third implementation needs to prove byte-agreement
 with the certified Charter Agreement Protocol corpus: the four certified
 identities, the corpus layout, the runner contract, and the byte-agreement
 procedure the repository's own independent verifier already follows. The
-TypeScript verifier under `verifier/` (Node built-ins only, Node 24+) is the
+TypeScript verifier under `verifier/` (Node built-ins only, Node ≥ 24.8) is the
 reference second implementation; a third implementation repeats its
 procedure.
 
@@ -18,10 +18,10 @@ recorded value for the current candidate:
 
 | Identity | Value | Job |
 |---|---|---|
-| Corpus digest | `sha-256:nLE8UwbYxyIRG147jhJoQLHf0RpsA4dw8X5ATpJvKK8` | Domain-separated digest inside the canonical corpus index; proves index self-consistency |
-| Index SHA-256 (base64url) | `Ty7kChMw3GusTSiJIgkwTCwIs7Ao9rWr8J9ok9oN1FM` | Raw SHA-256 of the exact canonical index bytes; pinned by the Elixir CLI and the TypeScript verifier core |
+| Corpus digest | `sha-256:9t3IsUcPMqtZiJE9wlYchjDJNoSpO4RbOte26RqgEqc` | Domain-separated digest inside the canonical corpus index; proves index self-consistency |
+| Index SHA-256 (base64url) | `SQYrs8WyUX4Bj_QlupjB_KYaMyjVjrnwvQ79sNkyIao` | Raw SHA-256 of the exact canonical index bytes; pinned by the Elixir CLI and the TypeScript verifier core |
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` | The compiled extension registry identity carried in the index |
-| Specification digest | `sha-256:omp4P8VPXArH3eRE0r1bQaUyHALuYPUC00ly2h4kxaE` | Domain-separated digest over the canonical manifest of the normative spec set (`spec/`); pinned in release metadata |
+| Specification digest | `sha-256:6bHRyRsti3Q08Ta1oJcp4By0cbAF14w5erKyf7wjKkQ` | Domain-separated digest over the canonical manifest of the normative spec set (`spec/`); pinned in release metadata |
 
 A corpus you built yourself that disagrees with the index SHA-256 is not the
 certified corpus, however internally consistent it is — both runners refuse
@@ -70,8 +70,8 @@ the report is the normative `spec/schemas/corpus-index.json` and
    digests), schema validation, descriptor and descriptor-chain
    verification, revision decode, acceptance verification and equivocation,
    termination verification, chain verification and governing computation,
-   and receipt verification — including Ed25519 signature checks over the
-   exact RFC 7515 signing-input bytes.
+   and receipt verification — including Ed25519 and ML-DSA signature checks
+   over the exact RFC 7515 signing-input bytes.
 3. Recompute every case's projected output or typed error; compare complete
    documents, not verdicts.
 4. Emit the canonical report and compare it byte-for-byte against the

@@ -142,25 +142,29 @@ names and indexes — rejected values never appear, so error logs are safe by
 construction. Match on the codes you treat specially (for example
 `:signature_invalid`, `:extension_unknown_critical`, `:limit_exceeded`) and
 route the rest to your audit surface. The complete code set is visible in
-`CharterAgreementProtocol.Error`; per-code coverage — 19 corpus-exercised
+`CharterAgreementProtocol.Error`; per-code coverage — 45 corpus-exercised
 codes with certified cases, the remainder exercised by in-repo tests or
 declared-only — is tabulated in the [error-code reference](error-codes.md).
 
 ## Run the certified corpus in your CI
 
-From a repository checkout (or an unpacked package directory):
+From a repository checkout (the alias's script is repository-only — the
+package does not ship `scripts/`):
 
 ```console
 $ mix conformance.verify
 ```
 
-From a dependent project, without leaving your application's Mix context:
+From a dependent project, without leaving your application's Mix context
+(wrap the call in `System.halt/1` as shown — a bare `mix run -e` drops the
+returned status):
 
 ```console
-$ mix run -e 'CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"])'
+$ mix run -e 'System.halt(CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"]))'
 ```
 
-The escript form also works from a checkout or unpacked package directory:
+The escript form also works from a checkout or unpacked package directory
+(`mix deps.get` first in an unpacked package — the lock does not ship):
 
 ```console
 $ mix escript.build && ./charter_agreement_protocol --corpus priv/conformance

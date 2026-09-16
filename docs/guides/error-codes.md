@@ -45,7 +45,7 @@ Closing the corpus-coverage gap further is a future certification decision.
 | `:corpus_index_invalid` | test-exercised | corpus_test |
 | `:cross_field_invalid` | corpus-exercised | certified corpus expectations (1 case) |
 | `:descriptor_chain_invalid` | corpus-exercised | certified corpus expectations (2 cases) |
-| `:descriptor_invalid` | corpus-exercised | certified corpus expectations (1 case) |
+| `:descriptor_invalid` | corpus-exercised | certified corpus expectations (2 cases) |
 | `:descriptor_key_invalid` | corpus-exercised | certified corpus expectations (1 case) |
 | `:digest_algorithm_unsupported` | corpus-exercised | certified corpus expectations (1 case) |
 | `:digest_encoding_invalid` | corpus-exercised | certified corpus expectations (1 case) |
@@ -68,14 +68,14 @@ Closing the corpus-coverage gap further is a future certification decision.
 | `:invalid_type` | corpus-exercised | certified corpus expectations (4 cases) |
 | `:limit_exceeded` | corpus-exercised | certified corpus expectations (1 case) |
 | `:missing_required` | corpus-exercised | certified corpus expectations (2 cases) |
-| `:nested_invalid` | corpus-exercised | certified corpus expectations (1 case) |
+| `:nested_invalid` | corpus-exercised | certified corpus expectations (2 cases) |
 | `:non_canonical_bytes` | corpus-exercised | certified corpus expectations (1 case) |
 | `:number_not_double_expressible` | corpus-exercised | certified corpus expectations (1 case) |
-| `:protected_header_invalid` | corpus-exercised | certified corpus expectations (1 case) |
+| `:protected_header_invalid` | corpus-exercised | certified corpus expectations (4 cases) |
 | `:receipt_claims_mismatch` | corpus-exercised | certified corpus expectations (1 case) |
 | `:receipt_invalid` | corpus-exercised | certified corpus expectations (1 case) |
 | `:revision_invalid` | corpus-exercised | certified corpus expectations (3 cases) |
-| `:signature_invalid` | corpus-exercised | certified corpus expectations (4 cases) |
+| `:signature_invalid` | corpus-exercised | certified corpus expectations (5 cases) |
 | `:signing_input_invalid` | test-exercised | signing_input_test |
 | `:signing_refused` | test-exercised | signing_input_test |
 | `:termination_claims_mismatch` | corpus-exercised | certified corpus expectations (1 case) |

@@ -93,7 +93,18 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
     pins = [
       {"lib/charter_agreement_protocol/conformance/cli.ex", index_identity},
       {"verifier/core.ts", index_identity},
-      {"verifier/core.ts", index["registry_digest"]}
+      {"verifier/core.ts", index["registry_digest"]},
+      # The shipped docs' certified-identity tables must carry the live
+      # values — a truncated or stale transcription (the 0.3.1 review caught
+      # a 42-character index SHA) must fail this gate, not reach consumers.
+      {"docs/guides/conformance.md", index_identity},
+      {"docs/guides/conformance.md", index["corpus_digest"]},
+      {"docs/guides/conformance.md", index["registry_digest"]},
+      {"docs/guides/conformance.md", live_spec_digest()},
+      {"docs/test-vectors.md", index_identity},
+      {"docs/test-vectors.md", index["corpus_digest"]},
+      {"docs/test-vectors.md", index["registry_digest"]},
+      {"docs/test-vectors.md", live_spec_digest()}
     ]
 
     Enum.each(pins, fn {path, pin} ->

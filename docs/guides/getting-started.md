@@ -115,7 +115,8 @@ report is canonical JSON carrying the corpus digest, registry digest, and raw
 index identity. From a repository checkout the same gate is
 `mix conformance.verify`; the alias's script is repository-only (the package
 does not ship `scripts/`), so from an unpacked package directory use the
-escript directly:
+escript directly (`mix deps.get` first — the packaged deps are
+development-only and the lock does not ship):
 
 ```console
 $ mix escript.build && ./charter_agreement_protocol --corpus priv/conformance
@@ -126,7 +127,8 @@ See [Conformance](conformance.md).
 ## Sign your first evidence (repository demo)
 
 CAP never holds keys. You build a signing input, sign its exact RFC 7515 bytes
-with your own Ed25519 key outside CAP, and hand the raw 64-byte signature back
+with your own Ed25519 key outside CAP, and hand the raw signature (64 bytes
+for Ed25519 — the registry row's exact length in general) back
 for assembly:
 
 ```elixir

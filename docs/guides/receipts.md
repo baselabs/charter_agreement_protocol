@@ -12,7 +12,7 @@ by the issuing party's charter key.
 
 | Member | Contract |
 |---|---|
-| `protocol_revision` | protocol data value `1` |
+| `protocol_revision` | `1` through `3` |
 | `charter_id` | the charter identity (genesis revision digest) |
 | `revision_number`, `revision_digest` | exact revision coordinates |
 | `issuing_party_role`, `agent_party_role` | the two bound roles |
@@ -54,7 +54,8 @@ context, and limits:
 
 - **Full `ChainFacts` context** — the chain is reverified from retained bytes
   before use. The issuing role must resolve to one active descriptor key and
-  the Ed25519 signature must verify. Charter identity, revision number, both
+  the signature must verify under the registry row's key algorithm. Charter
+  identity, revision number, both
   party roles, and the agent role's deployment binding must match the
   recognized revision exactly. Governance is recomputed at `occurred_at`.
 - **Revision-only context** — proves structural revision/deployment equality

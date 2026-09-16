@@ -48,10 +48,12 @@ callback, signer module, or custody handle. The seam is:
 
 1. CAP builds a signing input — the exact RFC 7515 message bytes plus the
    closed protected header.
-2. **You** sign those bytes with your Ed25519 key, outside CAP.
+2. **You** sign those bytes with your key (`Ed25519`, or `ML-DSA-65` when
+   minting at `protocol_revision` 3), outside CAP.
 3. `assemble_compact/2` revalidates the kind/header/payload/message
-   relationship, accepts exactly one raw 64-byte external signature, and
-   returns the compact.
+   relationship, accepts exactly one raw external signature at the registry
+   row's exact length (64 bytes for `Ed25519`; 2420/3309/4627 for the
+   ML-DSA parameterizations), and returns the compact.
 4. Hosts must post-verify the assembled compact through CAP before returning
    it to service.
 
@@ -63,11 +65,17 @@ constrain a dishonest signer or prove any view complete. See
 
 ## Cryptographic primitives and hardening
 
-- **Ed25519 only** (`EdDSA`). Before the runtime primitive is invoked, CAP
-  rejects noncanonical point encodings and all eight low-order torsion
-  encodings for both public keys and signature `R`, and rejects signature
-  scalars outside the canonical subgroup-order range — so the runtime never
-  sees degenerate inputs.
+- **Ed25519** (`EdDSA`/`Ed25519` rows). Before the runtime primitive is
+  invoked, CAP rejects noncanonical point encodings and all eight low-order
+  torsion encodings for both public keys and signature `R`, and rejects
+  signature scalars outside the canonical subgroup-order range — so the
+  runtime never sees degenerate inputs.
+- **Pure ML-DSA** (`ML-DSA-44/65/87` rows, from `protocol_revision` 3;
+  FIPS 204, context the empty string per RFC 9964). Lattice signatures
+  carry no torsion or point-encoding surface; the strictness rule is the
+  registry row's exact public-key and signature byte lengths, enforced
+  before cryptographic work. Verification needs an OTP runtime linked
+  against OpenSSL ≥ 3.5.
 - **Domain-separated SHA-256** (`SHA-256(domain || 0x00 || content)` over a
   closed domain set). The same bytes hash differently per artifact surface, so
   cross-surface digest substitution fails.
