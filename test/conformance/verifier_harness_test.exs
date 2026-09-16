@@ -65,7 +65,11 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
             System.cmd("node", arguments, stderr_to_stdout: true)
           end)
 
-        result = Task.yield(task, 1_000)
+        # The budget proves the verifier rejects the FIFO before reading it —
+        # an attempted read blocks forever and outlives any budget — while
+        # tolerating Node cold-start under CI load; 1s flaked on a busy
+        # runner (startup alone crossed it).
+        result = Task.yield(task, 10_000)
         if result == nil, do: Task.shutdown(task, :brutal_kill)
 
         assert {:ok, {output, status}} = result
