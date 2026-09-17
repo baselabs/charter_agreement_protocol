@@ -98,11 +98,10 @@ jobs:
   # setup-beam resolves the official Erlang/OTP Windows builds (otp "29",
   # the major pinned by config/config.exs; the Windows patch line follows
   # the official installer, not bob) and the Elixir precompiled archive.
-  # The full test suite is deliberately NOT run here: the revision-3
-  # ML-DSA corpus needs the runtime's linked OpenSSL >= 3.5, and the
-  # official Windows OTP binaries' bundled OpenSSL is not a declared fact —
-  # extending this lane to `mix test` is gated on that (see
-  # docs/adr/supported-otp-set.md).
+  # The lane's own capability report observed the official OTP 29 Windows
+  # build linking OpenSSL 3.5.5 with every :mldsa44/65/87 atom present, so
+  # the full test suite runs here too — clone-build-test on Windows
+  # (see docs/adr/supported-otp-set.md).
   windows-build:
     name: Windows clone-and-build
     runs-on: windows-2025

@@ -93,8 +93,13 @@ Probes (2026-09-16):
    pins LF / binary treatment for the byte-exact corpus, fixtures, and pins
    so `core.autocrlf` cannot corrupt a Windows checkout. The declared gates
    contain no POSIX-shell dependency (the currency gate is an Elixir script
-   spawning `mix` through `cmd /c` on Windows). The full test suite on
-   Windows is deliberately not claimed: the revision-3 ML-DSA corpus needs
-   the runtime's linked OpenSSL ≥ 3.5, and the official Windows OTP
-   binaries' bundled OpenSSL version is not a declared fact; extending the
-   lane to `mix test` is gated on that fact.
+   spawning `mix` through `cmd /c` on Windows). The full test suite runs on
+   this lane: its capability report OBSERVED (2026-09-17, CI run 35177596961)
+   that the official OTP 29 Windows build links OpenSSL 3.5.5 with every
+   `:mldsa44/65/87` atom present, so the revision-3 corpus's ML-DSA floor is
+   met on Windows — 268/268 green. One suite fixture is platform-aware: the
+   reject-before-read test's FIFO (`mkfifo` is POSIX-only) becomes a symlink
+   to the real index bytes on Windows, equally non-regular to lstat, and if a
+   host refuses link creation the test passes with a loud note instead of
+   claiming the substrate proved anything; the POSIX lanes carry the
+   red-capable FIFO form.
