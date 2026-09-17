@@ -126,9 +126,11 @@ jobs:
       # crypto and ML-DSA capability into the CI record, so the decision to
       # extend this lane to `mix test` rests on an observed fact instead of
       # an assumption (the corpus needs :mldsa44/65/87 and OpenSSL >= 3.5).
+      # The snippet deliberately contains no quote characters of any kind —
+      # pwsh strips embedded double quotes when passing native arguments.
       - name: Report runtime crypto capability
         run: |
-          elixir -e 'IO.inspect(:crypto.info_lib(), label: "linked_crypto"); IO.inspect([:mldsa44, :mldsa65, :mldsa87] -- :crypto.supports(:public_keys), label: "mldsa_missing")'
+          elixir -e 'IO.inspect(:crypto.info_lib()); IO.inspect([:mldsa44, :mldsa65, :mldsa87] -- :crypto.supports(:public_keys))'
 
       - name: Check formatting
         run: mix format --check-formatted
