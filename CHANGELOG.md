@@ -2,6 +2,58 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
+## [0.3.2] — 2026-09-16
+
+Toolchain-and-hygiene release; no wire-visible or behavioral library change
+(`lib/` is byte-identical to 0.3.1).
+
+### Fixed
+
+- Both shipped notebooks (charter tour, fork repair) minted their
+  Ed25519-signed artifacts with `protocol_revision => 1`; the registry
+  admits the Ed25519 key grammar from revision 2, so
+  `descriptor_signing_input` fail-closed with `signing_input_invalid` —
+  both notebooks were broken at execution time, not merely stale to read.
+  All nine claims sites now declare revision 2 and both notebooks' full
+  cell sequences execute green end to end from their own directory.
+
+### Changed
+
+- The declared Elixir floor drops to `~> 1.19` (tested lines 1.19.x and
+  1.20.x), matching `charter_agreement_signer`; anything below 1.19.0 is
+  refused by Mix with `Mix.ElixirVersionError` before anything compiles.
+  The supported-OTP set is declared as {28, 29} and enforced in-repo:
+  `config/config.exs` refuses a foreign OTP major before compilation. The
+  set is decided by substrate probe — stable precompiled 1.20.x builds also
+  exist for OTP 27, but on OTP 27.3.4.17 with OpenSSL 3.5.5 confirmed
+  linked, `:crypto.supports(:public_keys)` exposes none of
+  `:mldsa44/65/87`, so the revision-3 corpus fail-closes on 27. The range,
+  the set, `.tool-versions`, and the CI matrix lanes move together in one
+  commit; docs/adr/supported-otp-set.md records the probes, the proof legs,
+  and the floor lane green end to end on Elixir 1.19.5 / OTP 28.5.0.3.
+- CI's floor lane mirrors the signer sibling's (Elixir 1.19.5 /
+  OTP 28.5.0.3 on ubuntu-26.04). dialyxir moves to 1.4.8 and ex_doc to
+  0.40.4; the charter-family `==` pins carry inline exact-identity reasons.
+- Dependency currency becomes latest-first and gated
+  (docs/adr/dependency-currency-gate.md): `mix currency.check` runs inside
+  the quality battery and as its own CI step. The gate fails on any
+  resolvable drift, prints every resolver-rejected pin with its requirement
+  chain, classifies on the rendered table with whitespace-anchored matches,
+  and exits nonzero unverified when the hex.pm lookup renders no table.
+
+### Added
+
+- The Windows clone-and-build bar. `.gitattributes` normalizes line endings
+  and marks the byte-exact conformance corpus and test fixtures binary so
+  `core.autocrlf` cannot corrupt a Windows checkout; CI gains a
+  windows-build lane proving checkout, dependency fetch, test-environment
+  compile with warnings-as-errors, format, and the currency gate on the
+  official OTP 29 Windows builds, plus an informational runtime
+  crypto-capability report. No declared gate depends on a POSIX shell — the
+  currency gate is an Elixir script that spawns `mix` through `cmd /c` on
+  Windows. The full test suite on Windows is not yet claimed; the gated
+  extension is recorded in the supported-toolchain ADR.
+
 ## [0.3.1] — 2026-09-15
 
 Docs-and-tooling correction release; no wire-visible or library-code change

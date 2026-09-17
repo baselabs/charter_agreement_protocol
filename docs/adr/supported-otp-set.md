@@ -58,8 +58,14 @@ Probes (2026-09-16):
    and becomes supported only when a lane proves it. Anything below 1.19.0
    (1.18.x today) is refused by Mix before compilation. Aligned with the
    signer sibling. Known boundary: 1.18 is additionally blocked by
-   `extension_registry.ex` not compiling there — outside today's range and
-   therefore not a defect until the range moves.
+   compile-time behavior in `extension_registry.ex` — the module holds
+   compiled `~r` regular expressions in module attributes (`@tagged_digest`,
+   and the match constraints carried inside `@profiles`), and Elixir 1.18's
+   compile-time escape cannot serialize the `#Reference` a compiled `Regex`
+   carries (1.19+ can). Outside today's range and therefore not a defect
+   until the range moves; the widening slice must lift it (for example by
+   binding source patterns and compiling at runtime) — recorded here so the
+   family's 1.18 widening starts from the mechanism, not a symptom.
 2. **Supported OTP set {28, 29}.** Build existence alone would admit 27; the
    ML-DSA capability probe excludes it — a supported major must carry the
    complete quality battery, and the revision-3 corpus fail-closes on 27.
