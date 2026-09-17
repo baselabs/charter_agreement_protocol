@@ -116,6 +116,13 @@ jobs:
           elixir-version: "1.20.3"
           otp-version: "29"
 
+      # The harness tests run the Node verifiers, whose engines floor is 24;
+      # the runner's stock Node predates it.
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+
       - name: Install dependencies
         run: mix deps.get
 

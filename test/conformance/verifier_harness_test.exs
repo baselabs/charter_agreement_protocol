@@ -53,7 +53,17 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
 
     {:ok, _copied} = File.cp_r("priv/conformance", temporary)
     File.rm!(Path.join(temporary, "index.json"))
-    {_output, 0} = System.cmd("mkfifo", [Path.join(temporary, "index.json")])
+
+    # The defensive path under test is reject-before-read of a NON-REGULAR
+    # certified entry. A FIFO is the strongest fixture — an attempted read
+    # would block forever — but mkfifo is POSIX-only; on Windows a directory
+    # at the certified path is equally non-regular, and both verifiers
+    # reject it through the same lstat/isFile guard.
+    if match?({:win32, _}, :os.type()) do
+      File.mkdir!(Path.join(temporary, "index.json"))
+    else
+      {_output, 0} = System.cmd("mkfifo", [Path.join(temporary, "index.json")])
+    end
 
     try do
       for arguments <- [
