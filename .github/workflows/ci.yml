@@ -137,3 +137,10 @@ jobs:
 
       - name: Check dependency currency
         run: mix currency.check
+
+      # The capability report above observed the official OTP 29 Windows
+      # build linking OpenSSL 3.5.5 with every :mldsa44/65/87 atom present,
+      # so the full suite runs here too — the clone-and-build bar extends to
+      # clone-build-test on Windows.
+      - name: Run the full test suite
+        run: $env:MIX_ENV='test'; mix test --seed 42
