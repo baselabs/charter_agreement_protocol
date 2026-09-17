@@ -50,11 +50,18 @@ table.
 
 ## Quick start
 
-Elixir ~> 1.20; zero runtime dependencies (OTP `:crypto` only). From
+Elixir ~> 1.19 (tested lines 1.19.x and 1.20.x) on Erlang/OTP 28 or 29 —
+the range and the supported-OTP set are enforced in-repo (Mix refuses an
+Elixir outside the range and `config/config.exs` refuses an OTP major outside
+the set, both before anything compiles), and they move in lockstep with
+`.tool-versions` and the CI lanes (see
+[the supported-toolchain ADR](docs/adr/supported-otp-set.md)). Zero runtime
+dependencies (OTP `:crypto` only). From
 `protocol_revision` 3 the runtime floor has a second axis: ML-DSA verification
 needs an OTP runtime whose linked crypto library is OpenSSL ≥ 3.5 (FIPS 204
 landed there; OTP ≥ 28.1 with OpenSSL ≥ 3.5 is the declared floor — a runtime
-linked against OpenSSL 3.0.x cannot generate or verify ML-DSA keys). The
+linked against OpenSSL 3.0.x cannot generate or verify ML-DSA keys, and OTP 27
+exposes no ML-DSA algorithms to `:crypto` even with OpenSSL ≥ 3.5 linked). The
 shipped corpus contains ML-DSA cases, so the quick-start verification below
 needs that floor too:
 

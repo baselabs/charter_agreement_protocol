@@ -12,13 +12,21 @@ $ mix quality
 ```
 
 `mix quality` is the complete gate battery, identical locally and in CI:
-dependency audits, format check, warnings-as-errors compile, strict credo,
+dependency audits and the dependency-currency gate, format check,
+warnings-as-errors compile, strict credo,
 the full test suite with its coverage threshold, the certified conformance
 corpus (with regeneration byte-identity), all 25 named source mutations,
 Elixir/TypeScript verifier agreement over repository and unpacked-package
 corpora, dialyzer, docs with warnings-as-errors, and the release-candidate
 gate (reproducible archive, exact package boundary). See
 [Conformance](docs/guides/conformance.md).
+
+Toolchain: Elixir ~> 1.19 (tested lines 1.19.x and 1.20.x), supported OTP set
+{28, 29}. The `mix.exs` range, the `config/config.exs` supported-OTP assert,
+`.tool-versions`, and the CI matrix lanes move together in ONE commit — a
+lane outside the declared set, or a supported major with no lane, is a defect
+(see [the supported-toolchain ADR](docs/adr/supported-otp-set.md) and
+[the dependency-currency ADR](docs/adr/dependency-currency-gate.md)).
 
 The independent Node verifier needs Node ≥ 24.8 (ML-DSA in the Node
 builtins landed across the 24.6–24.8 minors; the verifier's engines floor

@@ -8,7 +8,13 @@ defmodule CharterAgreementProtocol.MixProject do
     [
       app: :charter_agreement_protocol,
       version: @version,
-      elixir: "~> 1.20",
+      # Lockstep rule: this range, config/config.exs's supported_otp set,
+      # .tool-versions, and the CI matrix lanes move together in ONE commit.
+      # Aligned with the signer sibling (charter_agreement_signer ~> 1.19):
+      # the range admits 1.19.x and 1.20.x (the tested lines; ~> 1.19 is
+      # "< 2.0.0"), and anything below 1.19.0 (e.g. 1.18.x) is refused by Mix
+      # with Mix.ElixirVersionError before anything compiles.
+      elixir: "~> 1.19",
       deps: deps(),
       elixirc_paths: elixirc_paths(Mix.env()),
       package: package(),
@@ -52,6 +58,10 @@ defmodule CharterAgreementProtocol.MixProject do
 
   defp deps do
     [
+      # Exact identity contracts with the charter-family siblings the fixture
+      # and conformance battery is certified against; the 0.1 -> 0.7 and
+      # 0.1 -> 0.4 breaking-family jumps are deliberate slices of their own,
+      # never a currency rider.
       {:agent_blueprint_protocol, "== 0.1.1", only: [:dev, :test], runtime: false},
       {:bounded_authority_protocol, "== 0.1.2", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
@@ -87,7 +97,9 @@ defmodule CharterAgreementProtocol.MixProject do
         "docs/adr/no-versioning-rule.md",
         "docs/adr/conformance-release-candidate.md",
         "docs/adr/algorithm-name-agility.md",
-        "docs/adr/ml-dsa-admission.md"
+        "docs/adr/ml-dsa-admission.md",
+        "docs/adr/supported-otp-set.md",
+        "docs/adr/dependency-currency-gate.md"
       ],
       licenses: ["Apache-2.0"],
       links: %{
@@ -131,6 +143,8 @@ defmodule CharterAgreementProtocol.MixProject do
         "docs/adr/conformance-release-candidate.md",
         "docs/adr/algorithm-name-agility.md",
         "docs/adr/ml-dsa-admission.md",
+        "docs/adr/supported-otp-set.md",
+        "docs/adr/dependency-currency-gate.md",
         "docs/release-runbook.md",
         "spec/core.md",
         "spec/requirements.md",
@@ -166,6 +180,8 @@ defmodule CharterAgreementProtocol.MixProject do
           "docs/adr/conformance-release-candidate.md",
           "docs/adr/algorithm-name-agility.md",
           "docs/adr/ml-dsa-admission.md",
+          "docs/adr/supported-otp-set.md",
+          "docs/adr/dependency-currency-gate.md",
           "docs/release-runbook.md"
         ],
         Specification: [
@@ -236,10 +252,12 @@ defmodule CharterAgreementProtocol.MixProject do
       "verifier.agreement": "run --no-start scripts/check_verifier_agreement.exs",
       "differential.check": "run --no-start scripts/check_differential.exs",
       "release.candidate": "run --no-start scripts/check_release_candidate.exs",
+      "currency.check": "run --no-start scripts/check_currency.exs",
       quality: [
         "hex.audit",
         "deps.unlock --check-unused",
         "deps.audit",
+        "currency.check",
         "format --check-formatted",
         "compile --warnings-as-errors",
         "credo --strict",

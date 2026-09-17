@@ -1,0 +1,8 @@
+# A Windows checkout with core.autocrlf=true would rewrite every text file
+# to CRLF and silently break every byte-exact surface (certified corpus,
+# fixtures, pins). Normalize all text to LF and treat the byte-exact
+# directories as binary so no conversion ever touches them.
+* text=auto eol=lf
+priv/conformance/** -text
+test/fixtures/** -text
+*.tar binary

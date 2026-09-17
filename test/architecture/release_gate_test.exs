@@ -36,6 +36,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     "hex.audit",
     "deps.unlock --check-unused",
     "deps.audit",
+    "currency.check",
     "format --check-formatted",
     "compile --warnings-as-errors",
     "credo --strict",

@@ -4,10 +4,15 @@ Five minutes from install to your first verified artifact evidence.
 
 ## Requirements
 
-- Elixir ~> 1.20; Erlang/OTP ≥ 28.1 with the runtime linked against
-  OpenSSL ≥ 3.5 — the corpus and every ML-DSA surface need it (FIPS 204
-  reached OpenSSL in 3.5.0; a runtime linked against OpenSSL 3.0.x cannot
-  generate or verify ML-DSA keys). Only OTP `:crypto` is used.
+- Elixir ~> 1.19 (tested lines 1.19.x and 1.20.x); Erlang/OTP 28 or 29, with
+  the runtime linked against OpenSSL ≥ 3.5 — the corpus and every ML-DSA
+  surface need it (FIPS 204 reached OpenSSL in 3.5.0; a runtime linked against
+  OpenSSL 3.0.x cannot generate or verify ML-DSA keys, and OTP 27 exposes no
+  ML-DSA algorithms to `:crypto` even with OpenSSL ≥ 3.5 linked). The
+  supported-OTP set is asserted in `config/config.exs` and moves in lockstep
+  with the Elixir range, `.tool-versions`, and the CI lanes (see
+  [the supported-toolchain ADR](../adr/supported-otp-set.md)). Only OTP
+  `:crypto` is used.
 - Node ≥ 24.8 only if you run the repository-side TypeScript verifier yourself —
   it is not needed to use the package (24.8 is the verifier's declared floor;
   ML-DSA in the Node builtins landed across the 24.6–24.8 minors)
