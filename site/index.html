@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CAP — the Charter Agreement Protocol</title>
+<meta name="description" content="Bounded, byte-exact evidence of what two parties agreed — including agent commerce. CAP verifies; it never authorizes. Signed descriptors, revisions, acceptances, terminations, receipts; a certified corpus; two independent implementations.">
+<link rel="stylesheet" href="./styles.css?v=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%230f172a'/%3E%3Ctext x='24' y='32' font-family='Arial,sans-serif' font-size='19' font-weight='800' text-anchor='middle' fill='%23a78bfa'%3E[CAP]%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="i-key"><path d="M10.6 13.4L21 3"/><path d="M18 4l2 2"/><path d="M15 7l2 2"/><circle cx="7.2" cy="16.8" r="3.8"/></g>
+    <g id="i-seal"><path d="M6 21h12"/><path d="M8 21v-2c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2"/><path d="M12 3a3.2 3.2 0 0 1 3.2 3.2c0 2.2-3.2 3.3-3.2 5.8 0-2.5-3.2-3.6-3.2-5.8A3.2 3.2 0 0 1 12 3z"/></g>
+    <g id="i-person"><circle cx="12" cy="8" r="3.3"/><path d="M5.2 20.5a6.8 6.8 0 0 1 13.6 0"/></g>
+    <g id="i-shield"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M8.8 12l2.2 2.2 4.2-4.2"/></g>
+    <g id="i-doc"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5"/><path d="M10 16h5"/></g>
+    <g id="i-lock"><rect x="6" y="11" width="12" height="9" rx="2"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/></g>
+    <g id="i-check"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.3l2.4 2.4 4.6-4.9"/></g>
+    <g id="i-terminal"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M7.5 10l2.6 2-2.6 2"/><path d="M12.5 14h4"/></g>
+  </defs>
+</svg>
+
+<header class="familynav">
+  <nav>
+    <span class="brand"><span class="wordmark"><i>[</i>CAP<i>]</i></span></span>
+    <span class="fam">
+      <a href="#" class="here" title="You are here">Protocol</a>
+      <a href="https://baselabs.github.io/charter_agreement_protocol_typescript/" title="The verifier package — the bench">Verifier</a>
+      <a href="https://baselabs.github.io/charter_agreement_signer_typescript/" title="The signer package — the charter workshop">Signer</a>
+      <a href="https://github.com/baselabs/charter_agreement_signer" title="The Elixir companion signer">Elixir&nbsp;signer</a>
+    </span>
+    <a class="gh" href="https://github.com/baselabs/charter_agreement_protocol">GitHub&nbsp;↗</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <p class="kicker"><span class="wordmark hero-mark"><i>[</i>CAP<i>]</i></span> Charter Agreement Protocol</p>
+    <h1>Agreements as <em>evidence</em> —<br>including when the parties are agents.</h1>
+    <p class="lede">CAP is a portable, non-authorizing format and verification protocol for bilateral
+    commercial agreements: signed, byte-exact artifacts that prove <strong>what two parties agreed,
+    which revision governed a given instant, and which agreement state governed a signed action</strong>
+    — without a central authority, and without ever making the decision for you.
+    <strong>CAP verifies. It never authorizes.</strong></p>
+    <div class="hero-actions">
+      <a class="btn primary" href="https://baselabs.github.io/charter_agreement_signer_typescript/"><svg class="ic"><use href="#i-terminal"/></svg> Form a charter — live</a>
+      <a class="btn ghost" href="#artifacts">The five artifacts</a>
+    </div>
+    <div class="flow" aria-label="The charter flow">
+      <div class="actor issuer"><svg class="ic"><use href="#i-seal"/></svg><span>Party A</span><small>descriptor + acceptance</small></div>
+      <div class="artifact"><svg class="ic"><use href="#i-doc"/></svg><span>charter</span></div>
+      <div class="actor holder"><svg class="ic"><use href="#i-person"/></svg><span>Party B</span><small>countersigns</small></div>
+      <div class="artifact"><svg class="ic"><use href="#i-doc"/></svg><span>receipt</span></div>
+      <div class="actor verifier"><svg class="ic"><use href="#i-shield"/></svg><span>Anyone</span><small>re-verifies from bytes</small></div>
+    </div>
+    <ul class="badges">
+      <li>open · Apache-2.0</li><li>byte-exact · RFC 8785 canonical</li><li>Ed25519 + ML-DSA (PQ)</li><li>Elixir + TypeScript</li>
+    </ul>
+  </div>
+</section>
+
+<main>
+<section id="artifacts" class="wrap">
+  <div class="sec-head"><h2>The five artifacts</h2>
+  <p>Each one is bytes you can hand to anyone; each one proves exactly what it says and nothing else.</p></div>
+  <table class="signers">
+    <thead><tr><th>Artifact</th><th>Form</th><th>Proves</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Party Descriptor</strong></td><td>signed JWS (<code>cap+party</code>)</td><td>a party’s declared key history — Ed25519, and ML-DSA from revision 3 — with predecessor-bound transitions and fork evidence</td></tr>
+      <tr><td><strong>Charter Revision</strong></td><td>canonical JSON</td><td>agreed terms: parties, roles, legal-text digest, precedence, window, termination reasons, exact deployment bindings</td></tr>
+      <tr><td><strong>Acceptance</strong></td><td>signed JWS (<code>cap+acceptance</code>)</td><td>bilateral signed assent to exact revision bytes</td></tr>
+      <tr><td><strong>Termination Notice</strong></td><td>signed JWS (<code>cap+termination</code>)</td><td>signed closure of the charter at a pure UTC instant</td></tr>
+      <tr><td><strong>Receipt</strong></td><td>signed JWS (<code>cap+receipt</code>)</td><td>a signed action bound to exact revision coordinates, deployment digest, and grant evidence</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="proves" class="wrap">
+  <div class="why-head">
+    <h2>What it proves — and refuses to</h2>
+    <p>The refusal list is the product. A verification tool that quietly makes your business
+    decisions for you is not a verification tool.</p>
+  </div>
+  <div class="pn-grid">
+    <article class="pn-card does">
+      <h3><svg class="ic"><use href="#i-check"/></svg> Use CAP when</h3>
+      <ul>
+        <li>two independent parties need portable, re-verifiable agreement evidence exchanged as bytes</li>
+        <li>agent commerce charters — machines forming and acting under bilateral terms</li>
+        <li>bilateral supplier terms with proof of which revision governed an action</li>
+        <li>key-history continuity proofs (including post-quantum rotations)</li>
+        <li>action receipts for audit that anyone can re-verify offline</li>
+      </ul>
+    </article>
+    <article class="pn-card doesnt">
+      <h3><svg class="ic"><use href="#i-x"/></svg> Do not use CAP for</h3>
+      <ul>
+        <li>authorization decisions — CAP never authorizes</li>
+        <li>live revocation checks</li>
+        <li>term evaluation — <code>term_satisfaction</code> stays in the omission floor</li>
+        <li>legal adjudication</li>
+        <li>single-party self-attestation</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section id="why" class="wrap why">
+  <div class="why-head">
+    <h2>Why the evidence holds</h2>
+  </div>
+  <div class="grid3">
+    <article class="whycard">
+      <h3>Byte-exact by construction.</h3>
+      <p class="pain">Two systems, two “version 2”s — and a dispute nobody can settle from the bytes.</p>
+      <p class="answer"><svg class="ic"><use href="#i-check"/></svg> Strict unpadded base64url, deterministic tagged decoding,
+      RFC 8785 canonicalization, <strong>domain-separated SHA-256</strong> — acceptances bind exact bytes.</p>
+    </article>
+    <article class="whycard">
+      <h3>Contested views stay contested.</h3>
+      <p class="pain">Most tooling silently tie-breaks an equivocation and calls it a verdict.</p>
+      <p class="answer"><svg class="ic"><use href="#i-check"/></svg> Same-signer equivocation is <strong>retained as signed evidence with no
+      winner</strong>; the only repair is a countersigned supersession revision.</p>
+    </article>
+    <article class="whycard">
+      <h3>Two implementations, zero shared code.</h3>
+      <p class="pain">One implementation verifying itself proves nothing about the spec.</p>
+      <p class="answer"><svg class="ic"><use href="#i-check"/></svg> A <strong>certified 100-case corpus</strong> runs through the pure Elixir
+      verifier and a builtins-only TypeScript one — <strong>byte-identical canonical reports</strong> or the build fails.</p>
+    </article>
+  </div>
+</section>
+
+<section id="family" class="wrap">
+  <div class="why-head">
+    <h2>The family</h2>
+    <p>One protocol, four repositories, two ecosystems — same bytes everywhere, live demos on the
+    TypeScript sites.</p>
+  </div>
+  <div class="fammap">
+    <article class="famcard here">
+      <h3><svg class="ic"><use href="#i-doc"/></svg> The protocol <small>· this repository</small></h3>
+      <p>The Elixir reference implementation and verifier, the certified corpus, the spec and guides
+      — including the security model’s full proves/never-proves table.</p>
+      <div class="links"><a href="https://github.com/baselabs/charter_agreement_protocol">repository</a><a href="https://hex.pm/packages/charter_agreement_protocol">hex.pm</a><a href="https://github.com/baselabs/charter_agreement_protocol/blob/main/docs/guides/security-model.md">security model</a></div>
+    </article>
+    <article class="famcard">
+      <h3><svg class="ic"><use href="#i-seal"/></svg> The signer <small>· TypeScript</small></h3>
+      <p>The npm companion that produces the signed artifacts through a caller-owned key handle —
+      the private key never enters the library.</p>
+      <div class="links"><a href="https://baselabs.github.io/charter_agreement_signer_typescript/">charter workshop</a><a href="https://www.npmjs.com/package/@charter-agreement-protocol/signer">npm</a></div>
+    </article>
+    <article class="famcard">
+      <h3><svg class="ic"><use href="#i-shield"/></svg> The verifier <small>· TypeScript</small></h3>
+      <p>The npm verify side: byte-exact artifact decode, chain facts, the algorithm registry —
+      zero runtime dependencies, corpus-certified.</p>
+      <div class="links"><a href="https://baselabs.github.io/charter_agreement_protocol_typescript/">the bench</a><a href="https://www.npmjs.com/package/@charter-agreement-protocol/verifier">npm</a></div>
+    </article>
+    <article class="famcard">
+      <h3><svg class="ic"><use href="#i-key"/></svg> The Elixir signer <small>· charter_agreement_signer</small></h3>
+      <p>The Elixir holder-side companion — the reference this TypeScript signer ports; {module, term()}
+      custody, one dependency: this protocol package.</p>
+      <div class="links"><a href="https://hex.pm/packages/charter_agreement_signer">hex.pm</a><a href="https://github.com/baselabs/charter_agreement_signer">repository</a></div>
+    </article>
+  </div>
+</section>
+</main>
+
+<footer class="familynav footer">
+  <nav>
+    <span class="brand"><span class="wordmark"><i>[</i>CAP<i>]</i></span></span>
+    <span class="fam">
+      <a href="https://github.com/baselabs/charter_agreement_protocol">Protocol</a>
+      <a href="https://baselabs.github.io/charter_agreement_protocol_typescript/">Verifier</a>
+      <a href="https://baselabs.github.io/charter_agreement_signer_typescript/">Signer</a>
+      <a href="https://github.com/baselabs/charter_agreement_signer">Elixir&nbsp;signer</a>
+    </span>
+    <span class="fine">Apache-2.0 · an open protocol by baselabs</span>
+  </nav>
+</footer>
+</body>
+</html>
