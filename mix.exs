@@ -63,7 +63,7 @@ defmodule CharterAgreementProtocol.MixProject do
       # 0.1 -> 0.4 breaking-family jumps are deliberate slices of their own,
       # never a currency rider.
       {:agent_blueprint_protocol, "== 0.1.1", only: [:dev, :test], runtime: false},
-      {:bounded_authority_protocol, "== 0.1.2", only: [:dev, :test], runtime: false},
+      {:bounded_authority_protocol, "== 0.4.1", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.40.3", only: [:dev, :test], runtime: false},
