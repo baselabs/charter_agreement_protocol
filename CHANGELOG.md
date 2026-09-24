@@ -2,6 +2,34 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
+## [0.4.1] — 2026-09-24
+
+Packaging-correction release; `lib/` is byte-identical to 0.4.0 and the
+certified corpus, census digest, and semantics identity (4) are unchanged.
+
+### Fixed
+
+- `docs/adr/release-identity.md` now ships in the archive: three
+  in-package files referenced it (the errata policy's immutability
+  statement, the no-versioning rule's two approved boundary exceptions,
+  and the issued consumer transition contract) but the 0.4.0 file list
+  omitted it, leaving dangling references in-archive.
+- `package.secret_scan.ignore` for the two deterministic public
+  test-data surfaces (the known-answer vectors in `capability.ex` and
+  the signed conformance corpus): hex.pm's published-package scanner
+  does not read repository-level scanner config, and its 0.4.0 scan
+  reported a 40-character interior substring of the public ML-DSA-87
+  known-answer signature as a `github-app-token` — a `ghs_` collision
+  inside a base64url blob whose run continues past the match, not a
+  credential (nothing to revoke). The ignore is hex's documented
+  mechanism and ships in this release's mix.exs.
+
+### Repository-side (not shipped)
+
+- The corrupt-public-key test's zero-overwrite corruption became a no-op
+  whenever key generation emitted a leading zero byte (1-in-256; a CI
+  lane drew it); it now XORs the byte with 0xFF. No production change.
+
 ## [0.4.0] — 2026-09-24
 
 The release-identity act: a versioned, machine-readable identity contract;
