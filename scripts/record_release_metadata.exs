@@ -3,9 +3,11 @@
 # deliberate spec-byte or corpus change:
 #     mix run --no-start scripts/record_release_metadata.exs
 alias CharterAgreementProtocol.{
+  Algorithm,
   Canonicalization,
   Conformance.Report,
   Digest,
+  ReleaseIdentity,
   SpecificationIdentity
 }
 
@@ -25,23 +27,67 @@ spec_digest =
   |> SpecificationIdentity.digest()
   |> Digest.to_tagged()
 
-metadata = %{
-  "archive_is_publication_authorization" => false,
-  "corpus_digest" => index["corpus_digest"],
-  "format" => "charter-agreement-protocol-release-metadata",
-  "index_sha256_base64url" => Report.index_identity(index_bytes),
-  "package" => "charter_agreement_protocol",
-  "package_version" => Mix.Project.config()[:version],
-  "registry_digest" => index["registry_digest"],
-  "spec_digest" => spec_digest,
-  "verifier_runtime" => "node>=24.8"
-}
-
-tag_value = fn
-  value when is_boolean(value) -> {:boolean, value}
-  value when is_binary(value) -> {:string, value}
-  nil -> :null
+limits_object = fn limits ->
+  CharterAgreementProtocol.Limits.fields()
+  |> Enum.map(fn field -> {Atom.to_string(field), {:integer, Map.get(limits, field)}} end)
 end
+
+registry_rows =
+  Enum.map(Algorithm.registry(), fn row ->
+    {:object,
+     [
+       {"name", {:string, row.name}},
+       {"min_protocol_revision", {:integer, row.min_protocol_revision}},
+       {"key_algorithm", {:string, row.key_algorithm}},
+       {"public_key_bytes", {:integer, row.public_key_bytes}},
+       {"signature_bytes", {:integer, row.signature_bytes}}
+     ]}
+  end)
+
+compatibility_rows =
+  Enum.map(ReleaseIdentity.compatibility(), fn row ->
+    {:object,
+     [
+      {"package_versions", {:array, Enum.map(row.package_versions, &{:string, &1})}},
+      {"verification_semantics", {:integer, row.verification_semantics}},
+      {"census_digest", {:string, row.census_digest}},
+      {"protocol_revisions", {:array, Enum.map(row.protocol_revisions, &{:integer, &1})}},
+       {"transitions",
+        {:array,
+         Enum.map(row.transitions, fn transition ->
+           {:object,
+            [
+              {"class", {:string, Atom.to_string(transition.class)}},
+              {"direction", {:string, Atom.to_string(transition.direction)}},
+              {"description", {:string, transition.description}}
+            ]}
+         end)}}
+     ]}
+  end)
+
+metadata = %{
+  "archive_is_publication_authorization" => {:boolean, false},
+  "compatibility" => {:array, compatibility_rows},
+  "corpus_digest" => {:string, index["corpus_digest"]},
+  "format" => {:string, "charter-agreement-protocol-release-metadata"},
+  "index_sha256_base64url" => {:string, Report.index_identity(index_bytes)},
+  "limits" =>
+    {:object,
+     [
+       {"default", {:object, limits_object.(CharterAgreementProtocol.Limits.default())}},
+       {"maximum", {:object, limits_object.(CharterAgreementProtocol.Limits.maximums())}}
+     ]},
+  "manifest_version" => {:integer, ReleaseIdentity.manifest_version()},
+  "package" => {:string, "charter_agreement_protocol"},
+  "package_version" => {:string, Mix.Project.config()[:version]},
+  "registry_digest" => {:string, index["registry_digest"]},
+  "signature_algorithms" => {:array, registry_rows},
+  "signature_registry_digest" =>
+    {:string, Algorithm.registry_digest() |> CharterAgreementProtocol.Digest.to_tagged()},
+  "spec_digest" => {:string, spec_digest},
+  "verification_semantics_version" => {:integer, ReleaseIdentity.verification_semantics()},
+  "verifier_runtime" => {:string, "node>=24.8"}
+}
 
 # The release identity is pinned repository-side (.release-archive.sha256),
 # never inside the packaged metadata: a tarball cannot carry its own digest
@@ -56,10 +102,7 @@ end
 # reproducibility within the run, and requires this content identity to
 # equal the pin on any platform.
 
-{:ok, bytes} =
-  Canonicalization.encode(
-    {:object, Enum.map(metadata, fn {key, value} -> {key, tag_value.(value)} end)}
-  )
+{:ok, bytes} = Canonicalization.encode({:object, Enum.map(metadata, fn {key, value} -> {key, value} end)})
 
 File.write!("priv/release-metadata.json", bytes)
 

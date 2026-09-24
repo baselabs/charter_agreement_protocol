@@ -248,6 +248,7 @@ defmodule CharterAgreementProtocol.MixProject do
     [
       audit: ["hex.audit", "deps.unlock --check-unused", "deps.audit"],
       "conformance.verify": "run --no-start scripts/check_conformance.exs",
+      "historical.check": "run --no-start scripts/check_historical_differential.exs",
       "conformance.mutations": "run --no-start scripts/check_conformance_mutations.exs",
       "verifier.agreement": "run --no-start scripts/check_verifier_agreement.exs",
       "differential.check": "run --no-start scripts/check_differential.exs",
@@ -263,6 +264,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "credo --strict",
         "test --cover --seed 42",
         "conformance.verify",
+        "historical.check",
         "conformance.mutations",
         "verifier.agreement",
         "differential.check",

@@ -1,5 +1,11 @@
 defmodule CharterAgreementProtocol.ReleaseCandidateGate do
-  alias CharterAgreementProtocol.{Canonicalization, Digest, SpecificationIdentity}
+  alias CharterAgreementProtocol.{
+  Algorithm,
+  Canonicalization,
+  Digest,
+  ReleaseIdentity,
+  SpecificationIdentity
+}
   alias CharterAgreementProtocol.Conformance.Report
 
   @root Path.expand("..", __DIR__)
@@ -90,6 +96,8 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
     if Map.take(metadata, Map.keys(expected)) != expected,
       do: raise("release metadata drift")
 
+    verify_release_identity_members!(metadata)
+
     pins = [
       {"lib/charter_agreement_protocol/conformance/cli.ex", index_identity},
       {"verifier/core.ts", index_identity},
@@ -111,6 +119,66 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
       if not String.contains?(File.read!(Path.join(@root, path)), pin),
         do: raise("certified identity missing from #{path}")
     end)
+  end
+
+  # The release-identity members are data-in-code projections: the archive
+  # pin authenticates the manifest BYTES, this comparison authenticates their
+  # TRUTH. A stale semantics version, drifted limits table, or hand-edited
+  # compatibility matrix fails the gate even when the bytes are self-consistent.
+  defp verify_release_identity_members!(metadata) do
+    limits = fn value ->
+      CharterAgreementProtocol.Limits.fields()
+      |> Enum.map(&{Atom.to_string(&1), Map.get(value, &1)})
+      |> Map.new()
+    end
+
+    expected_members = %{
+      "manifest_version" => ReleaseIdentity.manifest_version(),
+      "verification_semantics_version" => ReleaseIdentity.verification_semantics(),
+      "limits" => %{
+        "default" => limits.(CharterAgreementProtocol.Limits.default()),
+        "maximum" => limits.(CharterAgreementProtocol.Limits.maximums())
+      },
+      "signature_registry_digest" =>
+        Algorithm.registry_digest() |> CharterAgreementProtocol.Digest.to_tagged(),
+      "signature_algorithms" =>
+        Enum.map(Algorithm.registry(), fn row ->
+          %{
+            "name" => row.name,
+            "min_protocol_revision" => row.min_protocol_revision,
+            "key_algorithm" => row.key_algorithm,
+            "public_key_bytes" => row.public_key_bytes,
+            "signature_bytes" => row.signature_bytes
+          }
+        end),
+      "compatibility" =>
+        Enum.map(ReleaseIdentity.compatibility(), fn row ->
+          %{
+            "package_versions" => row.package_versions,
+            "verification_semantics" => row.verification_semantics,
+            "census_digest" => row.census_digest,
+            "protocol_revisions" => row.protocol_revisions,
+            "transitions" =>
+              Enum.map(row.transitions, fn transition ->
+                %{
+                  "class" => Atom.to_string(transition.class),
+                  "direction" => Atom.to_string(transition.direction),
+                  "description" => transition.description
+                }
+              end)
+          }
+        end)
+    }
+
+    if Map.take(metadata, Map.keys(expected_members)) != expected_members,
+      do: raise("release identity members drifted from live values")
+
+    # The additive-only contract: the shipped manifest may carry exactly the
+    # declared members — a removed or renamed member is a manifest-version
+    # bump, not a silent edit.
+    member_set = (Map.keys(expected_members) ++ ["archive_is_publication_authorization", "corpus_digest", "format", "index_sha256_base64url", "package", "package_version", "registry_digest", "spec_digest", "verifier_runtime"]) |> Enum.sort()
+    if Map.keys(metadata) != member_set,
+      do: raise("release metadata member set changed")
   end
 
   defp live_spec_digest do

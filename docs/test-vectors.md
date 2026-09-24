@@ -21,7 +21,7 @@ recorded value for the current candidate:
 | Corpus digest | `sha-256:bp_w7EUDVgwU5hNWLwUrIVeWKSas3xbaLLcN6Sn6Ev8` | Domain-separated digest inside the canonical corpus index; proves index self-consistency |
 | Index SHA-256 (base64url) | `f--8DXp39J4wJkrpkD8ZTQpHkMlduX43Xvnz0HeObeA` | Raw SHA-256 of the exact canonical index bytes; pinned by the Elixir CLI and the TypeScript verifier core |
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` | The compiled extension registry identity carried in the index |
-| Specification digest | `sha-256:6bHRyRsti3Q08Ta1oJcp4By0cbAF14w5erKyf7wjKkQ` | Domain-separated digest over the canonical manifest of the normative spec set (`spec/`); pinned in release metadata |
+| Specification digest | `sha-256:zN3cbF-GnsvTMYovOGrO7erwYeyCM1im4rNPyMramo4` | Domain-separated digest over the canonical manifest of the normative spec set (`spec/`); pinned in release metadata |
 
 A corpus you built yourself that disagrees with the index SHA-256 is not the
 certified corpus, however internally consistent it is — both runners refuse

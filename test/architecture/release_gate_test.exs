@@ -43,6 +43,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     "credo --strict",
     "test --cover --seed 42",
     "conformance.verify",
+    "historical.check",
     "conformance.mutations",
     "verifier.agreement",
     "differential.check",

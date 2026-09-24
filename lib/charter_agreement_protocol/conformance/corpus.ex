@@ -167,9 +167,22 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
   @spec floor() :: %{binary() => %{required: [binary()], n_a: binary()}}
   def floor, do: @floor
 
-  @doc "Load and integrity-check a complete in-memory corpus."
+  @doc """
+  Load and integrity-check a complete in-memory corpus.
+
+  `historical` relaxes exactly one check for a corpus certified by an
+  EARLIER release: the compiled applicability floor is a
+  current-certification instrument, so a frozen index that predates
+  surfaces or classes this package compiles cannot satisfy it. Every
+  integrity check that matters for a released artifact — the corpus
+  self-digest, the per-file hashes, the file set, the count reconciliation,
+  and the observed-versus-indexed cell counts — still applies unchanged.
+  """
   @spec load(term()) :: {:ok, t()} | {:error, Error.t()}
-  def load(map) when is_map(map) do
+  @spec load(term(), boolean()) :: {:ok, t()} | {:error, Error.t()}
+  def load(map, historical \\ false)
+
+  def load(map, historical) when is_map(map) do
     with {:ok, index_bytes} <- fetch_index(map),
          {:ok, index} <- decode_canonical(index_bytes, :index),
          :ok <- validate_index(index),
@@ -181,7 +194,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
          :ok <- verify_counts(index, cases_by_file),
          {:ok, cases} <- flatten_valid_cases(cases_by_file),
          :ok <- verify_unique_ids(cases),
-         :ok <- verify_applicability(index, cases) do
+         :ok <- verify_applicability(index, cases, historical) do
       {:ok,
        %__MODULE__{
          index: index,
@@ -193,7 +206,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     end
   end
 
-  def load(_map), do: index_error()
+  def load(_map, _historical), do: index_error()
 
   defp fetch_index(map) do
     case Map.get(map, "index.json") do
@@ -326,20 +339,44 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     if ids == Enum.uniq(ids), do: :ok, else: duplicate_id_error()
   end
 
-  defp verify_applicability(index, cases) do
+  defp verify_applicability(index, cases, historical) do
     applicability = index["applicability"]
     observed = Enum.frequencies_by(cases, &{&1["surface"], &1["class"]})
 
     valid? =
-      sorted_keys(applicability) == Enum.sort(@surfaces) and
-        Enum.all?(@surfaces, fn surface ->
-          cells = applicability[surface]
+      if historical do
+        # A frozen corpus certified by an earlier release carries that
+        # release's applicability census: cell-count agreement still
+        # reconciles against the executed cases, but the compiled floor —
+        # a current-certification instrument — does not apply to it.
+        applicability != nil and
+          Enum.all?(applicability, fn {surface, cells} ->
+            is_binary(surface) and is_map(cells) and
+              observed_counts_match?(cells, observed, surface)
+          end)
+      else
+        sorted_keys(applicability) == Enum.sort(@surfaces) and
+          Enum.all?(@surfaces, fn surface ->
+            cells = applicability[surface]
 
-          is_map(cells) and sorted_keys(cells) == Enum.sort(@classes) and
-            valid_cells?(surface, cells, observed)
-        end)
+            is_map(cells) and sorted_keys(cells) == Enum.sort(@classes) and
+              valid_cells?(surface, cells, observed)
+          end)
+      end
 
     if valid?, do: :ok, else: applicability_error()
+  end
+
+  defp observed_counts_match?(cells, observed, surface) do
+    Enum.all?(cells, fn {class, value} ->
+      case value do
+        count when is_integer(count) ->
+          Map.get(observed, {surface, class}, 0) == count
+
+        %{"n_a" => _reason} ->
+          Map.get(observed, {surface, class}, 0) == 0
+      end
+    end)
   end
 
   defp valid_cells?(surface, cells, observed) do
