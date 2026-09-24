@@ -9,6 +9,7 @@ defmodule CharterAgreementProtocol.DescriptorChain do
   """
 
   alias CharterAgreementProtocol.{
+    Capability.Profile,
     DescriptorFacts,
     Error,
     Facts,
@@ -28,9 +29,14 @@ defmodule CharterAgreementProtocol.DescriptorChain do
 
   @doc "Verify one complete descriptor view in any input order."
   @spec verify(term(), Limits.t()) :: {:ok, t()} | {:error, Error.t()}
-  def verify(compacts, %Limits{} = limits) when is_list(compacts) and compacts != [] do
+  @spec verify(term(), Limits.t(), Profile.t()) ::
+          {:ok, t()} | {:error, Error.t()}
+  def verify(compacts, limits, profile \\ Profile.full())
+
+  def verify(compacts, %Limits{} = limits, profile)
+      when is_list(compacts) and compacts != [] do
     if Limits.valid?(limits) do
-      with {:ok, verified} <- PartyDescriptor.verify_chain_view(compacts, limits) do
+      with {:ok, verified} <- PartyDescriptor.verify_chain_view(compacts, limits, profile) do
         {:ok, build(verified)}
       end
     else
@@ -38,17 +44,18 @@ defmodule CharterAgreementProtocol.DescriptorChain do
     end
   end
 
-  def verify(compacts, %Limits{} = limits) when is_list(compacts) do
+  def verify(compacts, %Limits{} = limits, _profile) when is_list(compacts) do
     if Limits.valid?(limits), do: chain_error(), else: invalid_limits()
   end
 
-  def verify(_compacts, %Limits{} = limits) do
+  def verify(_compacts, %Limits{} = limits, _profile) do
     if Limits.valid?(limits),
       do: {:error, Error.new(:invalid_type, ["descriptor_chain"])},
       else: invalid_limits()
   end
 
-  def verify(_compacts, _limits), do: {:error, Error.new(:invalid_type, ["limits"])}
+  def verify(_compacts, _limits, _profile),
+    do: {:error, Error.new(:invalid_type, ["limits"])}
 
   defp build(verified) do
     sibling_groups =

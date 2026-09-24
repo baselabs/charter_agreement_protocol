@@ -13,6 +13,7 @@ defmodule CharterAgreementProtocol.Acceptance do
     AcceptanceEquivocation,
     AcceptanceFacts,
     CharterRevision,
+    Capability.Profile,
     CompactJws,
     DescriptorChain,
     DescriptorFacts,
@@ -107,46 +108,56 @@ defmodule CharterAgreementProtocol.Acceptance do
   @doc "Verify one attached countersignature against exact caller-supplied artifacts."
   @spec verify(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t()) ::
           {:ok, AcceptanceFacts.t()} | {:error, Error.t()}
+  @spec verify(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t(), Profile.t()) ::
+          {:ok, AcceptanceFacts.t()} | {:error, Error.t()}
+  def verify(compact, revision, chain, limits, profile \\ Profile.full())
+
   def verify(
         compact,
         %CharterRevision{} = supplied_revision,
         %DescriptorChain{} = supplied_chain,
-        %Limits{} = limits
+        %Limits{} = limits,
+        profile
       ) do
     if Limits.valid?(limits) do
-      do_verify(compact, supplied_revision, supplied_chain, limits)
+      do_verify(compact, supplied_revision, supplied_chain, limits, profile)
     else
       invalid_limits()
     end
   end
 
-  def verify(_compact, _revision, _chain, %Limits{} = limits) do
+  def verify(_compact, _revision, _chain, %Limits{} = limits, _profile) do
     if Limits.valid?(limits), do: invalid_type(), else: invalid_limits()
   end
 
-  def verify(_compact, _revision, _chain, _limits), do: invalid_type()
+  def verify(_compact, _revision, _chain, _limits, _profile), do: invalid_type()
 
   @doc false
   @spec verify_verified(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t()) ::
           {:ok, AcceptanceFacts.t()} | {:error, Error.t()}
+  @spec verify_verified(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t(), Profile.t()) ::
+          {:ok, AcceptanceFacts.t()} | {:error, Error.t()}
+  def verify_verified(compact, revision, chain, limits, profile \\ Profile.full())
+
   def verify_verified(
         compact,
         %CharterRevision{} = verified_revision,
         %DescriptorChain{} = verified_chain,
-        %Limits{} = limits
+        %Limits{} = limits,
+        profile
       ) do
     if Limits.valid?(limits) do
-      do_verify_verified(compact, verified_revision, verified_chain, limits)
+      do_verify_verified(compact, verified_revision, verified_chain, limits, profile)
     else
       invalid_limits()
     end
   end
 
-  def verify_verified(_compact, _revision, _chain, %Limits{} = limits) do
+  def verify_verified(_compact, _revision, _chain, %Limits{} = limits, _profile) do
     if Limits.valid?(limits), do: invalid_type(), else: invalid_limits()
   end
 
-  def verify_verified(_compact, _revision, _chain, _limits), do: invalid_type()
+  def verify_verified(_compact, _revision, _chain, _limits, _profile), do: invalid_type()
 
   @doc false
   @spec decode_for_signing(term(), Limits.t()) :: {:ok, t()} | {:error, Error.t()}
@@ -188,7 +199,7 @@ defmodule CharterAgreementProtocol.Acceptance do
   def digest(%__MODULE__{envelope: %CompactJws{payload_bytes: bytes}}),
     do: :acceptance_content |> Digest.hash(bytes) |> Digest.to_tagged()
 
-  defp do_verify(compact, supplied_revision, supplied_chain, limits) do
+  defp do_verify(compact, supplied_revision, supplied_chain, limits, profile) do
     with {:ok, revision} <- reverify_revision(supplied_revision, limits),
          {:ok, chain} <- reverify_chain(supplied_chain, limits),
          {:ok, acceptance} <- decode(compact, limits),
@@ -196,7 +207,7 @@ defmodule CharterAgreementProtocol.Acceptance do
          {:ok, descriptor} <- pinned_descriptor(acceptance, revision, chain),
          {:ok, key} <- active_key(descriptor, acceptance.envelope.kid),
          :ok <-
-           CompactJws.verify_signature(acceptance.envelope, key.public_key, key.algorithm) do
+           CompactJws.verify_signature(acceptance.envelope, key.public_key, key.algorithm, profile) do
       {:ok, facts(acceptance, descriptor)}
     end
   end
@@ -205,13 +216,13 @@ defmodule CharterAgreementProtocol.Acceptance do
   # from the same retained bytes in the same call; re-decoding and re-verifying
   # them per acceptance is pure redundancy (O(A×D) crypto on untrusted views).
   # The public verify/4 keeps full re-verification for caller-supplied context.
-  defp do_verify_verified(compact, revision, chain, limits) do
+  defp do_verify_verified(compact, revision, chain, limits, profile) do
     with {:ok, acceptance} <- decode(compact, limits),
          :ok <- claims_match(acceptance, revision),
          {:ok, descriptor} <- pinned_descriptor(acceptance, revision, chain),
          {:ok, key} <- active_key(descriptor, acceptance.envelope.kid),
          :ok <-
-           CompactJws.verify_signature(acceptance.envelope, key.public_key, key.algorithm) do
+           CompactJws.verify_signature(acceptance.envelope, key.public_key, key.algorithm, profile) do
       {:ok, facts(acceptance, descriptor)}
     end
   end

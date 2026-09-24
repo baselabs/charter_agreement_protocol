@@ -11,6 +11,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
 
   alias CharterAgreementProtocol.{
     CharterRevision,
+    Capability.Profile,
     CompactJws,
     DescriptorChain,
     DescriptorFacts,
@@ -113,46 +114,56 @@ defmodule CharterAgreementProtocol.TerminationNotice do
   @doc "Verify one attached termination notice against exact caller-supplied artifacts."
   @spec verify(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t()) ::
           {:ok, TerminationFacts.t()} | {:error, Error.t()}
+  @spec verify(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t(), Profile.t()) ::
+          {:ok, TerminationFacts.t()} | {:error, Error.t()}
+  def verify(compact, revision, chain, limits, profile \\ Profile.full())
+
   def verify(
         compact,
         %CharterRevision{} = supplied_revision,
         %DescriptorChain{} = supplied_chain,
-        %Limits{} = limits
+        %Limits{} = limits,
+        profile
       ) do
     if Limits.valid?(limits) do
-      do_verify(compact, supplied_revision, supplied_chain, limits)
+      do_verify(compact, supplied_revision, supplied_chain, limits, profile)
     else
       invalid_limits()
     end
   end
 
-  def verify(_compact, _revision, _chain, %Limits{} = limits) do
+  def verify(_compact, _revision, _chain, %Limits{} = limits, _profile) do
     if Limits.valid?(limits), do: invalid_type(), else: invalid_limits()
   end
 
-  def verify(_compact, _revision, _chain, _limits), do: invalid_type()
+  def verify(_compact, _revision, _chain, _limits, _profile), do: invalid_type()
 
   @doc false
   @spec verify_verified(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t()) ::
           {:ok, TerminationFacts.t()} | {:error, Error.t()}
+  @spec verify_verified(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t(), Profile.t()) ::
+          {:ok, TerminationFacts.t()} | {:error, Error.t()}
+  def verify_verified(compact, revision, chain, limits, profile \\ Profile.full())
+
   def verify_verified(
         compact,
         %CharterRevision{} = verified_revision,
         %DescriptorChain{} = verified_chain,
-        %Limits{} = limits
+        %Limits{} = limits,
+        profile
       ) do
     if Limits.valid?(limits) do
-      do_verify_verified(compact, verified_revision, verified_chain, limits)
+      do_verify_verified(compact, verified_revision, verified_chain, limits, profile)
     else
       invalid_limits()
     end
   end
 
-  def verify_verified(_compact, _revision, _chain, %Limits{} = limits) do
+  def verify_verified(_compact, _revision, _chain, %Limits{} = limits, _profile) do
     if Limits.valid?(limits), do: invalid_type(), else: invalid_limits()
   end
 
-  def verify_verified(_compact, _revision, _chain, _limits), do: invalid_type()
+  def verify_verified(_compact, _revision, _chain, _limits, _profile), do: invalid_type()
 
   @doc false
   @spec decode_for_signing(term(), Limits.t()) :: {:ok, t()} | {:error, Error.t()}
@@ -171,7 +182,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
   def digest(%__MODULE__{envelope: %CompactJws{payload_bytes: bytes}}),
     do: :termination_content |> Digest.hash(bytes) |> Digest.to_tagged()
 
-  defp do_verify(compact, supplied_revision, supplied_chain, limits) do
+  defp do_verify(compact, supplied_revision, supplied_chain, limits, profile) do
     with {:ok, revision} <- reverify_revision(supplied_revision, limits),
          {:ok, chain} <- reverify_chain(supplied_chain, limits),
          {:ok, termination} <- decode(compact, limits),
@@ -179,7 +190,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
          {:ok, descriptor} <- pinned_descriptor(termination, revision, chain),
          {:ok, key} <- active_key(descriptor, termination.envelope.kid),
          :ok <-
-           CompactJws.verify_signature(termination.envelope, key.public_key, key.algorithm) do
+           CompactJws.verify_signature(termination.envelope, key.public_key, key.algorithm, profile) do
       {:ok, facts(termination, descriptor)}
     end
   end
@@ -187,13 +198,13 @@ defmodule CharterAgreementProtocol.TerminationNotice do
   # Chain.verify supplies the revision and descriptor chain it verified itself
   # in the same call; the public verify/4 keeps full re-verification for
   # caller-supplied context. See Acceptance.verify_verified.
-  defp do_verify_verified(compact, revision, chain, limits) do
+  defp do_verify_verified(compact, revision, chain, limits, profile) do
     with {:ok, termination} <- decode(compact, limits),
          :ok <- claims_match(termination, revision),
          {:ok, descriptor} <- pinned_descriptor(termination, revision, chain),
          {:ok, key} <- active_key(descriptor, termination.envelope.kid),
          :ok <-
-           CompactJws.verify_signature(termination.envelope, key.public_key, key.algorithm) do
+           CompactJws.verify_signature(termination.envelope, key.public_key, key.algorithm, profile) do
       {:ok, facts(termination, descriptor)}
     end
   end

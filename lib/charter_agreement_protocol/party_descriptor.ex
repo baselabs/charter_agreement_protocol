@@ -11,6 +11,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   alias CharterAgreementProtocol.{
     Algorithm,
     Base64Url,
+    Capability.Profile,
     CompactJws,
     DescriptorFacts,
     Digest,
@@ -185,17 +186,34 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   @doc "Verify one descriptor at genesis or against an already verified predecessor."
   @spec verify(term(), nil | DescriptorFacts.t(), Limits.t()) ::
           {:ok, DescriptorFacts.t()} | {:error, Error.t()}
-  def verify(compact, predecessor, %Limits{} = limits) do
-    if Limits.valid?(limits), do: do_verify(compact, predecessor, limits), else: invalid_limits()
-  end
+  def verify(compact, predecessor, %Limits{} = limits),
+    do: verify(compact, predecessor, limits, Profile.full())
 
   def verify(_compact, _predecessor, _limits),
+    do: {:error, Error.new(:invalid_type, ["limits"])}
+
+  @doc """
+  Verify one descriptor under a caller-supplied capability profile. The
+  profile applies per artifact before any cryptographic work.
+  """
+  @spec verify(term(), nil | DescriptorFacts.t(), Limits.t(), Profile.t()) ::
+          {:ok, DescriptorFacts.t()} | {:error, Error.t()}
+  def verify(compact, predecessor, %Limits{} = limits, %Profile{} = profile) do
+    if Limits.valid?(limits),
+      do: do_verify(compact, predecessor, limits, profile),
+      else: invalid_limits()
+  end
+
+  def verify(_compact, _predecessor, _limits, _profile),
     do: {:error, Error.new(:invalid_type, ["limits"])}
 
   @doc false
   @spec verify_chain_view([term()], Limits.t()) ::
           {:ok, [DescriptorFacts.t()]} | {:error, Error.t()}
-  def verify_chain_view(compacts, %Limits{} = limits) when is_list(compacts) do
+  @spec verify_chain_view([term()], Limits.t(), Profile.t()) ::
+          {:ok, [DescriptorFacts.t()]} | {:error, Error.t()}
+  def verify_chain_view(compacts, %Limits{} = limits, profile \\ Profile.full())
+      when is_list(compacts) do
     if Limits.valid?(limits) do
       case artifact_set_length(compacts) do
         :improper ->
@@ -205,7 +223,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
           {:error, Error.new(:limit_exceeded, ["descriptor_chain", "items"])}
 
         _count ->
-          do_verify_chain_view(compacts, limits)
+          do_verify_chain_view(compacts, limits, profile)
       end
     else
       invalid_limits()
@@ -315,24 +333,25 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
      end)}
   end
 
-  defp do_verify(compact, predecessor, limits) do
-    with {:ok, verified_predecessor} <- verify_predecessor(predecessor, limits),
+  defp do_verify(compact, predecessor, limits, profile) do
+    with {:ok, verified_predecessor} <- verify_predecessor(predecessor, limits, profile),
          {:ok, descriptor} <- decode(compact, limits),
          {:ok, party_id, public_key, key_algorithm, lineage} <-
            verification_context(descriptor, verified_predecessor, compact),
          :ok <-
-           CompactJws.verify_signature(descriptor.envelope, public_key, key_algorithm) do
+           CompactJws.verify_signature(descriptor.envelope, public_key, key_algorithm, profile) do
       {:ok, facts(descriptor, party_id, lineage)}
     end
   end
 
-  defp do_verify_chain_view(compacts, limits) do
+  defp do_verify_chain_view(compacts, limits, profile) do
     with {:ok, decoded} <- decode_chain_entries(compacts, limits),
          :ok <- unique_chain_digests(decoded),
          {:ok, genesis} <- one_chain_genesis(decoded),
-         {:ok, genesis_facts} <- verify_decoded(genesis.descriptor, genesis.compact, nil),
+         {:ok, genesis_facts} <-
+           verify_decoded(genesis.descriptor, genesis.compact, nil, profile),
          children = Enum.group_by(decoded, & &1.descriptor.prev_descriptor_digest),
-         {:ok, verified} <- verify_descendants([genesis_facts], children, %{}),
+         {:ok, verified} <- verify_descendants([genesis_facts], children, %{}, profile),
          true <- map_size(verified) == length(decoded) do
       {:ok, Map.values(verified)}
     else
@@ -366,26 +385,37 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     end
   end
 
-  defp verify_descendants([], _children, verified), do: {:ok, verified}
+  defp verify_descendants([], _children, verified, _profile), do: {:ok, verified}
 
-  defp verify_descendants([predecessor | queue], children, verified) do
+  defp verify_descendants([predecessor | queue], children, verified, profile) do
     entries = Map.get(children, predecessor.descriptor_digest, [])
 
-    with {:ok, additions} <- verify_children(entries, predecessor) do
+    with {:ok, additions} <- verify_children(entries, predecessor, profile) do
       verified =
         Enum.reduce([predecessor | additions], verified, fn facts, acc ->
           Map.put(acc, facts.descriptor_digest, facts)
         end)
 
-      verify_descendants(additions ++ queue, children, verified)
+      verify_descendants(additions ++ queue, children, verified, profile)
     end
   end
 
-  defp verify_children(children, predecessor) do
+  # Substrate diagnostics and profile rejections are honest outcomes, not
+  # chain-corruption evidence: they surface verbatim instead of collapsing
+  # into the chain error, so a substrate-limited or profile-limited verifier
+  # can tell the difference. Every other failure keeps its existing chain
+  # identity (byte-identical corpus verdicts).
+  @honest_failures ~w(algorithm_outside_profile revision_outside_profile algorithm_unsupported_on_substrate)a
+
+  defp verify_children(children, predecessor, profile) do
     Enum.reduce_while(children, {:ok, []}, fn entry, {:ok, additions} ->
-      case verify_decoded(entry.descriptor, entry.compact, predecessor) do
+      case verify_decoded(entry.descriptor, entry.compact, predecessor, profile) do
         {:ok, facts} -> {:cont, {:ok, [facts | additions]}}
-        _error -> {:halt, chain_error()}
+        {:error, %Error{code: code}} = error when code in @honest_failures ->
+          {:halt, error}
+
+        _error ->
+          {:halt, chain_error()}
       end
     end)
   end
@@ -411,11 +441,12 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
   defp genesis_shape(_number, _party_id, _previous), do: descriptor_error()
 
-  defp verify_predecessor(nil, _limits), do: {:ok, nil}
+  defp verify_predecessor(nil, _limits, _profile), do: {:ok, nil}
 
-  defp verify_predecessor(%DescriptorFacts{lineage: lineage} = supplied, limits)
+  defp verify_predecessor(%DescriptorFacts{lineage: lineage} = supplied, limits, profile)
        when is_list(lineage) and lineage != [] do
-    with {:ok, verified} <- lineage |> Enum.reverse() |> verify_lineage(limits),
+    with {:ok, verified} <-
+           lineage |> Enum.reverse() |> verify_lineage(limits, profile),
          true <- verified.descriptor_digest == supplied.descriptor_digest do
       {:ok, verified}
     else
@@ -423,32 +454,32 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     end
   end
 
-  defp verify_predecessor(_predecessor, _limits), do: chain_error()
+  defp verify_predecessor(_predecessor, _limits, _profile), do: chain_error()
 
-  defp verify_lineage([genesis | rest], limits) do
-    with {:ok, first} <- verify_one(genesis, nil, limits) do
-      Enum.reduce_while(rest, {:ok, first}, &verify_lineage_member(&1, &2, limits))
+  defp verify_lineage([genesis | rest], limits, profile) do
+    with {:ok, first} <- verify_one(genesis, nil, limits, profile) do
+      Enum.reduce_while(rest, {:ok, first}, &verify_lineage_member(&1, &2, limits, profile))
     end
   end
 
-  defp verify_lineage_member(compact, {:ok, predecessor}, limits) do
-    case verify_one(compact, predecessor, limits) do
+  defp verify_lineage_member(compact, {:ok, predecessor}, limits, profile) do
+    case verify_one(compact, predecessor, limits, profile) do
       {:ok, next} -> {:cont, {:ok, next}}
       error -> {:halt, error}
     end
   end
 
-  defp verify_one(compact, predecessor, limits) do
+  defp verify_one(compact, predecessor, limits, profile) do
     with {:ok, descriptor} <- decode(compact, limits) do
-      verify_decoded(descriptor, compact, predecessor)
+      verify_decoded(descriptor, compact, predecessor, profile)
     end
   end
 
-  defp verify_decoded(descriptor, compact, predecessor) do
+  defp verify_decoded(descriptor, compact, predecessor, profile) do
     with {:ok, party_id, public_key, key_algorithm, lineage} <-
            verification_context(descriptor, predecessor, compact),
          :ok <-
-           CompactJws.verify_signature(descriptor.envelope, public_key, key_algorithm) do
+           CompactJws.verify_signature(descriptor.envelope, public_key, key_algorithm, profile) do
       {:ok, facts(descriptor, party_id, lineage)}
     end
   end

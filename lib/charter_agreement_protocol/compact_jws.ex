@@ -12,6 +12,7 @@ defmodule CharterAgreementProtocol.CompactJws do
   alias CharterAgreementProtocol.{
     Algorithm,
     Base64Url,
+    Capability.Profile,
     Canonicalization,
     Error,
     Json,
@@ -75,19 +76,59 @@ defmodule CharterAgreementProtocol.CompactJws do
   Dispatch follows the registry row for the envelope's `alg`: the supplied
   key algorithm must equal the row's `key_algorithm`, and the signature
   length was already checked against the row at parse time.
+
+  A caller-supplied capability profile is admitted per artifact BEFORE any
+  cryptographic work: an envelope outside the profile's `alg` set rejects
+  with `:algorithm_outside_profile`, an envelope whose payload
+  `protocol_revision` is outside the profile's revision range rejects with
+  `:revision_outside_profile` — on every substrate alike, deterministically.
+  The profile never constrains the key material a descriptor declares.
   """
   @spec verify_signature(t(), term(), term()) :: :ok | {:error, Error.t()}
   def verify_signature(%__MODULE__{} = envelope, public_key, key_algorithm) do
-    case Algorithm.row_for(envelope.alg) do
-      %{key_algorithm: ^key_algorithm} = row ->
-        Signature.verify(envelope.message, envelope.signature, public_key, row.name)
-
-      _row_mismatch ->
-        signature_error()
-    end
+    verify_signature(envelope, public_key, key_algorithm, Profile.full())
   end
 
   def verify_signature(_envelope, _public_key, _key_algorithm), do: signature_error()
+
+  @spec verify_signature(t(), term(), term(), Profile.t()) ::
+          :ok | {:error, Error.t()}
+  def verify_signature(%__MODULE__{} = envelope, public_key, key_algorithm, %Profile{} = profile) do
+    with :ok <- admit(envelope, profile) do
+      case Algorithm.row_for(envelope.alg) do
+        %{key_algorithm: ^key_algorithm} = row ->
+          Signature.verify(envelope.message, envelope.signature, public_key, row.name)
+
+        _row_mismatch ->
+          signature_error()
+      end
+    end
+  end
+
+  def verify_signature(_envelope, _public_key, _key_algorithm, _profile), do: signature_error()
+
+  @doc """
+  The artifact's digest-covered `protocol_revision`, extracted from the
+  payload the binding rule already validated at parse time.
+  """
+  @spec protocol_revision(t()) :: pos_integer()
+  def protocol_revision(%__MODULE__{payload: {:object, members}}) do
+    {"protocol_revision", {:integer, revision}} = List.keyfind(members, "protocol_revision", 0)
+    revision
+  end
+
+  defp admit(envelope, profile) do
+    cond do
+      envelope.alg not in profile.algorithms ->
+        {:error, Error.new(:algorithm_outside_profile, ["compact_jws", "alg"])}
+
+      not Profile.admits?(profile, envelope.alg, protocol_revision(envelope)) ->
+        {:error, Error.new(:revision_outside_profile, ["compact_jws", "protocol_revision"])}
+
+      true ->
+        :ok
+    end
+  end
 
   defp parse_segments(compact, expected_typ, limits) do
     case :binary.split(compact, ".", [:global]) do

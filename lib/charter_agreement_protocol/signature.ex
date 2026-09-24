@@ -16,11 +16,24 @@ defmodule CharterAgreementProtocol.Signature do
   Verification is pure ML-DSA with the context fixed to the empty string
   (RFC 9964).
 
+  ## Substrate honesty
+
+  When the runtime does not declare the row's key algorithm, verification is
+  impossible for substrate reasons and fails with the named implementation
+  local diagnostic `:algorithm_unsupported_on_substrate` — never conflated
+  with `signature_invalid`. The diagnostic fires only after every
+  deterministic check has passed and the substrate is the sole obstacle: a
+  wrong-length or malformed input rejects with `signature_invalid` first, on
+  every substrate alike, so a forged artifact never earns a retryable
+  diagnosis. The diagnostic is outside the conformance verdict surface and
+  outside cross-verifier report identity; it is an honesty property of one
+  implementation on one substrate, not a protocol verdict.
+
   The module accepts only public verification material. It never signs,
   selects trust, or authorizes an artifact.
   """
 
-  alias CharterAgreementProtocol.{Algorithm, Error}
+  alias CharterAgreementProtocol.{Algorithm, Capability, Error}
 
   @ed25519_field_prime 2 ** 255 - 19
   @ed25519_subgroup_order 2 ** 252 + 27_742_317_777_372_353_535_851_937_790_883_648_493
@@ -74,21 +87,35 @@ defmodule CharterAgreementProtocol.Signature do
        }) do
     if is_binary(signature) and byte_size(signature) == signature_bytes and
          is_binary(public_key) and byte_size(public_key) == public_key_bytes and
-         strict_ed25519_inputs?(signature, public_key) and ed25519_supported?() and
-         :crypto.verify(:eddsa, :none, message, signature, [public_key, :ed25519]),
-       do: :ok,
-       else: invalid()
+         strict_ed25519_inputs?(signature, public_key) do
+      substrate_outcome("Ed25519", Capability.declared?("Ed25519"), fn ->
+        :crypto.verify(:eddsa, :none, message, signature, [public_key, :ed25519])
+      end)
+    else
+      invalid()
+    end
   end
 
   defp verify_ml_dsa(message, signature, public_key, row, key_algorithm) do
     crypto_algorithm = Map.fetch!(@ml_dsa_crypto, key_algorithm)
 
     if is_binary(signature) and byte_size(signature) == row.signature_bytes and
-         is_binary(public_key) and byte_size(public_key) == row.public_key_bytes and
-         crypto_algorithm in :crypto.supports(:public_keys) and
-         :crypto.verify(crypto_algorithm, :none, message, signature, public_key),
-       do: :ok,
-       else: invalid()
+         is_binary(public_key) and byte_size(public_key) == row.public_key_bytes do
+      substrate_outcome(key_algorithm, Capability.declared?(key_algorithm), fn ->
+        :crypto.verify(crypto_algorithm, :none, message, signature, public_key)
+      end)
+    else
+      invalid()
+    end
+  end
+
+  @doc false
+  @spec substrate_outcome(binary(), boolean(), (-> boolean())) ::
+          :ok | {:error, Error.t()}
+  def substrate_outcome(key_algorithm, false, _verify), do: unsupported(key_algorithm)
+
+  def substrate_outcome(_key_algorithm, true, verify) do
+    if verify.(), do: :ok, else: invalid()
   end
 
   defp strict_ed25519_inputs?(
@@ -108,9 +135,8 @@ defmodule CharterAgreementProtocol.Signature do
     y < @ed25519_field_prime and encoded not in @small_order_points
   end
 
-  defp ed25519_supported? do
-    :eddsa in :crypto.supports(:public_keys) and :ed25519 in :crypto.supports(:curves)
-  end
-
   defp invalid, do: {:error, Error.new(:signature_invalid, ["compact_jws", "signature"])}
+
+  defp unsupported(key_algorithm),
+    do: {:error, Error.new(:algorithm_unsupported_on_substrate, ["signature", key_algorithm])}
 end

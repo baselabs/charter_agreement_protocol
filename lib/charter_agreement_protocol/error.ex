@@ -29,6 +29,9 @@ defmodule CharterAgreementProtocol.Error do
     :digest_encoding_invalid,
     :digest_mismatch,
     :invalid_limits,
+    :invalid_profile,
+    :algorithm_outside_profile,
+    :revision_outside_profile,
     :limit_exceeded,
     :unknown_member,
     :missing_required,
@@ -48,6 +51,7 @@ defmodule CharterAgreementProtocol.Error do
     :compact_invalid,
     :protected_header_invalid,
     :signature_invalid,
+    :algorithm_unsupported_on_substrate,
     :descriptor_invalid,
     :descriptor_key_invalid,
     :descriptor_chain_invalid,
@@ -89,6 +93,9 @@ defmodule CharterAgreementProtocol.Error do
           | :digest_encoding_invalid
           | :digest_mismatch
           | :invalid_limits
+          | :invalid_profile
+          | :algorithm_outside_profile
+          | :revision_outside_profile
           | :limit_exceeded
           | :unknown_member
           | :missing_required
@@ -108,6 +115,7 @@ defmodule CharterAgreementProtocol.Error do
           | :compact_invalid
           | :protected_header_invalid
           | :signature_invalid
+          | :algorithm_unsupported_on_substrate
           | :descriptor_invalid
           | :descriptor_key_invalid
           | :descriptor_chain_invalid

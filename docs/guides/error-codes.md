@@ -3,7 +3,7 @@
 CAP never authorizes.
 
 Every verification failure is one closed, value-free error code from
-`CharterAgreementProtocol.Error.codes/0` — 57 codes, each carrying only a
+`CharterAgreementProtocol.Error.codes/0` — 58 codes, each carrying only a
 protocol-owned subject, never the rejected input. This reference states each
 code's evidence truthfully:
 
@@ -17,7 +17,15 @@ code's evidence truthfully:
   non-timestamp query argument the runner cannot pass; and
   `extension_schema_digest_mismatch` fires only through the explicit
   schema-view test seam — the compiled registry is self-consistent by
-  construction.
+  construction. A thirteenth, `algorithm_unsupported_on_substrate`, is
+  outside case certification for a different reason: it is an
+  implementation-local diagnostic whose emission depends on the runtime's
+  declared algorithms, so no substrate-independent corpus case can expect
+  it. It is proven by unit tests over the decision boundary and by the
+  capability-limited CI lane (Ubuntu 24.04 / OpenSSL 3.0.13), a real
+  substrate that lacks ML-DSA; it is deliberately outside cross-verifier
+  report identity — two conforming verifiers on different substrates may
+  differ on it for the same bytes by design.
 - **declared** — the code is in the compiled production vocabulary (the
   architecture vocabulary census asserts the emitted set equals the declared
   set) but no dedicated case drives it yet.
@@ -29,6 +37,8 @@ Closing the corpus-coverage gap further is a future certification decision.
 | `:acceptance_claims_mismatch` | corpus-exercised | certified corpus expectations (1 case) |
 | `:acceptance_equivocation_invalid` | corpus-exercised | certified corpus expectations (1 case) |
 | `:acceptance_invalid` | corpus-exercised | certified corpus expectations (1 case) |
+| `:algorithm_outside_profile` | test-exercised | chain_profile_test (per-artifact profile admission); profile corpus cases land with the profile act |
+| `:algorithm_unsupported_on_substrate` | test-exercised | signature_test (decision boundary and laziness); capability-limited CI lane on a real ML-DSA-less substrate; outside conformance certification and cross-verifier report identity |
 | `:base64url_invalid` | corpus-exercised | certified corpus expectations (1 case) |
 | `:base64url_padded` | corpus-exercised | certified corpus expectations (1 case) |
 | `:cardinality_violation` | corpus-exercised | certified corpus expectations (2 cases) |
@@ -64,6 +74,7 @@ Closing the corpus-coverage gap further is a future certification decision.
 | `:invalid_encoding` | corpus-exercised | certified corpus expectations (2 cases) |
 | `:invalid_limits` | corpus-exercised | certified corpus expectations (1 case) |
 | `:invalid_number` | corpus-exercised | certified corpus expectations (1 case) |
+| `:invalid_profile` | test-exercised | profile_test (construction rejection); chain_profile_test (checked before input validation, symmetric with `:invalid_limits`) |
 | `:invalid_syntax` | corpus-exercised | certified corpus expectations (1 case) |
 | `:invalid_type` | corpus-exercised | certified corpus expectations (4 cases) |
 | `:limit_exceeded` | corpus-exercised | certified corpus expectations (1 case) |
@@ -75,6 +86,7 @@ Closing the corpus-coverage gap further is a future certification decision.
 | `:receipt_claims_mismatch` | corpus-exercised | certified corpus expectations (1 case) |
 | `:receipt_invalid` | corpus-exercised | certified corpus expectations (1 case) |
 | `:revision_invalid` | corpus-exercised | certified corpus expectations (3 cases) |
+| `:revision_outside_profile` | test-exercised | chain_profile_test (per-artifact profile admission); profile corpus cases land with the profile act |
 | `:signature_invalid` | corpus-exercised | certified corpus expectations (5 cases) |
 | `:signing_input_invalid` | test-exercised | signing_input_test |
 | `:signing_refused` | test-exercised | signing_input_test |

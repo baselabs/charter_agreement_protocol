@@ -24,6 +24,7 @@ defmodule CharterAgreementProtocol.Receipt do
     Chain,
     ChainFacts,
     CharterRevision,
+    Capability.Profile,
     CompactJws,
     DescriptorChain,
     DescriptorFacts,
@@ -200,16 +201,22 @@ defmodule CharterAgreementProtocol.Receipt do
   @doc "Verify one attached receipt against revision-only or full-chain context."
   @spec verify(term(), ChainFacts.t() | CharterRevision.t(), Limits.t()) ::
           {:ok, ReceiptFacts.t()} | {:error, Error.t()}
-  def verify(compact, context, %Limits{} = limits)
+  @spec verify(term(), ChainFacts.t() | CharterRevision.t(), Limits.t(), Profile.t()) ::
+          {:ok, ReceiptFacts.t()} | {:error, Error.t()}
+  def verify(compact, context, limits, profile \\ Profile.full())
+
+  def verify(compact, context, %Limits{} = limits, profile)
       when is_struct(context, ChainFacts) or is_struct(context, CharterRevision) do
-    if Limits.valid?(limits), do: do_verify(compact, context, limits), else: invalid_limits()
+    if Limits.valid?(limits),
+      do: do_verify(compact, context, limits, profile),
+      else: invalid_limits()
   end
 
-  def verify(_compact, _context, %Limits{} = limits) do
+  def verify(_compact, _context, %Limits{} = limits, _profile) do
     if Limits.valid?(limits), do: invalid_type(), else: invalid_limits()
   end
 
-  def verify(_compact, _context, _limits), do: invalid_type()
+  def verify(_compact, _context, _limits, _profile), do: invalid_type()
 
   @doc false
   @spec decode_for_signing(term(), Limits.t()) :: {:ok, t()} | {:error, Error.t()}
@@ -228,11 +235,11 @@ defmodule CharterAgreementProtocol.Receipt do
   def digest(%__MODULE__{envelope: %CompactJws{payload_bytes: bytes}}),
     do: :receipt_content |> Digest.hash(bytes) |> Digest.to_tagged()
 
-  defp do_verify(compact, context, limits) do
+  defp do_verify(compact, context, limits, profile) do
     with {:ok, verified_context} <- reverify_context(context, limits),
          {:ok, receipt} <- decode(compact, limits),
          {:ok, projection} <- project(receipt, verified_context),
-         :ok <- verify_context_signature(receipt, verified_context) do
+         :ok <- verify_context_signature(receipt, verified_context, profile) do
       facts(receipt, projection, verified_context)
     end
   end
@@ -497,21 +504,37 @@ defmodule CharterAgreementProtocol.Receipt do
     end
   end
 
-  defp verify_context_signature(_receipt, {:revision, %CharterRevision{}}), do: :ok
+  defp verify_context_signature(_receipt, {:revision, %CharterRevision{}}, _profile), do: :ok
 
-  defp verify_context_signature(receipt, {:chain, chain}) do
-    verified_keys =
-      chain
-      |> signing_keys(receipt)
-      |> Enum.uniq()
-      |> Enum.filter(fn {public_key, algorithm} ->
-        CompactJws.verify_signature(receipt.envelope, public_key, algorithm) == :ok
-      end)
-
-    if length(verified_keys) == 1,
-      do: :ok,
-      else: {:error, Error.new(:signature_invalid, ["compact_jws", "signature"])}
+  defp verify_context_signature(receipt, {:chain, chain}, profile) do
+    chain
+    |> signing_keys(receipt)
+    |> Enum.uniq()
+    |> Enum.map(fn {public_key, algorithm} ->
+      CompactJws.verify_signature(receipt.envelope, public_key, algorithm, profile)
+    end)
+    |> signature_outcome()
   end
+
+  @doc false
+  @spec signature_outcome([:ok | {:error, Error.t()}]) :: :ok | {:error, Error.t()}
+  def signature_outcome(results) do
+    case Enum.count(results, &(&1 == :ok)) do
+      1 ->
+        :ok
+
+      0 ->
+        if Enum.any?(results, &substrate_unsupported?/1),
+          do: {:error, Error.new(:algorithm_unsupported_on_substrate, ["compact_jws", "signature"])},
+          else: {:error, Error.new(:signature_invalid, ["compact_jws", "signature"])}
+
+      _ambiguous ->
+        {:error, Error.new(:signature_invalid, ["compact_jws", "signature"])}
+    end
+  end
+
+  defp substrate_unsupported?({:error, %Error{code: :algorithm_unsupported_on_substrate}}), do: true
+  defp substrate_unsupported?(_other), do: false
 
   defp signing_keys(chain, receipt) do
     recognized_revision? =

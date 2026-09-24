@@ -11,6 +11,7 @@ defmodule CharterAgreementProtocol.Chain do
 
   alias CharterAgreementProtocol.{
     Acceptance,
+    Capability.Profile,
     ChainFacts,
     CharterRevision,
     CompactJws,
@@ -29,21 +30,31 @@ defmodule CharterAgreementProtocol.Chain do
   @doc "Verify a complete caller-supplied charter artifact view."
   @spec verify(term(), term(), term(), term(), Limits.t()) ::
           {:ok, ChainFacts.t()} | {:error, Error.t()}
-  def verify(revisions, acceptances, descriptors, terminations, %Limits{} = limits)
+  @spec verify(term(), term(), term(), term(), Limits.t(), Profile.t()) ::
+          {:ok, ChainFacts.t()} | {:error, Error.t()}
+  def verify(
+        revisions,
+        acceptances,
+        descriptors,
+        terminations,
+        %Limits{} = limits,
+        %Profile{} = profile
+      )
       when is_list(revisions) and is_list(acceptances) and is_list(descriptors) and
              is_list(terminations) do
     with true <- Limits.valid?(limits),
+         true <- Profile.valid?(profile),
          :ok <- bounded_input([revisions, acceptances, descriptors, terminations], limits),
-         {:ok, descriptor_chains} <- verify_descriptor_chains(descriptors, limits),
+         {:ok, descriptor_chains} <- verify_descriptor_chains(descriptors, limits, profile),
          {:ok, indexed_revisions, revision_index, charter_id} <-
-           verify_revisions(revisions, limits),
+           verify_revisions(revisions, limits, profile),
          {:ok, acceptance_facts} <-
-           verify_acceptances(acceptances, revision_index, descriptor_chains, limits),
+           verify_acceptances(acceptances, revision_index, descriptor_chains, limits, profile),
          :ok <- unique_acceptance_coordinates(acceptance_facts),
          {:ok, revision_facts} <- build_revision_facts(indexed_revisions, acceptance_facts),
          :ok <- accepted_supersession_targets(revision_facts),
          {:ok, termination_facts} <-
-           verify_terminations(terminations, revision_index, descriptor_chains, limits) do
+           verify_terminations(terminations, revision_index, descriptor_chains, limits, profile) do
       build_facts(
         charter_id,
         revision_facts,
@@ -52,13 +63,36 @@ defmodule CharterAgreementProtocol.Chain do
         termination_facts
       )
     else
-      false -> invalid_limits()
-      {:error, %Error{} = error} -> {:error, error}
+      false ->
+        if Limits.valid?(limits),
+          do: {:error, Error.new(:invalid_profile, ["profile"])},
+          else: invalid_limits()
+
+      {:error, %Error{} = error} ->
+        {:error, error}
     end
   end
 
-  def verify(_revisions, _acceptances, _descriptors, _terminations, %Limits{} = limits) do
-    if Limits.valid?(limits), do: invalid_type(), else: invalid_limits()
+  def verify(
+        _revisions,
+        _acceptances,
+        _descriptors,
+        _terminations,
+        %Limits{} = limits,
+        %Profile{} = profile
+      ) do
+    cond do
+      not Limits.valid?(limits) -> invalid_limits()
+      not Profile.valid?(profile) -> {:error, Error.new(:invalid_profile, ["profile"])}
+      true -> invalid_type()
+    end
+  end
+
+  def verify(_revisions, _acceptances, _descriptors, _terminations, _limits, _profile),
+    do: invalid_type()
+
+  def verify(revisions, acceptances, descriptors, terminations, %Limits{} = limits) do
+    verify(revisions, acceptances, descriptors, terminations, limits, Profile.full())
   end
 
   def verify(_revisions, _acceptances, _descriptors, _terminations, _limits), do: invalid_type()
@@ -118,13 +152,14 @@ defmodule CharterAgreementProtocol.Chain do
 
   defp bounded_list(_improper, _count, _bytes, _limits), do: invalid_type()
 
-  defp verify_descriptor_chains([], _limits), do: chain_error()
+  defp verify_descriptor_chains([], _limits, _profile), do: chain_error()
 
-  defp verify_descriptor_chains(compacts, limits) do
+  defp verify_descriptor_chains(compacts, limits, profile) do
     with {:ok, decoded} <- decode_descriptors(compacts, limits),
          groups <- Enum.group_by(decoded, &descriptor_party_id/1, &elem(&1, 0)),
          true <- map_size(groups) == 2,
-         {:ok, chains} <- groups |> Map.values() |> map_ok(&DescriptorChain.verify(&1, limits)) do
+         {:ok, chains} <-
+           groups |> Map.values() |> map_ok(&DescriptorChain.verify(&1, limits, profile)) do
       {:ok, Enum.sort_by(chains, &descriptor_chain_id/1)}
     else
       {:error, %Error{} = error} -> {:error, error}
@@ -150,10 +185,11 @@ defmodule CharterAgreementProtocol.Chain do
     descriptors |> hd() |> Map.fetch!(:party_id)
   end
 
-  defp verify_revisions([], _limits), do: chain_error()
+  defp verify_revisions([], _limits, _profile), do: chain_error()
 
-  defp verify_revisions(bytes_list, limits) do
+  defp verify_revisions(bytes_list, limits, profile) do
     with {:ok, revisions} <- map_ok(bytes_list, &CharterRevision.decode(&1, limits)),
+         :ok <- revision_profile(revisions, profile),
          indexed <- Enum.map(revisions, &{CharterRevision.digest(&1), &1}),
          true <- unique_revision_digests?(indexed),
          revision_index <- Map.new(indexed),
@@ -165,6 +201,25 @@ defmodule CharterAgreementProtocol.Chain do
       _failure -> chain_error()
     end
   end
+
+  # Unsigned revisions carry no envelope: the profile's revision axis applies
+  # to the decoded protocol_revision member; there is no algorithm axis for
+  # them (the alg names live on the signed artifacts that anchor them).
+  defp revision_profile([], _profile), do: :ok
+
+  defp revision_profile([revision | rest], profile) do
+    if revision_in_profile?(revision.protocol_revision, profile),
+      do: revision_profile(rest, profile),
+      else: {:error, Error.new(:revision_outside_profile, ["revision", "protocol_revision"])}
+  end
+
+  defp revision_in_profile?(protocol_revision, %Profile{} = profile)
+       when is_integer(protocol_revision) do
+    {minimum, maximum} = profile.revisions
+    protocol_revision >= minimum and protocol_revision <= maximum
+  end
+
+  defp revision_in_profile?(_protocol_revision, _profile), do: false
 
   defp unique_revision_digests?(indexed) do
     digests = Enum.map(indexed, &elem(&1, 0))
@@ -229,36 +284,36 @@ defmodule CharterAgreementProtocol.Chain do
     end)
   end
 
-  defp verify_acceptances(compacts, revision_index, descriptor_chains, limits) do
+  defp verify_acceptances(compacts, revision_index, descriptor_chains, limits, profile) do
     compacts
-    |> Enum.map(&verify_acceptance(&1, revision_index, descriptor_chains, limits))
+    |> Enum.map(&verify_acceptance(&1, revision_index, descriptor_chains, limits, profile))
     |> collect_ok()
   end
 
-  defp verify_acceptance(compact, revision_index, descriptor_chains, limits) do
+  defp verify_acceptance(compact, revision_index, descriptor_chains, limits, profile) do
     with {:ok, revision_digest, descriptor_digest} <-
            route_claims(compact, "cap+acceptance", "revision_digest", limits),
          %CharterRevision{} = revision <- Map.get(revision_index, revision_digest),
          %DescriptorChain{} = chain <- chain_for_descriptor(descriptor_chains, descriptor_digest) do
-      Acceptance.verify_verified(compact, revision, chain, limits)
+      Acceptance.verify_verified(compact, revision, chain, limits, profile)
     else
       {:error, %Error{} = error} -> {:error, error}
       _failure -> chain_error()
     end
   end
 
-  defp verify_terminations(compacts, revision_index, descriptor_chains, limits) do
+  defp verify_terminations(compacts, revision_index, descriptor_chains, limits, profile) do
     compacts
-    |> Enum.map(&verify_termination(&1, revision_index, descriptor_chains, limits))
+    |> Enum.map(&verify_termination(&1, revision_index, descriptor_chains, limits, profile))
     |> collect_ok()
   end
 
-  defp verify_termination(compact, revision_index, descriptor_chains, limits) do
+  defp verify_termination(compact, revision_index, descriptor_chains, limits, profile) do
     with {:ok, revision_digest, descriptor_digest} <-
            route_claims(compact, "cap+termination", "governing_revision_digest", limits),
          %CharterRevision{} = revision <- Map.get(revision_index, revision_digest),
          %DescriptorChain{} = chain <- chain_for_descriptor(descriptor_chains, descriptor_digest) do
-      TerminationNotice.verify_verified(compact, revision, chain, limits)
+      TerminationNotice.verify_verified(compact, revision, chain, limits, profile)
     else
       {:error, %Error{} = error} -> {:error, error}
       _failure -> chain_error()
