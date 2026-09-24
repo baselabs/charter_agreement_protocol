@@ -66,8 +66,13 @@ jobs:
           # lane (config/config.exs lockstep rule).
           - { name: floor, elixir: "1.19.5", otp: "28.5.0.3", node: "24.8" }
     steps:
-      - name: Check out source
+      # Full history: the standing historical differential gate reads the
+      # frozen certified corpora by tag (git show v0.1.0:priv/conformance/...),
+      # which a shallow clone cannot resolve.
+      - name: Check out source (full history)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
