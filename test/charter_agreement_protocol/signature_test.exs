@@ -70,7 +70,12 @@ defmodule CharterAgreementProtocol.SignatureTest do
       message: m,
       signature: s
     } do
-      corrupt = <<0>> <> binary_part(pk, 1, 1951)
+      # XOR the first byte: guaranteed DIFFERENT from the generated key (a
+      # plain zero-overwrite is identical whenever keygen emits a leading
+      # zero byte — a 1-in-256 flake the floor lane drew), and any
+      # single-byte change must break the signature binding.
+      flipped = <<:erlang.bxor(:binary.at(pk, 0), 255)>>
+      corrupt = flipped <> binary_part(pk, 1, 1951)
 
       assert {:error, %Error{code: :signature_invalid}} =
                Signature.verify(m, s, corrupt, "ML-DSA-65")
