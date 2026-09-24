@@ -78,3 +78,11 @@ A process exit status of `0` proves the published corpus recomputes and agrees
 with the certified identity (`System.halt/1` propagates the CLI's returned
 status — a bare `mix run -e` drops it). Record the published hex checksum beside the
 release tag and close the CHANGELOG entry.
+
+## Released identities are immutable
+
+Nothing recorded by this runbook is ever edited in place after publication:
+the certified identities, the manifest bytes, and the archive pins are
+records of released artifacts. Corrections are new releases through this
+same runbook; the compatibility matrix classifies history, it does not
+rewrite it.

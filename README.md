@@ -66,7 +66,7 @@ shipped corpus contains ML-DSA cases, so the quick-start verification below
 needs that floor too:
 
 ```elixir
-{:charter_agreement_protocol, "~> 0.3.0"}
+{:charter_agreement_protocol, "~> 0.4.0"}
 ```
 
 Then verify the shipped, certified corpus from your dependent project:

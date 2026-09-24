@@ -32,6 +32,32 @@ rejected.
 ADR filenames are slug-only, with no numeric sequence prefixes, for the same
 reason — document sequence numbers are themselves a versioning axis.
 
+## Boundary exceptions (explicitly approved 2026-09-24)
+
+The release-manifest contract admitted two version-bearing members as
+explicitly approved compatibility headers — the sole boundary exceptions
+beyond the package semver, each with its own stated scope (owner approval
+2026-09-24, recorded with the release-identity act):
+
+1. **The manifest schema version** (`manifest_version`, an integer in
+   `priv/release-metadata.json`): the version of the manifest's own SHAPE,
+   not of any protocol identity. It bumps only when a member is removed,
+   renamed, or retyped; additive members never bump it. Consumers must
+   ignore unknown members, so the number moves rarely and always means a
+   breaking change in the machine-readable contract.
+2. **The verification-semantics identity** (`verification_semantics_version`,
+   an integer mirrored from `ReleaseIdentity.verification_semantics/0`): the
+   identity of the verdict function, defined and scoped in
+   `docs/adr/release-identity.md`. It versions VERDICT BEHAVIOR, which the
+   wire's `protocol_revision` deliberately does not (a release may hold the
+   wire grammar fixed while verdict semantics move, and vice versa); the two
+   axes are coordinated through that ADR, never conflated.
+
+Integer DATA VALUES in the manifest are not version-bearing identifiers —
+they are the recorded projections of data-in-code functions, and the
+release-candidate gate asserts the projection equals the function. No other
+version token is admitted anywhere in the protocol surface.
+
 ## Enforcement
 
 Two layers, both landed:

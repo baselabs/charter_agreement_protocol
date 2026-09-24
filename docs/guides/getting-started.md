@@ -25,7 +25,7 @@ Depend on the published Hex release:
 ```elixir
 def deps do
   [
-    {:charter_agreement_protocol, "~> 0.3.0"}
+    {:charter_agreement_protocol, "~> 0.4.0"}
   ]
 end
 ```
