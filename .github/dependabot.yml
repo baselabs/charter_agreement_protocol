@@ -1,10 +1,19 @@
 version: 2
 updates:
+  # The two peer protocols are exact, test-only, runtime-disabled development
+  # identities, frozen by the digest-identity gate and the certified corpus
+  # (see test/portfolio/digest_identity_test.exs). Moving either is a
+  # deliberate wire-generation migration with its own recertification —
+  # never an automated bump — so dependabot does not propose them. The
+  # migration itself is tracked in the repository's local tracker.
   - package-ecosystem: mix
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: agent_blueprint_protocol
+      - dependency-name: bounded_authority_protocol
   - package-ecosystem: github-actions
     directory: /
     schedule:
