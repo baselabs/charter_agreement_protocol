@@ -62,6 +62,23 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:gate, CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest},
        {:mutation, "mldsa-binding-defeat"}
      ]},
+    {"CAP-PROFILE-admission-axes",
+     [
+       {:corpus,
+        ["chain.verify_profile:profile_algorithm_outside", "chain.verify_profile:profile_revision_outside"]},
+       {:gate, CharterAgreementProtocol.Architecture.ProfileContractTest},
+       {:mutation, "profile-gate-defeat"}
+     ]},
+    {"CAP-PROFILE-narrow-verification",
+     [
+       {:corpus, ["chain.verify_profile:profile_narrow_valid"]},
+       {:gate, CharterAgreementProtocol.Architecture.ProfileContractTest}
+     ]},
+    {"CAP-DESCRIPTOR-timestamp-floor",
+     [
+       {:corpus, ["party_descriptor.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Architecture.EffectiveFromContractTest}
+     ]},
     {"CAP-PARTY-DESCRIPTOR-key-grammar-gate",
      [
        {:corpus, ["party_descriptor.verify:invalid_constraint"]},

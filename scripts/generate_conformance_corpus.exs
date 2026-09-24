@@ -261,6 +261,17 @@ genesis =
 
 wrong_signed_genesis = descriptor_compact.(genesis_claims, "genesis-key", wrong_private)
 
+# The descriptor timestamp-floor witness (the release-identity act's own
+# green-to-red transition): a codec-valid long-fraction spelling the 0.3.x
+# codec accepted and the floor now rejects at the schema stage, exactly as
+# the seven sibling timestamp members have since the resource boundary.
+long_fraction_genesis =
+  descriptor_compact.(
+    %{genesis_claims | "effective_from" => "2026-08-25T10:00:00." <> String.duplicate("1", 60) <> "Z"},
+    "genesis-key",
+    genesis_private
+  )
+
 # --- The revision-2 alg-name population (RFC 9864; ADR
 # algorithm-name-agility). The fixtures above pin revision 1 + EdDSA
 # literally, ON PURPOSE: the legacy population is an independent minter of
@@ -463,6 +474,13 @@ descriptor_cases = [
     "class" => "chain_invalid",
     "input" => %{"compacts" => [genesis.compact, orphan.compact]},
     "expect" => invalid.("descriptor_chain_invalid")
+  },
+  %{
+    "id" => "descriptor-effective-from-timestamp-floor",
+    "surface" => "party_descriptor.verify",
+    "class" => "invalid_constraint",
+    "input" => %{"compact" => long_fraction_genesis.compact, "predecessor" => nil},
+    "expect" => invalid.("constraint_violation")
   }
 ]
 
@@ -945,6 +963,42 @@ forked_chain_input = chain_input.([chain_revision, chain_left, chain_right])
 repaired_chain_input = chain_input.([chain_revision, chain_left, chain_right, chain_repair])
 precedence_input = chain_input.([chain_revision, chain_left])
 
+profile_cases = [
+  %{
+    "id" => "chain-profile-narrow-valid",
+    "surface" => "chain.verify_profile",
+    "class" => "profile_narrow_valid",
+    "input" =>
+      Map.put(valid_chain_input, "profile", %{
+        "algorithms" => ["EdDSA"],
+        "revisions" => %{"min" => 1, "max" => 1}
+      }),
+    "expect" => valid.(%{"charter_id" => chain_genesis_digest, "topology" => "linear"})
+  },
+  %{
+    "id" => "chain-profile-algorithm-outside",
+    "surface" => "chain.verify_profile",
+    "class" => "profile_algorithm_outside",
+    "input" =>
+      Map.put(valid_chain_input, "profile", %{
+        "algorithms" => ["Ed25519"],
+        "revisions" => %{"min" => 1, "max" => 3}
+      }),
+    "expect" => invalid.("algorithm_outside_profile")
+  },
+  %{
+    "id" => "chain-profile-revision-outside",
+    "surface" => "chain.verify_profile",
+    "class" => "profile_revision_outside",
+    "input" =>
+      Map.put(valid_chain_input, "profile", %{
+        "algorithms" => ["EdDSA", "Ed25519"],
+        "revisions" => %{"min" => 2, "max" => 3}
+      }),
+    "expect" => invalid.("revision_outside_profile")
+  }
+]
+
 chain_cases = [
   %{
     "id" => "chain-dual-acceptance-valid",
@@ -1387,6 +1441,7 @@ cases =
     acceptance_cases ++
     termination_cases ++
     chain_cases ++
+    profile_cases ++
     coverage_cases ++
     supplemental_cases
 

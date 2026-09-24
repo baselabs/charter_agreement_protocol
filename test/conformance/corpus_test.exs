@@ -213,7 +213,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
         &(&1["surface"] in ["party_descriptor.verify", "descriptor_chain.verify"])
       )
 
-    assert length(verify_cases) == 21
+    assert length(verify_cases) == 22
     Enum.each(verify_cases, &assert_verify_case/1)
   end
 
@@ -328,6 +328,47 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
     assert length(chain_cases) == 7
     Enum.each(chain_cases, &assert_chain_case/1)
+
+    profile_cases = Enum.filter(cases, &(&1["surface"] == "chain.verify_profile"))
+    assert length(profile_cases) == 3
+    Enum.each(profile_cases, &assert_profile_case/1)
+  end
+
+  defp assert_profile_case(one) do
+    input = one["input"]
+
+    assert {:ok, profile} =
+             CharterAgreementProtocol.Capability.Profile.new(
+               algorithms: input["profile"]["algorithms"],
+               revisions:
+                 {input["profile"]["revisions"]["min"], input["profile"]["revisions"]["max"]}
+             )
+
+    actual =
+      Chain.verify(
+        input["revisions"],
+        input["acceptances"],
+        input["descriptors"],
+        input["terminations"],
+        Limits.default(),
+        profile
+      )
+
+    assert projected_profile_result(actual) == one["expect"]
+  end
+
+  defp projected_profile_result({:ok, facts}) do
+    %{
+      "status" => "valid",
+      "output" => %{
+        "charter_id" => facts.charter_id,
+        "topology" => Atom.to_string(facts.chain_topology)
+      }
+    }
+  end
+
+  defp projected_profile_result({:error, %Error{code: code}}) do
+    %{"status" => "invalid", "error_code" => Atom.to_string(code)}
   end
 
   defp assert_chain_case(%{"surface" => "chain.verify"} = one) do

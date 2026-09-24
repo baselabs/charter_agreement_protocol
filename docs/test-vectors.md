@@ -18,8 +18,8 @@ recorded value for the current candidate:
 
 | Identity | Value | Job |
 |---|---|---|
-| Corpus digest | `sha-256:9t3IsUcPMqtZiJE9wlYchjDJNoSpO4RbOte26RqgEqc` | Domain-separated digest inside the canonical corpus index; proves index self-consistency |
-| Index SHA-256 (base64url) | `SQYrs8WyUX4Bj_QlupjB_KYaMyjVjrnwvQ79sNkyIao` | Raw SHA-256 of the exact canonical index bytes; pinned by the Elixir CLI and the TypeScript verifier core |
+| Corpus digest | `sha-256:bp_w7EUDVgwU5hNWLwUrIVeWKSas3xbaLLcN6Sn6Ev8` | Domain-separated digest inside the canonical corpus index; proves index self-consistency |
+| Index SHA-256 (base64url) | `f--8DXp39J4wJkrpkD8ZTQpHkMlduX43Xvnz0HeObeA` | Raw SHA-256 of the exact canonical index bytes; pinned by the Elixir CLI and the TypeScript verifier core |
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` | The compiled extension registry identity carried in the index |
 | Specification digest | `sha-256:6bHRyRsti3Q08Ta1oJcp4By0cbAF14w5erKyf7wjKkQ` | Domain-separated digest over the canonical manifest of the normative spec set (`spec/`); pinned in release metadata |
 

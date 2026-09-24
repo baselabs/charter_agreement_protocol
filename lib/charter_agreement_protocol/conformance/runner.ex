@@ -12,6 +12,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   alias CharterAgreementProtocol.{
     Acceptance,
     Base64Url,
+    Capability.Profile,
     Canonicalization,
     Chain,
     CharterRevision,
@@ -203,6 +204,18 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
+  defp execute(%{"surface" => "chain.verify_profile", "input" => input}) do
+    input
+    |> Map.put("profile", input["profile"])
+    |> verify_chain_profile()
+    |> project_ok(fn facts ->
+      %{
+        "charter_id" => facts.charter_id,
+        "topology" => Atom.to_string(facts.chain_topology)
+      }
+    end)
+  end
+
   defp execute(%{"surface" => "chain.verify", "input" => input}) do
     input
     |> verify_chain()
@@ -336,6 +349,41 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
       "sibling_descriptors" => siblings
     }
   end
+
+  defp verify_chain_profile(input) do
+    spec = input["profile"] || %{}
+
+    with {:ok, algorithms} <- profile_algorithms(spec["algorithms"]),
+         {:ok, revisions} <- profile_revisions(spec["revisions"]),
+         {:ok, profile} <-
+           Profile.new(
+             algorithms: algorithms,
+             revisions: revisions
+           ) do
+      Chain.verify(
+        input["revisions"],
+        input["acceptances"],
+        input["descriptors"],
+        input["terminations"],
+        Limits.default(),
+        profile
+      )
+    end
+  end
+
+  defp profile_algorithms(nil), do: {:ok, nil}
+
+  defp profile_algorithms(names) when is_list(names), do: {:ok, names}
+
+  defp profile_algorithms(_other), do: {:error, Error.new(:invalid_type, ["profile"])}
+
+  defp profile_revisions(nil), do: {:ok, nil}
+
+  defp profile_revisions(%{"min" => minimum, "max" => maximum})
+       when is_integer(minimum) and is_integer(maximum),
+       do: {:ok, {minimum, maximum}}
+
+  defp profile_revisions(_other), do: {:error, Error.new(:invalid_type, ["profile"])}
 
   defp verify_chain(input) do
     Chain.verify(

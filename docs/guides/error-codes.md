@@ -3,7 +3,7 @@
 CAP never authorizes.
 
 Every verification failure is one closed, value-free error code from
-`CharterAgreementProtocol.Error.codes/0` — 58 codes, each carrying only a
+`CharterAgreementProtocol.Error.codes/0` — 61 codes, each carrying only a
 protocol-owned subject, never the rejected input. This reference states each
 code's evidence truthfully:
 
@@ -37,7 +37,7 @@ Closing the corpus-coverage gap further is a future certification decision.
 | `:acceptance_claims_mismatch` | corpus-exercised | certified corpus expectations (1 case) |
 | `:acceptance_equivocation_invalid` | corpus-exercised | certified corpus expectations (1 case) |
 | `:acceptance_invalid` | corpus-exercised | certified corpus expectations (1 case) |
-| `:algorithm_outside_profile` | test-exercised | chain_profile_test (per-artifact profile admission); profile corpus cases land with the profile act |
+| `:algorithm_outside_profile` | corpus-exercised | certified corpus expectations (1 case) |
 | `:algorithm_unsupported_on_substrate` | test-exercised | signature_test (decision boundary and laziness); capability-limited CI lane on a real ML-DSA-less substrate; outside conformance certification and cross-verifier report identity |
 | `:base64url_invalid` | corpus-exercised | certified corpus expectations (1 case) |
 | `:base64url_padded` | corpus-exercised | certified corpus expectations (1 case) |
@@ -86,7 +86,7 @@ Closing the corpus-coverage gap further is a future certification decision.
 | `:receipt_claims_mismatch` | corpus-exercised | certified corpus expectations (1 case) |
 | `:receipt_invalid` | corpus-exercised | certified corpus expectations (1 case) |
 | `:revision_invalid` | corpus-exercised | certified corpus expectations (3 cases) |
-| `:revision_outside_profile` | test-exercised | chain_profile_test (per-artifact profile admission); profile corpus cases land with the profile act |
+| `:revision_outside_profile` | corpus-exercised | certified corpus expectations (1 case) |
 | `:signature_invalid` | corpus-exercised | certified corpus expectations (5 cases) |
 | `:signing_input_invalid` | test-exercised | signing_input_test |
 | `:signing_refused` | test-exercised | signing_input_test |

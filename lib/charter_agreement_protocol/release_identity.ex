@@ -89,7 +89,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     %{
       package_versions: ["0.4.0"],
       verification_semantics: 4,
-      census_digest: "recorded-at-release",
+      census_digest: "sha-256:bp_w7EUDVgwU5hNWLwUrIVeWKSas3xbaLLcN6Sn6Ev8",
       protocol_revisions: [1, 2, 3],
       transitions: [
         %{

@@ -39,11 +39,11 @@ For the current candidate:
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:9t3IsUcPMqtZiJE9wlYchjDJNoSpO4RbOte26RqgEqc` |
-| Index SHA-256 (base64url) | `SQYrs8WyUX4Bj_QlupjB_KYaMyjVjrnwvQ79sNkyIao` |
+| Corpus digest | `sha-256:bp_w7EUDVgwU5hNWLwUrIVeWKSas3xbaLLcN6Sn6Ev8` |
+| Index SHA-256 (base64url) | `f--8DXp39J4wJkrpkD8ZTQpHkMlduX43Xvnz0HeObeA` |
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
 | Specification digest | `sha-256:6bHRyRsti3Q08Ta1oJcp4By0cbAF14w5erKyf7wjKkQ` |
-| Certified cases | 100 |
+| Certified cases | 104 |
 
 ## The requirements matrix
 

@@ -25,7 +25,7 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
       name: "certified-index-drift",
       path: "core.ts",
       from:
-        "export const CERTIFIED_INDEX_SHA256_BASE64URL = \"SQYrs8WyUX4Bj_QlupjB_KYaMyjVjrnwvQ79sNkyIao\";",
+        "export const CERTIFIED_INDEX_SHA256_BASE64URL = \"f--8DXp39J4wJkrpkD8ZTQpHkMlduX43Xvnz0HeObeA\";",
       to:
         "export const CERTIFIED_INDEX_SHA256_BASE64URL = \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\";",
       exit: 1

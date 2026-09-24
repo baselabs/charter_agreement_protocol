@@ -34,7 +34,7 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       name: "chain-signature-skip",
       path: "lib/charter_agreement_protocol/compact_jws.ex",
       from:
-        "  def verify_signature(%__MODULE__{} = envelope, public_key, key_algorithm) do\n    case Algorithm.row_for(envelope.alg) do\n      %{key_algorithm: ^key_algorithm} = row ->\n        Signature.verify(envelope.message, envelope.signature, public_key, row.name)\n\n      _row_mismatch ->\n        signature_error()\n    end\n  end",
+        "  def verify_signature(%__MODULE__{} = envelope, public_key, key_algorithm, %Profile{} = profile) do\n    with :ok <- admit(envelope, profile) do\n      case Algorithm.row_for(envelope.alg) do\n        %{key_algorithm: ^key_algorithm} = row ->\n          Signature.verify(envelope.message, envelope.signature, public_key, row.name)\n\n        _row_mismatch ->\n          signature_error()\n      end\n    end\n  end",
       to:
         "  def verify_signature(%__MODULE__{} = _envelope, _public_key, _key_algorithm),\n    do: :ok",
       command: ~w(mix test test/charter_agreement_protocol/descriptor_chain_test.exs --seed 42)
@@ -177,6 +177,13 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       from:
         "  defp key_revision_gate(\"Ed25519\", _protocol_revision), do: :ok\n\n  defp key_revision_gate(_ml_dsa, protocol_revision) when protocol_revision >= 3, do: :ok\n\n  defp key_revision_gate(_ml_dsa, _protocol_revision), do: {:error, :key_invalid}",
       to: "  defp key_revision_gate(_algorithm, _protocol_revision), do: :ok",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "profile-gate-defeat",
+      path: "lib/charter_agreement_protocol/compact_jws.ex",
+      from: "    with :ok <- admit(envelope, profile) do",
+      to: "    with :ok <- :ok do",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{

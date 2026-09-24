@@ -84,7 +84,11 @@ uppercase `T` and a `Z` offset, with optional fractional seconds and
 leap-second syntax. A value outside that grammar fails decode; the
 enforcement is codec-side (the schema layer bounds length only), and the
 corpus exercises timestamps positively in every valid artifact. Timestamp
-ordering uses a total order that preserves the leap-second slot.
+ordering uses a total order that preserves the leap-second slot. Every
+timestamp-valued member — including the party descriptor's
+`effective_from` — carries a 1..64 string-byte schema constraint
+[CAP-DESCRIPTOR-timestamp-floor]: a codec-parseable spelling longer than
+64 bytes is not a legal member value.
 
 ## 3. Schema layer
 
@@ -131,7 +135,17 @@ the pair [CAP-ALG-registry-binding] [CAP-ALG-mldsa-registry-rows].
 Producers MUST mint exactly (`Ed25519`, `protocol_revision` 2) or
 (`ML-DSA-65`, `protocol_revision` 3); accepting `EdDSA`
 at revisions 2 and 3 keeps artifacts from producers that adopt a revision
-before renaming their emission verifiable [CAP-ALG-registry-binding]. The `typ` value MUST be one of the four
+before renaming their emission verifiable [CAP-ALG-registry-binding].
+
+A verifier MAY be supplied a capability profile narrowing the registry
+names and `protocol_revision` values it admits, per artifact, applied
+before any cryptographic work; an artifact outside the profile's name set
+MUST be rejected as out of profile, and an artifact whose
+`protocol_revision` is outside the profile's revision range MUST be
+rejected as out of profile, on every substrate alike
+[CAP-PROFILE-admission-axes]. A profile never widens admission, and
+verification under the full profile is exactly verification without one
+[CAP-PROFILE-narrow-verification]. The `typ` value MUST be one of the four
 registered artifact types (`cap+party`, `cap+acceptance`,
 `cap+termination`, `cap+receipt`), and a verifier MUST NOT accept an
 artifact whose `typ` differs from the expected type for the call

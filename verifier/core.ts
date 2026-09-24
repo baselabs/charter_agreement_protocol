@@ -7,7 +7,7 @@ const CASE_FORMAT = "charter-agreement-protocol-conformance-cases";
 const REPORT_FORMAT = "charter-agreement-protocol-conformance-report";
 const MAXIMUM_CORPUS_FILES = 64;
 const MAXIMUM_CORPUS_BYTES = 33_554_432;
-export const CERTIFIED_INDEX_SHA256_BASE64URL = "SQYrs8WyUX4Bj_QlupjB_KYaMyjVjrnwvQ79sNkyIao";
+export const CERTIFIED_INDEX_SHA256_BASE64URL = "f--8DXp39J4wJkrpkD8ZTQpHkMlduX43Xvnz0HeObeA";
 export const CERTIFIED_REGISTRY_DIGEST = "sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc";
 // The fourth certified identity — the specification digest over the spec
 // set — is pinned in priv/release-metadata.json and enforced by the
@@ -53,7 +53,7 @@ const SURFACES = [
   "base64url.decode", "json.decode", "canonicalization.encode", "digest.hash",
   "schema.validate", "party_descriptor.verify", "descriptor_chain.verify",
   "charter_revision.decode", "acceptance.verify", "acceptance.equivocation",
-  "termination.verify", "chain.verify", "governing_revision", "receipt.verify",
+  "termination.verify", "chain.verify", "chain.verify_profile", "governing_revision", "receipt.verify",
 ];
 
 const CLASSES = [
@@ -61,7 +61,8 @@ const CLASSES = [
   "invalid_type", "invalid_constraint", "invalid_cardinality", "unknown_member",
   "missing_required", "non_canonical_bytes", "digest_mismatch", "signature_invalid",
   "chain_invalid", "descriptor_superseded", "descriptor_fork", "equivocation",
-  "chain_fork", "supersession", "precedence_selection", "outcome_indeterminate",
+  "chain_fork", "profile_algorithm_outside", "profile_revision_outside", "profile_narrow_valid",
+  "supersession", "precedence_selection", "outcome_indeterminate",
   "extension_unknown_critical", "extension_optional_roundtrip", "extension_invalid",
 ];
 
@@ -78,6 +79,7 @@ const REQUIRED = {
   "acceptance.equivocation": ["equivocation", "invalid_constraint"],
   "termination.verify": ["valid", "invalid_constraint", "signature_invalid"],
   "chain.verify": ["valid", "chain_fork", "supersession", "chain_invalid"],
+  "chain.verify_profile": ["profile_algorithm_outside", "profile_revision_outside", "profile_narrow_valid"],
   "governing_revision": ["precedence_selection"],
   "receipt.verify": ["valid", "invalid_constraint", "signature_invalid", "chain_fork", "outcome_indeterminate", "extension_optional_roundtrip", "invalid_encoding", "extension_invalid"],
 };
@@ -576,6 +578,12 @@ function descriptorFromCompact(compact: string, predecessor: { digest: string; p
   );
   if (!resolved) return fail("descriptor_key_invalid");
   if (!verifyDecodedJws(decoded.value, "cap+party", keys)) return fail("signature_invalid");
+  // The descriptor timestamp floor mirrors the reference schema constraint:
+  // a codec-parseable spelling longer than 64 bytes is not a legal member
+  // value (the same floor the seven sibling timestamp members carry).
+  if (typeof payload.effective_from !== "string" || payload.effective_from.length < 1 || payload.effective_from.length > 64) {
+    return fail("constraint_violation");
+  }
   if (!parseTimestamp(payload.effective_from)) {
     return fail("timestamp_invalid");
   }
@@ -750,6 +758,49 @@ function terminationFromCompact(compact: string, revision: { value: AnyRecord; d
 // coordinates, dual acceptance against the revision's actual party pairs (any
 // two roles — never hardcoded names), verified termination notices, and the
 // reference topology/governing semantics with ancestry coverage.
+function parseProfile(spec: AnyRecord | undefined): { algorithms: string[]; minRevision: number; maxRevision: number } {
+  const algorithms = spec && Array.isArray(spec.algorithms) && spec.algorithms.length > 0
+    ? spec.algorithms.filter((name: unknown) => typeof name === "string")
+    : ALG_ROWS.map((row) => row.name);
+  const bounds = spec && spec.revisions && typeof spec.revisions === "object" ? spec.revisions : {};
+  const minRevision = typeof bounds.min === "number" && ACCEPTED_PROTOCOL_REVISIONS.includes(bounds.min)
+    ? bounds.min : Math.min(...ACCEPTED_PROTOCOL_REVISIONS);
+  const maxRevision = typeof bounds.max === "number" && ACCEPTED_PROTOCOL_REVISIONS.includes(bounds.max)
+    ? bounds.max : Math.max(...ACCEPTED_PROTOCOL_REVISIONS);
+  return { algorithms, minRevision, maxRevision };
+}
+
+// "ok" | "algorithm" | "revision" | "decode": decode failures defer to the
+// unprofiled chain path so malformed inputs keep their decode-era verdicts.
+function admitView(input: AnyRecord): "ok" | "algorithm" | "revision" | "decode" {
+  const profile = parseProfile(input.profile);
+  const signed: string[] = [
+    ...(Array.isArray(input.descriptors) ? input.descriptors : []),
+    ...(Array.isArray(input.acceptances) ? input.acceptances : []),
+    ...(Array.isArray(input.terminations) ? input.terminations : []),
+  ];
+
+  for (const compact of signed) {
+    const decoded = decodeJws(compact);
+    if (!decoded.ok) return "decode";
+    const revision = decoded.value.payload.protocol_revision;
+    if (typeof revision !== "number") return "decode";
+    if (!profile.algorithms.includes(decoded.value.header.alg)) return "algorithm";
+    if (revision < profile.minRevision || revision > profile.maxRevision) return "revision";
+  }
+
+  for (const text of Array.isArray(input.revisions) ? input.revisions : []) {
+    let parsed: unknown;
+    try { parsed = JSON.parse(text as string); } catch (_error) { return "decode"; }
+    if (typeof parsed !== "object" || parsed === null) return "decode";
+    const revision = (parsed as AnyRecord).protocol_revision;
+    if (typeof revision !== "number") return "decode";
+    if (revision < profile.minRevision || revision > profile.maxRevision) return "revision";
+  }
+
+  return "ok";
+}
+
 function chainFromInput(input: AnyRecord): Result<{ descriptors: any; revisions: any[]; accepted: any[]; acceptedDigests: string[]; supersededDigests: string[]; topology: string; charterId: string }> {
   if (!Array.isArray(input.revisions) || input.revisions.length === 0) return fail("chain_invalid");
   const descriptors = descriptorChain(input.descriptors);
@@ -1036,6 +1087,21 @@ function execute(one: ConformanceCase): CaseResult {
       const chain = descriptorChain(input.descriptor_compacts);
       if (!revision.ok || !chain.ok) return invalid("termination_invalid");
       return project(terminationFromCompact(input.compact, revision.value, chain.value), (facts) => ({ termination_digest: facts.digest, governing_revision_digest: facts.claims.governing_revision_digest, party_descriptor_digest: facts.claims.party_descriptor_digest, reason_code: facts.claims.reason_code, descriptor_position: facts.descriptorPosition }));
+    }
+    case "chain.verify_profile": {
+      // The capability-profile mirror. Admission runs per artifact after
+      // decode and before any cryptographic work, exactly as the reference
+      // implementation threads it: an envelope outside the profile's alg set
+      // reports algorithm_outside_profile; a protocol_revision outside the
+      // profile's range reports revision_outside_profile. Unsigned revisions
+      // carry a protocol_revision member without an envelope, so only the
+      // revision axis applies to them. The full profile is exactly the
+      // unprofiled path.
+      const admission = admitView(input);
+      if (admission === "algorithm") return invalid("algorithm_outside_profile");
+      if (admission === "revision") return invalid("revision_outside_profile");
+      const chain = chainFromInput(input);
+      return project(chain, (facts) => ({ charter_id: facts.charterId, topology: facts.topology }));
     }
     case "chain.verify": {
       const chain = chainFromInput(input);

@@ -38,6 +38,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "acceptance.equivocation",
     "termination.verify",
     "chain.verify",
+    "chain.verify_profile",
     "governing_revision",
     "receipt.verify"
   ]
@@ -61,6 +62,9 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "descriptor_fork",
     "equivocation",
     "chain_fork",
+    "profile_algorithm_outside",
+    "profile_revision_outside",
+    "profile_narrow_valid",
     "supersession",
     "precedence_selection",
     "outcome_indeterminate",
@@ -124,6 +128,10 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "chain.verify" => %{
       required: ~w(valid chain_fork supersession chain_invalid),
       n_a: "single-artifact and foundational codec-only behavior are outside set verification"
+    },
+    "chain.verify_profile" => %{
+      required: ~w(profile_algorithm_outside profile_revision_outside profile_narrow_valid),
+      n_a: "unprofiled set verification is the chain.verify surface"
     },
     "governing_revision" => %{
       required: ~w(precedence_selection),

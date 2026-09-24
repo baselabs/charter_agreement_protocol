@@ -30,6 +30,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     alg-binding-defeat
     mldsa-binding-defeat
     mldsa-key-grammar-gate-defeat
+    profile-gate-defeat
   )
 
   @minimum_quality_steps [
