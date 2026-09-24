@@ -203,9 +203,11 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   @spec verify(term(), nil | DescriptorFacts.t(), Limits.t(), Profile.t()) ::
           {:ok, DescriptorFacts.t()} | {:error, Error.t()}
   def verify(compact, predecessor, %Limits{} = limits, %Profile{} = profile) do
-    if Limits.valid?(limits),
-      do: do_verify(compact, predecessor, limits, profile),
-      else: invalid_limits()
+    cond do
+      not Limits.valid?(limits) -> invalid_limits()
+      not Profile.valid?(profile) -> {:error, Error.new(:invalid_profile, ["profile"])}
+      true -> do_verify(compact, predecessor, limits, profile)
+    end
   end
 
   def verify(_compact, _predecessor, _limits, _profile),
@@ -404,27 +406,44 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     end
   end
 
-  # Substrate diagnostics and profile rejections are honest outcomes, not
-  # chain-corruption evidence: they surface verbatim instead of collapsing
-  # into the chain error, so a substrate-limited or profile-limited verifier
-  # can tell the difference. Every other failure keeps its existing chain
-  # identity (byte-identical corpus verdicts).
-  @honest_failures ~w(algorithm_outside_profile revision_outside_profile algorithm_unsupported_on_substrate)a
-
   defp verify_children(children, predecessor, profile) do
     Enum.reduce_while(children, {:ok, []}, fn entry, {:ok, additions} ->
       case verify_decoded(entry.descriptor, entry.compact, predecessor, profile) do
         {:ok, facts} ->
           {:cont, {:ok, [facts | additions]}}
 
-        {:error, %Error{code: code}} = error when code in @honest_failures ->
-          {:halt, error}
+        {:error, %Error{code: code}}
+        when code in [
+               :algorithm_outside_profile,
+               :revision_outside_profile,
+               :algorithm_unsupported_on_substrate
+             ] ->
+          {:halt, honest_halt(code)}
 
         _error ->
           {:halt, chain_error()}
       end
     end)
   end
+
+  # Deterministic regardless of input order: a sibling set mixing an
+  # out-of-profile child with a corrupted one reports the same honest code
+  # every time (this function verifies in any order).
+  @doc false
+  @spec honest_halt(
+          :algorithm_outside_profile
+          | :revision_outside_profile
+          | :algorithm_unsupported_on_substrate
+        ) ::
+          {:error, Error.t()}
+  def honest_halt(:algorithm_outside_profile),
+    do: {:error, Error.new(:algorithm_outside_profile, ["compact_jws", "alg"])}
+
+  def honest_halt(:revision_outside_profile),
+    do: {:error, Error.new(:revision_outside_profile, ["compact_jws", "protocol_revision"])}
+
+  def honest_halt(:algorithm_unsupported_on_substrate),
+    do: {:error, Error.new(:algorithm_unsupported_on_substrate, ["signature"])}
 
   defp optional_digest(values, name) do
     case Map.fetch(values, name) do

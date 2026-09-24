@@ -55,8 +55,12 @@ defmodule CharterAgreementProtocol.Architecture.FactsConstructionTest do
   defp source_contains_populated_build?(source, call) do
     case Regex.run(~r/\A.*?#{Regex.escape(call)}.*?\{\n(.*?)\n\s*\}/s, source) do
       nil ->
-        # single-line or unusual formatting: fall back to any nearby member
-        String.contains?(source, call)
+        # Unusual formatting: require the member within the next span of
+        # this call rather than anywhere in the file (fail-closed).
+        case Regex.run(~r/#{Regex.escape(call)}.{0,800}protocol_revision:/s, source) do
+          nil -> false
+          _ -> true
+        end
 
       [_, body | _] ->
         String.contains?(body, "protocol_revision:")

@@ -99,6 +99,19 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
 
     verify_release_identity_members!(metadata)
 
+    current_row =
+      ReleaseIdentity.compatibility()
+      |> Enum.find(&(Mix.Project.config()[:version] in &1.package_versions))
+
+    if current_row == nil,
+      do: raise("the current package version has no compatibility row")
+
+    if current_row.census_digest != index["corpus_digest"],
+      do:
+        raise(
+          "current compatibility row census #{current_row.census_digest} != live corpus digest #{index["corpus_digest"]}"
+        )
+
     pins = [
       {"lib/charter_agreement_protocol/conformance/cli.ex", index_identity},
       {"verifier/core.ts", index_identity},

@@ -48,10 +48,13 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
   test "revision coverage grows monotonically and stays within the registry" do
     accepted = Algorithm.accepted_protocol_revisions()
     history = ReleaseIdentity.verification_semantics_history()
-    coverage = Enum.map(history, & &1.protocol_revisions)
+    coverage = Enum.map(history, &MapSet.new(&1.protocol_revisions))
 
-    assert coverage == Enum.map(coverage, &Enum.sort/1)
     for revisions <- coverage, do: assert(Enum.all?(revisions, &(&1 in accepted)))
+
+    # each family's coverage is a superset of the prior family's
+    Enum.zip(coverage, tl(Enum.to_list(coverage)))
+    |> Enum.each(fn {prior, later} -> assert MapSet.subset?(prior, later) end)
   end
 
   test "the latest family row exists and carries exactly the descriptor timestamp transition" do

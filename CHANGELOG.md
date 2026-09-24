@@ -2,6 +2,108 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
+## [0.4.0] — 2026-09-24
+
+The release-identity act: a versioned, machine-readable identity contract;
+honest substrate capability; the capability profile; revision exposure in
+facts; and the standing historical certification. Judged design of
+2026-09-23 (two adversarial review lenses plus an independent judge);
+owner rulings 2026-09-24. No wire change — `protocol_revision` stays 3.
+
+### Release identity (public contract, additive)
+
+- The release manifest is now a versioned contract: `manifest_version`,
+  `verification_semantics_version`, `limits{default,maximum}`,
+  `signature_algorithms` + `signature_registry_digest` (the signature
+  registry's own domain-separated identity — the extension registry's
+  digest never identified signature algorithms), and a machine-readable
+  `compatibility` matrix. Additive-only; consumers MUST ignore unknown
+  members; the release-candidate gate now asserts the manifest equals the
+  live data-in-code functions member by member (the archive pin
+  authenticated bytes, not truth).
+- The verification-semantics identity is the STRICT verdict-function
+  identity (admissions and limits-default changes count; subjects,
+  substrate outcomes, crash-to-typed conversions, and facts fields do
+  not). Retroactive mapping published: S1=0.1.0, S2=0.2.0–0.2.1,
+  S3=0.3.0–0.3.2, S4=0.4.0, each family's transitions enumerated
+  (`ReleaseIdentity.verification_semantics_history/0`).
+- A standing per-release historical differential gate joins the quality
+  battery: every frozen certified corpus (v0.1.0 85, v0.2.0/0.2.1 90,
+  v0.3.0/0.3.2 100 cases) runs under the current package with verdict
+  agreement required except an enumerated per-(tag, case) allowlist —
+  red-provable by allowlist mutation (a named battery mutation). The
+  corpus loader gains an explicit historical mode that keeps every
+  released-artifact integrity check and relaxes only the compiled
+  applicability floor and the current extension-registry identity.
+- The consumer transition contract is ISSUED
+  (docs/guides/upgrading-verification-identity.md): no protocol-side act
+  preserves a persisted tuple that includes package version or census
+  digests; the verification-identity tuple to persist instead is named
+  and warranted; the pinning mechanics are stated; the consumer rehearsal
+  lane is accepted as published consumer evidence outside the certified
+  corpus.
+
+### Capability honesty
+
+- `capabilities()` — one verifiable verdict per registry row, derived
+  from pinned known-answer verification vectors gated on the runtime's
+  declared public-key algorithms; linked-crypto identity informational
+  only. The TypeScript verifier mirrors it with the same pinned bytes
+  and the same registry identity (`algorithmRegistryDigest()`).
+- `:algorithm_unsupported_on_substrate`: the named implementation-local
+  diagnostic for verification that is impossible for substrate reasons —
+  replacing exactly the capability conjunct, after every deterministic
+  check (a forged artifact never earns a retryable diagnosis), on the
+  Ed25519 row as well, with a known-answer re-run disambiguating a
+  raising crypto call (substrate obstacle vs. bad input), propagated
+  through every aggregator including the receipt path's
+  exact-one-verifier partition. Deliberately OUTSIDE the conformance
+  verdict surface and cross-verifier report identity; its real-substrate
+  evidence is the new capability-limited CI lane (Ubuntu 24.04 / OpenSSL
+  3.0.13, always green). OBSERVED on that substrate: OTP 28.5 and 29.1
+  both report no `:mldsa*` atoms — the diagnostic is reachable exactly
+  where it was asked for.
+
+### Capability profile
+
+- `CharterAgreementProtocol.Capability.Profile` — caller-supplied pure
+  data (`new/1`, `valid?/1`, `full/0`), validated like `Limits` at every
+  verify surface, failing closed with `:invalid_profile` before
+  verification begins. Two axes (envelope `alg` names;
+  `protocol_revision` range) applied per artifact and threaded through
+  every verify seam (`verify_chain/6` and per-artifact profile arities
+  on the facade), never a pre-pass. Out-of-profile artifacts reject
+  BEFORE crypto with `:algorithm_outside_profile` /
+  `:revision_outside_profile` — through the receipt aggregator's
+  partition too. Declared key material is deliberately unconstrained (a
+  revision-3 descriptor declaring ML-DSA keys, signed by an active
+  Ed25519 key, is in profile for an Ed25519-only deployment; exclude
+  ML-DSA-keyed lineages by narrowing the revision axis).
+
+### Verification output and the timestamp floor
+
+- Every facts record carries its artifact's `protocol_revision`, and the
+  SIGNED artifacts' records carry the envelope `alg` — `ReceiptFacts`
+  included (it embeds no decoded artifact; the scalars are the only
+  route). Unsigned revision facts carry no `alg` (there is no envelope);
+  the field is nil by design. Keys land with defaults and a
+  construction-site gate makes a missed site loud instead of a runtime
+  red.
+- `PartyDescriptor.effective_from` gains the 1..64 string-byte floor its
+  seven sibling timestamp members took in 0.3.0 — the last live timestamp
+  asymmetry, closing semantics S3 and opening S4. Its green-to-red
+  transition is a certified corpus witness
+  (`descriptor-effective-from-timestamp-floor`).
+
+### Conformance
+
+- Certified corpus re-recorded at 104 cases: the `chain.verify_profile`
+  surface (both out-of-profile axes red, an in-profile narrowing green)
+  and the timestamp-floor witness. The `profile-gate-defeat` mutation
+  joins the battery (27 named mutations, all red-proved; the corpus test
+  executes the profile cases directly so the mutation cannot survive).
+  TypeScript verifier agreement is byte-identical over the new corpus.
+
 ## [0.3.2] — 2026-09-16
 
 Toolchain-and-hygiene release; no wire-visible or behavioral library change

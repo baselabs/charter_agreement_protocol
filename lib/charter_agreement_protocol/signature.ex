@@ -114,9 +114,21 @@ defmodule CharterAgreementProtocol.Signature do
           :ok | {:error, Error.t()}
   def substrate_outcome(key_algorithm, false, _verify), do: unsupported(key_algorithm)
 
-  def substrate_outcome(_key_algorithm, true, verify) do
+  def substrate_outcome(key_algorithm, true, verify) do
     if verify.(), do: :ok, else: invalid()
+  rescue
+    # The runtime declares the algorithm but the call raised (a disabled
+    # provider, a FIPS-limited build): the pinned known-answer vector
+    # decides — it fails too, the substrate cannot perform the operation
+    # and the honest diagnostic fires; it passes, the raise was the
+    # input's own fault and the verdict is signature_invalid.
+    _raise -> raise_outcome(key_algorithm, Capability.kat_verifies?(key_algorithm))
   end
+
+  @doc false
+  @spec raise_outcome(binary(), boolean()) :: {:error, Error.t()}
+  def raise_outcome(_key_algorithm, true), do: invalid()
+  def raise_outcome(key_algorithm, false), do: unsupported(key_algorithm)
 
   defp strict_ed25519_inputs?(
          <<r::binary-size(32), s::binary-size(32)>>,

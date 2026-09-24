@@ -206,7 +206,6 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
 
   defp execute(%{"surface" => "chain.verify_profile", "input" => input}) do
     input
-    |> Map.put("profile", input["profile"])
     |> verify_chain_profile()
     |> project_ok(fn facts ->
       %{

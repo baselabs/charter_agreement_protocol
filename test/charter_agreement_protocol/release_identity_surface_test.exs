@@ -7,7 +7,6 @@ defmodule CharterAgreementProtocol.ReleaseIdentitySurfaceTest do
   use ExUnit.Case, async: true
 
   alias CharterAgreementProtocol.{
-    Acceptance,
     Algorithm,
     Capability,
     Capability.Profile,
@@ -20,9 +19,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentitySurfaceTest do
     Error,
     Limits,
     PartyDescriptor,
-    Receipt,
     ReceiptFixture,
-    ReleaseIdentity,
     TerminationNotice
   }
 
@@ -210,6 +207,47 @@ defmodule CharterAgreementProtocol.ReleaseIdentitySurfaceTest do
 
     assert {:error, %Error{code: :invalid_type}} =
              PartyDescriptor.verify("compact", nil, "limits", Profile.full())
+  end
+
+  test "the honest-halt branches are total and order-independent" do
+    alias CharterAgreementProtocol.{Capability.Profile, DescriptorChain, Error, Limits}
+
+    import CharterAgreementProtocol.DescriptorFixture
+
+    # An Ed25519-framed rev-2 genesis with a default-framed (EdDSA) child:
+    # under an Ed25519-only profile the CHILD is algorithm-outside and the
+    # honest code must surface through the chain aggregation, deterministically.
+    {genesis_key, genesis_private} = key(1, "genesis-key")
+
+    genesis_claims = %{
+      "protocol_revision" => 2,
+      "descriptor_number" => 1,
+      "verification_keys" => [genesis_key],
+      "attestation_hints" => [],
+      "extensions" => %{"critical" => %{}, "optional" => %{}},
+      "effective_from" => "2026-08-25T10:00:00Z"
+    }
+
+    ed25519_genesis =
+      compact(genesis_claims, "genesis-key", genesis_private,
+        protected: %{"alg" => "Ed25519", "typ" => "cap+party", "kid" => "genesis-key"}
+      )
+
+    eddsa_child = successor(ed25519_genesis, 2, claims: %{"protocol_revision" => 2})
+    {:ok, ed25519_only} = Profile.new(algorithms: ["Ed25519"], revisions: {1, 3})
+
+    assert {:error, %Error{code: :algorithm_outside_profile}} =
+             DescriptorChain.verify(
+               [ed25519_genesis.compact, eddsa_child.compact],
+               Limits.default(),
+               ed25519_only
+             )
+
+    # the substrate branch is decided purely at the boundary
+    assert {:error, %Error{code: :algorithm_unsupported_on_substrate}} =
+             CharterAgreementProtocol.PartyDescriptor.honest_halt(
+               :algorithm_unsupported_on_substrate
+             )
   end
 
   defp case_body(input, profile) do

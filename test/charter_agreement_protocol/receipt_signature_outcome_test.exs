@@ -40,6 +40,19 @@ defmodule CharterAgreementProtocol.ReceiptSignatureOutcomeTest do
     assert {:error, %Error{code: :signature_invalid}} = Receipt.signature_outcome([:ok, :ok])
   end
 
+  test "profile rejections surface verbatim, never as a forgery verdict" do
+    profile_rejection = {:error, Error.new(:algorithm_outside_profile, ["compact_jws", "alg"])}
+
+    assert {:error, %Error{code: :algorithm_outside_profile}} =
+             Receipt.signature_outcome([profile_rejection])
+
+    revision_rejection =
+      {:error, Error.new(:revision_outside_profile, ["compact_jws", "protocol_revision"])}
+
+    assert {:error, %Error{code: :revision_outside_profile}} =
+             Receipt.signature_outcome([revision_rejection, @signature_invalid])
+  end
+
   test "an empty candidate set fails closed" do
     assert @signature_invalid = Receipt.signature_outcome([])
   end

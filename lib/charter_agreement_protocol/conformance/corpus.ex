@@ -185,7 +185,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
   def load(map, historical) when is_map(map) do
     with {:ok, index_bytes} <- fetch_index(map),
          {:ok, index} <- decode_canonical(index_bytes, :index),
-         :ok <- validate_index(index),
+         :ok <- validate_index(index, historical),
          :ok <- verify_corpus_digest(index),
          :ok <- reject_empty(index),
          :ok <- verify_file_set(index, map),
@@ -224,16 +224,20 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     end
   end
 
-  defp validate_index(index) when is_map(index) do
+  defp validate_index(index, historical) when is_map(index) do
+    # Historical mode also relaxes the extension-registry identity: a frozen
+    # index carries the registry digest of the release that certified it,
+    # and the corpus self-digest already pins its bytes.
     valid? =
       sorted_keys(index) == @index_keys and index["format"] == @index_format and
         valid_index_identity_fields?(index) and valid_files?(index["files"]) and
-        is_map(index["applicability"]) and valid_registry_digest?(index["registry_digest"])
+        is_map(index["applicability"]) and
+        (historical or valid_registry_digest?(index["registry_digest"]))
 
     if valid?, do: :ok, else: index_error()
   end
 
-  defp validate_index(_index), do: index_error()
+  defp validate_index(_index, _historical), do: index_error()
 
   defp valid_index_identity_fields?(index) do
     is_binary(index["corpus_digest"]) and is_integer(index["total_cases"]) and
@@ -349,7 +353,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
         # release's applicability census: cell-count agreement still
         # reconciles against the executed cases, but the compiled floor —
         # a current-certification instrument — does not apply to it.
-        applicability != nil and
+        is_map(applicability) and
           Enum.all?(applicability, fn {surface, cells} ->
             is_binary(surface) and is_map(cells) and
               observed_counts_match?(cells, observed, surface)

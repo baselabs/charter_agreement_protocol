@@ -6,6 +6,8 @@
 // the Elixir reference implementation, recomputed from raw bytes.
 
 export {
+  algorithmRegistryDigest,
+  capabilities,
   canonical,
   loadCorpus,
   reportFor,

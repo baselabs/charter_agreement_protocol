@@ -42,7 +42,7 @@ For the current candidate:
 | Corpus digest | `sha-256:bp_w7EUDVgwU5hNWLwUrIVeWKSas3xbaLLcN6Sn6Ev8` |
 | Index SHA-256 (base64url) | `f--8DXp39J4wJkrpkD8ZTQpHkMlduX43Xvnz0HeObeA` |
 | Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:zN3cbF-GnsvTMYovOGrO7erwYeyCM1im4rNPyMramo4` |
+| Specification digest | `sha-256:B5NOXu15y618o6KgX5Goho4ycWJSDZTbZH41tpZtoWA` |
 | Certified cases | 104 |
 
 ## The requirements matrix

@@ -578,13 +578,16 @@ function descriptorFromCompact(compact: string, predecessor: { digest: string; p
     one.key_id === decoded.value.header.kid && keyMatchesRow(one, descriptorRow)
   );
   if (!resolved) return fail("descriptor_key_invalid");
-  if (!verifyDecodedJws(decoded.value, "cap+party", keys)) return fail("signature_invalid");
-  // The descriptor timestamp floor mirrors the reference schema constraint:
-  // a codec-parseable spelling longer than 64 bytes is not a legal member
-  // value (the same floor the seven sibling timestamp members carry).
-  if (typeof payload.effective_from !== "string" || payload.effective_from.length < 1 || payload.effective_from.length > 64) {
+  // The descriptor timestamp floor mirrors the reference SCHEMA-stage
+  // constraint (checked before signature work there): a spelling outside
+  // 1..64 BYTES is not a legal member value — the same floor the seven
+  // sibling timestamp members carry. Byte length, not UTF-16 units.
+  if (typeof payload.effective_from !== "string" ||
+      Buffer.byteLength(payload.effective_from, "utf8") < 1 ||
+      Buffer.byteLength(payload.effective_from, "utf8") > 64) {
     return fail("constraint_violation");
   }
+  if (!verifyDecodedJws(decoded.value, "cap+party", keys)) return fail("signature_invalid");
   if (!parseTimestamp(payload.effective_from)) {
     return fail("timestamp_invalid");
   }
@@ -759,35 +762,68 @@ function terminationFromCompact(compact: string, revision: { value: AnyRecord; d
 // coordinates, dual acceptance against the revision's actual party pairs (any
 // two roles — never hardcoded names), verified termination notices, and the
 // reference topology/governing semantics with ancestry coverage.
-function parseProfile(spec: AnyRecord | undefined): { algorithms: string[]; minRevision: number; maxRevision: number } {
-  const algorithms = spec && Array.isArray(spec.algorithms) && spec.algorithms.length > 0
-    ? spec.algorithms.filter((name: unknown) => typeof name === "string")
-    : ALG_ROWS.map((row) => row.name);
-  const bounds = spec && spec.revisions && typeof spec.revisions === "object" ? spec.revisions : {};
-  const minRevision = typeof bounds.min === "number" && ACCEPTED_PROTOCOL_REVISIONS.includes(bounds.min)
-    ? bounds.min : Math.min(...ACCEPTED_PROTOCOL_REVISIONS);
-  const maxRevision = typeof bounds.max === "number" && ACCEPTED_PROTOCOL_REVISIONS.includes(bounds.max)
-    ? bounds.max : Math.max(...ACCEPTED_PROTOCOL_REVISIONS);
-  return { algorithms, minRevision, maxRevision };
+// Strict like the reference Profile.new/1: shape errors report invalid_type;
+// unknown names or out-of-accepted-range bounds report invalid_profile.
+// Omitted members mean the full axis.
+function parseProfile(spec: AnyRecord | undefined):
+  { ok: true; algorithms: string[]; minRevision: number; maxRevision: number } |
+  { ok: false; code: "invalid_type" | "invalid_profile" } {
+  const registryNames = ALG_ROWS.map((row) => row.name);
+  let algorithms = registryNames;
+  if (spec !== undefined && spec.algorithms !== undefined) {
+    if (!Array.isArray(spec.algorithms)) return { ok: false, code: "invalid_type" };
+    const names = spec.algorithms as unknown[];
+    if (names.length === 0 || new Set(names).size !== names.length) return { ok: false, code: "invalid_profile" };
+    if (!names.every((name) => typeof name === "string" && registryNames.includes(name))) {
+      return { ok: false, code: "invalid_profile" };
+    }
+    algorithms = names as string[];
+  }
+
+  let minRevision = Math.min(...ACCEPTED_PROTOCOL_REVISIONS);
+  let maxRevision = Math.max(...ACCEPTED_PROTOCOL_REVISIONS);
+  if (spec !== undefined && spec.revisions !== undefined) {
+    const bounds = spec.revisions as AnyRecord;
+    if (typeof bounds !== "object" || bounds === null ||
+        typeof bounds.min !== "number" || typeof bounds.max !== "number") {
+      return { ok: false, code: "invalid_type" };
+    }
+    if (!ACCEPTED_PROTOCOL_REVISIONS.includes(bounds.min) ||
+        !ACCEPTED_PROTOCOL_REVISIONS.includes(bounds.max) || bounds.min > bounds.max) {
+      return { ok: false, code: "invalid_profile" };
+    }
+    minRevision = bounds.min;
+    maxRevision = bounds.max;
+  }
+
+  return { ok: true, algorithms, minRevision, maxRevision };
 }
 
-// "ok" | "algorithm" | "revision" | "decode": decode failures defer to the
-// unprofiled chain path so malformed inputs keep their decode-era verdicts.
-function admitView(input: AnyRecord): "ok" | "algorithm" | "revision" | "decode" {
+// "ok" | "algorithm" | "revision" | "invalid_type" | "invalid_profile" |
+// "decode": the admission walk mirrors the reference Chain.verify order
+// (descriptors, then revisions, then acceptances and terminations) so a
+// view with more than one defect reports the same stage in both
+// implementations. Decode failures defer to the unprofiled chain path so
+// malformed inputs keep their decode-era verdicts. Within one stage this
+// mirror admits before signature verification, as the reference does.
+function admitView(input: AnyRecord):
+  "ok" | "algorithm" | "revision" | "invalid_type" | "invalid_profile" | "decode" {
   const profile = parseProfile(input.profile);
-  const signed: string[] = [
-    ...(Array.isArray(input.descriptors) ? input.descriptors : []),
-    ...(Array.isArray(input.acceptances) ? input.acceptances : []),
-    ...(Array.isArray(input.terminations) ? input.terminations : []),
-  ];
+  if (!profile.ok) return profile.code;
 
-  for (const compact of signed) {
+  const admitEnvelope = (compact: unknown): "ok" | "algorithm" | "revision" | "decode" => {
     const decoded = decodeJws(compact);
     if (!decoded.ok) return "decode";
     const revision = decoded.value.payload.protocol_revision;
     if (typeof revision !== "number") return "decode";
     if (!profile.algorithms.includes(decoded.value.header.alg)) return "algorithm";
     if (revision < profile.minRevision || revision > profile.maxRevision) return "revision";
+    return "ok";
+  };
+
+  for (const compact of Array.isArray(input.descriptors) ? input.descriptors : []) {
+    const outcome = admitEnvelope(compact);
+    if (outcome !== "ok") return outcome;
   }
 
   for (const text of Array.isArray(input.revisions) ? input.revisions : []) {
@@ -797,6 +833,14 @@ function admitView(input: AnyRecord): "ok" | "algorithm" | "revision" | "decode"
     const revision = (parsed as AnyRecord).protocol_revision;
     if (typeof revision !== "number") return "decode";
     if (revision < profile.minRevision || revision > profile.maxRevision) return "revision";
+  }
+
+  for (const compact of [
+    ...(Array.isArray(input.acceptances) ? input.acceptances : []),
+    ...(Array.isArray(input.terminations) ? input.terminations : []),
+  ]) {
+    const outcome = admitEnvelope(compact);
+    if (outcome !== "ok") return outcome;
   }
 
   return "ok";
@@ -1101,6 +1145,8 @@ function execute(one: ConformanceCase): CaseResult {
       const admission = admitView(input);
       if (admission === "algorithm") return invalid("algorithm_outside_profile");
       if (admission === "revision") return invalid("revision_outside_profile");
+      if (admission === "invalid_type") return invalid("invalid_type");
+      if (admission === "invalid_profile") return invalid("invalid_profile");
       const chain = chainFromInput(input);
       return project(chain, (facts) => ({ charter_id: facts.charterId, topology: facts.topology }));
     }
@@ -1389,11 +1435,11 @@ function katVerifies(keyAlgorithm: string): boolean {
 }
 
 export function capabilities(): { linkedCrypto: string; algorithms: Array<{ name: string; keyAlgorithm: string; verifiable: boolean }> } {
-  const seen = new Set<string>();
-  const algorithms = ALG_ROWS.map((row) => {
-    if (!seen.has(row.keyAlgorithm)) seen.add(row.keyAlgorithm);
-    return { name: row.name, keyAlgorithm: row.keyAlgorithm, verifiable: katVerifies(row.keyAlgorithm) };
-  });
+  const algorithms = ALG_ROWS.map((row) => ({
+    name: row.name,
+    keyAlgorithm: row.keyAlgorithm,
+    verifiable: katVerifies(row.keyAlgorithm),
+  }));
   return { linkedCrypto: process.versions.openssl ?? "", algorithms };
 }
 

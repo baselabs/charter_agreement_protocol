@@ -43,9 +43,10 @@ defmodule CharterAgreementProtocol.CapabilityTest do
   end
 
   test "kat_verifies? is declaration-gated: no crypto call when undeclared" do
-    # The second argument injects the substrate declaration; a raise inside the
-    # gate would prove the call was made anyway.
+    # The second argument injects the substrate declaration; the and-chain
+    # short-circuits before the known-answer verify.
     refute Capability.kat_verifies?("ML-DSA-65", false)
+    assert Capability.kat_verifies?("ML-DSA-65", true)
   end
 
   test "the facade mirrors the report" do

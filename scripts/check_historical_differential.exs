@@ -15,6 +15,7 @@
 # longer fires — each fails this gate.
 
 alias CharterAgreementProtocol.Conformance.{Corpus, Runner}
+alias CharterAgreementProtocol.ReleaseIdentity
 
 defmodule CharterAgreementProtocol.HistoricalDifferentialGate do
   @moduledoc false
@@ -30,6 +31,14 @@ defmodule CharterAgreementProtocol.HistoricalDifferentialGate do
     "v0.2.1" => %{
       "descriptor-rev3-fails-closed" => {"protected_header_invalid", "valid"}
     }
+  }
+
+  @expected_packages %{
+    "v0.1.0" => ["0.1.0"],
+    "v0.2.0" => ["0.2.0", "0.2.1"],
+    "v0.2.1" => ["0.2.0", "0.2.1"],
+    "v0.3.0" => ["0.3.0", "0.3.1", "0.3.2"],
+    "v0.3.2" => ["0.3.0", "0.3.1", "0.3.2"]
   }
 
   @expected_counts %{
@@ -55,6 +64,23 @@ defmodule CharterAgreementProtocol.HistoricalDifferentialGate do
           |> Map.new(&{&1.id, {verdict(&1.expected), verdict(&1.actual)}})
 
         expected = Map.get(@expected_disagreements, tag, %{})
+
+        # The published census for this family is the frozen index's own
+        # corpus digest — the matrix can never drift from the artifact it
+        # describes.
+        published =
+          ReleaseIdentity.compatibility()
+          |> Enum.find(&(&1.package_versions == Map.fetch!(@expected_packages, tag)))
+          |> Map.fetch!(:census_digest)
+
+        index_digest = files["index.json"] |> :json.decode() |> Map.get("corpus_digest")
+
+        if published != index_digest,
+          do:
+            raise(
+              "historical differential #{tag}: published census #{published} != frozen index digest #{index_digest}"
+            )
+
         unexpected = Map.keys(disagreements) -- Map.keys(expected)
         unfired = Map.keys(expected) -- Map.keys(disagreements)
 

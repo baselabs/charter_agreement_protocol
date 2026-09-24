@@ -119,10 +119,15 @@ defmodule CharterAgreementProtocol.Acceptance do
         %Limits{} = limits,
         profile
       ) do
-    if Limits.valid?(limits) do
-      do_verify(compact, supplied_revision, supplied_chain, limits, profile)
-    else
-      invalid_limits()
+    cond do
+      not Limits.valid?(limits) ->
+        invalid_limits()
+
+      not Profile.valid?(profile) ->
+        {:error, Error.new(:invalid_profile, ["profile"])}
+
+      true ->
+        do_verify(compact, supplied_revision, supplied_chain, limits, profile)
     end
   end
 
@@ -146,10 +151,15 @@ defmodule CharterAgreementProtocol.Acceptance do
         %Limits{} = limits,
         profile
       ) do
-    if Limits.valid?(limits) do
-      do_verify_verified(compact, verified_revision, verified_chain, limits, profile)
-    else
-      invalid_limits()
+    cond do
+      not Limits.valid?(limits) ->
+        invalid_limits()
+
+      not Profile.valid?(profile) ->
+        {:error, Error.new(:invalid_profile, ["profile"])}
+
+      true ->
+        do_verify_verified(compact, verified_revision, verified_chain, limits, profile)
     end
   end
 

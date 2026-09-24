@@ -70,7 +70,7 @@ with OpenSSL 3.0.x) probes `capabilities()` at boot, verifies its
 Ed25519 corpus green, and receives
 `:algorithm_unsupported_on_substrate` — a named, testable, honest
 diagnostic — for revision-3 ML-DSA artifacts, never a forgery verdict.
-`Capability.new(algorithms: [...], revisions: {min, max})` narrows
+`Capability.Profile.new(algorithms: [...], revisions: {min, max})` narrows
 admission to a declared subset, enforced before any cryptographic work;
 widening it when the substrate upgrades is a profile change, not a
 re-audit. See the capability-limited CI lane for the executed evidence on

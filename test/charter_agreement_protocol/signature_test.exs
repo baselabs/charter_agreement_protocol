@@ -22,6 +22,19 @@ defmodule CharterAgreementProtocol.SignatureTest do
       assert :ok = Signature.substrate_outcome("ML-DSA-65", true, fn -> true end)
     end
 
+    test "a raising crypto call on a capable substrate is signature_invalid, not a crash" do
+      assert {:error, %Error{code: :signature_invalid}} =
+               Signature.substrate_outcome("ML-DSA-65", true, fn -> raise "provider blew up" end)
+    end
+
+    test "the raise disambiguation is pure in its known-answer verdict" do
+      assert {:error, %Error{code: :signature_invalid}} =
+               Signature.raise_outcome("ML-DSA-65", true)
+
+      assert {:error, %Error{code: :algorithm_unsupported_on_substrate}} =
+               Signature.raise_outcome("ML-DSA-65", false)
+    end
+
     test "a declared algorithm that fails returns signature_invalid" do
       assert {:error, %Error{code: :signature_invalid}} =
                Signature.substrate_outcome("ML-DSA-65", true, fn -> false end)
@@ -70,8 +83,9 @@ defmodule CharterAgreementProtocol.SignatureTest do
       assert {:error, %Error{code: :signature_invalid}} =
                Signature.verify(m, :crypto.strong_rand_bytes(3308), pk, "ML-DSA-65")
 
+      # a WRONG-length key (1951 bytes) rejects on the length check
       assert {:error, %Error{code: :signature_invalid}} =
-               Signature.verify(m, <<0::3309*8>>, :crypto.strong_rand_bytes(1952), "ML-DSA-65")
+               Signature.verify(m, <<0::3309*8>>, :crypto.strong_rand_bytes(1951), "ML-DSA-65")
     end
   end
 end

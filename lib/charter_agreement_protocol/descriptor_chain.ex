@@ -35,12 +35,17 @@ defmodule CharterAgreementProtocol.DescriptorChain do
 
   def verify(compacts, %Limits{} = limits, profile)
       when is_list(compacts) and compacts != [] do
-    if Limits.valid?(limits) do
-      with {:ok, verified} <- PartyDescriptor.verify_chain_view(compacts, limits, profile) do
-        {:ok, build(verified)}
-      end
-    else
-      invalid_limits()
+    cond do
+      not Limits.valid?(limits) ->
+        invalid_limits()
+
+      not Profile.valid?(profile) ->
+        {:error, Error.new(:invalid_profile, ["profile"])}
+
+      true ->
+        with {:ok, verified} <- PartyDescriptor.verify_chain_view(compacts, limits, profile) do
+          {:ok, build(verified)}
+        end
     end
   end
 

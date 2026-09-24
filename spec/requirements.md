@@ -10,7 +10,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ## Bound evidence
 
-- Requirements: 53
+- Requirements: 54
 - Corpus cells: 64
 - Named mutations: 26
 
@@ -69,6 +69,11 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Corpus: `party_descriptor.verify:valid`, `chain.verify:valid`
 - Gate: `CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest`
 - Mutation: `mldsa-binding-defeat`
+
+### CAP-RELEASE-historical-certification
+
+- Corpus: `chain.verify_profile:profile_narrow_valid`
+- Gate: `CharterAgreementProtocol.Architecture.ProfileContractTest`
 
 ### CAP-PROFILE-admission-axes
 

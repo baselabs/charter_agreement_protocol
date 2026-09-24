@@ -207,9 +207,11 @@ defmodule CharterAgreementProtocol.Receipt do
 
   def verify(compact, context, %Limits{} = limits, profile)
       when is_struct(context, ChainFacts) or is_struct(context, CharterRevision) do
-    if Limits.valid?(limits),
-      do: do_verify(compact, context, limits, profile),
-      else: invalid_limits()
+    cond do
+      not Limits.valid?(limits) -> invalid_limits()
+      not Profile.valid?(profile) -> {:error, Error.new(:invalid_profile, ["profile"])}
+      true -> do_verify(compact, context, limits, profile)
+    end
   end
 
   def verify(_compact, _context, %Limits{} = limits, _profile) do
@@ -524,20 +526,32 @@ defmodule CharterAgreementProtocol.Receipt do
         :ok
 
       0 ->
-        if Enum.any?(results, &substrate_unsupported?/1),
-          do:
-            {:error, Error.new(:algorithm_unsupported_on_substrate, ["compact_jws", "signature"])},
-          else: {:error, Error.new(:signature_invalid, ["compact_jws", "signature"])}
+        # An honest failure (substrate obstacle or profile rejection) is
+        # reported verbatim when no candidate verified: a deterministic
+        # policy rejection must never wear a forgery verdict.
+        case Enum.find(results, &honest_failure?/1) do
+          {:error, %Error{code: :algorithm_unsupported_on_substrate}} ->
+            {:error, Error.new(:algorithm_unsupported_on_substrate, ["compact_jws", "signature"])}
+
+          {:error, %Error{code: :algorithm_outside_profile}} ->
+            {:error, Error.new(:algorithm_outside_profile, ["compact_jws", "alg"])}
+
+          {:error, %Error{code: :revision_outside_profile}} ->
+            {:error, Error.new(:revision_outside_profile, ["compact_jws", "protocol_revision"])}
+
+          _none ->
+            {:error, Error.new(:signature_invalid, ["compact_jws", "signature"])}
+        end
 
       _ambiguous ->
         {:error, Error.new(:signature_invalid, ["compact_jws", "signature"])}
     end
   end
 
-  defp substrate_unsupported?({:error, %Error{code: :algorithm_unsupported_on_substrate}}),
-    do: true
-
-  defp substrate_unsupported?(_other), do: false
+  defp honest_failure?({:error, %Error{code: :algorithm_unsupported_on_substrate}}), do: true
+  defp honest_failure?({:error, %Error{code: :algorithm_outside_profile}}), do: true
+  defp honest_failure?({:error, %Error{code: :revision_outside_profile}}), do: true
+  defp honest_failure?(_other), do: false
 
   defp signing_keys(chain, receipt) do
     recognized_revision? =

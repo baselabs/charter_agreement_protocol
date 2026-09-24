@@ -9,6 +9,8 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  algorithmRegistryDigest,
+  capabilities,
   decodeArtifact,
   verifyAcceptance,
   verifyChain,
@@ -84,4 +86,24 @@ test("verifyReceipt goes green on the certified governing match", () => {
   assert.ok(verified.ok);
   assert.equal(verified.facts.governing_match, "match");
   assert.equal(verified.facts.chain_conflict, "none");
+});
+
+test("capabilities reports a verifiable verdict per registry row", () => {
+  const report = capabilities();
+  const names = new Set(report.algorithms.map((row) => row.name));
+  for (const expected of ["EdDSA", "Ed25519", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]) {
+    assert.ok(names.has(expected), `missing ${expected}`);
+  }
+  // This suite runs on a capable Node (>= 24.8): every row verifies.
+  for (const row of report.algorithms) {
+    assert.equal(row.verifiable, true, `${row.name} should verify on this runtime`);
+  }
+  assert.ok(typeof report.linkedCrypto === "string");
+});
+
+test("algorithmRegistryDigest equals the reference identity", () => {
+  assert.equal(
+    algorithmRegistryDigest(),
+    "sha-256:bPZY8aw4NCp3kMt4bZAACFZIcBctGGuTSa6avESQlrM",
+  );
 });

@@ -87,7 +87,10 @@ standing differential gate:
 A standing per-release gate runs every frozen certified corpus (v0.1.0
 through v0.3.2) under the current package through the pure runner, with
 verdict agreement required except an enumerated per-(tag, case)
-transition allowlist, red-provable by allowlist mutation. The published
+transition allowlist and a per-family census tie to each frozen index's
+own corpus digest. The allowlist comparison is red-provable by
+mutation (observed: a direction flip fails the gate); the gate runs in
+every quality battery. The published
 claim is worded to the instrument: finite evidence over named inputs,
 never a proof of universal equivalence. The corpus loader gains an
 explicit historical mode that keeps every released-artifact integrity
@@ -142,7 +145,9 @@ and never will.
 
 - Consumers bind to the semantics identity, the limits they use, the
   signature-registry digest, and the per-artifact `protocol_revision`
-  (now exposed on every facts record alongside the envelope `alg`),
+  (exposed on every facts record; the signed artifacts' records also carry
+  the envelope `alg` — unsigned revision facts carry none, there is no
+  envelope, the field is nil by design),
   instead of census digests and package numbers; the transition contract
   for the existing consumer is issued with this release and states
   plainly that no protocol-side act can preserve its historical

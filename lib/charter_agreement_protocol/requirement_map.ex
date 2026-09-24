@@ -62,6 +62,11 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:gate, CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest},
        {:mutation, "mldsa-binding-defeat"}
      ]},
+    {"CAP-RELEASE-historical-certification",
+     [
+       {:corpus, ["chain.verify_profile:profile_narrow_valid"]},
+       {:gate, CharterAgreementProtocol.Architecture.ProfileContractTest}
+     ]},
     {"CAP-PROFILE-admission-axes",
      [
        {:corpus,

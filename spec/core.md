@@ -137,6 +137,10 @@ Producers MUST mint exactly (`Ed25519`, `protocol_revision` 2) or
 at revisions 2 and 3 keeps artifacts from producers that adopt a revision
 before renaming their emission verifiable [CAP-ALG-registry-binding].
 
+Every release reproduces the verdicts of every previously certified
+conformance corpus except transitions this specification enumerates
+[CAP-RELEASE-historical-certification].
+
 A verifier MAY be supplied a capability profile narrowing the registry
 names and `protocol_revision` values it admits, per artifact, applied
 before any cryptographic work; an artifact outside the profile's name set
