@@ -18,7 +18,7 @@ defmodule CharterAgreementProtocol.TerminationFacts do
     :descriptor_position,
     :not_verified
   ]
-  defstruct @enforce_keys
+  defstruct @enforce_keys ++ [protocol_revision: nil, alg: nil]
 
   @type t :: %__MODULE__{
           termination: TerminationNotice.t(),

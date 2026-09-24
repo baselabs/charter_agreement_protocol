@@ -13,7 +13,7 @@ defmodule CharterAgreementProtocol.DescriptorFacts do
     :lineage,
     :not_verified
   ]
-  defstruct @enforce_keys
+  defstruct @enforce_keys ++ [protocol_revision: nil, alg: nil]
 
   @type position :: :head | :superseded | :contested
   @type t :: %__MODULE__{

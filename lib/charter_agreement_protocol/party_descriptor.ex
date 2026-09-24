@@ -164,7 +164,11 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
                   nested: {:array, @hint_definition}
                 ),
                 Schema.field("extensions", required?: true, types: [:object]),
-                Schema.field("effective_from", required?: true, types: [:string])
+                Schema.field("effective_from",
+                  required?: true,
+                  types: [:string],
+                  constraint: {:string_bytes, 1, 64}
+                )
               ])
 
   @doc "Decode and structurally validate one canonical descriptor envelope."
@@ -528,6 +532,8 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
       Facts.build(DescriptorFacts, %{
         descriptor: descriptor,
         descriptor_digest: digest(descriptor),
+        protocol_revision: descriptor.protocol_revision,
+        alg: descriptor.envelope.alg,
         party_id: party_id,
         descriptor_number: descriptor.descriptor_number,
         prev_descriptor_digest: descriptor.prev_descriptor_digest,

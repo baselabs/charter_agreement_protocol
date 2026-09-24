@@ -13,11 +13,15 @@ defmodule CharterAgreementProtocol.RevisionFacts do
     acceptance_facts: [],
     acceptance_digests: [],
     acceptance_status: :proposed,
+    protocol_revision: nil,
+    alg: nil,
     not_verified: []
   ]
 
   @type t :: %__MODULE__{
           revision: CharterRevision.t(),
+          protocol_revision: pos_integer() | nil,
+          alg: binary() | nil,
           revision_digest: binary(),
           charter_id: binary(),
           revision_number: pos_integer(),

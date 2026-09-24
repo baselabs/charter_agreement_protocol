@@ -575,6 +575,8 @@ defmodule CharterAgreementProtocol.Receipt do
       ReceiptFacts,
       %{
         receipt_digest: digest(receipt),
+        protocol_revision: receipt.protocol_revision,
+        alg: receipt.envelope.alg,
         charter_id: receipt.charter_id,
         revision_number: receipt.revision_number,
         revision_digest: receipt.revision_digest,

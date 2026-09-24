@@ -355,6 +355,8 @@ defmodule CharterAgreementProtocol.Acceptance do
       Facts.build(AcceptanceFacts, %{
         acceptance: acceptance,
         acceptance_digest: digest(acceptance),
+        protocol_revision: acceptance.protocol_revision,
+        alg: acceptance.envelope.alg,
         charter_id: acceptance.charter_id,
         revision_number: acceptance.revision_number,
         revision_digest: acceptance.revision_digest,

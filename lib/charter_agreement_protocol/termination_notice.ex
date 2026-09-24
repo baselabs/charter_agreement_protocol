@@ -341,6 +341,8 @@ defmodule CharterAgreementProtocol.TerminationNotice do
       Facts.build(TerminationFacts, %{
         termination: termination,
         termination_digest: digest(termination),
+        protocol_revision: termination.protocol_revision,
+        alg: termination.envelope.alg,
         charter_id: termination.charter_id,
         governing_revision_digest: termination.governing_revision_digest,
         party_descriptor_digest: termination.party_descriptor_digest,

@@ -355,6 +355,7 @@ defmodule CharterAgreementProtocol.Chain do
       Facts.build(RevisionFacts, %{
         revision: revision,
         revision_digest: digest,
+        protocol_revision: revision.protocol_revision,
         charter_id: revision.charter_id || digest,
         revision_number: revision.revision_number,
         prev_revision_digest: revision.prev_revision_digest,
