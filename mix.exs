@@ -114,7 +114,8 @@ defmodule CharterAgreementProtocol.MixProject do
         "docs/adr/algorithm-name-agility.md",
         "docs/adr/ml-dsa-admission.md",
         "docs/adr/supported-otp-set.md",
-        "docs/adr/dependency-currency-gate.md"
+        "docs/adr/dependency-currency-gate.md",
+        "docs/adr/release-identity.md"
       ],
       licenses: ["Apache-2.0"],
       links: %{
