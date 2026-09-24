@@ -21,10 +21,10 @@ defmodule CharterAgreementProtocol.Receipt do
   alias CharterAgreementProtocol.{
     AcceptanceFacts,
     Base64Url,
+    Capability.Profile,
     Chain,
     ChainFacts,
     CharterRevision,
-    Capability.Profile,
     CompactJws,
     DescriptorChain,
     DescriptorFacts,
@@ -525,7 +525,8 @@ defmodule CharterAgreementProtocol.Receipt do
 
       0 ->
         if Enum.any?(results, &substrate_unsupported?/1),
-          do: {:error, Error.new(:algorithm_unsupported_on_substrate, ["compact_jws", "signature"])},
+          do:
+            {:error, Error.new(:algorithm_unsupported_on_substrate, ["compact_jws", "signature"])},
           else: {:error, Error.new(:signature_invalid, ["compact_jws", "signature"])}
 
       _ambiguous ->
@@ -533,7 +534,9 @@ defmodule CharterAgreementProtocol.Receipt do
     end
   end
 
-  defp substrate_unsupported?({:error, %Error{code: :algorithm_unsupported_on_substrate}}), do: true
+  defp substrate_unsupported?({:error, %Error{code: :algorithm_unsupported_on_substrate}}),
+    do: true
+
   defp substrate_unsupported?(_other), do: false
 
   defp signing_keys(chain, receipt) do

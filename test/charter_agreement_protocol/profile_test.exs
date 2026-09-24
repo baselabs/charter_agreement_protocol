@@ -29,7 +29,10 @@ defmodule CharterAgreementProtocol.ProfileTest do
   test "new rejects unknown names, duplicates, and non-lists" do
     assert {:error, %Error{code: :invalid_profile}} = Profile.new(algorithms: ["Ed448"])
     assert {:error, %Error{code: :invalid_profile}} = Profile.new(algorithms: [])
-    assert {:error, %Error{code: :invalid_profile}} = Profile.new(algorithms: ["Ed25519", "Ed25519"])
+
+    assert {:error, %Error{code: :invalid_profile}} =
+             Profile.new(algorithms: ["Ed25519", "Ed25519"])
+
     assert {:error, %Error{code: :invalid_profile}} = Profile.new(algorithms: "Ed25519")
   end
 

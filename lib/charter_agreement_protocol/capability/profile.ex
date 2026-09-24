@@ -63,12 +63,14 @@ defmodule CharterAgreementProtocol.Capability.Profile do
 
       algorithms =
         case Keyword.fetch(options, :algorithms) do
+          {:ok, nil} -> full.algorithms
           {:ok, names} -> names
           :error -> full.algorithms
         end
 
       revisions =
         case Keyword.fetch(options, :revisions) do
+          {:ok, nil} -> full.revisions
           {:ok, bounds} -> bounds
           :error -> full.revisions
         end
@@ -138,5 +140,6 @@ defmodule CharterAgreementProtocol.Capability.Profile do
 
   defp valid_revisions_option?(nil), do: true
 
-  defp valid_revisions_option?(bounds), do: valid_range?(bounds, Algorithm.accepted_protocol_revisions())
+  defp valid_revisions_option?(bounds),
+    do: valid_range?(bounds, Algorithm.accepted_protocol_revisions())
 end

@@ -12,8 +12,8 @@ defmodule CharterAgreementProtocol.CompactJws do
   alias CharterAgreementProtocol.{
     Algorithm,
     Base64Url,
-    Capability.Profile,
     Canonicalization,
+    Capability.Profile,
     Error,
     Json,
     Limits,

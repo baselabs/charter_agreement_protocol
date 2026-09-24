@@ -414,7 +414,9 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   defp verify_children(children, predecessor, profile) do
     Enum.reduce_while(children, {:ok, []}, fn entry, {:ok, additions} ->
       case verify_decoded(entry.descriptor, entry.compact, predecessor, profile) do
-        {:ok, facts} -> {:cont, {:ok, [facts | additions]}}
+        {:ok, facts} ->
+          {:cont, {:ok, [facts | additions]}}
+
         {:error, %Error{code: code}} = error when code in @honest_failures ->
           {:halt, error}
 

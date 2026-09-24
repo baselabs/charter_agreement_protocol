@@ -10,7 +10,13 @@ defmodule CharterAgreementProtocol.FactsRevisionExposureTest do
     compacts = Enum.map(acceptances, & &1.compact)
 
     {:ok, facts} =
-      Chain.verify([setup.genesis.bytes], compacts, ChainFixture.descriptors(setup), [], Limits.default())
+      Chain.verify(
+        [setup.genesis.bytes],
+        compacts,
+        ChainFixture.descriptors(setup),
+        [],
+        Limits.default()
+      )
 
     %{setup: setup, facts: facts}
   end

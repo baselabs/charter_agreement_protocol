@@ -219,8 +219,6 @@ defmodule CharterAgreementProtocol.Chain do
     protocol_revision >= minimum and protocol_revision <= maximum
   end
 
-  defp revision_in_profile?(_protocol_revision, _profile), do: false
-
   defp unique_revision_digests?(indexed) do
     digests = Enum.map(indexed, &elem(&1, 0))
     digests == Enum.uniq(digests)

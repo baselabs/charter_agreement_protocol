@@ -2,7 +2,14 @@ defmodule CharterAgreementProtocol.ChainProfileTest do
   @moduledoc false
   use ExUnit.Case, async: true
 
-  alias CharterAgreementProtocol.{Capability.Profile, Chain, ChainFacts, ChainFixture, Error, Limits}
+  alias CharterAgreementProtocol.{
+    Capability.Profile,
+    Chain,
+    ChainFacts,
+    ChainFixture,
+    Error,
+    Limits
+  }
 
   setup do
     setup = ChainFixture.base()
@@ -94,7 +101,14 @@ defmodule CharterAgreementProtocol.ChainProfileTest do
 
     # and it precedes even malformed input, like invalid_limits does
     assert {:error, %Error{code: :invalid_profile}} =
-             Chain.verify("not-a-list", view.acceptances, view.descriptors, [], Limits.default(), profile)
+             Chain.verify(
+               "not-a-list",
+               view.acceptances,
+               view.descriptors,
+               [],
+               Limits.default(),
+               profile
+             )
   end
 
   test "invalid limits still win over an invalid profile (existing precedence)", %{view: view} do

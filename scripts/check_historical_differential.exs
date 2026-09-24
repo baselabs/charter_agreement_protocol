@@ -45,6 +45,7 @@ defmodule CharterAgreementProtocol.HistoricalDifferentialGate do
 
     Enum.each(@expected_counts, fn {tag, expected_count} ->
       files = historical_files(repo, tag)
+
       with {:ok, corpus} <- Corpus.load(files, true),
            true <- length(corpus.cases) == expected_count,
            results <- Runner.run(corpus) do
@@ -70,7 +71,9 @@ defmodule CharterAgreementProtocol.HistoricalDifferentialGate do
 
             if drifted != [],
               do:
-                raise("historical differential #{tag}: transition direction drift #{inspect(drifted)}")
+                raise(
+                  "historical differential #{tag}: transition direction drift #{inspect(drifted)}"
+                )
 
             IO.puts(
               "historical differential: #{tag} #{length(corpus.cases)} cases, #{map_size(expected)} enumerated transition(s)"

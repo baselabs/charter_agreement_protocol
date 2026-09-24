@@ -29,6 +29,8 @@ defmodule CharterAgreementProtocol do
     TerminationNotice
   }
 
+  alias CharterAgreementProtocol.Capability.Profile
+
   @doc "Decode one canonical attached Party Descriptor."
   @spec decode_party_descriptor(term(), Limits.t()) ::
           {:ok, PartyDescriptor.t()} | {:error, CharterAgreementProtocol.Error.t()}
@@ -41,12 +43,12 @@ defmodule CharterAgreementProtocol do
   @doc "Verify one Party Descriptor at genesis or against a verified predecessor."
   @spec verify_descriptor(term(), nil | DescriptorFacts.t(), Limits.t()) ::
           {:ok, DescriptorFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
-  @spec verify_descriptor(term(), nil | DescriptorFacts.t(), Limits.t(), Capability.Profile.t()) ::
+  @spec verify_descriptor(term(), nil | DescriptorFacts.t(), Limits.t(), Profile.t()) ::
           {:ok, DescriptorFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_descriptor(compact, predecessor, limits), to: PartyDescriptor, as: :verify
 
   @doc "Verify one Party Descriptor under a caller-supplied capability profile."
-  @spec verify_descriptor(term(), nil | DescriptorFacts.t(), Limits.t(), Capability.Profile.t()) ::
+  @spec verify_descriptor(term(), nil | DescriptorFacts.t(), Limits.t(), Profile.t()) ::
           {:ok, DescriptorFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_descriptor(compact, predecessor, limits, profile),
     to: PartyDescriptor,
@@ -55,12 +57,12 @@ defmodule CharterAgreementProtocol do
   @doc "Verify a complete in-view descriptor chain and retain fork evidence."
   @spec verify_descriptor_chain(term(), Limits.t()) ::
           {:ok, DescriptorChain.t()} | {:error, CharterAgreementProtocol.Error.t()}
-  @spec verify_descriptor_chain(term(), Limits.t(), Capability.Profile.t()) ::
+  @spec verify_descriptor_chain(term(), Limits.t(), Profile.t()) ::
           {:ok, DescriptorChain.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_descriptor_chain(compacts, limits), to: DescriptorChain, as: :verify
 
   @doc "Verify a complete in-view descriptor chain under a capability profile."
-  @spec verify_descriptor_chain(term(), Limits.t(), Capability.Profile.t()) ::
+  @spec verify_descriptor_chain(term(), Limits.t(), Profile.t()) ::
           {:ok, DescriptorChain.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_descriptor_chain(compacts, limits, profile),
     to: DescriptorChain,
@@ -83,7 +85,7 @@ defmodule CharterAgreementProtocol do
           CharterRevision.t(),
           DescriptorChain.t(),
           Limits.t(),
-          Capability.Profile.t()
+          Profile.t()
         ) ::
           {:ok, AcceptanceFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_acceptance(compact, revision, descriptor_chain, limits),
@@ -96,7 +98,7 @@ defmodule CharterAgreementProtocol do
           CharterRevision.t(),
           DescriptorChain.t(),
           Limits.t(),
-          Capability.Profile.t()
+          Profile.t()
         ) ::
           {:ok, AcceptanceFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_acceptance(compact, revision, descriptor_chain, limits, profile),
@@ -111,7 +113,7 @@ defmodule CharterAgreementProtocol do
           CharterRevision.t(),
           DescriptorChain.t(),
           Limits.t(),
-          Capability.Profile.t()
+          Profile.t()
         ) ::
           {:ok, TerminationFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_termination(compact, revision, descriptor_chain, limits),
@@ -124,7 +126,7 @@ defmodule CharterAgreementProtocol do
           CharterRevision.t(),
           DescriptorChain.t(),
           Limits.t(),
-          Capability.Profile.t()
+          Profile.t()
         ) ::
           {:ok, TerminationFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_termination(compact, revision, descriptor_chain, limits, profile),
@@ -134,12 +136,22 @@ defmodule CharterAgreementProtocol do
   @doc "Verify one receipt against revision-only or full-chain context."
   @spec verify_receipt(term(), ChainFacts.t() | CharterRevision.t(), Limits.t()) ::
           {:ok, ReceiptFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
-  @spec verify_receipt(term(), ChainFacts.t() | CharterRevision.t(), Limits.t(), Capability.Profile.t()) ::
+  @spec verify_receipt(
+          term(),
+          ChainFacts.t() | CharterRevision.t(),
+          Limits.t(),
+          Profile.t()
+        ) ::
           {:ok, ReceiptFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_receipt(compact, context, limits), to: Receipt, as: :verify
 
   @doc "Verify one receipt under a caller-supplied capability profile."
-  @spec verify_receipt(term(), ChainFacts.t() | CharterRevision.t(), Limits.t(), Capability.Profile.t()) ::
+  @spec verify_receipt(
+          term(),
+          ChainFacts.t() | CharterRevision.t(),
+          Limits.t(),
+          Profile.t()
+        ) ::
           {:ok, ReceiptFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_receipt(compact, context, limits, profile), to: Receipt, as: :verify
 
@@ -189,7 +201,7 @@ defmodule CharterAgreementProtocol do
   @doc "Verify a complete caller-supplied charter artifact view."
   @spec verify_chain(term(), term(), term(), term(), Limits.t()) ::
           {:ok, ChainFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
-  @spec verify_chain(term(), term(), term(), term(), Limits.t(), Capability.Profile.t()) ::
+  @spec verify_chain(term(), term(), term(), term(), Limits.t(), Profile.t()) ::
           {:ok, ChainFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_chain(revisions, acceptances, descriptors, terminations, limits),
     to: Chain,
@@ -202,7 +214,7 @@ defmodule CharterAgreementProtocol do
   before any cryptographic work; malformed profiles fail closed with
   `:invalid_profile`.
   """
-  @spec verify_chain(term(), term(), term(), term(), Limits.t(), Capability.Profile.t()) ::
+  @spec verify_chain(term(), term(), term(), term(), Limits.t(), Profile.t()) ::
           {:ok, ChainFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_chain(revisions, acceptances, descriptors, terminations, limits, profile),
     to: Chain,

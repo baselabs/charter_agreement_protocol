@@ -267,7 +267,10 @@ wrong_signed_genesis = descriptor_compact.(genesis_claims, "genesis-key", wrong_
 # the seven sibling timestamp members have since the resource boundary.
 long_fraction_genesis =
   descriptor_compact.(
-    %{genesis_claims | "effective_from" => "2026-08-25T10:00:00." <> String.duplicate("1", 60) <> "Z"},
+    %{
+      genesis_claims
+      | "effective_from" => "2026-08-25T10:00:00." <> String.duplicate("1", 60) <> "Z"
+    },
     "genesis-key",
     genesis_private
   )

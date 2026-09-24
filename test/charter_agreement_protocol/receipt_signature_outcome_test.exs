@@ -6,7 +6,11 @@ defmodule CharterAgreementProtocol.ReceiptSignatureOutcomeTest do
 
   @signature_invalid {:error, Error.new(:signature_invalid, ["compact_jws", "signature"])}
 
-  @substrate_unsupported {:error, Error.new(:algorithm_unsupported_on_substrate, ["signature", "ML-DSA-65"])}
+  @substrate_unsupported {:error,
+                          Error.new(:algorithm_unsupported_on_substrate, [
+                            "signature",
+                            "ML-DSA-65"
+                          ])}
 
   test "exactly one verified candidate key succeeds" do
     assert :ok = Receipt.signature_outcome([:ok])
@@ -15,7 +19,9 @@ defmodule CharterAgreementProtocol.ReceiptSignatureOutcomeTest do
 
   test "no verified key and no substrate obstacle is signature_invalid" do
     assert @signature_invalid = Receipt.signature_outcome([@signature_invalid])
-    assert @signature_invalid = Receipt.signature_outcome([@signature_invalid, @signature_invalid])
+
+    assert @signature_invalid =
+             Receipt.signature_outcome([@signature_invalid, @signature_invalid])
   end
 
   test "zero verified keys with a substrate obstacle reports the diagnostic honestly" do

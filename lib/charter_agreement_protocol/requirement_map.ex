@@ -65,7 +65,10 @@ defmodule CharterAgreementProtocol.RequirementMap do
     {"CAP-PROFILE-admission-axes",
      [
        {:corpus,
-        ["chain.verify_profile:profile_algorithm_outside", "chain.verify_profile:profile_revision_outside"]},
+        [
+          "chain.verify_profile:profile_algorithm_outside",
+          "chain.verify_profile:profile_revision_outside"
+        ]},
        {:gate, CharterAgreementProtocol.Architecture.ProfileContractTest},
        {:mutation, "profile-gate-defeat"}
      ]},

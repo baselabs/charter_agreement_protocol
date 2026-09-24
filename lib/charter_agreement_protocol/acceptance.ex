@@ -12,8 +12,8 @@ defmodule CharterAgreementProtocol.Acceptance do
   alias CharterAgreementProtocol.{
     AcceptanceEquivocation,
     AcceptanceFacts,
-    CharterRevision,
     Capability.Profile,
+    CharterRevision,
     CompactJws,
     DescriptorChain,
     DescriptorFacts,
@@ -207,7 +207,12 @@ defmodule CharterAgreementProtocol.Acceptance do
          {:ok, descriptor} <- pinned_descriptor(acceptance, revision, chain),
          {:ok, key} <- active_key(descriptor, acceptance.envelope.kid),
          :ok <-
-           CompactJws.verify_signature(acceptance.envelope, key.public_key, key.algorithm, profile) do
+           CompactJws.verify_signature(
+             acceptance.envelope,
+             key.public_key,
+             key.algorithm,
+             profile
+           ) do
       {:ok, facts(acceptance, descriptor)}
     end
   end
@@ -222,7 +227,12 @@ defmodule CharterAgreementProtocol.Acceptance do
          {:ok, descriptor} <- pinned_descriptor(acceptance, revision, chain),
          {:ok, key} <- active_key(descriptor, acceptance.envelope.kid),
          :ok <-
-           CompactJws.verify_signature(acceptance.envelope, key.public_key, key.algorithm, profile) do
+           CompactJws.verify_signature(
+             acceptance.envelope,
+             key.public_key,
+             key.algorithm,
+             profile
+           ) do
       {:ok, facts(acceptance, descriptor)}
     end
   end

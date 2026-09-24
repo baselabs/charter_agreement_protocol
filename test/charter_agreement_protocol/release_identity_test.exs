@@ -21,7 +21,13 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
       assert is_list(row.protocol_revisions) and row.protocol_revisions != []
 
       for transition <- row.transitions do
-        assert transition.class in [:admission, :verdict_narrowing, :resource_boundary, :typed_error]
+        assert transition.class in [
+                 :admission,
+                 :verdict_narrowing,
+                 :resource_boundary,
+                 :typed_error
+               ]
+
         assert transition.direction in [:green_to_red, :red_to_green, :crash_to_typed]
         assert is_binary(transition.description) and byte_size(transition.description) > 0
       end

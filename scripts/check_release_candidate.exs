@@ -1,11 +1,12 @@
 defmodule CharterAgreementProtocol.ReleaseCandidateGate do
   alias CharterAgreementProtocol.{
-  Algorithm,
-  Canonicalization,
-  Digest,
-  ReleaseIdentity,
-  SpecificationIdentity
-}
+    Algorithm,
+    Canonicalization,
+    Digest,
+    ReleaseIdentity,
+    SpecificationIdentity
+  }
+
   alias CharterAgreementProtocol.Conformance.Report
 
   @root Path.expand("..", __DIR__)
@@ -176,7 +177,21 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
     # The additive-only contract: the shipped manifest may carry exactly the
     # declared members — a removed or renamed member is a manifest-version
     # bump, not a silent edit.
-    member_set = (Map.keys(expected_members) ++ ["archive_is_publication_authorization", "corpus_digest", "format", "index_sha256_base64url", "package", "package_version", "registry_digest", "spec_digest", "verifier_runtime"]) |> Enum.sort()
+    member_set =
+      (Map.keys(expected_members) ++
+         [
+           "archive_is_publication_authorization",
+           "corpus_digest",
+           "format",
+           "index_sha256_base64url",
+           "package",
+           "package_version",
+           "registry_digest",
+           "spec_digest",
+           "verifier_runtime"
+         ])
+      |> Enum.sort()
+
     if Map.keys(metadata) != member_set,
       do: raise("release metadata member set changed")
   end

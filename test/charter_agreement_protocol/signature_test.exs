@@ -10,7 +10,9 @@ defmodule CharterAgreementProtocol.SignatureTest do
     end
 
     test "an undeclared algorithm never invokes crypto (the laziness property)" do
-      detonator = fn -> raise "crypto must not be called when the substrate lacks the algorithm" end
+      detonator = fn ->
+        raise "crypto must not be called when the substrate lacks the algorithm"
+      end
 
       assert {:error, %Error{code: :algorithm_unsupported_on_substrate}} =
                Signature.substrate_outcome("Ed25519", false, detonator)
@@ -45,7 +47,9 @@ defmodule CharterAgreementProtocol.SignatureTest do
     } do
       flipped = <<:erlang.bxor(:binary.at(s, 0), 255)>>
       corrupt = flipped <> binary_part(s, 1, 3308)
-      assert {:error, %Error{code: :signature_invalid}} = Signature.verify(m, corrupt, pk, "ML-DSA-65")
+
+      assert {:error, %Error{code: :signature_invalid}} =
+               Signature.verify(m, corrupt, pk, "ML-DSA-65")
     end
 
     test "a corrupt right-length key fails typed, not by raise", %{
@@ -54,7 +58,9 @@ defmodule CharterAgreementProtocol.SignatureTest do
       signature: s
     } do
       corrupt = <<0>> <> binary_part(pk, 1, 1951)
-      assert {:error, %Error{code: :signature_invalid}} = Signature.verify(m, s, corrupt, "ML-DSA-65")
+
+      assert {:error, %Error{code: :signature_invalid}} =
+               Signature.verify(m, s, corrupt, "ML-DSA-65")
     end
 
     test "wrong-length inputs reject before any capability question", %{

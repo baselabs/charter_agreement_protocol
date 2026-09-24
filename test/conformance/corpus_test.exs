@@ -6,6 +6,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   alias CharterAgreementProtocol.{
     Acceptance,
+    Capability.Profile,
     Chain,
     CharterRevision,
     DescriptorChain,
@@ -338,7 +339,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     input = one["input"]
 
     assert {:ok, profile} =
-             CharterAgreementProtocol.Capability.Profile.new(
+             Profile.new(
                algorithms: input["profile"]["algorithms"],
                revisions:
                  {input["profile"]["revisions"]["min"], input["profile"]["revisions"]["max"]}

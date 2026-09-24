@@ -48,10 +48,10 @@ compatibility_rows =
   Enum.map(ReleaseIdentity.compatibility(), fn row ->
     {:object,
      [
-      {"package_versions", {:array, Enum.map(row.package_versions, &{:string, &1})}},
-      {"verification_semantics", {:integer, row.verification_semantics}},
-      {"census_digest", {:string, row.census_digest}},
-      {"protocol_revisions", {:array, Enum.map(row.protocol_revisions, &{:integer, &1})}},
+       {"package_versions", {:array, Enum.map(row.package_versions, &{:string, &1})}},
+       {"verification_semantics", {:integer, row.verification_semantics}},
+       {"census_digest", {:string, row.census_digest}},
+       {"protocol_revisions", {:array, Enum.map(row.protocol_revisions, &{:integer, &1})}},
        {"transitions",
         {:array,
          Enum.map(row.transitions, fn transition ->
@@ -102,7 +102,8 @@ metadata = %{
 # reproducibility within the run, and requires this content identity to
 # equal the pin on any platform.
 
-{:ok, bytes} = Canonicalization.encode({:object, Enum.map(metadata, fn {key, value} -> {key, value} end)})
+{:ok, bytes} =
+  Canonicalization.encode({:object, Enum.map(metadata, fn {key, value} -> {key, value} end)})
 
 File.write!("priv/release-metadata.json", bytes)
 

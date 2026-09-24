@@ -2,6 +2,7 @@ defmodule CharterAgreementProtocol.Architecture.FactsConstructionTest do
   use ExUnit.Case, async: true
 
   alias CharterAgreementProtocol.ArchitectureScan
+
   alias CharterAgreementProtocol.{
     AcceptanceFacts,
     DescriptorFacts,
@@ -34,7 +35,13 @@ defmodule CharterAgreementProtocol.Architecture.FactsConstructionTest do
       |> Enum.flat_map(fn path ->
         source = File.read!(path)
 
-        for module <- [AcceptanceFacts, DescriptorFacts, ReceiptFacts, RevisionFacts, TerminationFacts],
+        for module <- [
+              AcceptanceFacts,
+              DescriptorFacts,
+              ReceiptFacts,
+              RevisionFacts,
+              TerminationFacts
+            ],
             call = "Facts.build(" <> Atom.to_string(module) <> ",",
             String.contains?(source, call),
             not source_contains_populated_build?(source, call) do
@@ -60,7 +67,10 @@ defmodule CharterAgreementProtocol.Architecture.FactsConstructionTest do
     source =
       "Facts.build(CharterAgreementProtocol.AcceptanceFacts, %{\n  acceptance_digest: digest\n})"
 
-    assert source_contains_populated_build?(source, "Facts.build(CharterAgreementProtocol.AcceptanceFacts") == false
+    assert source_contains_populated_build?(
+             source,
+             "Facts.build(CharterAgreementProtocol.AcceptanceFacts"
+           ) == false
   end
 
   test "literal, dynamic, applied, and renamed facts constructors make the gate red" do

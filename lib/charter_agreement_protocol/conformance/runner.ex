@@ -12,8 +12,8 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   alias CharterAgreementProtocol.{
     Acceptance,
     Base64Url,
-    Capability.Profile,
     Canonicalization,
+    Capability.Profile,
     Chain,
     CharterRevision,
     DescriptorChain,

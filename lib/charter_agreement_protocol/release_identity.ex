@@ -151,5 +151,4 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
   """
   @spec compatibility() :: [release_row()]
   def compatibility, do: @compatibility
-
 end

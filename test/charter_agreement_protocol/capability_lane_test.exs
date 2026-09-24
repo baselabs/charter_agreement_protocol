@@ -8,7 +8,15 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
   # forgery verdict.
   use ExUnit.Case, async: true
 
-  alias CharterAgreementProtocol.{Capability, Capability.Profile, Chain, ChainFixture, Error, Limits, Signature}
+  alias CharterAgreementProtocol.{
+    Capability,
+    Capability.Profile,
+    Chain,
+    ChainFixture,
+    Error,
+    Limits,
+    Signature
+  }
 
   test "the report's per-row verdicts agree with actual verification behavior" do
     for %{key_algorithm: key_algorithm, verifiable: verifiable?} <- Capability.report().algorithms do

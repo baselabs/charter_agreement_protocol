@@ -10,8 +10,8 @@ defmodule CharterAgreementProtocol.TerminationNotice do
   """
 
   alias CharterAgreementProtocol.{
-    CharterRevision,
     Capability.Profile,
+    CharterRevision,
     CompactJws,
     DescriptorChain,
     DescriptorFacts,
@@ -190,7 +190,12 @@ defmodule CharterAgreementProtocol.TerminationNotice do
          {:ok, descriptor} <- pinned_descriptor(termination, revision, chain),
          {:ok, key} <- active_key(descriptor, termination.envelope.kid),
          :ok <-
-           CompactJws.verify_signature(termination.envelope, key.public_key, key.algorithm, profile) do
+           CompactJws.verify_signature(
+             termination.envelope,
+             key.public_key,
+             key.algorithm,
+             profile
+           ) do
       {:ok, facts(termination, descriptor)}
     end
   end
@@ -204,7 +209,12 @@ defmodule CharterAgreementProtocol.TerminationNotice do
          {:ok, descriptor} <- pinned_descriptor(termination, revision, chain),
          {:ok, key} <- active_key(descriptor, termination.envelope.kid),
          :ok <-
-           CompactJws.verify_signature(termination.envelope, key.public_key, key.algorithm, profile) do
+           CompactJws.verify_signature(
+             termination.envelope,
+             key.public_key,
+             key.algorithm,
+             profile
+           ) do
       {:ok, facts(termination, descriptor)}
     end
   end
