@@ -53,10 +53,12 @@ defmodule CharterAgreementProtocol.DescriptorChain do
     if Limits.valid?(limits), do: chain_error(), else: invalid_limits()
   end
 
-  def verify(_compacts, %Limits{} = limits, _profile) do
-    if Limits.valid?(limits),
-      do: {:error, Error.new(:invalid_type, ["descriptor_chain"])},
-      else: invalid_limits()
+  def verify(_compacts, %Limits{} = limits, profile) do
+    cond do
+      not Limits.valid?(limits) -> invalid_limits()
+      not Profile.valid?(profile) -> {:error, Error.new(:invalid_profile, ["profile"])}
+      true -> {:error, Error.new(:invalid_type, ["descriptor_chain"])}
+    end
   end
 
   def verify(_compacts, _limits, _profile),

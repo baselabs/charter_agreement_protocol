@@ -214,8 +214,12 @@ defmodule CharterAgreementProtocol.Receipt do
     end
   end
 
-  def verify(_compact, _context, %Limits{} = limits, _profile) do
-    if Limits.valid?(limits), do: invalid_type(), else: invalid_limits()
+  def verify(_compact, _context, %Limits{} = limits, profile) do
+    cond do
+      not Limits.valid?(limits) -> invalid_limits()
+      not Profile.valid?(profile) -> {:error, Error.new(:invalid_profile, ["profile"])}
+      true -> invalid_type()
+    end
   end
 
   def verify(_compact, _context, _limits, _profile), do: invalid_type()

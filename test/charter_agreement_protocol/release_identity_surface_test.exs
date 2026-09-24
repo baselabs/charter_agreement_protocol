@@ -19,8 +19,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentitySurfaceTest do
     Error,
     Limits,
     PartyDescriptor,
-    ReceiptFixture,
-    TerminationNotice
+    ReceiptFixture
   }
 
   setup do
@@ -87,6 +86,19 @@ defmodule CharterAgreementProtocol.ReleaseIdentitySurfaceTest do
       end)
 
     assert {:error, %Error{code: :corpus_index_invalid}} = Corpus.load(tampered, true)
+
+    # a historical cell that is neither a count nor an n_a note is rejected,
+    # not raised on — the self-digest is recomputed after tampering so the
+    # applicability stage itself is what fires
+    weird_cell =
+      Map.update!(files, "index.json", fn bytes ->
+        bytes
+        |> String.replace(~s("valid":1), ~s("valid":"one"), global: false)
+        |> redigest()
+      end)
+
+    assert {:error, %Error{code: :corpus_applicability_incomplete}} =
+             Corpus.load(weird_cell, true)
   end
 
   test "the runner's profile spec helpers are total", %{setup: setup, acceptances: acceptances} do
@@ -248,6 +260,186 @@ defmodule CharterAgreementProtocol.ReleaseIdentitySurfaceTest do
              CharterAgreementProtocol.PartyDescriptor.honest_halt(
                :algorithm_unsupported_on_substrate
              )
+  end
+
+  test "invalid profiles outrank malformed input at every surface, matching Chain" do
+    alias CharterAgreementProtocol.{
+      Acceptance,
+      DescriptorChain,
+      Error,
+      Limits,
+      PartyDescriptor,
+      Receipt,
+      TerminationNotice
+    }
+
+    bad_profile = %CharterAgreementProtocol.Capability.Profile{algorithms: [], revisions: {1, 3}}
+
+    # good limits + bad profile + malformed input -> invalid_profile everywhere
+    assert {:error, %Error{code: :invalid_profile}} =
+             PartyDescriptor.verify("compact", nil, Limits.default(), bad_profile)
+
+    assert {:error, %Error{code: :invalid_profile}} =
+             PartyDescriptor.verify("compact", nil, Limits.default(), "profile")
+
+    assert {:error, %Error{code: :invalid_profile}} =
+             DescriptorChain.verify(["not-a-descriptor"], Limits.default(), bad_profile)
+
+    assert {:error, %Error{code: :invalid_profile}} =
+             Acceptance.verify("compact", "revision", "chain", Limits.default(), bad_profile)
+
+    # a non-struct revision also lands in the fallback: profile outranks type
+    assert {:error, %Error{code: :invalid_profile}} =
+             Acceptance.verify("compact", %{}, %{}, Limits.default(), bad_profile)
+
+    assert {:error, %Error{code: :invalid_profile}} =
+             TerminationNotice.verify(
+               "compact",
+               "revision",
+               "chain",
+               Limits.default(),
+               bad_profile
+             )
+
+    assert {:error, %Error{code: :invalid_profile}} =
+             Receipt.verify("compact", "context", Limits.default(), bad_profile)
+
+    # and limits still win over the profile everywhere
+    bad_limits = %{Limits.default() | max_depth: -1}
+
+    assert {:error, %Error{code: :invalid_limits}} =
+             PartyDescriptor.verify("compact", nil, bad_limits, bad_profile)
+
+    assert {:error, %Error{code: :invalid_limits}} =
+             Receipt.verify("compact", "context", bad_limits, bad_profile)
+
+    # malformed input with a VALID profile keeps its invalid_type verdict at
+    # every surface (the profile never widens a type failure)
+    assert {:error, %Error{code: :invalid_type}} =
+             Acceptance.verify("compact", "revision", "chain", Limits.default(), Profile.full())
+
+    assert {:error, %Error{code: :invalid_type}} =
+             TerminationNotice.verify(
+               "compact",
+               "revision",
+               "chain",
+               Limits.default(),
+               Profile.full()
+             )
+
+    assert {:error, %Error{code: :invalid_type}} =
+             Receipt.verify("compact", "context", Limits.default(), Profile.full())
+
+    # verify_verified shares the precedence
+    assert {:error, %Error{code: :invalid_profile}} =
+             Acceptance.verify_verified(
+               "compact",
+               "revision",
+               "chain",
+               Limits.default(),
+               bad_profile
+             )
+
+    assert {:error, %Error{code: :invalid_profile}} =
+             TerminationNotice.verify_verified(
+               "compact",
+               "revision",
+               "chain",
+               Limits.default(),
+               bad_profile
+             )
+
+    # a VALID profile keeps the type verdict at verify_verified too
+    assert {:error, %Error{code: :invalid_type}} =
+             Acceptance.verify_verified(
+               "compact",
+               "revision",
+               "chain",
+               Limits.default(),
+               Profile.full()
+             )
+
+    assert {:error, %Error{code: :invalid_type}} =
+             TerminationNotice.verify_verified(
+               "compact",
+               "revision",
+               "chain",
+               Limits.default(),
+               Profile.full()
+             )
+
+    # and the descriptor fallback's limits branch
+    assert {:error, %Error{code: :invalid_limits}} =
+             PartyDescriptor.verify(
+               "compact",
+               nil,
+               %{Limits.default() | max_depth: -1},
+               "profile"
+             )
+  end
+
+  test "the honest priority ladder is fixed and the substrate subject survives" do
+    alias CharterAgreementProtocol.{Error, PartyDescriptor}
+
+    algorithm = Error.new(:algorithm_outside_profile, ["compact_jws", "alg"])
+    revision = Error.new(:revision_outside_profile, ["compact_jws", "protocol_revision"])
+    substrate = Error.new(:algorithm_unsupported_on_substrate, ["signature", "ML-DSA-65"])
+
+    # fixed priority regardless of list order
+    for order <- [
+          [algorithm, revision, substrate],
+          [substrate, revision, algorithm],
+          [revision, substrate, algorithm]
+        ] do
+      assert PartyDescriptor.priority_honest_code(order) == :algorithm_outside_profile
+
+      assert PartyDescriptor.priority_honest_code([revision, substrate]) ==
+               :revision_outside_profile
+
+      assert PartyDescriptor.priority_honest_code([substrate]) ==
+               :algorithm_unsupported_on_substrate
+    end
+
+    # the substrate diagnostic keeps its algorithm-bearing subject verbatim
+    assert {:error,
+            %Error{code: :algorithm_unsupported_on_substrate, subject: ["signature", "ML-DSA-65"]}} =
+             PartyDescriptor.honest_outcome(:algorithm_unsupported_on_substrate, [substrate])
+
+    # total when the substrate failure is somehow absent
+    assert {:error, %Error{code: :algorithm_unsupported_on_substrate}} =
+             PartyDescriptor.honest_outcome(:algorithm_unsupported_on_substrate, [])
+  end
+
+  defp encode_tree(tree) do
+    alias CharterAgreementProtocol.Canonicalization
+    {:ok, bytes} = Canonicalization.encode(tree)
+    bytes
+  end
+
+  defp redigest(index_bytes) do
+    alias CharterAgreementProtocol.{Canonicalization, Digest}
+
+    index = :json.decode(index_bytes)
+
+    digest =
+      :corpus_index
+      |> Digest.hash(encode_tree(tag_tree(Map.delete(index, "corpus_digest"))))
+      |> Digest.to_tagged()
+
+    Map.put(index, "corpus_digest", digest)
+    |> then(&encode_tree(tag_tree(&1)))
+  end
+
+  defp tag_tree(value) when is_boolean(value), do: {:boolean, value}
+  defp tag_tree(value) when is_integer(value), do: {:integer, value}
+  defp tag_tree(value) when is_binary(value), do: {:string, value}
+
+  defp tag_tree(value) when is_map(value) do
+    {:object, Enum.map(value, fn {k, v} -> {k, tag_tree(v)} end)}
+  end
+
+  defp tag_tree(value) when is_list(value) do
+    {:array, Enum.map(value, &tag_tree/1)}
   end
 
   defp case_body(input, profile) do

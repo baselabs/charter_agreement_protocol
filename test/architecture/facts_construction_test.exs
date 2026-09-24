@@ -26,55 +26,62 @@ defmodule CharterAgreementProtocol.Architecture.FactsConstructionTest do
     assert findings == []
   end
 
-  test "every artifact facts construction site carries protocol_revision (the exposure floor)" do
+  test "every artifact facts construction site carries its revision (and, where signed, alg) scalars" do
     # A missed construction site would silently build a record whose revision
     # scalar is nil (defaults, not enforce_keys, by design) — this gate makes
-    # the miss loud at the construction site instead of at a consumer.
+    # the miss loud at the construction site instead of at a consumer. Every
+    # Facts.build block per module is inspected (not just the first), the
+    # unsigned revision record is exempt from the alg floor (no envelope), and
+    # the four signed-artifact records must populate both scalars.
+    signed = [AcceptanceFacts, DescriptorFacts, ReceiptFacts, TerminationFacts]
+
     sites =
       ArchitectureScan.source_files(["lib"])
       |> Enum.flat_map(fn path ->
         source = File.read!(path)
 
-        for module <- [
-              AcceptanceFacts,
-              DescriptorFacts,
-              ReceiptFacts,
-              RevisionFacts,
-              TerminationFacts
-            ],
+        for module <- [RevisionFacts | signed],
             call = "Facts.build(" <> Atom.to_string(module) <> ",",
-            String.contains?(source, call),
-            not source_contains_populated_build?(source, call) do
-          {path, module}
+            block <- build_blocks(source, call),
+            missing = missing_members(block, module in signed),
+            missing != [] do
+          {path, module, missing}
         end
       end)
 
     assert sites == []
   end
 
-  defp source_contains_populated_build?(source, call) do
-    case Regex.run(~r/\A.*?#{Regex.escape(call)}.*?\{\n(.*?)\n\s*\}/s, source) do
-      nil ->
-        # Unusual formatting: require the member within the next span of
-        # this call rather than anywhere in the file (fail-closed).
-        case Regex.run(~r/#{Regex.escape(call)}.{0,800}protocol_revision:/s, source) do
-          nil -> false
-          _ -> true
-        end
-
-      [_, body | _] ->
-        String.contains?(body, "protocol_revision:")
-    end
+  # Every Facts.build block for this module in the source, as raw text.
+  defp build_blocks(source, call) do
+    ~r/#{Regex.escape(call)}.*?\{\n(.*?)\n\s*\}/s
+    |> Regex.scan(source, capture: :all_but_first)
+    |> List.wrap()
+    |> Enum.map(&List.first/1)
   end
 
-  test "the exposure floor gate is red when a site drops the member" do
+  # Which exposure members a build block fails to populate. The unsigned
+  # revision record owes only protocol_revision; the signed records owe both.
+  defp missing_members(block, signed?) do
+    owed = if signed?, do: ["protocol_revision:", "alg:"], else: ["protocol_revision:"]
+
+    Enum.reject(owed, &String.contains?(block, &1))
+  end
+
+  test "the exposure floor gate is red when a site drops a member" do
     source =
       "Facts.build(CharterAgreementProtocol.AcceptanceFacts, %{\n  acceptance_digest: digest\n})"
 
-    assert source_contains_populated_build?(
-             source,
-             "Facts.build(CharterAgreementProtocol.AcceptanceFacts"
-           ) == false
+    assert build_blocks(source, "Facts.build(CharterAgreementProtocol.AcceptanceFacts,") == [
+             "  acceptance_digest: digest"
+           ]
+
+    assert missing_members("  acceptance_digest: digest", true) == ["protocol_revision:", "alg:"]
+
+    unsigned =
+      "Facts.build(CharterAgreementProtocol.RevisionFacts, %{\n  revision_digest: digest\n})"
+
+    assert missing_members("  revision_digest: digest", false) == ["protocol_revision:"]
   end
 
   test "literal, dynamic, applied, and renamed facts constructors make the gate red" do

@@ -137,8 +137,12 @@ defmodule CharterAgreementProtocol.TerminationNotice do
     end
   end
 
-  def verify(_compact, _revision, _chain, %Limits{} = limits, _profile) do
-    if Limits.valid?(limits), do: invalid_type(), else: invalid_limits()
+  def verify(_compact, _revision, _chain, %Limits{} = limits, profile) do
+    cond do
+      not Limits.valid?(limits) -> invalid_limits()
+      not Profile.valid?(profile) -> {:error, Error.new(:invalid_profile, ["profile"])}
+      true -> invalid_type()
+    end
   end
 
   def verify(_compact, _revision, _chain, _limits, _profile), do: invalid_type()
@@ -169,8 +173,12 @@ defmodule CharterAgreementProtocol.TerminationNotice do
     end
   end
 
-  def verify_verified(_compact, _revision, _chain, %Limits{} = limits, _profile) do
-    if Limits.valid?(limits), do: invalid_type(), else: invalid_limits()
+  def verify_verified(_compact, _revision, _chain, %Limits{} = limits, profile) do
+    cond do
+      not Limits.valid?(limits) -> invalid_limits()
+      not Profile.valid?(profile) -> {:error, Error.new(:invalid_profile, ["profile"])}
+      true -> invalid_type()
+    end
   end
 
   def verify_verified(_compact, _revision, _chain, _limits, _profile), do: invalid_type()

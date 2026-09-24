@@ -29,9 +29,9 @@ From 0.4.0, persist and compare this tuple on replay:
 - `signature_registry_digest` (the signature algorithm registry's
   identity),
 - `spec_digest`, unchanged,
-- the per-artifact `protocol_revision` (now exposed on every facts record,
-  alongside the envelope `alg`), so a revision-2 acceptance is never
-  conflated with a revision-3 one.
+- the per-artifact `protocol_revision` (now exposed on every facts record;
+  the signed artifacts' records also carry the envelope `alg`), so a
+  revision-2 acceptance is never conflated with a revision-3 one.
 
 CAP warrants THESE stable across an upgrade when the compatibility matrix
 says so, and never silently moves them. Release-distribution identities —

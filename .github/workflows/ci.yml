@@ -121,6 +121,21 @@ jobs:
         run: |
           mix run --no-start -e 'IO.inspect(CharterAgreementProtocol.capabilities(), structs: false, width: 120)'
 
+      - name: Assert the lane substrate itself (ML-DSA unverifiable here)
+        run: |
+          mix run --no-start -e '
+          report = CharterAgreementProtocol.capabilities()
+          mldsa = Enum.filter(report.algorithms, &String.starts_with?(&1.name, "ML-DSA-"))
+          others = Enum.reject(report.algorithms, &String.starts_with?(&1.name, "ML-DSA-"))
+          Enum.each(mldsa, fn row ->
+            unless row.verifiable == false, do: raise("lane substrate gained ML-DSA (#{row.name}) — the honest-failure lane must move to an older substrate")
+          end)
+          Enum.each(others, fn row ->
+            unless row.verifiable == true, do: raise("lane substrate lost #{row.name} — the lane must verify the classical rows")
+          end)
+          IO.puts("capability-limited substrate confirmed: ML-DSA unverifiable, classical verifiable")
+          '
+
       - name: Capability-limited assertions
         run: mix test test/charter_agreement_protocol/capability_lane_test.exs
 

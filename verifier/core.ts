@@ -574,19 +574,20 @@ function descriptorFromCompact(compact: string, predecessor: { digest: string; p
   const descriptorRow = ALG_ROWS.find((one) => one.name === decoded.value.header.alg);
   const grammar = keyGrammarError(payload);
   if (grammar) return fail(grammar);
-  const resolved = Array.isArray(keys) && keys.find((one) =>
-    one.key_id === decoded.value.header.kid && keyMatchesRow(one, descriptorRow)
-  );
-  if (!resolved) return fail("descriptor_key_invalid");
   // The descriptor timestamp floor mirrors the reference SCHEMA-stage
-  // constraint (checked before signature work there): a spelling outside
-  // 1..64 BYTES is not a legal member value — the same floor the seven
-  // sibling timestamp members carry. Byte length, not UTF-16 units.
+  // constraint (checked before key resolution and signature work there):
+  // a spelling outside 1..64 BYTES is not a legal member value — the same
+  // floor the seven sibling timestamp members carry. Byte length, not
+  // UTF-16 units.
   if (typeof payload.effective_from !== "string" ||
       Buffer.byteLength(payload.effective_from, "utf8") < 1 ||
       Buffer.byteLength(payload.effective_from, "utf8") > 64) {
     return fail("constraint_violation");
   }
+  const resolved = Array.isArray(keys) && keys.find((one) =>
+    one.key_id === decoded.value.header.kid && keyMatchesRow(one, descriptorRow)
+  );
+  if (!resolved) return fail("descriptor_key_invalid");
   if (!verifyDecodedJws(decoded.value, "cap+party", keys)) return fail("signature_invalid");
   if (!parseTimestamp(payload.effective_from)) {
     return fail("timestamp_invalid");
@@ -800,12 +801,14 @@ function parseProfile(spec: AnyRecord | undefined):
 }
 
 // "ok" | "algorithm" | "revision" | "invalid_type" | "invalid_profile" |
-// "decode": the admission walk mirrors the reference Chain.verify order
-// (descriptors, then revisions, then acceptances and terminations) so a
-// view with more than one defect reports the same stage in both
-// implementations. Decode failures defer to the unprofiled chain path so
-// malformed inputs keep their decode-era verdicts. Within one stage this
-// mirror admits before signature verification, as the reference does.
+// "decode": the admission walk mirrors the reference Chain.verify STAGE
+// order (descriptors, then revisions, then acceptances and terminations),
+// so a view whose defects are in different stages reports the same stage
+// in both implementations. Within one stage, admission defects are
+// decided before signature work here exactly as there. A view with BOTH a
+// structural defect and an admission defect in the SAME stage may differ
+// (this mirror reports the admission code; the reference reports the
+// structural one) — no certified corpus case carries that shape.
 function admitView(input: AnyRecord):
   "ok" | "algorithm" | "revision" | "invalid_type" | "invalid_profile" | "decode" {
   const profile = parseProfile(input.profile);

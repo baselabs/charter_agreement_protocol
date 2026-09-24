@@ -372,14 +372,21 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
   end
 
   defp observed_counts_match?(cells, observed, surface) do
-    Enum.all?(cells, fn {class, value} ->
-      case value do
-        count when is_integer(count) ->
-          Map.get(observed, {surface, class}, 0) == count
+    cells
+    |> Enum.all?(fn
+      {_class, %{"n_a" => _reason}} -> true
+      {_class, value} when is_integer(value) -> true
+      _other -> false
+    end) and counts_reconcile?(cells, observed, surface)
+  end
 
-        %{"n_a" => _reason} ->
-          Map.get(observed, {surface, class}, 0) == 0
-      end
+  defp counts_reconcile?(cells, observed, surface) do
+    Enum.all?(cells, fn
+      {class, %{"n_a" => _reason}} ->
+        Map.get(observed, {surface, class}, 0) == 0
+
+      {class, count} when is_integer(count) ->
+        Map.get(observed, {surface, class}, 0) == count
     end)
   end
 

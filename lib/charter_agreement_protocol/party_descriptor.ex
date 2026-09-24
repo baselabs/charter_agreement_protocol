@@ -210,6 +210,15 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     end
   end
 
+  # Any %Profile{} reached the main clause; here the profile is never a
+  # valid one, so the honest outcome is invalid_profile (matching Chain's
+  # limits-then-profile precedence) whenever the limits themselves are valid.
+  def verify(_compact, _predecessor, %Limits{} = limits, _profile) do
+    if Limits.valid?(limits),
+      do: {:error, Error.new(:invalid_profile, ["profile"])},
+      else: invalid_limits()
+  end
+
   def verify(_compact, _predecessor, _limits, _profile),
     do: {:error, Error.new(:invalid_type, ["limits"])}
 
@@ -406,25 +415,76 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     end
   end
 
+  # Order-independent per sibling group: every child is evaluated, then one
+  # deterministic outcome is chosen — any structural failure is the chain
+  # error; otherwise the highest-priority honest code among the group's
+  # honest failures fires, regardless of input order.
   defp verify_children(children, predecessor, profile) do
-    Enum.reduce_while(children, {:ok, []}, fn entry, {:ok, additions} ->
-      case verify_decoded(entry.descriptor, entry.compact, predecessor, profile) do
-        {:ok, facts} ->
-          {:cont, {:ok, [facts | additions]}}
+    {additions, failures} =
+      Enum.reduce(children, {[], []}, fn entry, {ok, failed} ->
+        case verify_decoded(entry.descriptor, entry.compact, predecessor, profile) do
+          {:ok, facts} -> {[facts | ok], failed}
+          {:error, %Error{} = error} -> {ok, [error | failed]}
+        end
+      end)
 
-        {:error, %Error{code: code}}
-        when code in [
-               :algorithm_outside_profile,
-               :revision_outside_profile,
-               :algorithm_unsupported_on_substrate
-             ] ->
-          {:halt, honest_halt(code)}
+    cond do
+      failures == [] ->
+        {:ok, additions}
 
-        _error ->
-          {:halt, chain_error()}
-      end
-    end)
+      Enum.any?(failures, &(not honest_failure?(&1))) ->
+        chain_error()
+
+      true ->
+        failures
+        |> priority_honest_code()
+        |> honest_outcome(failures)
+    end
   end
+
+  defp honest_failure?(%Error{code: code})
+       when code in [
+              :algorithm_outside_profile,
+              :revision_outside_profile,
+              :algorithm_unsupported_on_substrate
+            ],
+       do: true
+
+  defp honest_failure?(_other), do: false
+
+  # Fixed priority: algorithm policy, then revision policy, then substrate.
+  @doc false
+  @spec priority_honest_code([Error.t()]) ::
+          :algorithm_outside_profile
+          | :revision_outside_profile
+          | :algorithm_unsupported_on_substrate
+  def priority_honest_code(failures) do
+    codes = Enum.map(failures, & &1.code)
+
+    cond do
+      :algorithm_outside_profile in codes -> :algorithm_outside_profile
+      :revision_outside_profile in codes -> :revision_outside_profile
+      true -> :algorithm_unsupported_on_substrate
+    end
+  end
+
+  @doc false
+  @spec honest_outcome(
+          :algorithm_outside_profile
+          | :revision_outside_profile
+          | :algorithm_unsupported_on_substrate,
+          [Error.t()]
+        ) ::
+          {:error, Error.t()}
+  def honest_outcome(:algorithm_unsupported_on_substrate, failures) do
+    # The substrate diagnostic keeps its algorithm-bearing subject verbatim —
+    # an operator must see WHICH algorithm the substrate cannot verify.
+    failure = Enum.find(failures, &(&1.code == :algorithm_unsupported_on_substrate))
+
+    if failure, do: {:error, failure}, else: honest_halt(:algorithm_unsupported_on_substrate)
+  end
+
+  def honest_outcome(code, _failures), do: honest_halt(code)
 
   # Deterministic regardless of input order: a sibling set mixing an
   # out-of-profile child with a corrupted one reports the same honest code

@@ -31,8 +31,8 @@ owner rulings 2026-09-24. No wire change — `protocol_revision` stays 3.
   battery: every frozen certified corpus (v0.1.0 85, v0.2.0/0.2.1 90,
   v0.3.0/0.3.2 100 cases) runs under the current package with verdict
   agreement required except an enumerated per-(tag, case) allowlist —
-  red-provable by allowlist mutation (a named battery mutation). The
-  corpus loader gains an explicit historical mode that keeps every
+  red-provable by allowlist mutation (observed: a flipped transition
+  direction fails the gate). The corpus loader gains an explicit historical mode that keeps every
   released-artifact integrity check and relaxes only the compiled
   applicability floor and the current extension-registry identity.
 - The consumer transition contract is ISSUED
@@ -100,7 +100,7 @@ owner rulings 2026-09-24. No wire change — `protocol_revision` stays 3.
 - Certified corpus re-recorded at 104 cases: the `chain.verify_profile`
   surface (both out-of-profile axes red, an in-profile narrowing green)
   and the timestamp-floor witness. The `profile-gate-defeat` mutation
-  joins the battery (27 named mutations, all red-proved; the corpus test
+  joins the battery (26 named mutations, all red-proved; the corpus test
   executes the profile cases directly so the mutation cannot survive).
   TypeScript verifier agreement is byte-identical over the new corpus.
 
