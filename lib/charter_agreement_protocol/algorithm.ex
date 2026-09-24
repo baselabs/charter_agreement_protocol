@@ -40,6 +40,8 @@ defmodule CharterAgreementProtocol.Algorithm do
   `docs/adr/algorithm-name-agility.md` and `docs/adr/ml-dsa-admission.md`).
   """
 
+  alias CharterAgreementProtocol.{Canonicalization, Digest}
+
   @registry [
     %{
       name: "EdDSA",
@@ -148,6 +150,35 @@ defmodule CharterAgreementProtocol.Algorithm do
   @doc "The emission name producers use when the caller selects none."
   @spec default_emission_name() :: binary()
   def default_emission_name, do: "Ed25519"
+
+  @doc """
+  The domain-separated digest of every registry row.
+
+  The signature algorithm registry's published identity: changes iff a row
+  changes. The extension registry's digest (the manifest's historic
+  `registry_digest` member) identifies extension profiles, not signature
+  algorithms — this digest is the identity for the signature registry
+  itself.
+  """
+  @spec registry_digest() :: Digest.t()
+  def registry_digest do
+    value =
+      {:object,
+       Enum.map(@registry, fn row ->
+         {row.name,
+          {:object,
+           [
+             {"name", {:string, row.name}},
+             {"min_protocol_revision", {:integer, row.min_protocol_revision}},
+             {"key_algorithm", {:string, row.key_algorithm}},
+             {"public_key_bytes", {:integer, row.public_key_bytes}},
+             {"signature_bytes", {:integer, row.signature_bytes}}
+           ]}}
+       end)}
+
+    {:ok, bytes} = Canonicalization.encode(value)
+    Digest.hash(:signature_registry, bytes)
+  end
 
   @doc """
   The registry row for one key algorithm, or nil.

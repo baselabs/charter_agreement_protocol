@@ -29,6 +29,7 @@ defmodule CharterAgreementProtocol.Digest do
     signature: "charter-agreement-protocol/signature",
     extension_schema: "charter-agreement-protocol/extension-schema",
     extension_registry: "charter-agreement-protocol/extension-registry",
+    signature_registry: "charter-agreement-protocol/signature-registry",
     conformance_report: "charter-agreement-protocol/conformance-report",
     corpus_index: "charter-agreement-protocol/corpus-index",
     specification: "charter-agreement-protocol/specification"

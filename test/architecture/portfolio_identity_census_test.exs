@@ -18,6 +18,7 @@ defmodule CharterAgreementProtocol.Architecture.PortfolioIdentityCensusTest do
                charter-agreement-protocol/conformance-report
                charter-agreement-protocol/corpus-index
                charter-agreement-protocol/extension-registry
+               charter-agreement-protocol/signature-registry
                charter-agreement-protocol/extension-schema
                charter-agreement-protocol/legal-text
                charter-agreement-protocol/party-descriptor-content
