@@ -8,6 +8,15 @@ description = "Deterministic signed conformance fixtures are public test vectors
 targetRules = ["jwt"]
 paths = [
   '''^lib/charter_agreement_protocol/capability\.ex$''',
+  '''^conformance/cases/(party_descriptor-verify|descriptor_chain-verify|acceptance-verify|acceptance-equivocation|termination-verify|chain-verify|chain-verify_profile|governing_revision|receipt-verify)\.json$''',
   '''^priv/conformance/cases/(party_descriptor-verify|descriptor_chain-verify|acceptance-verify|acceptance-equivocation|termination-verify|chain-verify|chain-verify_profile|governing_revision|receipt-verify)\.json$''',
   '''^verifier/conformance/cases/(party_descriptor-verify|descriptor_chain-verify|acceptance-verify|acceptance-equivocation|termination-verify|chain-verify|chain-verify_profile|governing_revision|receipt-verify)\.json$'''
+]
+
+[[allowlists]]
+description = "Pinned known-answer verification vectors are public test data, not credentials"
+targetRules = ["github-app-token"]
+paths = [
+  '''^lib/charter_agreement_protocol/capability\.ex$''',
+  '''^verifier/core\.ts$'''
 ]
