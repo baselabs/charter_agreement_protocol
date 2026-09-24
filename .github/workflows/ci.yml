@@ -93,6 +93,37 @@ jobs:
       - name: Run complete quality gate
         run: mix quality
 
+  # The capability-limited lane: the honest-failure evidence for substrates
+  # that cannot verify ML-DSA. Ubuntu 24.04 ships OpenSSL 3.0.x, where the
+  # ML-DSA rows report unverifiable and verification fails with the named
+  # algorithm_unsupported_on_substrate diagnostic instead of a forgery
+  # verdict (the same assertions are green on the capable lanes above — the
+  # test is substrate-neutral, the evidence is per-substrate). This lane is
+  # deliberately always green; it is the evidence-model home for substrate-
+  # only requirements (docs/guides/error-codes.md).
+  capability-limited:
+    name: Capability-limited substrate
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up BEAM
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f124 # v1.24.1
+        with:
+          elixir-version: "1.20.3"
+          otp-version: "28.5.0.3"
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Report runtime capabilities
+        run: |
+          mix run --no-start -e 'IO.inspect(CharterAgreementProtocol.capabilities(), structs: false, width: 120)'
+
+      - name: Capability-limited assertions
+        run: mix test test/charter_agreement_protocol/capability_lane_test.exs
+
   # The Windows clone-and-build bar: a fresh checkout must fetch
   # dependencies and compile under the declared toolchain on a Windows host.
   # setup-beam resolves the official Erlang/OTP Windows builds (otp "29",
