@@ -75,6 +75,21 @@ defmodule CharterAgreementProtocol.MixProject do
   defp package do
     [
       maintainers: ["rjpalermo"],
+      # hex.pm's published-package secret scan does not read this
+      # repository's .gitleaks.toml. Both ignored paths are deterministic
+      # PUBLIC test data, never credentials: the conformance corpus is
+      # signed fixtures shipped since 0.1.0 (the `jwt` rule fires on every
+      # base64url JWS segment), and capability.ex pins the known-answer
+      # verification vectors (the `github-app-token` rule once matched a
+      # random `ghs_` substring INSIDE the ML-DSA-87 signature vector —
+      # interior bytes of a public signature, not a token; the line carries
+      # an inline gitleaks:allow with the same rationale).
+      secret_scan: [
+        ignore: [
+          "lib/charter_agreement_protocol/capability.ex",
+          "priv/conformance/**"
+        ]
+      ],
       files: [
         "lib",
         "priv/conformance",
