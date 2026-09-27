@@ -10,6 +10,11 @@ capability probes recorded below (executed 2026-09-16) and by the sibling
 signer audit (`charter_agreement_signer` v0.3.3, which landed the same range
 and set); the two repositories are aligned by owner direction.
 
+**Amended September 26, 2026:** the macOS and Windows CI legs this ADR
+required are withdrawn by owner rule; CI runs on Linux only. Developer
+portability across macOS, Linux and Windows stays a requirement of the
+developer setup, proven on a developer machine.
+
 ## Context
 
 Before this act the toolchain identity lived outside the repository: no
@@ -85,21 +90,23 @@ Probes (2026-09-16):
    `.tool-versions` and the dev toolchain) and floor `1.19.5`/`28.5.0.3`
    (mirrors the signer's floor lane), both on ubuntu-26.04 for the ML-DSA
    substrate.
-5. **A fresh clone must build on Windows.** CI carries a
-   `windows-build` lane proving the clone bar — checkout, `deps.get`,
-   test-environment compile with warnings-as-errors, format check, and the
-   dependency-currency gate — on the official Erlang/OTP Windows builds of
-   OTP 29 with the Elixir 1.20.3 precompiled archive, and `.gitattributes`
-   pins LF / binary treatment for the byte-exact corpus, fixtures, and pins
-   so `core.autocrlf` cannot corrupt a Windows checkout. The declared gates
-   contain no POSIX-shell dependency (the currency gate is an Elixir script
-   spawning `mix` through `cmd /c` on Windows). The full test suite runs on
-   this lane: its capability report OBSERVED (2026-09-17, CI run 35177596961)
-   that the official OTP 29 Windows build links OpenSSL 3.5.5 with every
-   `:mldsa44/65/87` atom present, so the revision-3 corpus's ML-DSA floor is
-   met on Windows — 268/268 green. One suite fixture is platform-aware: the
-   reject-before-read test's FIFO (`mkfifo` is POSIX-only) becomes a symlink
-   to the real index bytes on Windows, equally non-regular to lstat, and if a
-   host refuses link creation the test passes with a loud note instead of
-   claiming the substrate proved anything; the POSIX lanes carry the
-   red-capable FIFO form.
+5. **Developer portability across macOS, Linux, and Windows** stays a
+   requirement of the developer setup, proven on a developer machine, not a
+   CI leg (amended September 26, 2026; see the note under Status above). The
+   declared gates contain no POSIX-shell dependency (the currency gate is an
+   Elixir script spawning `mix` through `cmd /c` on Windows), and
+   `.gitattributes` pins LF / binary treatment for the byte-exact corpus,
+   fixtures, and pins so `core.autocrlf` cannot corrupt a Windows checkout.
+   One suite fixture is platform-aware: the reject-before-read test's FIFO
+   (`mkfifo` is POSIX-only) becomes a symlink to the real index bytes on
+   Windows, equally non-regular to lstat, and if a host refuses link
+   creation the test passes with a loud note instead of claiming the
+   substrate proved anything; the POSIX lanes carry the red-capable FIFO
+   form. (Struck: this decision previously required a CI-side `windows-build`
+   lane, on the official Erlang/OTP Windows builds, proving the clone bar
+   (checkout, `deps.get`, test-environment compile, format check, and the
+   dependency-currency gate), with a full-suite pass recorded 2026-09-17 (CI
+   run 35177596961, 268/268 green, OpenSSL 3.5.5 with every `:mldsa44/65/87`
+   atom present). That CI lane requirement is withdrawn; the underlying
+   developer-portability work above remains in the repository and is proven
+   on a developer machine instead.)
