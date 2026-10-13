@@ -38,19 +38,8 @@ defmodule CharterAgreementProtocol.Signature do
   @ed25519_field_prime 2 ** 255 - 19
   @ed25519_subgroup_order 2 ** 252 + 27_742_317_777_372_353_535_851_937_790_883_648_493
 
-  @small_order_points Enum.map(
-                        [
-                          "0100000000000000000000000000000000000000000000000000000000000000",
-                          "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
-                          "0000000000000000000000000000000000000000000000000000000000000080",
-                          "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
-                          "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
-                          "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
-                          "0000000000000000000000000000000000000000000000000000000000000000",
-                          "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa"
-                        ],
-                        &Base.decode16!(&1, case: :mixed)
-                      )
+  @ed25519_d 37_095_705_934_669_439_343_138_083_508_754_565_189_542_113_879_843_219_016_388_785_533_085_940_283_555
+  @ed25519_sqrt_minus_one 19_681_161_376_707_505_956_807_079_304_988_542_015_446_066_515_923_890_162_744_021_073_123_829_784_752
 
   @ml_dsa_crypto %{
     "ML-DSA-44" => :mldsa44,
@@ -153,12 +142,48 @@ defmodule CharterAgreementProtocol.Signature do
   end
 
   defp strict_point?(<<prefix::binary-size(31), last>>) do
-    encoded = <<prefix::binary, last>>
-    # Canonical y (< p) plus the complete torsion set covers every noncanonical
-    # or low-order encoding, including the negative-zero spellings.
     y = :binary.decode_unsigned(<<prefix::binary, Bitwise.band(last, 0x7F)>>, :little)
+    strict_decoded_point?(y, Bitwise.bsr(last, 7))
+  end
 
-    y < @ed25519_field_prime and encoded not in @small_order_points
+  defp strict_decoded_point?(y, sign) when y < @ed25519_field_prime do
+    y_squared = field(y * y)
+    numerator = field(y_squared - 1)
+    denominator = field(@ed25519_d * y_squared + 1)
+    square = field(numerator * power(denominator, @ed25519_field_prime - 2))
+    root = power(square, div(@ed25519_field_prime + 3, 8))
+    root = if field(root * root) == square, do: root, else: field(root * @ed25519_sqrt_minus_one)
+
+    if denominator != 0 and field(root * root) == square and not (root == 0 and sign == 1) do
+      x = if rem(root, 2) == sign, do: root, else: field(-root)
+      {x8, y8, z8} = {x, y, 1} |> double_point() |> double_point() |> double_point()
+      not (x8 == 0 and field(y8 - z8) == 0)
+    else
+      false
+    end
+  end
+
+  defp strict_decoded_point?(_y, _sign), do: false
+
+  # Homogeneous Edwards coordinates keep the three doublings free of division.
+  defp double_point({x, y, z}) do
+    x_squared = field(x * x)
+    y_squared = field(y * y)
+    sum = field(y_squared - x_squared)
+    difference = field(sum - 2 * z * z)
+
+    {field(2 * x * y * difference), field(-sum * (x_squared + y_squared)),
+     field(sum * difference)}
+  end
+
+  defp field(value), do: Integer.mod(value, @ed25519_field_prime)
+
+  defp power(base, exponent), do: power(base, exponent, 1)
+  defp power(_base, 0, result), do: result
+
+  defp power(base, exponent, result) do
+    next = if rem(exponent, 2) == 1, do: field(result * base), else: result
+    power(field(base * base), div(exponent, 2), next)
   end
 
   defp invalid, do: {:error, Error.new(:signature_invalid, ["compact_jws", "signature"])}
