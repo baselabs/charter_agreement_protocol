@@ -369,10 +369,12 @@ defmodule CharterAgreementProtocol.Receipt do
     if Timestamp.compare(recorded_at, occurred_at) in [:eq, :gt], do: :ok, else: receipt_error()
   end
 
-  defp reverify_context(%CharterRevision{canonical_bytes: bytes}, limits, profile) do
+  defp reverify_context(%CharterRevision{canonical_bytes: bytes} = supplied, limits, profile) do
     with {:ok, revision} <- CharterRevision.decode(bytes, limits),
          :ok <- CharterRevision.admit(revision, profile) do
-      {:ok, {:revision, revision}}
+      if Retained.compatible?(supplied, revision),
+        do: {:ok, {:revision, revision}},
+        else: receipt_error()
     end
   end
 
@@ -383,12 +385,15 @@ defmodule CharterAgreementProtocol.Receipt do
          {:ok, terminations} <- retained_terminations(facts),
          {:ok, verified} <-
            Chain.verify(revisions, acceptances, descriptors, terminations, limits, profile) do
-      {:ok, {:chain, verified}}
+      if Retained.compatible?(facts, verified),
+        do: {:ok, {:chain, verified}},
+        else: receipt_error()
     else
       {:error, %Error{} = error} -> {:error, error}
-      _failure -> receipt_error()
     end
   end
+
+  defp reverify_context(_supplied, _limits, _profile), do: receipt_error()
 
   defp retained_revisions(%ChainFacts{revision_facts: facts}) when is_list(facts) do
     collect_retained(facts, fn

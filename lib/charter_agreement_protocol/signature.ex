@@ -117,7 +117,7 @@ defmodule CharterAgreementProtocol.Signature do
     crypto_algorithm = Map.fetch!(@ml_dsa_crypto, key_algorithm)
 
     if is_binary(signature) and byte_size(signature) == row.signature_bytes and
-         is_binary(public_key) and byte_size(public_key) == row.public_key_bytes do
+         valid_key?(public_key, key_algorithm) do
       substrate_outcome(key_algorithm, Capability.declared?(key_algorithm), fn ->
         :crypto.verify(crypto_algorithm, :none, message, signature, public_key)
       end)

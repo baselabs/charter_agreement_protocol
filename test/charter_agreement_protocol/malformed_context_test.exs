@@ -5,13 +5,15 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
   alias CharterAgreementProtocol, as: CAP
 
   alias CharterAgreementProtocol.{
+    Acceptance,
     Capability.Profile,
     ChainFixture,
     DescriptorChain,
     DescriptorFacts,
     Error,
     Limits,
-    ReceiptFixture
+    ReceiptFixture,
+    TerminationNotice
   }
 
   setup do
@@ -76,6 +78,66 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
 
     assert {:error, %Error{}} =
              CAP.verify_descriptor(context.set.issuer.compact, bad, Limits.default())
+  end
+
+  test "every context field rejects a malformed field type", context do
+    limits = Limits.default()
+    profile = Profile.full()
+    [key] = context.set.issuer.claims["verification_keys"]
+    public = Base.url_decode64!(key["public_key"], padding: false)
+
+    descriptor_input = %{
+      "kid" => context.set.issuer.kid,
+      "claims" => Map.put(context.set.issuer.claims, "protocol_revision", 2),
+      "public_key" => public
+    }
+
+    receipt_input = %{
+      descriptor_input
+      | "claims" => Map.put(ReceiptFixture.claims(context.set.genesis), "protocol_revision", 2)
+    }
+
+    compact = ChainFixture.acceptance(context.set.genesis, context.set.issuer, "issuer").compact
+
+    for {value, kind, input} <- [
+          {context.chain, :receipt, receipt_input},
+          {context.revision, :receipt, receipt_input},
+          {hd(context.descriptors.descriptors), :party_descriptor, descriptor_input}
+        ],
+        field <- Map.keys(Map.from_struct(value)) do
+      changed = Map.put(value, field, fn -> :malformed end)
+      assert {:error, %Error{}} = CAP.prepare_signing(kind, input, changed, limits, profile)
+
+      assert {:error, %Error{}} =
+               CAP.prepare_signing(kind, input, Map.delete(value, field), limits, profile)
+
+      if kind == :party_descriptor,
+        do:
+          assert(
+            match?(
+              {:error, %Error{}},
+              CAP.verify_descriptor(context.set.issuer.compact, changed, limits)
+            )
+          ),
+        else:
+          assert(match?({:error, %Error{}}, CAP.verify_receipt(context.receipt, changed, limits)))
+    end
+
+    for field <- Map.keys(Map.from_struct(context.descriptors)) do
+      changed = Map.put(context.descriptors, field, fn -> :malformed end)
+
+      assert {:error, %Error{}} =
+               CAP.verify_acceptance(compact, context.revision, changed, limits)
+
+      assert {:error, %Error{}} =
+               CAP.verify_termination(compact, context.revision, changed, limits)
+
+      assert {:error, %Error{}} =
+               Acceptance.verify_verified(compact, context.revision, changed, limits)
+
+      assert {:error, %Error{}} =
+               TerminationNotice.verify_verified(compact, context.revision, changed, limits)
+    end
   end
 
   property "every context field remains total at the public verification and signing seams",

@@ -170,7 +170,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
         {:error, Error.new(:invalid_profile, ["profile"])}
 
       true ->
-        do_verify_verified(compact, verified_revision, verified_chain, limits, profile)
+        do_verify(compact, verified_revision, verified_chain, limits, profile)
     end
   end
 
@@ -215,12 +215,6 @@ defmodule CharterAgreementProtocol.TerminationNotice do
          {:ok, chain} <- reverify_chain(supplied_chain, limits, profile),
          {:ok, prepared} <- prepare_verified(compact, revision, chain, limits, profile) do
       {:ok, Map.put(prepared, :verify_with, {revision, chain})}
-    end
-  end
-
-  defp do_verify_verified(compact, revision, chain, limits, profile) do
-    with {:ok, prepared} <- prepare_verified(compact, revision, chain, limits, profile) do
-      verify_prepared(prepared, profile)
     end
   end
 
@@ -312,21 +306,28 @@ defmodule CharterAgreementProtocol.TerminationNotice do
       else: termination_error()
   end
 
-  defp reverify_revision(%CharterRevision{canonical_bytes: bytes}, limits, profile) do
+  defp reverify_revision(%CharterRevision{canonical_bytes: bytes} = supplied, limits, profile) do
     with {:ok, revision} <- CharterRevision.decode(bytes, limits),
          :ok <- CharterRevision.admit(revision, profile) do
-      {:ok, revision}
+      if Retained.compatible?(supplied, revision), do: {:ok, revision}, else: invalid_type()
     end
   end
 
-  defp reverify_chain(%DescriptorChain{descriptors: descriptors}, limits, profile) do
+  defp reverify_revision(_supplied, _limits, _profile), do: invalid_type()
+
+  defp reverify_chain(%DescriptorChain{descriptors: descriptors} = supplied, limits, profile) do
     with {:ok, compacts} <- retained_compacts(descriptors),
-         true <- compacts != [] do
-      DescriptorChain.verify(Enum.uniq(compacts), limits, profile)
+         true <- compacts != [],
+         {:ok, chain} <- DescriptorChain.verify(Enum.uniq(compacts), limits, profile),
+         true <- Retained.compatible?(supplied, chain) do
+      {:ok, chain}
     else
+      {:error, %Error{} = error} -> {:error, error}
       _failure -> chain_error()
     end
   end
+
+  defp reverify_chain(_supplied, _limits, _profile), do: chain_error()
 
   defp retained_compacts(descriptors) when is_list(descriptors) do
     if Retained.list?(descriptors), do: collect_compacts(descriptors), else: chain_error()

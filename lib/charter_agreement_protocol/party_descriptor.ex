@@ -565,6 +565,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
        when is_list(lineage) and lineage != [] do
     with {:ok, verified} <-
            reverse_lineage(lineage, limits, profile),
+         true <- Retained.compatible?(supplied, verified),
          true <- verified.descriptor_digest == supplied.descriptor_digest do
       {:ok, verified}
     else
