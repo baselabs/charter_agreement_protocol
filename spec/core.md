@@ -113,13 +113,15 @@ under the row's key algorithm — Ed25519 [RFC8032] or pure ML-DSA
 verify under that algorithm and key MUST fail
 [CAP-SIGNATURE-ed25519-verification].
 
-An Ed25519 public key MUST be exactly 32 bytes. Decode `y` as the
+An Ed25519 public key MUST be exactly 32 bytes
+[CAP-SIGNATURE-ed25519-verification]. Decode `y` as the
 little-endian integer with the top bit cleared and use that bit as the sign
 of `x`. With `p = 2^255 - 19` and `d = -121665/121666 mod p`, a verifier MUST
 reject `y >= p`, reject when `(y^2 - 1)/(d*y^2 + 1) mod p` has no square
-root, and reject `x = 0` with the sign bit set. Choose the root whose parity
+root, and reject `x = 0` with the sign bit set
+[CAP-SIGNATURE-ed25519-verification]. Choose the root whose parity
 matches the sign bit to obtain `P = (x, y)`. A verifier MUST reject when
-`[8]P` is the identity. Points of mixed order are admitted
+`[8]P` is the identity [CAP-SIGNATURE-ed25519-verification]. Points of mixed order are admitted
 [CAP-SIGNATURE-ed25519-verification].
 
 Every attached artifact carries

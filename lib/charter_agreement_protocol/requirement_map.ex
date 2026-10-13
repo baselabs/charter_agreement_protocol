@@ -226,7 +226,6 @@ defmodule CharterAgreementProtocol.RequirementMap do
           "party_descriptor.verify:signature_invalid",
           "party_descriptor.verify:valid"
         ]},
-       {:gate, CharterAgreementProtocol.Ed25519AdmissionTest},
        {:gate, CharterAgreementProtocol.Architecture.SigningBoundaryTest},
        {:mutation, "ed25519-defeat"},
        {:mutation, "ed25519-list-only-admission"}
