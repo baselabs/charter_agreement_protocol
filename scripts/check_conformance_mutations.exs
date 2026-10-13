@@ -383,8 +383,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "signing-refusal-skip",
       path: "lib/charter_agreement_protocol/signing_plan.ex",
-      from: "{:ok, _revision} <- SigningInput.refusal_check(kind, artifact, chain)",
-      to: "{:ok, _revision} <- {:ok, nil}",
+      from: "{:ok, revision} <- SigningInput.refusal_check(kind, artifact, chain)",
+      to: "{:ok, revision} <- Chain.signing_revision(kind, artifact, chain)",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
