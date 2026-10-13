@@ -181,7 +181,9 @@ defmodule CharterAgreementProtocol.Capability do
 
     case :persistent_term.get(cache_key, :missing) do
       :missing ->
-        :global.trans({cache_key, self()}, fn -> cache_once(cache_key, key_algorithm) end)
+        :global.trans({cache_key, self()}, fn -> cache_once(cache_key, key_algorithm) end, [
+          node()
+        ])
 
       cached ->
         cached
