@@ -18,11 +18,15 @@ is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:ivfIdXDtMDpq5ElpaVgRr8gqRVXsmMMr2oeXyuH4bw4` |
-| Index SHA-256 (base64url) | `n2Se2on9kG3cdeFMiy9OW9lKalvM_02Fmdw-XbYe-A4` |
+| Corpus digest | `sha-256:2-t12PxqWcNhr1MBdhlFkwRhN5K_5pYN5m7Z-sxafmQ` |
+| Index SHA-256 (base64url) | `vkrz0Xrt37EFuRxVI-rIp5R36RSSohCqFnPT98SREFU` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:04s7VyVgNPgsSaMBWhf0Stq15WOhqAqT-uHlueeu7Bw` |
-| Cases | 163, in 15 case files |
+| Specification digest | `sha-256:90C5jxxLRRBTEhq9IdoRUmA9ZGImDCmr3iUagyIfrLo` |
+
+The pinned TypeScript 0.6.0 verifier has the earlier certified index and no
+`signing.prepare` surface. Its harness, agreement check and release-candidate
+identity check report the expected corpus mismatch for this checkout.
+| Cases | 216, in 15 case files |
 
 What each one tells you:
 
@@ -70,6 +74,7 @@ behavior it exercises). The surfaces:
 | `chain.verify_profile` | A whole artifact set under a capability profile |
 | `governing_revision` | The governing revision at given instants, including closure by termination |
 | `receipt.verify` | One receipt against a verified chain or a bare revision |
+| `signing.prepare` | Pre-sign segments, descriptor key match, and typed refusals |
 
 The classes run from `valid` and the size bounds (`exact_bound`, `maximum_plus_one`)
 through each kind of malformed input to the set-level outcomes: `chain_fork`,

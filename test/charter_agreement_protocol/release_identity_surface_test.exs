@@ -82,7 +82,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentitySurfaceTest do
     # run — exactly the integrity property a frozen released artifact needs.
     tampered =
       Map.update!(files, "index.json", fn bytes ->
-        String.replace(bytes, ~s("total_cases":163), ~s("total_cases":164))
+        String.replace(bytes, ~s("total_cases":216), ~s("total_cases":217))
       end)
 
     assert {:error, %Error{code: :corpus_index_invalid}} = Corpus.load(tampered, true)

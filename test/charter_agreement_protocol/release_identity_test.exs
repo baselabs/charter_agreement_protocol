@@ -67,10 +67,10 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
     |> Enum.each(fn {prior, later} -> assert MapSet.subset?(prior, later) end)
   end
 
-  test "the latest family opens with the distinct-parties narrowing" do
+  test "the latest corpus row keeps semantics and has no transitions" do
     [latest | _] = Enum.reverse(ReleaseIdentity.compatibility())
     assert latest.verification_semantics == ReleaseIdentity.verification_semantics()
-    assert latest.package_versions == ["0.5.0"]
-    assert [%{class: :verdict_narrowing, direction: :green_to_red}] = latest.transitions
+    assert latest.package_versions == ["0.6.0"]
+    assert latest.transitions == []
   end
 end

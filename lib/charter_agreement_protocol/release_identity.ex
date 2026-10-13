@@ -112,6 +112,13 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "A charter's parties must be distinct parties: a revision naming one descriptor for two roles rejects (revision_invalid), and a chain view whose revision parties resolve to one descriptor history, or that holds a history no revision names, rejects (chain_invalid)"
         }
       ]
+    },
+    %{
+      package_versions: ["0.6.0"],
+      verification_semantics: 5,
+      census_digest: "sha-256:2-t12PxqWcNhr1MBdhlFkwRhN5K_5pYN5m7Z-sxafmQ",
+      protocol_revisions: [1, 2, 3],
+      transitions: []
     }
   ]
 

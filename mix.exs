@@ -1,7 +1,7 @@
 defmodule CharterAgreementProtocol.MixProject do
   use Mix.Project
 
-  @version "0.5.0"
+  @version "0.6.0"
   @source_url "https://github.com/baselabs/charter_agreement_protocol"
 
   def project do
@@ -114,6 +114,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "docs/adr/ml-dsa-admission.md",
         "docs/adr/supported-otp-set.md",
         "docs/adr/dependency-currency-gate.md",
+        "docs/adr/pre-sign-check.md",
         "docs/adr/release-identity.md"
       ],
       licenses: ["Apache-2.0"],
@@ -158,6 +159,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "docs/adr/conformance-release-candidate.md",
         "docs/adr/algorithm-name-agility.md",
         "docs/adr/ml-dsa-admission.md",
+        "docs/adr/pre-sign-check.md",
         "docs/adr/release-identity.md",
         "spec/core.md",
         "spec/requirements.md",
@@ -210,6 +212,7 @@ defmodule CharterAgreementProtocol.MixProject do
           "docs/adr/conformance-release-candidate.md",
           "docs/adr/algorithm-name-agility.md",
           "docs/adr/ml-dsa-admission.md",
+          "docs/adr/pre-sign-check.md",
           "docs/adr/release-identity.md"
         ],
         Specification: [
@@ -273,6 +276,7 @@ defmodule CharterAgreementProtocol.MixProject do
           CharterAgreementProtocol.Chain,
           CharterAgreementProtocol.Signature,
           CharterAgreementProtocol.SigningInput,
+          CharterAgreementProtocol.SigningPlan,
           CharterAgreementProtocol.CompactJws
         ],
         Encoding: [
