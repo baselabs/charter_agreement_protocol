@@ -76,11 +76,18 @@ defmodule CharterAgreementProtocol.SigningPrepareCases do
           "signing_input_invalid",
           "maximum_plus_one"
         ),
+        valid("signing-set-profile-scope", Map.put(scoped, "profile", narrow)),
         invalid(
-          "signing-set-profile-scope",
-          Map.put(scoped, "profile", narrow),
+          "signing-party-chain-profile",
+          Map.put(acceptance, "profile", narrow),
           "algorithm_outside_profile",
           "profile_algorithm_outside"
+        ),
+        invalid(
+          "signing-set-revision-profile",
+          Map.put(scoped, "profile", %{"revisions" => %{"min" => 2, "max" => 3}}),
+          "revision_outside_profile",
+          "profile_revision_outside"
         ),
         invalid(
           "signing-receipt-profile-scope",

@@ -8,6 +8,11 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-10-13: signing profile scope
+
+The retained set check uses `Profile.full()`. The caller profile covers
+exactly the context and artifact that public verification covers.
+
 ## 2026-10-13: pre-sign API
 
 Add the CAP-SIGNING requirements for ordered preparation, caller limits,

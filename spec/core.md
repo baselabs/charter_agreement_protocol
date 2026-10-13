@@ -266,9 +266,12 @@ verification [CAP-SIGNING-set-context]. A descriptor absent from every held chai
 `acceptance_claims_mismatch` or `termination_claims_mismatch`
 [CAP-SIGNING-set-context].
 
-The caller's full profile MUST apply when verifying the retained set for
-producer refusals, as well as at the artifact verifier's normal context
-and envelope admission steps [CAP-SIGNING-set-profile].
+The retained set check for producer refusals MUST use `Profile.full()`,
+which admits every registered algorithm and revision. The caller's profile
+MUST apply to the revision, signing party's descriptor history and artifact
+for acceptance and termination, the whole retained set for a receipt, and
+the predecessor history and artifact for a descriptor, exactly as in public
+verification [CAP-SIGNING-set-profile].
 
 Public verification and preparation MUST call the same internal
 preparation step through candidate resolution, including context

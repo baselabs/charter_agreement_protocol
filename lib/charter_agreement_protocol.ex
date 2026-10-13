@@ -1022,7 +1022,9 @@ defmodule CharterAgreementProtocol do
   Checks run in this order: limits, profile, context type, input build, key
   shape, set verification and producer refusals, verification preparation,
   snapshot membership, runtime support. Limits bound the whole set read.
-  Set verification uses the full caller profile. A bare revision receipt
+  Set verification uses `Profile.full()`. The caller profile applies to the
+  same revision, descriptor history and artifact as public verification.
+  A bare revision receipt
   returns `key: :unnamed`; every other successful plan has `key: :matched`.
 
   Sign the returned `signing_input.message`, then call `finish_signing/2`.

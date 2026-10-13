@@ -122,7 +122,7 @@ defmodule CharterAgreementProtocol.SigningPlan do
       else: {:error, Error.new(:signing_key_invalid, ["signing_input", "public_key"])}
   end
 
-  defp derive(kind, artifact, set, limits, profile) when kind in [:acceptance, :termination] do
+  defp derive(kind, artifact, set, limits, _profile) when kind in [:acceptance, :termination] do
     with {:ok, chain} <-
            Chain.verify(
              set.revisions,
@@ -130,7 +130,7 @@ defmodule CharterAgreementProtocol.SigningPlan do
              set.descriptors,
              set.terminations,
              limits,
-             profile
+             Profile.full()
            ),
          {:ok, _revision} <- SigningInput.refusal_check(kind, artifact, chain) do
       Chain.signing_context(kind, artifact, chain)

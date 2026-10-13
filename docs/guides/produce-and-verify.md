@@ -337,7 +337,10 @@ uses `ChainFacts` or a `CharterRevision`. A bare revision returns
 
 Keep the plan as returned. `finish_signing/2` assembles under its limits
 and runs public verification with its context and profile. Limits apply
-to every byte CAP reads in the whole retained set. The full profile applies
-to the set check for producer refusals. The old signing-input functions
+to every byte CAP reads in the whole retained set. `Profile.full()` applies
+to the set check for producer refusals. The caller profile applies to the
+revision, signing party's descriptor history and artifact for acceptance
+and termination, the whole retained set for a receipt, and the predecessor
+history and artifact for a descriptor. The old signing-input functions
 and `assemble_compact/2` continue to use default limits; use this flow for
 the key check and explicit limits.

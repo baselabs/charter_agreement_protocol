@@ -418,19 +418,17 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "signing-set-profile-skip",
       path: "lib/charter_agreement_protocol/signing_plan.ex",
-      from:
-        "           Chain.verify(\n             set.revisions,\n             set.acceptances,\n             set.descriptors,\n             set.terminations,\n             limits,\n             profile\n           ),\n",
-      to:
-        "           Chain.verify(\n             set.revisions,\n             set.acceptances,\n             set.descriptors,\n             set.terminations,\n             limits,\n             Profile.full()\n           ),\n",
+      from: "Acceptance.prepare(compact, revision, chain, limits, profile)",
+      to: "Acceptance.prepare(compact, revision, chain, limits, Profile.full())",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
       name: "signing-set-limits-skip",
       path: "lib/charter_agreement_protocol/signing_plan.ex",
       from:
-        "           Chain.verify(\n             set.revisions,\n             set.acceptances,\n             set.descriptors,\n             set.terminations,\n             limits,\n             profile\n           ),\n",
+        "           Chain.verify(\n             set.revisions,\n             set.acceptances,\n             set.descriptors,\n             set.terminations,\n             limits,\n             Profile.full()\n           ),\n",
       to:
-        "           Chain.verify(\n             set.revisions,\n             set.acceptances,\n             set.descriptors,\n             set.terminations,\n             Limits.default(),\n             profile\n           ),\n",
+        "           Chain.verify(\n             set.revisions,\n             set.acceptances,\n             set.descriptors,\n             set.terminations,\n             Limits.default(),\n             Profile.full()\n           ),\n",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{

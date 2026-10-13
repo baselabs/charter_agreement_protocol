@@ -13,9 +13,9 @@ defmodule CharterAgreementProtocol.SigningSetOracleTest do
     SigningInput
   }
 
-  test "standalone acceptance can pass while the retained set fails the caller profile or limits" do
+  test "preparation scopes the profile to the signing party and bounds the whole set" do
     for {id, expected} <- [
-          {"signing-set-profile-scope", :algorithm_outside_profile},
+          {"signing-set-profile-scope", :ok},
           {"signing-strict-set-limits", :limit_exceeded}
         ] do
       input = case_input(id)
@@ -33,7 +33,7 @@ defmodule CharterAgreementProtocol.SigningSetOracleTest do
       compact = sign(signing_input.message, 1)
 
       {:ok, profile} =
-        if expected == :algorithm_outside_profile,
+        if expected == :ok,
           do: Profile.new(algorithms: ["Ed25519"]),
           else: Profile.new()
 
@@ -43,8 +43,16 @@ defmodule CharterAgreementProtocol.SigningSetOracleTest do
       assert {:ok, _facts} =
                CAP.verify_acceptance(compact, revision, descriptors, limits, profile)
 
-      assert {:error, %Error{code: ^expected}} =
-               CAP.prepare_signing(:acceptance, value, set, limits, profile)
+      if expected == :ok do
+        assert {:ok, plan} = CAP.prepare_signing(:acceptance, value, set, limits, profile)
+        [_protected, _payload, encoded] = String.split(compact, ".")
+
+        assert {:ok, ^compact} =
+                 CAP.finish_signing(plan, Base.url_decode64!(encoded, padding: false))
+      else
+        assert {:error, %Error{code: ^expected}} =
+                 CAP.prepare_signing(:acceptance, value, set, limits, profile)
+      end
     end
   end
 
