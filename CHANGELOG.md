@@ -4,6 +4,11 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+### Repository-side
+
+- `mix historical.check` replays the released 0.5.0 corpus (163 cases, no
+  listed transitions).
+
 ## [0.5.0] — 2026-10-13
 
 One verdict change: a charter's parties must be distinct parties (see
