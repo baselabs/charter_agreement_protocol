@@ -126,6 +126,7 @@ string. A success is `{"status": "valid", "output": <output>}` with the output b
 | `chain.verify_profile` | the `chain.verify` lists plus `profile`: `algorithms` (a list of `alg` names) and `revisions` (an object with `min` and `max`) | `charter_id`, `topology` |
 | `governing_revision` | the `chain.verify` lists plus `queries` (each with `at`) | `governing_revisions`: per query, a revision digest, `"contested"` or `"none"` |
 | `receipt.verify` | `compact`, and as context either `chain` (a `chain.verify` input) or `revision_text` (a bare revision); optional `profile` (as in `chain.verify_profile`) | `receipt_digest`, `revision_number`, `revision_digest`, `decision`, `outcome`, `chain_conflict`, `governing_match`, `deployment_digest_matched`, `optional_extensions_retained` |
+| `signing.prepare` | `kind`, `kid`, `claims`, base64url `public_key`, optional `algorithm`, `limits` and `profile`; `context` is null or `predecessor_compacts` for a descriptor, `set` for acceptance and termination, or `chain` / `revision_text` for a receipt | `protected_segment`, `payload_segment`, `key` (`"matched"` or `"unnamed"`), or an error code |
 
 Details that matter for byte equality:
 

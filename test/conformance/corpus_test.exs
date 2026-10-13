@@ -198,7 +198,196 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert_termination_expectations(cases)
     assert_chain_expectations(cases)
     assert_receipt_expectations(cases)
+    assert Enum.any?(cases, &(&1["surface"] == "signing.prepare"))
   end
+
+  test "signing preparation projects every new corpus case independently" do
+    %{"cases" => cases} = :json.decode(File.read!("priv/conformance/cases/signing-prepare.json"))
+    assert length(cases) >= 50
+
+    for one <- cases do
+      input = one["input"]
+
+      result =
+        with {:ok, limits} <- signing_limits(input),
+             {:ok, profile} <- signing_profile(input) do
+          context = signing_context(input["context"])
+
+          value =
+            input
+            |> Map.take(["kid", "claims", "algorithm"])
+            |> Map.put("public_key", Base.url_decode64!(input["public_key"], padding: false))
+
+          CharterAgreementProtocol.prepare_signing(
+            String.to_existing_atom(input["kind"]),
+            value,
+            context,
+            limits,
+            profile
+          )
+        end
+
+      output =
+        case result do
+          {:ok, plan} ->
+            if plan.signing_input.alg == "Ed25519" do
+              public = Base.url_decode64!(input["public_key"], padding: false)
+
+              byte =
+                Enum.find(1..9, fn n ->
+                  elem(:crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<n>>, 32)), 0) ==
+                    public
+                end)
+
+              assert is_integer(byte), one["id"]
+
+              {_public, private} =
+                :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<byte>>, 32))
+
+              signature =
+                :crypto.sign(:eddsa, :none, plan.signing_input.message, [private, :ed25519])
+
+              assert {:ok, _compact} = CharterAgreementProtocol.finish_signing(plan, signature)
+
+              if plan.key == :matched do
+                assert {:error, %Error{code: :signature_invalid}} =
+                         CharterAgreementProtocol.finish_signing(plan, <<0::512>>)
+              end
+
+              {:ok, excluded} = Profile.new(algorithms: ["ML-DSA-65"])
+
+              assert {:error, %Error{code: :algorithm_outside_profile}} =
+                       CharterAgreementProtocol.finish_signing(
+                         %{plan | profile: excluded},
+                         signature
+                       )
+            end
+
+            %{
+              "status" => "valid",
+              "output" => %{
+                "protected_segment" => plan.signing_input.protected_segment,
+                "payload_segment" => plan.signing_input.payload_segment,
+                "key" => Atom.to_string(plan.key)
+              }
+            }
+
+          {:error, %Error{code: code}} ->
+            %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+        end
+
+      assert output == one["expect"], one["id"]
+    end
+  end
+
+  test "malformed retained fields reject through the corpus contexts" do
+    %{"cases" => cases} = :json.decode(File.read!("priv/conformance/cases/signing-prepare.json"))
+    input = Enum.find(cases, &(&1["id"] == "signing-ed25519-receipt"))["input"]
+    chain = signing_context(input["context"])
+    [first | rest] = chain.acceptance_facts
+
+    value =
+      Map.take(input, ["kid", "claims", "algorithm"])
+      |> Map.put("public_key", Base.url_decode64!(input["public_key"], padding: false))
+
+    for {field, malformed} <- [signature: :bad, message: 42] do
+      changed =
+        put_in(first.acceptance.envelope, Map.put(first.acceptance.envelope, field, malformed))
+
+      context = %{chain | acceptance_facts: [changed | rest]}
+
+      assert {:error, %Error{}} =
+               CharterAgreementProtocol.prepare_signing(
+                 :receipt,
+                 value,
+                 context,
+                 Limits.default(),
+                 Profile.full()
+               )
+    end
+
+    for field <- Map.keys(Map.from_struct(chain)) do
+      malformed = Map.put(chain, field, fn -> :malformed end)
+
+      assert {:error, %Error{}} =
+               CharterAgreementProtocol.prepare_signing(
+                 :receipt,
+                 value,
+                 malformed,
+                 Limits.default(),
+                 Profile.full()
+               )
+    end
+
+    malformed = %{chain | revision_facts: [hd(chain.revision_facts) | :tail]}
+
+    assert {:error, %Error{}} =
+             CharterAgreementProtocol.prepare_signing(
+               :receipt,
+               value,
+               malformed,
+               Limits.default(),
+               Profile.full()
+             )
+
+    [descriptor | _] = hd(chain.descriptor_chains).descriptors
+    descriptor = %{descriptor | lineage: [hd(descriptor.lineage) | :tail]}
+    assert {:error, %Error{}} = PartyDescriptor.verify("bad", descriptor, Limits.default())
+
+    assert is_boolean(
+             :persistent_term.get({CharterAgreementProtocol.Capability, "Ed25519"}).verifiable
+           )
+  end
+
+  defp signing_limits(input) do
+    attrs =
+      input
+      |> Map.get("limits", %{})
+      |> Map.new(fn {key, value} -> {String.to_existing_atom(key), value} end)
+
+    {:ok, struct(Limits.default(), attrs)}
+  end
+
+  defp signing_profile(input) do
+    spec = input["profile"] || %{}
+    range = spec["revisions"]
+    default = Profile.full()
+
+    {:ok,
+     struct(Profile,
+       algorithms: Map.get(spec, "algorithms", default.algorithms),
+       revisions: if(range, do: {range["min"], range["max"]}, else: default.revisions)
+     )}
+  end
+
+  defp signing_context(%{"set" => set}) do
+    struct(CharterAgreementProtocol.ArtifactSet,
+      revisions: set["revisions"],
+      acceptances: set["acceptances"],
+      terminations: set["terminations"],
+      descriptors: set["descriptors"]
+    )
+  end
+
+  defp signing_context(%{"chain" => chain}) do
+    {:ok, facts} = verify_chain_input(chain)
+    facts
+  end
+
+  defp signing_context(%{"revision_text" => text}) do
+    {:ok, revision} = CharterRevision.decode(text, Limits.default())
+    revision
+  end
+
+  defp signing_context(%{"predecessor_compacts" => compacts}) do
+    Enum.reduce(compacts, nil, fn compact, predecessor ->
+      {:ok, facts} = PartyDescriptor.verify(compact, predecessor, Limits.default())
+      facts
+    end)
+  end
+
+  defp signing_context(:null), do: nil
+  defp signing_context(value), do: value
 
   defp shipped_files do
     "priv/conformance/**/*"

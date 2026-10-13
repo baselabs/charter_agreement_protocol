@@ -269,6 +269,33 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
+  defp execute(%{"surface" => "signing.prepare", "input" => input}) do
+    with {:ok, limits} <- signing_limits(input),
+         {:ok, profile} <- signing_profile(input),
+         {:ok, context} <- signing_context(input["context"]),
+         {:ok, public_key} <- Base64Url.decode(input["public_key"]) do
+      value =
+        input |> Map.take(["kid", "claims", "algorithm"]) |> Map.put("public_key", public_key)
+
+      CharterAgreementProtocol.prepare_signing(
+        signing_kind(input["kind"]),
+        value,
+        context,
+        limits,
+        profile
+      )
+      |> project_ok(fn plan ->
+        %{
+          "protected_segment" => plan.signing_input.protected_segment,
+          "payload_segment" => plan.signing_input.payload_segment,
+          "key" => Atom.to_string(plan.key)
+        }
+      end)
+    else
+      {:error, %Error{} = error} -> invalid(error.code)
+    end
+  end
+
   defp project_ok({:ok, value}, projector), do: valid(projector.(value))
   defp project_ok({:error, %Error{code: code}}, _projector), do: invalid(code)
   defp project_ok(:ok, projector), do: valid(projector.(:ok))
@@ -360,6 +387,56 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
 
   # A receipt case names its context as either a `chain` view or the bare
   # `revision_text` of a revision-only context.
+  defp signing_limits(input) do
+    selected = input["limits"] || %{}
+    fields = Map.new(selected, fn {name, value} -> {String.to_existing_atom(name), value} end)
+    {:ok, struct(Limits.default(), fields)}
+  end
+
+  defp signing_profile(input) do
+    selected = input["profile"] || %{}
+    full = Profile.full()
+    range = selected["revisions"]
+
+    {:ok,
+     %Profile{
+       algorithms: Map.get(selected, "algorithms", full.algorithms),
+       revisions: if(range, do: {range["min"], range["max"]}, else: full.revisions)
+     }}
+  end
+
+  defp signing_kind("party_descriptor"), do: :party_descriptor
+  defp signing_kind("acceptance"), do: :acceptance
+  defp signing_kind("termination"), do: :termination
+  defp signing_kind("receipt"), do: :receipt
+  defp signing_kind(_other), do: :unknown
+
+  defp signing_context(%{"set" => set}) do
+    {:ok,
+     struct(CharterAgreementProtocol.ArtifactSet,
+       revisions: set["revisions"],
+       acceptances: set["acceptances"],
+       descriptors: set["descriptors"],
+       terminations: set["terminations"]
+     )}
+  end
+
+  defp signing_context(%{"chain" => set}), do: verify_chain(set)
+
+  defp signing_context(%{"revision_text" => text}),
+    do: CharterRevision.decode(text, Limits.default())
+
+  defp signing_context(%{"predecessor_compacts" => compacts}) do
+    Enum.reduce_while(compacts, {:ok, nil}, fn compact, {:ok, predecessor} ->
+      case PartyDescriptor.verify(compact, predecessor, Limits.default()) do
+        {:ok, facts} -> {:cont, {:ok, facts}}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp signing_context(value), do: {:ok, value}
+
   defp receipt_context(%{"revision_text" => text}) do
     {:ok, revision} = CharterRevision.decode(text, Limits.default())
     revision

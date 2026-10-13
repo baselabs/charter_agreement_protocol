@@ -179,6 +179,8 @@ The signing-input functions (`descriptor_signing_input/1`,
 | Code | Meaning | Typical cause | What to do |
 |---|---|---|---|
 | `:signing_input_invalid` | the input does not describe a valid artifact for this producer | claims that fail the artifact's schema, a `protocol_revision` that does not match the algorithm (`Ed25519` signs at 2, `ML-DSA-65` at 3), an unknown `"algorithm"`, a bad `kid`, extra input members | fix the claims |
+| `:signing_key_invalid` | snapshot key shape fails | wrong registry length or strict point encoding | supply a valid public key |
+| `:signing_key_mismatch` | snapshot differs from every resolved descriptor key | kid, bytes or key algorithm mismatch | check the holder's descriptor key |
 | `:signing_refused` | the claims contradict the signer's own view of the charter | accepting a revision with wrong coordinates, accepting a sibling of a revision the party already accepted, an ancestry that leaves out an accepted head, a notice whose revision does not govern at `effective_at` or whose `reason_code` is not listed | do not sign; correct the claims or the view you passed |
 
 `assemble_compact/2` returns `:signature_invalid` when the signature length is
@@ -250,7 +252,7 @@ library's own tests through the public API (`test-exercised`).
 | `:invalid_encoding` | corpus-exercised | a corpus case expects this code |
 | `:invalid_limits` | corpus-exercised | a corpus case expects this code |
 | `:invalid_number` | corpus-exercised | a corpus case expects this code |
-| `:invalid_profile` | test-exercised | needs a malformed profile, which the runner does not pass |
+| `:invalid_profile` | corpus-exercised | needs a malformed profile, which the runner does not pass |
 | `:invalid_syntax` | corpus-exercised | a corpus case expects this code |
 | `:invalid_type` | corpus-exercised | a corpus case expects this code |
 | `:limit_exceeded` | corpus-exercised | a corpus case expects this code |
@@ -264,8 +266,10 @@ library's own tests through the public API (`test-exercised`).
 | `:revision_invalid` | corpus-exercised | a corpus case expects this code |
 | `:revision_outside_profile` | corpus-exercised | a corpus case expects this code |
 | `:signature_invalid` | corpus-exercised | a corpus case expects this code |
-| `:signing_input_invalid` | test-exercised | comes from the producer, which the runner does not call |
-| `:signing_refused` | test-exercised | comes from the producer, which the runner does not call |
+| `:signing_input_invalid` | corpus-exercised | `signing.prepare` checks the input |
+| `:signing_key_invalid` | corpus-exercised | `signing.prepare` checks key shape |
+| `:signing_key_mismatch` | corpus-exercised | `signing.prepare` checks the snapshot |
+| `:signing_refused` | corpus-exercised | `signing.prepare` shares the producer refusals |
 | `:termination_claims_mismatch` | corpus-exercised | a corpus case expects this code |
 | `:termination_invalid` | corpus-exercised | a corpus case expects this code |
 | `:timestamp_invalid` | corpus-exercised | a corpus case expects this code |

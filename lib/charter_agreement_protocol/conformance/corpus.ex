@@ -40,7 +40,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "chain.verify",
     "chain.verify_profile",
     "governing_revision",
-    "receipt.verify"
+    "receipt.verify",
+    "signing.prepare"
   ]
 
   @classes [
@@ -141,6 +142,11 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       required: ~w(precedence_selection terminated),
       n_a: "set integrity and single-artifact behavior are outside temporal precedence selection"
     },
+    "signing.prepare" => %{
+      required:
+        ~w(valid exact_bound maximum_plus_one invalid_type invalid_constraint chain_invalid profile_algorithm_outside profile_revision_outside),
+      n_a: "signature bytes are outside preparation"
+    },
     "receipt.verify" => %{
       required:
         ~w(valid invalid_constraint signature_invalid unknown_member chain_fork terminated outcome_indeterminate extension_optional_roundtrip invalid_encoding extension_invalid profile_narrow_valid profile_algorithm_outside profile_revision_outside),
@@ -225,13 +231,26 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
   end
 
   defp decode_canonical(bytes, kind) do
-    with {:ok, value} <- Json.decode(bytes),
+    with {:ok, value} <- Json.decode(bytes, case_limits(kind)),
          {:ok, ^bytes} <- Canonicalization.encode(value) do
       {:ok, plain(value)}
     else
       _failure -> if(kind == :index, do: index_error(), else: case_error())
     end
   end
+
+  defp case_limits(:case) do
+    {:ok, limits} =
+      CharterAgreementProtocol.Limits.new(
+        max_bytes: 16_777_216,
+        max_depth: 128,
+        max_string_bytes: 1_048_576
+      )
+
+    limits
+  end
+
+  defp case_limits(:index), do: CharterAgreementProtocol.Limits.default()
 
   defp validate_index(index, historical) when is_map(index) do
     # Historical mode also relaxes the extension-registry identity: a frozen

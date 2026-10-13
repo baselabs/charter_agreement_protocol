@@ -11,14 +11,29 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
 
     assert report.agreement
     assert report.exit_status == 0
-    assert report.total == 163
-    assert report.agreed == 163
+    assert report.total == 216
+    assert report.agreed == 216
     assert report.disagreed == 0
 
     assert {:ok, bytes} = Report.to_bytes(corpus, results)
     assert bytes =~ ~s("corpus_digest":"#{corpus.identity}")
     assert bytes =~ ~s("registry_digest":"#{corpus.index["registry_digest"]}")
     assert bytes =~ ~s("index_sha256_base64url":"#{Report.index_identity(corpus.index_bytes)}")
+  end
+
+  test "preparation rejects malformed serialized keys, kinds and predecessor bytes" do
+    {:ok, corpus} = Corpus.load(shipped_files())
+    original = Enum.find(corpus.cases, &(&1["id"] == "signing-ed25519-party_descriptor"))
+
+    for {changes, code} <- [
+          {%{"public_key" => "?"}, "base64url_invalid"},
+          {%{"kind" => "other"}, "invalid_type"},
+          {%{"context" => %{"predecessor_compacts" => ["bad"]}}, "compact_invalid"}
+        ] do
+      one = %{original | "input" => Map.merge(original["input"], changes)}
+      [result] = Runner.run(%{corpus | cases: [one]})
+      assert result.actual == %{"status" => "invalid", "error_code" => code}
+    end
   end
 
   test "one expectation flip makes the report disagree" do
