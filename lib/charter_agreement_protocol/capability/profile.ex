@@ -106,11 +106,9 @@ defmodule CharterAgreementProtocol.Capability.Profile do
   @doc "Whether a profile is complete and inside the registry."
   @spec valid?(term()) :: boolean()
   def valid?(%__MODULE__{algorithms: algorithms, revisions: revisions}) do
-    registry_names = Enum.map(Algorithm.registry(), & &1.name)
     accepted = Algorithm.accepted_protocol_revisions()
 
-    is_list(algorithms) and algorithms != [] and algorithms == Enum.uniq(algorithms) and
-      Enum.all?(algorithms, &(&1 in registry_names)) and valid_range?(revisions, accepted)
+    valid_algorithms?(algorithms) and valid_range?(revisions, accepted)
   end
 
   def valid?(_profile), do: false
@@ -157,12 +155,22 @@ defmodule CharterAgreementProtocol.Capability.Profile do
 
   defp valid_algorithms_option?(nil), do: true
 
-  defp valid_algorithms_option?(names) do
+  defp valid_algorithms_option?(names), do: valid_algorithms?(names)
+
+  defp valid_algorithms?(names) do
     registry_names = Enum.map(Algorithm.registry(), & &1.name)
 
-    is_list(names) and names != [] and names == Enum.uniq(names) and
-      Enum.all?(names, &(&1 in registry_names))
+    names != [] and valid_names?(names, registry_names, [])
   end
+
+  defp valid_names?([], _registry_names, _seen), do: true
+
+  defp valid_names?([name | rest], registry_names, seen) do
+    name in registry_names and name not in seen and
+      valid_names?(rest, registry_names, [name | seen])
+  end
+
+  defp valid_names?(_names, _registry_names, _seen), do: false
 
   defp valid_revisions_option?(nil), do: true
 

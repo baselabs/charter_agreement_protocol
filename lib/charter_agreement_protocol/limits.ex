@@ -123,7 +123,7 @@ defmodule CharterAgreementProtocol.Limits do
   @spec valid?(term()) :: boolean()
   def valid?(%__MODULE__{} = limits) do
     Enum.all?(@fields, fn field ->
-      value = Map.fetch!(limits, field)
+      value = Map.get(limits, field)
       is_integer(value) and value >= 0 and value <= Map.fetch!(@maximums, field)
     end)
   end
