@@ -67,7 +67,8 @@ calls under the full profile are unaffected.
   need your own tagging helper to build claims.
 - `priv/verifier-source.json` ships in the package. It names the TypeScript
   verifier repository and the commit this release was checked against, so
-  you can match an npm verifier version to this release.
+  you can match an npm verifier version to this release. For 0.5.0 that is
+  the `@charter-agreement-protocol/verifier` 0.6.0 release commit.
 
 ### Conformance
 
