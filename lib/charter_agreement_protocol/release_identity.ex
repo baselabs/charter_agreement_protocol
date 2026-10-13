@@ -117,9 +117,21 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     %{
       package_versions: ["0.6.0"],
       verification_semantics: 6,
-      census_digest: "sha-256:j-uFCsKXy48LuzTmkZWJvme-qm0pLA4aCZr-CNrxz-s",
+      census_digest: "sha-256:3ZRZ6lD8UcK9aGEzjBh_Yvlj3KI3GBRgkW8ru5IilEk",
       protocol_revisions: [1, 2, 3],
       transitions: [
+        %{
+          class: :verdict_narrowing,
+          direction: :green_to_red,
+          description:
+            "Ed25519 public keys are fully decoded on admission: signatures using the identity and order-two negative-zero encodings return signature_invalid instead of ok; keys with no curve point are rejected, and signing preparation returns signing_key_invalid for all three encodings instead of ok"
+        },
+        %{
+          class: :typed_error,
+          direction: :crash_to_typed,
+          description:
+            "Limits structs with missing fields and profiles with improper algorithm lists return invalid_limits or invalid_profile instead of raising"
+        },
         %{
           class: :verdict_narrowing,
           direction: :green_to_red,

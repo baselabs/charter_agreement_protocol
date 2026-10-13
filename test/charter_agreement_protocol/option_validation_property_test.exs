@@ -5,9 +5,15 @@ defmodule CharterAgreementProtocol.OptionValidationPropertyTest do
   alias CharterAgreementProtocol, as: CAP
   alias CharterAgreementProtocol.{Capability.Profile, Error, Limits}
 
-  test "incomplete limits and improper algorithm lists return false" do
+  test "a limits struct tag without fields returns false" do
     refute Limits.valid?(%{__struct__: Limits})
+  end
+
+  test "limits with max_bytes removed return false" do
     refute Limits.valid?(Map.delete(Limits.default(), :max_bytes))
+  end
+
+  test "an improper profile algorithm list returns false" do
     refute Profile.valid?(%Profile{algorithms: ["Ed25519" | :tail], revisions: {1, 3}})
     assert {:error, %Error{code: :invalid_profile}} = Profile.new(algorithms: ["Ed25519" | :tail])
   end
@@ -94,7 +100,7 @@ defmodule CharterAgreementProtocol.OptionValidationPropertyTest do
     [
       CAP.prepare_signing(:party_descriptor, %{}, nil, limits, profile),
       CAP.verify_descriptor("", nil, limits, profile),
-      CAP.verify_descriptor_chain([], limits, profile),
+      CAP.verify_descriptor_chain([""], limits, profile),
       CAP.verify_acceptance("", nil, nil, limits, profile),
       CAP.verify_termination("", nil, nil, limits, profile),
       CAP.verify_receipt("", nil, limits, profile),

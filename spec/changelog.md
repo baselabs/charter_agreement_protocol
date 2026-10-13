@@ -8,6 +8,13 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-10-13: Ed25519 key admission
+
+State the Ed25519 public key decoding and small-order rejection rule in
+`core.md`. Mixed-order points remain admitted. Add descriptor and signing
+cases for negative-zero encodings, a key with no curve point and a valid
+mixed-order key, plus a source mutation that restores list-only admission.
+
 ## 2026-10-13: signing profile scope
 
 The retained set check uses `Profile.full()`. The caller profile covers

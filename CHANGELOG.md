@@ -13,6 +13,8 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ### Fixed
 
+- Ed25519 public keys are now fully decoded on admission, so two more small-order encodings and keys that are not curve points are rejected.
+- Malformed limits structs and improper profile algorithm lists return typed errors.
 - Malformed retained context lists and envelope fields return typed errors.
 - Set verification reuses its verified context for each acceptance and
   termination. Retained context checks group repeated record shapes before

@@ -111,7 +111,18 @@ over the exact compact signing-input bytes with the resolved public key
 under the row's key algorithm — Ed25519 [RFC8032] or pure ML-DSA
 (FIPS 204, context the empty string) [RFC9964]; a signature that does not
 verify under that algorithm and key MUST fail
-[CAP-SIGNATURE-ed25519-verification]. Every attached artifact carries
+[CAP-SIGNATURE-ed25519-verification].
+
+An Ed25519 public key MUST be exactly 32 bytes. Decode `y` as the
+little-endian integer with the top bit cleared and use that bit as the sign
+of `x`. With `p = 2^255 - 19` and `d = -121665/121666 mod p`, a verifier MUST
+reject `y >= p`, reject when `(y^2 - 1)/(d*y^2 + 1) mod p` has no square
+root, and reject `x = 0` with the sign bit set. Choose the root whose parity
+matches the sign bit to obtain `P = (x, y)`. A verifier MUST reject when
+`[8]P` is the identity. Points of mixed order are admitted
+[CAP-SIGNATURE-ed25519-verification].
+
+Every attached artifact carries
 `protocol_revision`; revisions 1, 2, and 3 are defined (revision 1 closed
 the `alg` name set to `EdDSA`; revision 2 admits the fully-specified
 `Ed25519` name; revision 3 admits the ML-DSA names), and a decoder
