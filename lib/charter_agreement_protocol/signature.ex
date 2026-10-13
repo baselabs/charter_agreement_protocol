@@ -134,12 +134,9 @@ defmodule CharterAgreementProtocol.Signature do
   def substrate_outcome(key_algorithm, true, verify) do
     if verify.(), do: :ok, else: invalid()
   rescue
-    # The runtime declares the algorithm but the call raised (a disabled
-    # provider, a FIPS-limited build): the pinned known-answer vector
-    # decides — it fails too, the substrate cannot perform the operation
-    # and the honest diagnostic fires; it passes, the raise was the
-    # input's own fault and the verdict is signature_invalid.
-    _raise -> raise_outcome(key_algorithm, Capability.kat_verifies?(key_algorithm))
+    # A provider may become unavailable after the cached probe. Check the
+    # known-answer vector live to distinguish that failure from bad input.
+    _raise -> raise_outcome(key_algorithm, Capability.kat_verifies?(key_algorithm, true))
   end
 
   @doc false

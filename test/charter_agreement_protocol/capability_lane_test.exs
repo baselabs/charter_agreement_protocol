@@ -6,7 +6,7 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
   # actual verification behavior, and verification under a declared
   # capability obstacle fails with the honest named diagnostic, never a
   # forgery verdict.
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias CharterAgreementProtocol.{
     Capability,
@@ -57,6 +57,20 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
       end
 
       refute Capability.kat_verifies?("ML-DSA-65", true)
+    end
+  end
+
+  test "a raising signature operation runs a fresh known-answer verification" do
+    if not Capability.kat_verifies?("ML-DSA-65") do
+      {result, calls} =
+        CharterAgreementProtocol.CryptoTrace.count(:verify, fn ->
+          Signature.substrate_outcome("ML-DSA-65", true, fn ->
+            :crypto.verify(:mldsa65, :none, "lane", <<0::3309*8>>, <<0::1952*8>>)
+          end)
+        end)
+
+      assert {:error, %Error{code: :algorithm_unsupported_on_substrate}} = result
+      assert length(calls) == 2
     end
   end
 
