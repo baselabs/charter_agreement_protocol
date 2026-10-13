@@ -14,6 +14,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 ### Fixed
 
 - Malformed retained context lists and envelope fields return typed errors.
+- Set verification reuses its verified context for each acceptance and
+  termination. Retained context checks group repeated record shapes before
+  comparing them.
 - `Capability.report/0` handles raising provider calls. Declared support and
   known-answer verification are cached once per key algorithm.
 
