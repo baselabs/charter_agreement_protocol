@@ -10,11 +10,83 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ## Bound evidence
 
-- Requirements: 58
-- Corpus cells: 85
-- Named mutations: 43
+- Requirements: 68
+- Corpus cells: 93
+- Named mutations: 65
 
 ## Requirements
+
+### CAP-SIGNING-retained-input-totality
+
+- Corpus: `signing.prepare:invalid_type`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+- Mutation: `signing-retained-envelope-guard-skip`
+- Mutation: `signing-retained-list-guard-skip`
+- Mutation: `signing-retained-lineage-guard-skip`
+- Mutation: `signing-retained-shape-skip`
+
+### CAP-SIGNING-prepare-order
+
+- Corpus: `signing.prepare:invalid_type`, `signing.prepare:invalid_constraint`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+- Mutation: `signing-limits-order-skip`
+- Mutation: `signing-profile-order-skip`
+- Mutation: `signing-context-type-skip`
+
+### CAP-SIGNING-caller-limits
+
+- Corpus: `signing.prepare:exact_bound`, `signing.prepare:maximum_plus_one`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+- Mutation: `signing-build-default-limits`
+- Mutation: `signing-set-limits-skip`
+- Mutation: `signing-finish-default-limits`
+
+### CAP-SIGNING-key-shape
+
+- Corpus: `signing.prepare:invalid_constraint`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+- Mutation: `signing-key-shape-skip`
+- Mutation: `signing-strict-point-skip`
+
+### CAP-SIGNING-snapshot-membership
+
+- Corpus: `signing.prepare:valid`, `signing.prepare:invalid_constraint`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+- Mutation: `signing-snapshot-match-skip`
+- Mutation: `signing-receipt-first-key-only`
+
+### CAP-SIGNING-set-context
+
+- Corpus: `signing.prepare:chain_invalid`, `signing.prepare:invalid_constraint`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+- Mutation: `signing-unheld-code-collapse`
+- Mutation: `signing-refusal-skip`
+
+### CAP-SIGNING-set-profile
+
+- Corpus: `signing.prepare:profile_algorithm_outside`, `signing.prepare:profile_revision_outside`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+- Mutation: `signing-set-profile-skip`
+
+### CAP-SIGNING-runtime-support
+
+- Corpus: `signing.prepare:valid`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+- Mutation: `signing-runtime-support-invert`
+- Mutation: `signing-runtime-cache-skip`
+
+### CAP-SIGNING-shared-preparation
+
+- Corpus: `signing.prepare:valid`, `signing.prepare:chain_invalid`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+- Mutation: `signing-shared-prepare-skip`
+
+### CAP-SIGNING-finish-verification
+
+- Corpus: `signing.prepare:valid`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+- Mutation: `signing-finish-verify-skip`
+- Mutation: `signing-finish-profile-skip`
 
 ### CAP-CANONICALIZATION-ecmascript-number
 

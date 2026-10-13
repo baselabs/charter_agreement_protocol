@@ -242,8 +242,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "context-descriptor-profile-skip",
       path: "lib/charter_agreement_protocol/acceptance.ex",
-      from: "      DescriptorChain.verify(Enum.uniq(compacts), limits, profile)",
-      to: "      DescriptorChain.verify(Enum.uniq(compacts), limits)",
+      from: "DescriptorChain.verify(Enum.uniq(compacts), limits, profile)",
+      to: "DescriptorChain.verify(Enum.uniq(compacts), limits)",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
@@ -265,8 +265,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "termination-descriptor-profile-skip",
       path: "lib/charter_agreement_protocol/termination_notice.ex",
-      from: "      DescriptorChain.verify(Enum.uniq(compacts), limits, profile)",
-      to: "      DescriptorChain.verify(Enum.uniq(compacts), limits)",
+      from: "DescriptorChain.verify(Enum.uniq(compacts), limits, profile)",
+      to: "DescriptorChain.verify(Enum.uniq(compacts), limits)",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
@@ -279,8 +279,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "chain-receipt-admission-skip",
       path: "lib/charter_agreement_protocol/receipt.ex",
-      from: "    with :ok <- CompactJws.admit(receipt.envelope, profile) do\n      chain",
-      to: "    with :ok <- :ok do\n      chain",
+      from: "         :ok <- CompactJws.admit(receipt.envelope, profile) do",
+      to: "         :ok <- :ok do",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
@@ -305,16 +305,174 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       name: "descriptor-admission-before-key-skip",
       path: "lib/charter_agreement_protocol/party_descriptor.ex",
       from:
-        "    with :ok <- CompactJws.admit(descriptor.envelope, profile),\n         {:ok, key} <- active_key(descriptor.verification_keys, descriptor.envelope.kid) do",
+        "  defp verification_context(%__MODULE__{descriptor_number: 1} = descriptor, nil, compact, profile) do\n    with :ok <- CompactJws.admit(descriptor.envelope, profile) do",
       to:
-        "    with {:ok, key} <- active_key(descriptor.verification_keys, descriptor.envelope.kid) do",
+        "  defp verification_context(%__MODULE__{descriptor_number: 1} = descriptor, nil, compact, profile) do\n    with :ok <- :ok do",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
       name: "revision-only-receipt-profile-skip",
       path: "lib/charter_agreement_protocol/receipt.ex",
-      from: "    do: CompactJws.admit(receipt.envelope, profile)",
-      to: "    do: :ok",
+      from: "         :ok <- CompactJws.admit(receipt.envelope, profile) do",
+      to: "         :ok <- :ok do",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-limits-order-skip",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "      not Limits.valid?(limits) ->",
+      to: "      false ->",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-profile-order-skip",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "      not Profile.valid?(profile) ->",
+      to: "      false ->",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-context-type-skip",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "defp context_type(_kind, _context), do: invalid_type()",
+      to: "defp context_type(_kind, _context), do: :ok",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-build-default-limits",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "SigningInput.build(kind, Map.delete(input, \"public_key\"), limits)",
+      to: "SigningInput.build(kind, Map.delete(input, \"public_key\"), Limits.default())",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-key-shape-skip",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "if Signature.valid_key?(public_key, alg),",
+      to: "if true,",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-strict-point-skip",
+      path: "lib/charter_agreement_protocol/signature.ex",
+      from: "byte_size(public_key) == length and strict_point?(public_key)",
+      to: "byte_size(public_key) == length",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-snapshot-match-skip",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "if Enum.any?(keys, &(candidate(&1) == {public_key, key_algorithm})),",
+      to: "if true,",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-receipt-first-key-only",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "if Enum.any?(keys, &(candidate(&1) == {public_key, key_algorithm})),",
+      to: "if Enum.any?(Enum.take(keys, 1), &(candidate(&1) == {public_key, key_algorithm})),",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-runtime-support-invert",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "if Capability.kat_verifies?(algorithm),",
+      to: "if not Capability.kat_verifies?(algorithm),",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-refusal-skip",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "{:ok, _revision} <- SigningInput.refusal_check(kind, artifact, chain)",
+      to: "{:ok, _revision} <- {:ok, nil}",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-unheld-code-collapse",
+      path: "lib/charter_agreement_protocol/chain.ex",
+      from: "{:error, Error.new(:acceptance_claims_mismatch, [\"acceptance\", \"claims\"])}",
+      to: "chain_error()",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-finish-default-limits",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "SigningInput.assemble_under(input, signature, plan.limits)",
+      to: "SigningInput.assemble_under(input, signature, Limits.default())",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-finish-verify-skip",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "verify(input.kind, compact, plan.verify_with, plan.limits, plan.profile)",
+      to: "{:ok, nil}",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-finish-profile-skip",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "verify(input.kind, compact, plan.verify_with, plan.limits, plan.profile)",
+      to: "verify(input.kind, compact, plan.verify_with, plan.limits, Profile.full())",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-set-profile-skip",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from:
+        "           Chain.verify(\n             set.revisions,\n             set.acceptances,\n             set.descriptors,\n             set.terminations,\n             limits,\n             profile\n           ),\n",
+      to:
+        "           Chain.verify(\n             set.revisions,\n             set.acceptances,\n             set.descriptors,\n             set.terminations,\n             limits,\n             Profile.full()\n           ),\n",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-set-limits-skip",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from:
+        "           Chain.verify(\n             set.revisions,\n             set.acceptances,\n             set.descriptors,\n             set.terminations,\n             limits,\n             profile\n           ),\n",
+      to:
+        "           Chain.verify(\n             set.revisions,\n             set.acceptances,\n             set.descriptors,\n             set.terminations,\n             Limits.default(),\n             profile\n           ),\n",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-shared-prepare-skip",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "do: PartyDescriptor.prepare(compact, context, limits, profile)",
+      to: "do: PartyDescriptor.prepare(compact, nil, limits, profile)",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-retained-envelope-guard-skip",
+      path: "lib/charter_agreement_protocol/internal/retained.ex",
+      from: "when is_binary(message) and is_binary(signature),",
+      to: "when is_binary(message),",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-retained-list-guard-skip",
+      path: "lib/charter_agreement_protocol/internal/retained.ex",
+      from: "def list?(_other), do: false",
+      to: "def list?(_other), do: true",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-retained-lineage-guard-skip",
+      path: "lib/charter_agreement_protocol/internal/retained.ex",
+      from: "def binaries?(_other), do: false",
+      to: "def binaries?(_other), do: true",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-runtime-cache-skip",
+      path: "lib/charter_agreement_protocol/capability.ex",
+      from: ":persistent_term.put(cache_key, result)",
+      to: ":ok",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-retained-shape-skip",
+      path: "lib/charter_agreement_protocol/internal/retained.ex",
+      from: "    Map.keys(supplied) == Map.keys(verified) and",
+      to: "    true or",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{

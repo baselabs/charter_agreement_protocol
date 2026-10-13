@@ -5,6 +5,28 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
   alias CharterAgreementProtocol.RequirementMap
 
   @mutation_names ~w(
+    signing-limits-order-skip
+    signing-profile-order-skip
+    signing-context-type-skip
+    signing-build-default-limits
+    signing-key-shape-skip
+    signing-strict-point-skip
+    signing-snapshot-match-skip
+    signing-receipt-first-key-only
+    signing-runtime-support-invert
+    signing-refusal-skip
+    signing-unheld-code-collapse
+    signing-finish-default-limits
+    signing-finish-verify-skip
+    signing-finish-profile-skip
+    signing-set-profile-skip
+    signing-set-limits-skip
+    signing-shared-prepare-skip
+    signing-retained-envelope-guard-skip
+    signing-retained-list-guard-skip
+    signing-retained-lineage-guard-skip
+    signing-runtime-cache-skip
+    signing-retained-shape-skip
     jcs-number-defeat
     padding-acceptance
     separator-collapse

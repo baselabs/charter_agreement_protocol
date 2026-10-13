@@ -9,6 +9,79 @@ defmodule CharterAgreementProtocol.RequirementMap do
   """
 
   @entries [
+    {"CAP-SIGNING-retained-input-totality",
+     [
+       {:corpus, ["signing.prepare:invalid_type"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
+       {:mutation, "signing-retained-envelope-guard-skip"},
+       {:mutation, "signing-retained-list-guard-skip"},
+       {:mutation, "signing-retained-lineage-guard-skip"},
+       {:mutation, "signing-retained-shape-skip"}
+     ]},
+    {"CAP-SIGNING-prepare-order",
+     [
+       {:corpus, ["signing.prepare:invalid_type", "signing.prepare:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
+       {:mutation, "signing-limits-order-skip"},
+       {:mutation, "signing-profile-order-skip"},
+       {:mutation, "signing-context-type-skip"}
+     ]},
+    {"CAP-SIGNING-caller-limits",
+     [
+       {:corpus, ["signing.prepare:exact_bound", "signing.prepare:maximum_plus_one"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
+       {:mutation, "signing-build-default-limits"},
+       {:mutation, "signing-set-limits-skip"},
+       {:mutation, "signing-finish-default-limits"}
+     ]},
+    {"CAP-SIGNING-key-shape",
+     [
+       {:corpus, ["signing.prepare:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
+       {:mutation, "signing-key-shape-skip"},
+       {:mutation, "signing-strict-point-skip"}
+     ]},
+    {"CAP-SIGNING-snapshot-membership",
+     [
+       {:corpus, ["signing.prepare:valid", "signing.prepare:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
+       {:mutation, "signing-snapshot-match-skip"},
+       {:mutation, "signing-receipt-first-key-only"}
+     ]},
+    {"CAP-SIGNING-set-context",
+     [
+       {:corpus, ["signing.prepare:chain_invalid", "signing.prepare:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
+       {:mutation, "signing-unheld-code-collapse"},
+       {:mutation, "signing-refusal-skip"}
+     ]},
+    {"CAP-SIGNING-set-profile",
+     [
+       {:corpus,
+        ["signing.prepare:profile_algorithm_outside", "signing.prepare:profile_revision_outside"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
+       {:mutation, "signing-set-profile-skip"}
+     ]},
+    {"CAP-SIGNING-runtime-support",
+     [
+       {:corpus, ["signing.prepare:valid"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
+       {:mutation, "signing-runtime-support-invert"},
+       {:mutation, "signing-runtime-cache-skip"}
+     ]},
+    {"CAP-SIGNING-shared-preparation",
+     [
+       {:corpus, ["signing.prepare:valid", "signing.prepare:chain_invalid"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
+       {:mutation, "signing-shared-prepare-skip"}
+     ]},
+    {"CAP-SIGNING-finish-verification",
+     [
+       {:corpus, ["signing.prepare:valid"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
+       {:mutation, "signing-finish-verify-skip"},
+       {:mutation, "signing-finish-profile-skip"}
+     ]},
     {"CAP-CANONICALIZATION-ecmascript-number",
      [
        {:corpus, ["canonicalization.encode:valid"]},

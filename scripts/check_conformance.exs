@@ -485,7 +485,14 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
   defp decode_segment(segment) do
     case Base64Url.decode(segment) do
       {:ok, bytes} ->
-        case Json.decode(bytes) do
+        {:ok, limits} =
+          CharterAgreementProtocol.Limits.new(
+            max_bytes: 16_777_216,
+            max_depth: 128,
+            max_string_bytes: 1_048_576
+          )
+
+        case Json.decode(bytes, limits) do
           {:ok, value} -> value
           _other -> :undecodable
         end
@@ -1081,7 +1088,14 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
   end
 
   defp decode!(bytes) do
-    case Json.decode(bytes) do
+    {:ok, limits} =
+      CharterAgreementProtocol.Limits.new(
+        max_bytes: 16_777_216,
+        max_depth: 128,
+        max_string_bytes: 1_048_576
+      )
+
+    case Json.decode(bytes, limits) do
       {:ok, value} -> value
       {:error, reason} -> raise "wire json did not decode: #{inspect(reason)}"
     end

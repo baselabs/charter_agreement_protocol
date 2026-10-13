@@ -8,6 +8,13 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-10-13: pre-sign API
+
+Add the CAP-SIGNING requirements for ordered preparation, caller limits,
+key shape and membership, shared context preparation, runtime support,
+finishing and malformed retained context handling. Add `signing.prepare`
+to the certified corpus. Existing verification semantics remain 5.
+
 ## 2026-10-13: profile admission covers re-verified context
 
 - `core.md` section 4: a call that re-verifies caller-supplied context

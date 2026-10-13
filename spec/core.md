@@ -222,6 +222,78 @@ evidence and MUST NOT pick a winner
 same-number, same-role over different digests MUST be rejected as
 unpairable evidence [CAP-ACCEPTANCE-EQUIVOCATION-pairing-required].
 
+### 4.4.1 Pre-sign check
+
+The pre-sign API accepts a kind, a closed map containing `kid`, `claims`,
+raw `public_key` bytes and an optional emission `algorithm`, a context,
+limits, and a profile. It returns a signing plan or a typed error. A plan
+exposes the protected and payload segments, the exact signing message and
+`key`; the public key, verified context, limits and profile are internal
+fields that callers retain unchanged. Existing producer and assembly
+arities retain their default limits and exact byte output.
+
+The check MUST apply limits validation, profile validation, kind-specific
+context typing, input construction, key shape, set verification and
+producer refusals, verification preparation, snapshot membership, and
+runtime support in that order [CAP-SIGNING-prepare-order]. Descriptor
+context is absent or predecessor facts; acceptance and termination context
+is an artifact set; receipt context is chain facts or a bare revision.
+
+Input construction MUST frame, canonicalize, validate claims and decode a
+zero-signature provisional compact under the caller's limits, including
+the final signature segment size [CAP-SIGNING-caller-limits]. Limits MUST cover every artifact read in
+the whole supplied set, and finishing MUST assemble under those same
+limits [CAP-SIGNING-caller-limits]. Construction failures use
+`signing_input_invalid`.
+
+Key shape MUST use the registry's exact public-key length and, for
+Ed25519, the strict point predicate shared with signature verification;
+failure uses `signing_key_invalid` [CAP-SIGNING-key-shape].
+
+The snapshot's kid, public bytes and artifact key algorithm MUST match an
+active resolved candidate, or preparation returns `signing_key_mismatch`
+[CAP-SIGNING-snapshot-membership].
+Every resolved receipt candidate remains eligible, including two same-kid
+keys. Only a bare-revision receipt skips membership and reports `unnamed`;
+other successful plans report `matched` [CAP-SIGNING-snapshot-membership].
+The candidates stay internal and describe the holder's own descriptor key
+check.
+
+Acceptance and termination preparation MUST verify the retained set, apply
+the existing R1-R3 producer refusals, and derive the claimed revision and
+signing party's descriptor chain using the same lookup as chain
+verification [CAP-SIGNING-set-context]. A descriptor absent from every held chain returns
+`acceptance_claims_mismatch` or `termination_claims_mismatch`
+[CAP-SIGNING-set-context].
+
+The caller's full profile MUST apply when verifying the retained set for
+producer refusals, as well as at the artifact verifier's normal context
+and envelope admission steps [CAP-SIGNING-set-profile].
+
+Public verification and preparation MUST call the same internal
+preparation step through candidate resolution, including context
+re-verification, claims matching and profile admission
+[CAP-SIGNING-shared-preparation].
+
+Preparation MUST check declared support plus a known-answer verification
+before returning a plan for every kind, including bare-revision receipts
+[CAP-SIGNING-runtime-support].
+That answer MUST be cached once per key algorithm
+[CAP-SIGNING-runtime-support]. A raising provider call
+is reported as unavailable; capability reporting returns normally
+[CAP-SIGNING-runtime-support].
+
+Finishing MUST assemble the external signature and invoke the public
+artifact verifier with the CAP-derived context, plan limits and profile,
+returning the compact only on success [CAP-SIGNING-finish-verification].
+
+Malformed retained context fields MUST return typed errors in public
+verification and preparation [CAP-SIGNING-retained-input-totality]. Every field of caller-supplied chain facts,
+descriptor chains, descriptor facts and revisions MUST be handled without
+an exception [CAP-SIGNING-retained-input-totality]. Facts are reconstructed
+from retained bytes, so supplied descriptive scalars do not replace the
+verified values.
+
 ### 4.5 Termination Notice (`cap+termination`)
 
 A termination notice pinned to a governing revision, a party descriptor,
