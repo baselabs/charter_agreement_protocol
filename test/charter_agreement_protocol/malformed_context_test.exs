@@ -448,6 +448,122 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
     end
   end
 
+  test "internal verified paths reject malformed nested values", context do
+    [descriptor] = context.descriptors.descriptors
+
+    variants = [
+      {%{
+         context.revision
+         | parties: [%{__struct__: CharterAgreementProtocol.CharterRevision.Party}]
+       }, context.descriptors},
+      {%{context.revision | parties: Enum.map(context.revision.parties, &Map.put(&1, :role, 42))},
+       context.descriptors},
+      {%{context.revision | charter_id: 42}, context.descriptors},
+      {context.revision,
+       %{context.descriptors | descriptors: [Map.delete(descriptor, :descriptor_digest)]}}
+    ]
+
+    for {revision, descriptors} <- variants,
+        {verify, compact} <- internal_inputs(context) do
+      assert {:error, %Error{code: :invalid_type}} =
+               verify.(compact, revision, descriptors, Limits.default())
+    end
+  end
+
+  property "internal verified paths reject missing members in every nested struct", context do
+    [descriptor] = context.descriptors.descriptors
+    [key | _] = descriptor.descriptor.verification_keys
+    [party | _] = context.revision.parties
+    rules = context.revision.termination_rules
+
+    nested = [
+      {party, fn changed -> {%{context.revision | parties: [changed]}, context.descriptors} end},
+      {rules,
+       fn changed -> {%{context.revision | termination_rules: changed}, context.descriptors} end},
+      {descriptor,
+       fn changed -> {context.revision, %{context.descriptors | descriptors: [changed]}} end},
+      {descriptor.descriptor,
+       fn changed ->
+         {context.revision,
+          %{context.descriptors | descriptors: [%{descriptor | descriptor: changed}]}}
+       end},
+      {key,
+       fn changed ->
+         {context.revision,
+          %{
+            context.descriptors
+            | descriptors: [
+                %{
+                  descriptor
+                  | descriptor: %{descriptor.descriptor | verification_keys: [changed]}
+                }
+              ]
+          }}
+       end}
+    ]
+
+    check all(drop_count <- positive_integer(), max_runs: 30) do
+      for {value, rebuild} <- nested,
+          field <- Map.keys(Map.from_struct(value)) do
+        fields = [
+          field | Enum.take(Map.keys(Map.from_struct(value)), rem(drop_count, map_size(value)))
+        ]
+
+        {revision, descriptors} = rebuild.(Map.drop(value, fields))
+
+        for {verify, compact} <- internal_inputs(context) do
+          assert {:error, %Error{code: :invalid_type}} =
+                   verify.(compact, revision, descriptors, Limits.default())
+        end
+      end
+    end
+  end
+
+  property "internal verified paths reject wrong types in nested members they read", context do
+    [descriptor] = context.descriptors.descriptors
+    [key | _] = descriptor.descriptor.verification_keys
+    [party | _] = context.revision.parties
+
+    check all(value <- one_of([integer(), constant(nil), list_of(integer())]), max_runs: 30) do
+      variants =
+        for field <- [:role, :party_descriptor_digest] do
+          {%{context.revision | parties: [Map.put(party, field, value)]}, context.descriptors}
+        end
+
+      variants =
+        variants ++
+          for field <- [:key_id, :public_key, :algorithm, :status] do
+            changed = Map.put(key, field, value)
+
+            {context.revision,
+             %{
+               context.descriptors
+               | descriptors: [
+                   %{
+                     descriptor
+                     | descriptor: %{descriptor.descriptor | verification_keys: [changed]}
+                   }
+                 ]
+             }}
+          end
+
+      for {revision, descriptors} <- variants,
+          {verify, compact} <- internal_inputs(context) do
+        assert {:error, %Error{code: :invalid_type}} =
+                 verify.(compact, revision, descriptors, Limits.default())
+      end
+    end
+  end
+
+  defp internal_inputs(context) do
+    [
+      {&Acceptance.verify_verified/4,
+       ChainFixture.acceptance(context.set.genesis, context.set.issuer, "issuer").compact},
+      {&TerminationNotice.verify_verified/4,
+       ChainFixture.termination(context.set.genesis, context.set.issuer, "issuer").compact}
+    ]
+  end
+
   defp typed?({:ok, _value}), do: true
   defp typed?({:error, %Error{}}), do: true
   defp typed?(_other), do: false

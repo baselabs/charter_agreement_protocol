@@ -6,8 +6,10 @@ defmodule CharterAgreementProtocol.Internal.Retained do
     CharterRevision,
     CompactJws,
     DescriptorChain,
+    DescriptorFacts,
     Error,
-    ForkEvidence
+    ForkEvidence,
+    PartyDescriptor
   }
 
   @spec list?(term()) :: boolean()
@@ -39,24 +41,71 @@ defmodule CharterAgreementProtocol.Internal.Retained do
   defp revision_shape?(%CharterRevision{} = revision) do
     Map.keys(revision) == Map.keys(struct(CharterRevision)) and
       is_binary(revision.canonical_bytes) and is_integer(revision.revision_number) and
+      optional_binary?(revision.charter_id) and optional_binary?(revision.prev_revision_digest) and
       binaries?(revision.supersedes) and
       list?(revision.parties) and
-      Enum.all?(revision.parties, &is_struct(&1, CharterRevision.Party)) and
+      Enum.all?(revision.parties, &party_shape?/1) and
       rules_shape?(revision.termination_rules)
   end
 
   defp revision_shape?(_other), do: false
 
-  defp rules_shape?(%CharterRevision.TerminationRules{reason_codes: codes}), do: binaries?(codes)
+  defp party_shape?(%CharterRevision.Party{role: role, party_descriptor_digest: digest} = party) do
+    complete?(party, CharterRevision.Party) and is_binary(role) and is_binary(digest)
+  end
+
+  defp party_shape?(_other), do: false
+
+  defp rules_shape?(%CharterRevision.TerminationRules{reason_codes: codes} = rules),
+    do: complete?(rules, CharterRevision.TerminationRules) and binaries?(codes)
+
   defp rules_shape?(_other), do: false
 
   defp chain_shape?(%DescriptorChain{} = chain) do
     Map.keys(chain) == Map.keys(%DescriptorChain{topology: :linear, descriptors: []}) and
       chain.topology in [:linear, :forked] and list?(chain.descriptors) and
+      Enum.all?(chain.descriptors, &descriptor_facts_shape?/1) and
       (is_nil(chain.fork_evidence) or is_struct(chain.fork_evidence, ForkEvidence))
   end
 
   defp chain_shape?(_other), do: false
+
+  defp descriptor_facts_shape?(
+         %DescriptorFacts{
+           descriptor_digest: digest,
+           descriptor_position: position,
+           descriptor: descriptor
+         } = facts
+       ) do
+    complete?(facts, DescriptorFacts) and is_binary(digest) and
+      position in [:head, :superseded, :contested] and descriptor_shape?(descriptor)
+  end
+
+  defp descriptor_facts_shape?(_other), do: false
+
+  defp descriptor_shape?(%PartyDescriptor{verification_keys: keys} = descriptor) do
+    complete?(descriptor, PartyDescriptor) and list?(keys) and Enum.all?(keys, &key_shape?/1)
+  end
+
+  defp descriptor_shape?(_other), do: false
+
+  defp key_shape?(
+         %PartyDescriptor.VerificationKey{
+           key_id: id,
+           public_key: public,
+           algorithm: algorithm,
+           status: status
+         } = key
+       ) do
+    complete?(key, PartyDescriptor.VerificationKey) and is_binary(id) and is_binary(public) and
+      is_binary(algorithm) and status in [:active, :retired]
+  end
+
+  defp key_shape?(_other), do: false
+
+  defp complete?(value, module), do: Map.keys(value) == Map.keys(struct(module))
+  defp optional_binary?(nil), do: true
+  defp optional_binary?(value), do: is_binary(value)
 
   @spec compatible?(term(), term()) :: boolean()
   def compatible?(%{__struct__: module} = supplied, %{__struct__: module} = verified) do
