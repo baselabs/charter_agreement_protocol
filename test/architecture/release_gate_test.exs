@@ -36,6 +36,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     chain-signature-skip
     digest-equality-skip
     ed25519-defeat
+    ed25519-list-only-admission
     typ-confusion
     reason-code-uncheck
     precedence-lowest
