@@ -169,8 +169,14 @@ defmodule CharterAgreementProtocol.TerminationNotice do
       not Profile.valid?(profile) ->
         {:error, Error.new(:invalid_profile, ["profile"])}
 
+      not Retained.verified_context?(verified_revision, verified_chain) ->
+        invalid_type()
+
       true ->
-        do_verify(compact, verified_revision, verified_chain, limits, profile)
+        with {:ok, prepared} <-
+               prepare_verified(compact, verified_revision, verified_chain, limits, profile) do
+          verify_prepared(prepared, profile)
+        end
     end
   end
 

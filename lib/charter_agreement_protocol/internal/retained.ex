@@ -1,7 +1,13 @@
 defmodule CharterAgreementProtocol.Internal.Retained do
   @moduledoc "Retained byte extraction for re-verification. CAP never authorizes."
 
-  alias CharterAgreementProtocol.{Base64Url, CompactJws}
+  alias CharterAgreementProtocol.{
+    Base64Url,
+    CharterRevision,
+    CompactJws,
+    DescriptorChain,
+    ForkEvidence
+  }
 
   @spec list?(term()) :: boolean()
   def list?([]), do: true
@@ -19,6 +25,19 @@ defmodule CharterAgreementProtocol.Internal.Retained do
       do: {:ok, message <> "." <> Base64Url.encode(signature)}
 
   def compact(_other), do: :error
+  @spec verified_context?(CharterRevision.t(), DescriptorChain.t()) :: boolean()
+  def verified_context?(revision, chain) do
+    is_binary(revision.canonical_bytes) and is_integer(revision.revision_number) and
+      binaries?(revision.supersedes) and
+      list?(revision.parties) and
+      Enum.all?(revision.parties, &is_struct(&1, CharterRevision.Party)) and
+      is_struct(revision.termination_rules, CharterRevision.TerminationRules) and
+      binaries?(revision.termination_rules.reason_codes) and
+      Map.keys(chain) == Map.keys(%DescriptorChain{topology: :linear, descriptors: []}) and
+      chain.topology in [:linear, :forked] and list?(chain.descriptors) and
+      (is_nil(chain.fork_evidence) or is_struct(chain.fork_evidence, ForkEvidence))
+  end
+
   @spec compatible?(term(), term()) :: boolean()
   def compatible?(%{__struct__: module} = supplied, %{__struct__: module} = verified) do
     Map.keys(supplied) == Map.keys(verified) and
@@ -36,8 +55,12 @@ defmodule CharterAgreementProtocol.Internal.Retained do
   def compatible?(supplied, verified) when is_atom(verified), do: is_atom(supplied)
 
   def compatible?(supplied, verified) when is_list(verified) do
-    list?(supplied) and list?(verified) and
-      Enum.all?(supplied, fn item -> Enum.any?(verified, &compatible?(item, &1)) end)
+    if list?(supplied) and list?(verified) do
+      models = Enum.uniq_by(verified, &shape/1)
+      Enum.all?(supplied, fn item -> Enum.any?(models, &compatible?(item, &1)) end)
+    else
+      false
+    end
   end
 
   def compatible?(supplied, verified) when is_tuple(verified) do
@@ -48,6 +71,27 @@ defmodule CharterAgreementProtocol.Internal.Retained do
   end
 
   def compatible?(_supplied, _verified), do: false
+
+  defp shape(%{__struct__: module} = value) do
+    {module,
+     value
+     |> Map.from_struct()
+     |> Enum.map(fn {field, item} -> {field, shape(item)} end)
+     |> Enum.sort()}
+  end
+
+  defp shape(value) when is_list(value), do: {:list, value |> Enum.map(&shape/1) |> MapSet.new()}
+
+  defp shape(value) when is_tuple(value),
+    do: {:tuple, value |> Tuple.to_list() |> Enum.map(&shape/1)}
+
+  defp shape(value) when is_binary(value), do: :binary
+  defp shape(value) when is_integer(value), do: :integer
+  defp shape(value) when is_float(value), do: :float
+  defp shape(nil), do: nil
+  defp shape(value) when is_boolean(value), do: :boolean
+  defp shape(value) when is_atom(value), do: :atom
+  defp shape(_value), do: :other
 
   defp optional_scalar?(module, field, nil) when field in [:alg, :protocol_revision],
     do:
