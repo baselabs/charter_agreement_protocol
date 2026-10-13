@@ -40,10 +40,10 @@ defmodule CharterAgreementProtocol.CapabilityProviderTest do
     {:ok, _} = :cover.compile_beam(#{inspect(String.to_charlist(beam))})
     {:ok, _} = :cover.compile_beam(#{inspect(String.to_charlist(signature_beam))})
     true = CharterAgreementProtocol.Signature.valid_key?(#{inspect(public)}, "Ed25519")
-    {:error, %{code: :algorithm_unsupported_on_substrate}} = CharterAgreementProtocol.Signature.verify("provider", #{inspect(signature)}, #{inspect(public)}, "Ed25519")
     false = CharterAgreementProtocol.Capability.kat_verifies?("Ed25519", true)
     queries = for _ <- 1..32, do: Task.async(fn -> CharterAgreementProtocol.Capability.kat_verifies?("Ed25519") end)
     query_results = Enum.map(queries, &Task.await/1)
+    {:error, %{code: :algorithm_unsupported_on_substrate}} = CharterAgreementProtocol.Signature.verify("provider", #{inspect(signature)}, #{inspect(public)}, "Ed25519")
     report = CharterAgreementProtocol.Capability.report()
     [] = report.linked_crypto
     true = Enum.all?(query_results, &(&1 == false))
