@@ -53,6 +53,7 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:corpus, ["signing.prepare:chain_invalid", "signing.prepare:invalid_constraint"]},
        {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
        {:mutation, "signing-unheld-code-collapse"},
+       {:mutation, "signing-termination-code-collapse"},
        {:mutation, "signing-refusal-skip"}
      ]},
     {"CAP-SIGNING-set-profile",

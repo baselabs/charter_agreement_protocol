@@ -42,6 +42,16 @@ defmodule CharterAgreementProtocol.SigningPrepareCases do
           "signing_key_mismatch"
         ),
         invalid(
+          "signing-acceptance-wrong-key",
+          Map.put(acceptance, "public_key", wrong_key),
+          "signing_key_mismatch"
+        ),
+        invalid(
+          "signing-termination-wrong-key",
+          Map.put(termination, "public_key", wrong_key),
+          "signing_key_mismatch"
+        ),
+        invalid(
           "signing-wrong-algorithm",
           Map.merge(descriptor, %{
             "algorithm" => "ML-DSA-65",

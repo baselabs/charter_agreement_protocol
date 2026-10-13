@@ -280,6 +280,23 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     end
   end
 
+  test "termination context lookup names a missing held descriptor" do
+    %{"cases" => cases} = :json.decode(File.read!("priv/conformance/cases/signing-prepare.json"))
+    input = Enum.find(cases, &(&1["id"] == "signing-ed25519-termination"))["input"]
+    set = input["context"]["set"]
+    {:ok, facts} = verify_chain_input(set)
+
+    {:ok, _input, artifact} =
+      CharterAgreementProtocol.SigningInput.build(
+        :termination,
+        Map.take(input, ["kid", "claims", "algorithm"]),
+        Limits.default()
+      )
+
+    assert {:error, %Error{code: :termination_claims_mismatch}} =
+             Chain.signing_context(:termination, artifact, %{facts | descriptor_chains: []})
+  end
+
   test "malformed retained fields reject through the corpus contexts" do
     %{"cases" => cases} = :json.decode(File.read!("priv/conformance/cases/signing-prepare.json"))
     input = Enum.find(cases, &(&1["id"] == "signing-ed25519-receipt"))["input"]
@@ -488,7 +505,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_termination_expectations(cases) do
     termination_cases = Enum.filter(cases, &(&1["surface"] == "termination.verify"))
-    assert length(termination_cases) == 12
+    assert length(termination_cases) == 13
 
     Enum.each(termination_cases, fn one ->
       input = one["input"]

@@ -416,6 +416,13 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
+      name: "signing-termination-code-collapse",
+      path: "lib/charter_agreement_protocol/chain.ex",
+      from: "Error.new(:termination_claims_mismatch, [\"termination\", \"claims\"])",
+      to: "Error.new(:chain_invalid, [\"termination\", \"claims\"])",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
       name: "signing-set-profile-skip",
       path: "lib/charter_agreement_protocol/signing_plan.ex",
       from: "Acceptance.prepare(compact, revision, chain, limits, profile)",

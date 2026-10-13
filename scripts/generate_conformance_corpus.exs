@@ -909,6 +909,20 @@ termination_cases = [
       })
   },
   %{
+    "id" => "termination-wrong-revision-claims",
+    "surface" => "termination.verify",
+    "class" => "invalid_constraint",
+    "input" =>
+      termination_input.(
+        termination_compact.(
+          Map.put(termination_claims, "governing_revision_digest", genesis.digest),
+          "genesis-key",
+          genesis_private
+        ).compact
+      ),
+    "expect" => invalid.("termination_claims_mismatch")
+  },
+  %{
     "id" => "termination-unlisted-reason",
     "surface" => "termination.verify",
     "class" => "invalid_constraint",
