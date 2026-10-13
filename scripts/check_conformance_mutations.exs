@@ -7,6 +7,29 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
 
   @mutations [
     %{
+      name: "provider-runtime-query-rescue-skip",
+      path: "lib/charter_agreement_protocol/capability.ex",
+      from:
+        "    declared?(key_algorithm, :crypto.supports(:public_keys), :crypto.supports(:curves))\n  rescue\n    _error -> false",
+      to:
+        "    declared?(key_algorithm, :crypto.supports(:public_keys), :crypto.supports(:curves))",
+      command: ~w(mix test test/charter_agreement_protocol/capability_provider_test.exs --seed 42)
+    },
+    %{
+      name: "provider-known-answer-rescue-skip",
+      path: "lib/charter_agreement_protocol/capability.ex",
+      from: "    known_answer_verifies(key_algorithm)\n  rescue\n    _error -> false",
+      to: "    known_answer_verifies(key_algorithm)",
+      command: ~w(mix test test/charter_agreement_protocol/capability_provider_test.exs --seed 42)
+    },
+    %{
+      name: "provider-library-query-rescue-skip",
+      path: "lib/charter_agreement_protocol/capability.ex",
+      from: "    :crypto.info_lib()\n  rescue\n    _error -> []",
+      to: "    :crypto.info_lib()",
+      command: ~w(mix test test/charter_agreement_protocol/capability_provider_test.exs --seed 42)
+    },
+    %{
       name: "jcs-number-defeat",
       path: "lib/charter_agreement_protocol/canonicalization.ex",
       from: "      float == 0 -> {:ok, \"0\"}",

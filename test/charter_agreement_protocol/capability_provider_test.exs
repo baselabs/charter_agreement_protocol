@@ -14,48 +14,48 @@ defmodule CharterAgreementProtocol.CapabilityProviderTest do
   alias CharterAgreementProtocol.Capability
 
   test "a real provider load failure returns an unavailable report" do
-    directories = Path.wildcard("/usr/lib/*/libcrypto.so.3") |> Enum.map(&Path.dirname/1)
-    assert directories != [], "the Linux provider test needs the system OpenSSL 3.0 library"
     library = Application.app_dir(:charter_agreement_protocol, "ebin")
     beam = Path.join(library, "Elixir.CharterAgreementProtocol.Capability.beam")
-    declared = Capability.declared?("Ed25519")
+    directory = Path.join(System.tmp_dir!(), "cap-provider-#{System.unique_integer([:positive])}")
+    crypto = :code.lib_dir(:crypto) |> List.to_string()
+    isolated = Path.join(directory, Path.basename(crypto))
+    output_file = Path.join(directory, "provider.coverdata")
+    File.mkdir_p!(isolated)
+    File.cp_r!(Path.join(crypto, "ebin"), Path.join(isolated, "ebin"))
+    on_exit(fn -> File.rm_rf!(directory) end)
 
-    for directory <- directories do
-      output_file =
-        Path.join(
-          System.tmp_dir!(),
-          "cap-provider-#{System.unique_integer([:positive])}.coverdata"
-        )
-
-      on_exit(fn -> File.rm(output_file) end)
-
-      code = """
-      :cover.start()
-      {:ok, _} = :cover.compile_beam(#{inspect(String.to_charlist(beam))})
-      result = CharterAgreementProtocol.Capability.kat_verifies?("Ed25519", #{inspect(declared)})
-      queries = for _ <- 1..32, do: Task.async(fn -> CharterAgreementProtocol.Capability.kat_verifies?("Ed25519") end)
-      query_results = Enum.map(queries, &Task.await/1)
-      report = CharterAgreementProtocol.Capability.report()
-      [] = report.linked_crypto
-      false = result
-      true = Enum.all?(query_results, &(&1 == false))
-      true = Enum.all?(report.algorithms, &(not &1.verifiable))
-      IO.puts("provider result: unavailable")
-      :ok = :cover.export(#{inspect(String.to_charlist(output_file))})
-      """
-
-      {output, status} =
-        System.cmd("elixir", ["-pa", library, "-e", code],
-          env: [{"LD_LIBRARY_PATH", directory}],
-          stderr_to_stdout: true
-        )
-
-      assert status == 0, output
-      assert output =~ "provider result: unavailable"
-
-      if Process.whereis(:cover_server),
-        do: assert(:cover.import(String.to_charlist(output_file)) == :ok)
+    # OTP's unchanged crypto modules run without their native library in a child VM.
+    code = """
+    #{inspect(String.to_charlist(Path.join(isolated, "priv")))} = :code.priv_dir(:crypto)
+    try do
+      :crypto.supports()
+      raise "the isolated crypto application unexpectedly loaded its native library"
+    rescue
+      UndefinedFunctionError -> :ok
     end
+    :cover.start()
+    {:ok, _} = :cover.compile_beam(#{inspect(String.to_charlist(beam))})
+    false = CharterAgreementProtocol.Capability.kat_verifies?("Ed25519", true)
+    queries = for _ <- 1..32, do: Task.async(fn -> CharterAgreementProtocol.Capability.kat_verifies?("Ed25519") end)
+    query_results = Enum.map(queries, &Task.await/1)
+    report = CharterAgreementProtocol.Capability.report()
+    [] = report.linked_crypto
+    true = Enum.all?(query_results, &(&1 == false))
+    true = Enum.all?(report.algorithms, &(not &1.verifiable))
+    IO.puts("provider result: unavailable")
+    :ok = :cover.export(#{inspect(String.to_charlist(output_file))})
+    """
+
+    {output, status} =
+      System.cmd("elixir", ["-pa", library, "-pa", Path.join(isolated, "ebin"), "-e", code],
+        stderr_to_stdout: true
+      )
+
+    assert status == 0, output
+    assert output =~ "provider result: unavailable"
+
+    if Process.whereis(:cover_server),
+      do: assert(:cover.import(String.to_charlist(output_file)) == :ok)
   end
 
   test "partial metadata queries use the real runtime for the other axis" do

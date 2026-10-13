@@ -5,6 +5,9 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
   alias CharterAgreementProtocol.RequirementMap
 
   @mutation_names ~w(
+    provider-runtime-query-rescue-skip
+    provider-known-answer-rescue-skip
+    provider-library-query-rescue-skip
     signing-limits-order-skip
     signing-profile-order-skip
     signing-context-type-skip

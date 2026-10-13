@@ -74,7 +74,10 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:corpus, ["signing.prepare:valid"]},
        {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
        {:mutation, "signing-runtime-support-invert"},
-       {:mutation, "signing-runtime-cache-skip"}
+       {:mutation, "signing-runtime-cache-skip"},
+       {:mutation, "provider-runtime-query-rescue-skip"},
+       {:mutation, "provider-known-answer-rescue-skip"},
+       {:mutation, "provider-library-query-rescue-skip"}
      ]},
     {"CAP-SIGNING-shared-preparation",
      [
