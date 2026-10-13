@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.Conformance.CorpusTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias CharterAgreementProtocol.Conformance.Corpus
   alias CharterAgreementProtocol.ConformanceTest.Builder
@@ -354,6 +354,23 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert is_boolean(
              :persistent_term.get({CharterAgreementProtocol.Capability, "Ed25519"}).verifiable
            )
+  end
+
+  test "runtime preparation probes once per key algorithm" do
+    alias CharterAgreementProtocol.{Capability, CryptoTrace}
+    algorithms = ["Ed25519", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]
+    Enum.each(algorithms, &:persistent_term.erase({Capability, &1}))
+
+    {_result, calls} =
+      CryptoTrace.count(:verify, fn ->
+        for _ <- 1..20, algorithm <- algorithms do
+          assert Capability.kat_verifies?(algorithm)
+          assert Capability.declared?(algorithm)
+        end
+      end)
+
+    counts = Enum.frequencies_by(calls, &hd/1)
+    assert counts == %{eddsa: 1, mldsa44: 1, mldsa65: 1, mldsa87: 1}
   end
 
   defp signing_limits(input) do

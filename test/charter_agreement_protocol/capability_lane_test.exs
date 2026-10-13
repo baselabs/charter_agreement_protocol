@@ -50,6 +50,16 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
     end
   end
 
+  test "a real unsupported crypto operation is rescued by the live known-answer probe" do
+    if not Capability.kat_verifies?("ML-DSA-65") do
+      assert_raise ErlangError, fn ->
+        :crypto.verify(:mldsa65, :none, "lane", <<0::3309*8>>, <<0::1952*8>>)
+      end
+
+      refute Capability.kat_verifies?("ML-DSA-65", true)
+    end
+  end
+
   test "a predecessor the runtime cannot check reports the substrate diagnostic, never a broken chain" do
     corpus = :json.decode(File.read!("priv/conformance/cases/party_descriptor-verify.json"))
     compact_of = fn id -> Enum.find(corpus["cases"], &(&1["id"] == id))["input"]["compact"] end

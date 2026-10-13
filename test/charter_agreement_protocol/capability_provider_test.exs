@@ -15,6 +15,7 @@ defmodule CharterAgreementProtocol.CapabilityProviderTest do
 
   test "a real provider load failure returns an unavailable report" do
     directories = Path.wildcard("/usr/lib/*/libcrypto.so.3") |> Enum.map(&Path.dirname/1)
+    assert directories != [], "the Linux provider test needs the system OpenSSL 3.0 library"
     library = Application.app_dir(:charter_agreement_protocol, "ebin")
     beam = Path.join(library, "Elixir.CharterAgreementProtocol.Capability.beam")
     declared = Capability.declared?("Ed25519")
@@ -35,14 +36,11 @@ defmodule CharterAgreementProtocol.CapabilityProviderTest do
       queries = for _ <- 1..32, do: Task.async(fn -> CharterAgreementProtocol.Capability.kat_verifies?("Ed25519") end)
       query_results = Enum.map(queries, &Task.await/1)
       report = CharterAgreementProtocol.Capability.report()
-      if report.linked_crypto == [] do
-        false = result
-        true = Enum.all?(query_results, &(&1 == false))
-        true = Enum.all?(report.algorithms, &(not &1.verifiable))
-        IO.puts("provider result: unavailable")
-      else
-        IO.puts("provider result: loaded")
-      end
+      [] = report.linked_crypto
+      false = result
+      true = Enum.all?(query_results, &(&1 == false))
+      true = Enum.all?(report.algorithms, &(not &1.verifiable))
+      IO.puts("provider result: unavailable")
       :ok = :cover.export(#{inspect(String.to_charlist(output_file))})
       """
 
@@ -53,7 +51,7 @@ defmodule CharterAgreementProtocol.CapabilityProviderTest do
         )
 
       assert status == 0, output
-      assert output =~ "provider result:"
+      assert output =~ "provider result: unavailable"
 
       if Process.whereis(:cover_server),
         do: assert(:cover.import(String.to_charlist(output_file)) == :ok)
