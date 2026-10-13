@@ -4,6 +4,11 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
   alias CharterAgreementProtocol.Conformance.{Cli, Corpus, Report, Runner}
   alias CharterAgreementProtocol.Digest
 
+  @tag skip:
+         not Enum.all?(
+           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
+           &CharterAgreementProtocol.Capability.kat_verifies?/1
+         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
   test "the shipped corpus executes every case and emits an identity-bound report" do
     assert {:ok, corpus} = Corpus.load(shipped_files())
     results = Runner.run(corpus)
@@ -52,6 +57,11 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
     end
   end
 
+  @tag skip:
+         not Enum.all?(
+           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
+           &CharterAgreementProtocol.Capability.kat_verifies?/1
+         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
   test "one expectation flip makes the report disagree" do
     assert {:ok, corpus} = Corpus.load(shipped_files())
 
@@ -143,6 +153,11 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
     assert [%{agree: true}] = Runner.run(corpus)
   end
 
+  @tag skip:
+         not Enum.all?(
+           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
+           &CharterAgreementProtocol.Capability.kat_verifies?/1
+         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
   test "the CLI requires an explicit corpus and verifies the certified shipped corpus" do
     assert ExUnit.CaptureIO.capture_io(:stderr, fn -> send(self(), {:exit, Cli.run([])}) end) =~
              "usage:"

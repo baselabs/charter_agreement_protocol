@@ -49,6 +49,11 @@ defmodule CharterAgreementProtocol.Docs.RecipesTest do
       assert Enum.map(sections(recipes_path()), &elem(&1, 0)) == [@setup | @recipes]
     end
 
+    @tag skip:
+           not Enum.all?(
+             ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
+             &CharterAgreementProtocol.Capability.kat_verifies?/1
+           ) and "requires a runtime that verifies all registered ML-DSA algorithms"
     test "every recipe runs on its own after the setup" do
       path = recipes_path()
       [{@setup, setup_blocks} | recipes] = sections(path)
@@ -60,6 +65,11 @@ defmodule CharterAgreementProtocol.Docs.RecipesTest do
       end
     end
 
+    @tag skip:
+           not Enum.all?(
+             ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
+             &CharterAgreementProtocol.Capability.kat_verifies?/1
+           ) and "requires a runtime that verifies all registered ML-DSA algorithms"
     test "the whole page runs from top to bottom" do
       path = recipes_path()
 

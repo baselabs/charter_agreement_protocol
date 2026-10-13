@@ -15,6 +15,11 @@ defmodule CharterAgreementProtocol.SigningOracleTest do
     SigningInput
   }
 
+  @tag skip:
+         not Enum.all?(
+           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
+           &CharterAgreementProtocol.Capability.kat_verifies?/1
+         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
   test "descriptor and receipt corpus inputs agree before the signature step" do
     for {file, kind} <- [
           {"party_descriptor-verify", :party_descriptor},

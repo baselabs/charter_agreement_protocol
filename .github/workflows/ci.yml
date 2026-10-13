@@ -143,4 +143,4 @@ jobs:
           '
 
       - name: Capability-limited assertions
-        run: mix test test/charter_agreement_protocol/capability_lane_test.exs
+        run: mix test test/charter_agreement_protocol/capability_lane_test.exs test/charter_agreement_protocol/capability_provider_test.exs

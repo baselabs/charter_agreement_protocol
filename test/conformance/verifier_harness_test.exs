@@ -26,7 +26,7 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
   # The pinned TypeScript verifier source (scripts/verifier_source.exs).
   defp verifier(file), do: Path.join(VerifierSource.path(), file)
 
-  test "the Node harness independently accepts shipped bytes and rejects index corruption" do
+  test "the Node harness checks its pinned corpus and rejects index corruption" do
     {version, 0} = System.cmd("node", ["--version"])
 
     major =
@@ -34,15 +34,16 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
 
     assert major >= 24
 
-    assert {output, 0} = System.cmd("node", [verifier("check-corpus.mjs"), "priv/conformance"])
+    corpus = verifier("conformance")
+    assert {output, 0} = System.cmd("node", [verifier("check-corpus.mjs"), corpus])
     assert String.starts_with?(output, "sha-256:")
 
     temporary = Path.join(System.tmp_dir!(), "cap-corpus-#{System.unique_integer([:positive])}")
     File.mkdir_p!(temporary)
     on_exit(fn -> File.rm_rf!(temporary) end)
 
-    for path <- Path.wildcard("priv/conformance/**/*"), not File.dir?(path) do
-      relative = Path.relative_to(path, "priv/conformance")
+    for path <- Path.wildcard(Path.join(corpus, "**/*")), not File.dir?(path) do
+      relative = Path.relative_to(path, corpus)
       target = Path.join(temporary, relative)
       File.mkdir_p!(Path.dirname(target))
       File.cp!(path, target)

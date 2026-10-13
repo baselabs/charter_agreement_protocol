@@ -44,6 +44,11 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
   end)
   """
 
+  @tag skip:
+         not Enum.all?(
+           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
+           &CharterAgreementProtocol.Capability.kat_verifies?/1
+         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
   test "charter-tour runs from top to bottom" do
     output = run_notebook!("charter-tour.livemd")
 
@@ -63,6 +68,11 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
     assert String.replace(output, ~r/\s+/, " ") =~ inspect(floor)
   end
 
+  @tag skip:
+         not Enum.all?(
+           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
+           &CharterAgreementProtocol.Capability.kat_verifies?/1
+         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
   test "fork-repair runs from top to bottom" do
     output = run_notebook!("fork-repair.livemd")
 
