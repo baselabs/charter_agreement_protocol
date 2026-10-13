@@ -336,6 +336,7 @@ defmodule CharterAgreementProtocol.MixProject do
 
   defp aliases do
     [
+      ci: ["quality"],
       audit: ["hex.audit", "deps.unlock --check-unused", "deps.audit"],
       "conformance.verify": "run --no-start scripts/check_conformance.exs",
       "historical.check": "run --no-start scripts/check_historical_differential.exs",
