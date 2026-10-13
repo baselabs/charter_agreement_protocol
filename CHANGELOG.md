@@ -4,6 +4,8 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-13
+
 One verdict change: a charter's parties must be distinct parties (see
 Security). The verification semantics version moves from 4 to 5. Apart from
 that change, this release gives the same verdict as 0.4.1 on every case of
