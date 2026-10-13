@@ -298,6 +298,47 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
     end
   end
 
+  property "valid retained prefixes reject bad tails and elements at depth", context do
+    check all(
+            depth <- integer(1..8),
+            bad <- one_of([constant(:tail), constant(nil), constant(42)])
+          ) do
+      first = hd(context.descriptors.descriptors)
+      prefix = List.duplicate(first, depth)
+      improper = Enum.reduce(prefix, :tail, fn item, tail -> [item | tail] end)
+      compact = ChainFixture.acceptance(context.set.genesis, context.set.issuer, "issuer").compact
+
+      for descriptors <- [improper, prefix ++ [bad]],
+          verify <- [&CAP.verify_acceptance/4, &CAP.verify_termination/4] do
+        assert {:error, %Error{}} =
+                 verify.(
+                   compact,
+                   context.revision,
+                   %{context.descriptors | descriptors: descriptors},
+                   Limits.default()
+                 )
+      end
+
+      lineage =
+        Enum.reduce(List.duplicate(context.set.issuer.compact, depth), :tail, fn item, tail ->
+          [item | tail]
+        end)
+
+      malformed = %{first | lineage: lineage}
+
+      assert {:error, %Error{}} =
+               CAP.verify_descriptor(context.set.issuer.compact, malformed, Limits.default())
+
+      assert {:error, %Error{}} =
+               CAP.verify_acceptance(
+                 compact,
+                 context.revision,
+                 %{context.descriptors | descriptors: [malformed]},
+                 Limits.default()
+               )
+    end
+  end
+
   defp typed?({:ok, _value}), do: true
   defp typed?({:error, %Error{}}), do: true
   defp typed?(_other), do: false
