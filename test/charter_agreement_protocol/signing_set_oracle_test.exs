@@ -7,9 +7,9 @@ defmodule CharterAgreementProtocol.SigningSetOracleTest do
     Capability.Profile,
     Chain,
     CharterRevision,
-    SigningFixture,
     Error,
     Limits,
+    SigningFixture,
     SigningInput
   }
 
