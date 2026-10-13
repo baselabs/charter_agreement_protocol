@@ -190,8 +190,19 @@ defmodule CharterAgreementProtocol.Signature do
 
   defp field(value), do: Integer.mod(value, @ed25519_field_prime)
 
-  defp power(base, exponent),
-    do: :crypto.mod_pow(base, exponent, @ed25519_field_prime) |> :binary.decode_unsigned()
+  defp power(base, exponent) do
+    :crypto.mod_pow(base, exponent, @ed25519_field_prime) |> :binary.decode_unsigned()
+  rescue
+    # Point admission remains deterministic when the native library cannot load.
+    _error in [ErlangError, UndefinedFunctionError] -> power_fallback(base, exponent, 1)
+  end
+
+  defp power_fallback(_base, 0, result), do: result
+
+  defp power_fallback(base, exponent, result) do
+    next = if rem(exponent, 2) == 1, do: field(result * base), else: result
+    power_fallback(field(base * base), div(exponent, 2), next)
+  end
 
   defp invalid, do: {:error, Error.new(:signature_invalid, ["compact_jws", "signature"])}
 

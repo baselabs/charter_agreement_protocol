@@ -16,6 +16,9 @@ defmodule CharterAgreementProtocol.CapabilityProviderTest do
   test "a real provider load failure returns an unavailable report" do
     library = Application.app_dir(:charter_agreement_protocol, "ebin")
     beam = Path.join(library, "Elixir.CharterAgreementProtocol.Capability.beam")
+    signature_beam = Path.join(library, "Elixir.CharterAgreementProtocol.Signature.beam")
+    {public, private} = :crypto.generate_key(:eddsa, :ed25519)
+    signature = :crypto.sign(:eddsa, :none, "provider", [private, :ed25519])
     directory = Path.join(System.tmp_dir!(), "cap-provider-#{System.unique_integer([:positive])}")
     crypto = :code.lib_dir(:crypto) |> List.to_string()
     isolated = Path.join(directory, Path.basename(crypto))
@@ -35,6 +38,9 @@ defmodule CharterAgreementProtocol.CapabilityProviderTest do
     end
     :cover.start()
     {:ok, _} = :cover.compile_beam(#{inspect(String.to_charlist(beam))})
+    {:ok, _} = :cover.compile_beam(#{inspect(String.to_charlist(signature_beam))})
+    true = CharterAgreementProtocol.Signature.valid_key?(#{inspect(public)}, "Ed25519")
+    {:error, %{code: :algorithm_unsupported_on_substrate}} = CharterAgreementProtocol.Signature.verify("provider", #{inspect(signature)}, #{inspect(public)}, "Ed25519")
     false = CharterAgreementProtocol.Capability.kat_verifies?("Ed25519", true)
     queries = for _ <- 1..32, do: Task.async(fn -> CharterAgreementProtocol.Capability.kat_verifies?("Ed25519") end)
     query_results = Enum.map(queries, &Task.await/1)

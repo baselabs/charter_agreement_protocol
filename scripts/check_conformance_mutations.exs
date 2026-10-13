@@ -9,10 +9,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "ed25519-native-power-skip",
       path: "lib/charter_agreement_protocol/signature.ex",
-      from:
-        "  defp power(base, exponent),\n    do: :crypto.mod_pow(base, exponent, @ed25519_field_prime) |> :binary.decode_unsigned()",
-      to:
-        "  defp power(base, exponent), do: power(base, exponent, 1)\n  defp power(_base, 0, result), do: result\n  defp power(base, exponent, result) do\n    next = if rem(exponent, 2) == 1, do: field(result * base), else: result\n    power(field(base * base), div(exponent, 2), next)\n  end",
+      from: ":crypto.mod_pow(base, exponent, @ed25519_field_prime) |> :binary.decode_unsigned()",
+      to: "power_fallback(base, exponent, 1)",
       command: ~w(mix test test/charter_agreement_protocol/ed25519_admission_test.exs --seed 42)
     },
     %{
