@@ -177,6 +177,11 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     end
   end
 
+  @tag skip:
+         not Enum.all?(
+           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
+           &CharterAgreementProtocol.Capability.kat_verifies?/1
+         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
   test "the shipped corpus loads through the pure map interface" do
     assert {:ok, %Corpus{cases: cases}} = Corpus.load(shipped_files())
 
@@ -201,6 +206,11 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert Enum.any?(cases, &(&1["surface"] == "signing.prepare"))
   end
 
+  @tag skip:
+         not Enum.all?(
+           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
+           &CharterAgreementProtocol.Capability.kat_verifies?/1
+         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
   test "signing preparation projects every new corpus case independently" do
     %{"cases" => cases} = :json.decode(File.read!("priv/conformance/cases/signing-prepare.json"))
     assert length(cases) >= 50
@@ -266,6 +276,24 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
       assert output == one["expect"], one["id"]
     end
+  end
+
+  test "the identity R corpus signature verifies in OpenSSL and fails the CAP point rule" do
+    %{"cases" => cases} =
+      :json.decode(File.read!("priv/conformance/cases/party_descriptor-verify.json"))
+
+    compact = Enum.find(cases, &(&1["id"] == "descriptor-ed25519-r-identity"))["input"]["compact"]
+    [protected, payload, signature] = String.split(compact, ".")
+    message = protected <> "." <> payload
+    claims = payload |> Base.url_decode64!(padding: false) |> JSON.decode!()
+    [key] = claims["verification_keys"]
+    public = Base.url_decode64!(key["public_key"], padding: false)
+    signature = Base.url_decode64!(signature, padding: false)
+
+    assert :crypto.verify(:eddsa, :none, message, signature, [public, :ed25519])
+
+    assert {:error, %Error{code: :signature_invalid}} =
+             CharterAgreementProtocol.Signature.verify(message, signature, public, "Ed25519")
   end
 
   test "termination context lookup names a missing held descriptor" do
@@ -347,6 +375,11 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
            )
   end
 
+  @tag skip:
+         not Enum.all?(
+           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
+           &CharterAgreementProtocol.Capability.kat_verifies?/1
+         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
   test "runtime preparation probes once per key algorithm" do
     alias CharterAgreementProtocol.{Capability, CryptoTrace}
     algorithms = ["Ed25519", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]
@@ -365,12 +398,15 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   defp signing_limits(input) do
-    attrs =
-      input
-      |> Map.get("limits", %{})
-      |> Map.new(fn {key, value} -> {String.to_existing_atom(key), value} end)
+    known = Map.new(Limits.fields(), &{Atom.to_string(&1), &1})
+    selected = Map.get(input, "limits", %{})
 
-    {:ok, struct(Limits.default(), attrs)}
+    if Enum.all?(Map.keys(selected), &Map.has_key?(known, &1)) do
+      fields = Map.new(selected, fn {key, value} -> {Map.fetch!(known, key), value} end)
+      {:ok, struct(Limits.default(), fields)}
+    else
+      {:error, Error.new(:invalid_type, ["limits"])}
+    end
   end
 
   defp signing_profile(input) do
@@ -378,11 +414,15 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     range = spec["revisions"]
     default = Profile.full()
 
-    {:ok,
-     struct(Profile,
-       algorithms: Map.get(spec, "algorithms", default.algorithms),
-       revisions: if(range, do: {range["min"], range["max"]}, else: default.revisions)
-     )}
+    if Enum.all?(Map.keys(spec), &(&1 in ["algorithms", "revisions"])) do
+      {:ok,
+       struct(Profile,
+         algorithms: Map.get(spec, "algorithms", default.algorithms),
+         revisions: if(range, do: {range["min"], range["max"]}, else: default.revisions)
+       )}
+    else
+      {:error, Error.new(:invalid_type, ["profile"])}
+    end
   end
 
   defp signing_context(%{"set" => set}) do
@@ -452,7 +492,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
         &(&1["surface"] in ["party_descriptor.verify", "descriptor_chain.verify"])
       )
 
-    assert length(verify_cases) == 33
+    assert length(verify_cases) == 37
     Enum.each(verify_cases, &assert_verify_case/1)
   end
 
@@ -680,16 +720,18 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_receipt_expectations(cases) do
     receipt_cases = Enum.filter(cases, &(&1["surface"] == "receipt.verify"))
-    assert length(receipt_cases) == 20
+    assert length(receipt_cases) == 21
 
     Enum.each(receipt_cases, fn one ->
       input = one["input"]
+
+      {:ok, caller_limits} = signing_limits(input)
 
       actual =
         Receipt.verify(
           input["compact"],
           receipt_context(input),
-          Limits.default(),
+          caller_limits,
           case_profile(input)
         )
 

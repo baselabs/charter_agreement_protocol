@@ -11,8 +11,8 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 ## Bound evidence
 
 - Requirements: 68
-- Corpus cells: 93
-- Named mutations: 74
+- Corpus cells: 94
+- Named mutations: 81
 
 ## Requirements
 
@@ -27,6 +27,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Mutation: `termination-context-code-revert`
 - Mutation: `termination-lineage-code-revert`
 - Mutation: `acceptance-lineage-code-revert`
+- Mutation: `retained-revision-fields-skip`
 
 ### CAP-SIGNING-prepare-order
 
@@ -35,14 +36,16 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Mutation: `signing-limits-order-skip`
 - Mutation: `signing-profile-order-skip`
 - Mutation: `signing-context-type-skip`
+- Mutation: `runner-option-members-skip`
 
 ### CAP-SIGNING-caller-limits
 
-- Corpus: `signing.prepare:exact_bound`, `signing.prepare:maximum_plus_one`
+- Corpus: `signing.prepare:exact_bound`, `signing.prepare:maximum_plus_one`, `receipt.verify:maximum_plus_one`
 - Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
 - Mutation: `signing-build-default-limits`
 - Mutation: `signing-set-limits-skip`
 - Mutation: `signing-finish-default-limits`
+- Mutation: `receipt-caller-limits-skip`
 
 ### CAP-SIGNING-key-shape
 
@@ -73,6 +76,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
 - Mutation: `signing-set-profile-skip`
 - Mutation: `signing-set-profile-narrow`
+- Mutation: `signing-termination-profile-skip`
 
 ### CAP-SIGNING-runtime-support
 
@@ -205,6 +209,9 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Gate: `CharterAgreementProtocol.Architecture.SigningBoundaryTest`
 - Mutation: `ed25519-defeat`
 - Mutation: `ed25519-list-only-admission`
+- Mutation: `ed25519-r-check-skip`
+- Mutation: `ed25519-canonical-y-skip`
+- Mutation: `ed25519-native-power-skip`
 
 ### CAP-COMPACT-JWS-type-isolation
 

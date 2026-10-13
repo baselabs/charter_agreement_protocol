@@ -17,6 +17,7 @@ defmodule CharterAgreementProtocol.SigningPrepareCases do
 
     scoped = scope_input(ed_set)
     large_scope = scope_input(ed_set, true)
+    scoped_termination = termination_scope(scoped)
     descriptor = ed["party_descriptor"]
     acceptance = ed["acceptance"]
     receipt = ed["receipt"]
@@ -87,6 +88,40 @@ defmodule CharterAgreementProtocol.SigningPrepareCases do
           "maximum_plus_one"
         ),
         valid("signing-set-profile-scope", Map.put(scoped, "profile", narrow)),
+        valid(
+          "signing-termination-counterparty-profile",
+          Map.put(scoped_termination, "profile", narrow)
+        ),
+        invalid(
+          "signing-termination-party-profile",
+          Map.put(termination, "profile", narrow),
+          "algorithm_outside_profile",
+          "profile_algorithm_outside"
+        ),
+        invalid(
+          "signing-termination-revision-profile",
+          Map.put(scoped_termination, "profile", %{"revisions" => %{"min" => 2, "max" => 3}}),
+          "revision_outside_profile",
+          "profile_revision_outside"
+        ),
+        invalid(
+          "signing-strict-receipt-limits",
+          Map.put(receipt, "limits", %{"max_artifact_set_items" => 1}),
+          "limit_exceeded",
+          "maximum_plus_one"
+        ),
+        invalid(
+          "signing-unknown-limits-member",
+          Map.put(descriptor, "limits", %{"algorithms" => 1}),
+          "invalid_type",
+          "invalid_type"
+        ),
+        invalid(
+          "signing-unknown-profile-member",
+          Map.put(descriptor, "profile", %{"other" => true}),
+          "invalid_type",
+          "invalid_type"
+        ),
         invalid(
           "signing-party-chain-profile",
           Map.put(acceptance, "profile", narrow),
@@ -254,6 +289,29 @@ defmodule CharterAgreementProtocol.SigningPrepareCases do
 
     receipt = case_input("receipt-verify", "receipt-signed-governing-match")["compact"]
     inputs(set, receipt, "Ed25519")["acceptance"]
+  end
+
+  defp termination_scope(acceptance) do
+    set = acceptance["context"]["set"]
+    counterparty = Enum.at(set["descriptors"], 1)
+
+    counter =
+      acceptance
+      |> Map.put("algorithm", "EdDSA")
+      |> Map.put("kid", header(counterparty)["kid"])
+      |> update_in(
+        ["claims"],
+        &Map.merge(&1, %{
+          "protocol_revision" => 1,
+          "party_role" => "acceptor",
+          "party_descriptor_digest" =>
+            tagged_bytes(:party_descriptor_content, payload_bytes(counterparty))
+        })
+      )
+
+    set = %{set | "acceptances" => [sign(acceptance, 1), sign(counter, 2)]}
+    receipt = case_input("receipt-verify", "receipt-signed-governing-match")["compact"]
+    inputs(set, receipt, "Ed25519")["termination"]
   end
 
   defp inputs(set, receipt, alg) do

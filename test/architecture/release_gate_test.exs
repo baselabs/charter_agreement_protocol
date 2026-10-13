@@ -5,6 +5,13 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
   alias CharterAgreementProtocol.RequirementMap
 
   @mutation_names ~w(
+    ed25519-native-power-skip
+    runner-option-members-skip
+    receipt-caller-limits-skip
+    retained-revision-fields-skip
+    signing-termination-profile-skip
+    ed25519-r-check-skip
+    ed25519-canonical-y-skip
     termination-context-code-revert
     termination-lineage-code-revert
     acceptance-lineage-code-revert

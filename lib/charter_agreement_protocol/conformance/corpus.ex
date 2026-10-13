@@ -149,7 +149,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     },
     "receipt.verify" => %{
       required:
-        ~w(valid invalid_constraint signature_invalid unknown_member chain_fork terminated outcome_indeterminate extension_optional_roundtrip invalid_encoding extension_invalid profile_narrow_valid profile_algorithm_outside profile_revision_outside),
+        ~w(valid maximum_plus_one invalid_constraint signature_invalid unknown_member chain_fork terminated outcome_indeterminate extension_optional_roundtrip invalid_encoding extension_invalid profile_narrow_valid profile_algorithm_outside profile_revision_outside),
       n_a: "non-receipt codec and set-construction behavior is outside receipt verification"
     }
   }

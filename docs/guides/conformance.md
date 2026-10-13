@@ -18,11 +18,11 @@ is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:3ZRZ6lD8UcK9aGEzjBh_Yvlj3KI3GBRgkW8ru5IilEk` |
-| Index SHA-256 (base64url) | `RvtImy1rAVyn_rorpyorhktQWWYMUXVPO5fhzTbMSS8` |
+| Corpus digest | `sha-256:mkqzfOWULYStXLwedxL5cXiFvQMAMIYDHYjcqSJnSq0` |
+| Index SHA-256 (base64url) | `fvkjFVS797aqmxs0-2XYi9aLij6ZHxBiuQb9cQyhqS0` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:EFkDKwCAENnhJH2-Q4WpnpmBb_s5F6L3Y0fRcjzcYEo` |
-| Cases | 229, in 16 case files |
+| Specification digest | `sha-256:Zl4c98_PSyXL13F60J_Vhq_shsnQhs3tkOaYqJR3JNo` |
+| Cases | 243, in 16 case files |
 
 The pinned TypeScript 0.7.0 verifier at `47ef74f` includes `signing.prepare`
 and certifies the earlier index. Its set profile check still applies the

@@ -2448,6 +2448,27 @@ context_profile_cases =
       }
     ]
 
+review_cases = [
+  %{
+    "id" => "json-unknown-limits-member",
+    "surface" => "json.decode",
+    "class" => "invalid_type",
+    "input" => %{"text" => "null", "limits" => %{"cap_unregistered_limit" => 1}},
+    "expect" => invalid.("invalid_type")
+  },
+  %{
+    "id" => "receipt-strict-chain-limits",
+    "surface" => "receipt.verify",
+    "class" => "maximum_plus_one",
+    "input" =>
+      Enum.find(cases ++ supplemental_cases, &(&1["id"] == "receipt-signed-governing-match"))[
+        "input"
+      ]
+      |> Map.put("limits", %{"max_artifact_set_items" => 1}),
+    "expect" => invalid.("limit_exceeded")
+  }
+]
+
 cases =
   cases ++
     descriptor_cases ++
@@ -2468,6 +2489,7 @@ cases =
     displacement_cases ++
     context_profile_cases ++
     supplemental_cases ++
+    review_cases ++
     CharterAgreementProtocol.SigningPrepareCases.cases() ++
     CharterAgreementProtocol.Ed25519KeyCases.cases()
 

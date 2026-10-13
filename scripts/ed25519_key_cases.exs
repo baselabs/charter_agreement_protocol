@@ -12,7 +12,11 @@ defmodule CharterAgreementProtocol.Ed25519KeyCases do
        "0100000000000000000000000000000000000000000000000000000000000080"},
       {"order-two-negative-zero",
        "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"},
-      {"no-curve-point", "0200000000000000000000000000000000000000000000000000000000000000"}
+      {"no-curve-point", "0200000000000000000000000000000000000000000000000000000000000000"},
+      {"noncanonical-y-three",
+       "f0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f"},
+      {"noncanonical-y-sixteen-negative",
+       "fdffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}
     ]
 
     negatives =
@@ -35,8 +39,23 @@ defmodule CharterAgreementProtocol.Ed25519KeyCases do
     output = %{"descriptor_digest" => digest, "party_id" => digest, "descriptor_number" => 1}
     [protected, payload] = String.split(message(claims), ".")
 
+    identity = <<1, 0::248>>
+    {r_claims, r_challenge} = even_challenge(@mixed, identity)
+
     negatives ++
       [
+        descriptor_case(
+          "r-identity",
+          r_claims,
+          identity <> <<r_challenge::little-unsigned-size(256)>>,
+          invalid("signature_invalid")
+        ),
+        descriptor_case(
+          "r-no-curve-point",
+          claims,
+          <<2, 0::248>> <> <<1, 0::248>>,
+          invalid("signature_invalid")
+        ),
         descriptor_case("mixed-order", claims, signature, valid(output)),
         signing_case(
           "mixed-order",
@@ -51,12 +70,12 @@ defmodule CharterAgreementProtocol.Ed25519KeyCases do
       ]
   end
 
-  defp even_challenge(public) do
+  defp even_challenge(public, r \\ @base) do
     Enum.find_value(0..59, fn second ->
       claims = claims(public, second)
 
       challenge =
-        :crypto.hash(:sha512, @base <> public <> message(claims))
+        :crypto.hash(:sha512, r <> public <> message(claims))
         |> :binary.decode_unsigned(:little)
         |> rem(@order)
 

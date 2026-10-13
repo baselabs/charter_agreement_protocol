@@ -7,6 +7,59 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
 
   @mutations [
     %{
+      name: "ed25519-native-power-skip",
+      path: "lib/charter_agreement_protocol/signature.ex",
+      from:
+        "  defp power(base, exponent),\n    do: :crypto.mod_pow(base, exponent, @ed25519_field_prime) |> :binary.decode_unsigned()",
+      to:
+        "  defp power(base, exponent), do: power(base, exponent, 1)\n  defp power(_base, 0, result), do: result\n  defp power(base, exponent, result) do\n    next = if rem(exponent, 2) == 1, do: field(result * base), else: result\n    power(field(base * base), div(exponent, 2), next)\n  end",
+      command: ~w(mix test test/charter_agreement_protocol/ed25519_admission_test.exs --seed 42)
+    },
+    %{
+      name: "runner-option-members-skip",
+      path: "lib/charter_agreement_protocol/conformance/runner.ex",
+      from: ":ok <- closed_options(one[\"input\"])",
+      to: ":ok <- :ok",
+      command: ~w(mix test test/conformance/runner_report_cli_test.exs --seed 42)
+    },
+    %{
+      name: "receipt-caller-limits-skip",
+      path: "lib/charter_agreement_protocol/conformance/runner.ex",
+      from:
+        "Receipt.verify(input[\"compact\"], receipt_context(input), caller_limits, case_profile(input))",
+      to:
+        "Receipt.verify(input[\"compact\"], receipt_context(input), Limits.default(), case_profile(input))",
+      command: ~w(mix test test/conformance/runner_report_cli_test.exs --seed 42)
+    },
+    %{
+      name: "retained-revision-fields-skip",
+      path: "lib/charter_agreement_protocol/internal/retained.ex",
+      from: "Map.keys(revision) == Map.keys(struct(CharterRevision)) and",
+      to: "true and",
+      command: ~w(mix test test/charter_agreement_protocol/malformed_context_test.exs --seed 42)
+    },
+    %{
+      name: "signing-termination-profile-skip",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "TerminationNotice.prepare(compact, revision, chain, limits, profile)",
+      to: "TerminationNotice.prepare(compact, revision, chain, limits, Profile.full())",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "ed25519-r-check-skip",
+      path: "lib/charter_agreement_protocol/signature.ex",
+      from: "    strict_point?(r) and",
+      to: "    is_binary(r) and",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "ed25519-canonical-y-skip",
+      path: "lib/charter_agreement_protocol/signature.ex",
+      from: "when y < @ed25519_field_prime do",
+      to: "when is_integer(y) do",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
       name: "termination-context-code-revert",
       path: "lib/charter_agreement_protocol/termination_notice.ex",
       from: "      _failure -> invalid_type()",

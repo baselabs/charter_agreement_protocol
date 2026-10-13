@@ -19,7 +19,8 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:mutation, "signing-retained-shape-skip"},
        {:mutation, "termination-context-code-revert"},
        {:mutation, "termination-lineage-code-revert"},
-       {:mutation, "acceptance-lineage-code-revert"}
+       {:mutation, "acceptance-lineage-code-revert"},
+       {:mutation, "retained-revision-fields-skip"}
      ]},
     {"CAP-SIGNING-prepare-order",
      [
@@ -27,15 +28,22 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
        {:mutation, "signing-limits-order-skip"},
        {:mutation, "signing-profile-order-skip"},
-       {:mutation, "signing-context-type-skip"}
+       {:mutation, "signing-context-type-skip"},
+       {:mutation, "runner-option-members-skip"}
      ]},
     {"CAP-SIGNING-caller-limits",
      [
-       {:corpus, ["signing.prepare:exact_bound", "signing.prepare:maximum_plus_one"]},
+       {:corpus,
+        [
+          "signing.prepare:exact_bound",
+          "signing.prepare:maximum_plus_one",
+          "receipt.verify:maximum_plus_one"
+        ]},
        {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
        {:mutation, "signing-build-default-limits"},
        {:mutation, "signing-set-limits-skip"},
-       {:mutation, "signing-finish-default-limits"}
+       {:mutation, "signing-finish-default-limits"},
+       {:mutation, "receipt-caller-limits-skip"}
      ]},
     {"CAP-SIGNING-key-shape",
      [
@@ -70,7 +78,8 @@ defmodule CharterAgreementProtocol.RequirementMap do
         ]},
        {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
        {:mutation, "signing-set-profile-skip"},
-       {:mutation, "signing-set-profile-narrow"}
+       {:mutation, "signing-set-profile-narrow"},
+       {:mutation, "signing-termination-profile-skip"}
      ]},
     {"CAP-SIGNING-runtime-support",
      [
@@ -234,7 +243,10 @@ defmodule CharterAgreementProtocol.RequirementMap do
         ]},
        {:gate, CharterAgreementProtocol.Architecture.SigningBoundaryTest},
        {:mutation, "ed25519-defeat"},
-       {:mutation, "ed25519-list-only-admission"}
+       {:mutation, "ed25519-list-only-admission"},
+       {:mutation, "ed25519-r-check-skip"},
+       {:mutation, "ed25519-canonical-y-skip"},
+       {:mutation, "ed25519-native-power-skip"}
      ]},
     {"CAP-COMPACT-JWS-type-isolation",
      [
