@@ -265,8 +265,15 @@ wrong_signature = :crypto.sign(:eddsa, :none, input.message, [other_private, :ed
 {:error, %CharterAgreementProtocol.Error{code: :signature_invalid}} =
   CAP.verify_descriptor(wrong, nil, limits)
 
-signature = :crypto.sign(:eddsa, :none, input.message, [private_key, :ed25519])
-{:ok, descriptor} = CAP.assemble_compact(input, signature)
+{:ok, plan} = CAP.prepare_signing(
+  :party_descriptor,
+  %{"kid" => "party-key", "claims" => claims, "public_key" => public_key},
+  nil,
+  limits,
+  profile
+)
+signature = :crypto.sign(:eddsa, :none, plan.signing_input.message, [private_key, :ed25519])
+{:ok, descriptor} = CAP.finish_signing(plan, signature)
 {:ok, descriptor_facts} = CAP.verify_descriptor(descriptor, nil, limits)
 descriptor_facts.signing_key_id
 ```
@@ -280,6 +287,20 @@ key before it assembles the artifact, and runs the matching CAP verify
 function before it returns. If you call CAP's signing inputs directly, the
 verify step is yours.
 
+### Check before external signing
+
+Pass the holder's snapshot public key as raw bytes. CAP derives and keeps
+its verification context in the returned plan. Acceptance and termination
+use an `ArtifactSet`; a descriptor uses nil or predecessor facts; a receipt
+uses `ChainFacts` or a `CharterRevision`. A bare revision returns
+`key: :unnamed` because it names no descriptor key.
+
+Keep the plan as returned. `finish_signing/2` assembles under its limits
+and runs public verification with its context and profile. Limits apply
+to every byte CAP reads in the whole retained set. The full profile applies
+to the set check for producer refusals. The old signing-input functions
+and `assemble_compact/2` continue to use default limits; use this flow for
+the key check and explicit limits.
 ## What CAP leaves to your application
 
 CAP checks that artifacts are well formed, correctly signed, consistent with

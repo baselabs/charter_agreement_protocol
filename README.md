@@ -27,7 +27,7 @@ and is not proven.
 
 ```elixir
 def deps do
-  [{:charter_agreement_protocol, "~> 0.5.0"}]
+  [{:charter_agreement_protocol, "~> 0.6.0"}]
 end
 ```
 
@@ -121,7 +121,7 @@ every case in the conformance corpus that ships with this package.
 
 ## Status
 
-Version 0.5.0. Protocol revisions 1, 2 and 3 verify. See the [changelog](CHANGELOG.md)
+Version 0.6.0. Protocol revisions 1, 2 and 3 verify. See the [changelog](CHANGELOG.md)
 for what changed, and [upgrading](docs/guides/upgrading-verification-identity.md) before
 moving between versions.
 

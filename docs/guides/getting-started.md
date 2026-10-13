@@ -22,7 +22,7 @@ Add CAP to the dependencies in the project's `mix.exs`:
 ```elixir
 def deps do
   [
-    {:charter_agreement_protocol, "~> 0.5.0"}
+    {:charter_agreement_protocol, "~> 0.6.0"}
   ]
 end
 ```

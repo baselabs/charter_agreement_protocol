@@ -19,7 +19,7 @@ have not used `verify_chain/5` yet.
 ```elixir
 def deps do
   [
-    {:charter_agreement_protocol, "~> 0.5.0"},
+    {:charter_agreement_protocol, "~> 0.6.0"},
     {:charter_agreement_signer, "~> 0.5.0"}
   ]
 end
@@ -314,3 +314,30 @@ claims.
 - The signer's [documentation](https://hexdocs.pm/charter_agreement_signer)
   covers `sign_termination/4` and `sign_receipt/4`, and its recipes show HSM
   and KMS key handles.
+
+## Check before external signing
+
+Pass the holder's snapshot public key as raw bytes. CAP derives and keeps
+its verification context in the returned plan. Acceptance and termination
+use an `ArtifactSet`; a descriptor uses nil or predecessor facts; a receipt
+uses `ChainFacts` or a `CharterRevision`. A bare revision returns
+`key: :unnamed` because it names no descriptor key.
+
+```elixir
+{:ok, plan} = CharterAgreementProtocol.prepare_signing(
+  :acceptance,
+  %{"kid" => snapshot.kid, "claims" => claims, "public_key" => snapshot.public_key},
+  held_set,
+  limits,
+  profile
+)
+{:ok, signature} = sign_bytes.(plan.signing_input.message)
+{:ok, compact} = CharterAgreementProtocol.finish_signing(plan, signature)
+```
+
+Keep the plan as returned. `finish_signing/2` assembles under its limits
+and runs public verification with its context and profile. Limits apply
+to every byte CAP reads in the whole retained set. The full profile applies
+to the set check for producer refusals. The old signing-input functions
+and `assemble_compact/2` continue to use default limits; use this flow for
+the key check and explicit limits.

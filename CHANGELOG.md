@@ -4,6 +4,24 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- `prepare_signing/5`, `finish_signing/2` and `SigningPlan` check the holder's
+  descriptor key before external signing and verify the finished compact.
+- `signing_key_invalid` and `signing_key_mismatch` name snapshot failures.
+- The `signing.prepare` corpus surface pins segments, key status and errors.
+
+### Fixed
+
+- Malformed retained context lists and envelope fields return typed errors.
+- `Capability.report/0` handles raising provider calls. Declared support and
+  known-answer verification are cached once per key algorithm.
+
+### Changed
+
+- Existing verdicts and producer bytes stay unchanged. Verification
+  semantics remains 5; the 0.6.0 row has no transitions.
+
 ### Repository-side
 
 - `mix historical.check` replays the released 0.5.0 corpus (163 cases, no
