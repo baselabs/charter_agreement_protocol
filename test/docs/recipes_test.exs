@@ -383,7 +383,7 @@ defmodule CharterAgreementProtocol.Docs.RecipesTest do
 
     # The prose: a Timestamp works, another time zone and a string do not.
     {:ok, timestamp} = CharterAgreementProtocol.Timestamp.parse("2026-10-01T00:00:00Z")
-    assert b.governing_terms.(b.chain_facts, timestamp) == b.now
+    assert b.which_governs.(b.chain_facts, timestamp) == b.now
 
     paris = %DateTime{
       year: 2026,
@@ -399,8 +399,8 @@ defmodule CharterAgreementProtocol.Docs.RecipesTest do
       std_offset: 3600
     }
 
-    assert b.governing_terms.(b.chain_facts, paris) == {:rejected, :governing_invalid}
-    assert b.governing_terms.(b.chain_facts, "2026-10-01T00:00:00Z") == {:rejected, :invalid_type}
+    assert b.which_governs.(b.chain_facts, paris) == {:rejected, :governing_invalid}
+    assert b.which_governs.(b.chain_facts, "2026-10-01T00:00:00Z") == {:rejected, :invalid_type}
   end
 
   defp check_integration("Log errors safely", b, output) do

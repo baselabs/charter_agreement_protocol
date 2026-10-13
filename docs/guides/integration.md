@@ -152,7 +152,7 @@ it.
 ## Ask which revision governs, and at what time
 
 ```elixir
-governing_terms = fn facts, at ->
+which_governs = fn facts, at ->
   case CAP.governing_revision(facts, at) do
     {:ok, :contested} -> :contested
     {:ok, :none} -> :not_in_force
@@ -161,8 +161,8 @@ governing_terms = fn facts, at ->
   end
 end
 
-now = governing_terms.(chain_facts, DateTime.utc_now())
-before_start = governing_terms.(chain_facts, ~U[2026-08-01 00:00:00Z])
+now = which_governs.(chain_facts, DateTime.utc_now())
+before_start = which_governs.(chain_facts, ~U[2026-08-01 00:00:00Z])
 ```
 
 CAP reads no clock, so every governing question carries its own instant:
