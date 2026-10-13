@@ -42,7 +42,9 @@ defmodule CharterAgreementProtocol.Internal.Retained do
 
   def compatible?(supplied, verified) when is_tuple(verified) do
     is_tuple(supplied) and tuple_size(supplied) == tuple_size(verified) and
-      compatible?(Tuple.to_list(supplied), Tuple.to_list(verified))
+      Enum.all?(Enum.zip(Tuple.to_list(supplied), Tuple.to_list(verified)), fn {value, model} ->
+        compatible?(value, model)
+      end)
   end
 
   def compatible?(_supplied, _verified), do: false

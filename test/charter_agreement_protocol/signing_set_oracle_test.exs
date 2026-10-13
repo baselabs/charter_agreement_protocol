@@ -6,6 +6,8 @@ defmodule CharterAgreementProtocol.SigningSetOracleTest do
     Base64Url,
     Capability.Profile,
     Chain,
+    CharterRevision,
+    SigningFixture,
     Error,
     Limits,
     SigningInput
@@ -146,11 +148,14 @@ defmodule CharterAgreementProtocol.SigningSetOracleTest do
 
     plain =
       JSON.decode!(input["context"]["revision_text"])
-      |> put_in(["extensions", "optional", "com.example/number"], %{"value" => 1.5})
+      |> put_in(["extensions", "optional", "com.example/number"], %{
+        "value" => 1.5,
+        "enabled" => true
+      })
 
     {:ok, revision} =
       CAP.decode_charter_revision(
-        CharterAgreementProtocol.SigningFixture.canonical(plain),
+        SigningFixture.canonical(plain),
         Limits.default()
       )
 
@@ -162,6 +167,41 @@ defmodule CharterAgreementProtocol.SigningSetOracleTest do
                Limits.default(),
                Profile.full()
              )
+  end
+
+  test "tuple fields keep their types at the corresponding positions" do
+    input = case_input("signing-bare-revision-receipt")
+
+    plain =
+      JSON.decode!(input["context"]["revision_text"])
+      |> put_in(["extensions", "optional", "com.example/types"], %{"enabled" => true})
+
+    {:ok, revision} =
+      CAP.decode_charter_revision(SigningFixture.canonical(plain), Limits.default())
+
+    digest = CharterRevision.digest(revision)
+
+    value =
+      value(input)
+      |> put_in(["claims", "charter_id"], digest)
+      |> put_in(["claims", "revision_digest"], digest)
+
+    assert {:ok, _plan} =
+             CAP.prepare_signing(:receipt, value, revision, Limits.default(), Profile.full())
+
+    malformed = %{
+      revision
+      | extensions:
+          {:object,
+           [
+             {"critical", {:object, []}},
+             {"optional",
+              {:object, [{"com.example/types", {:object, [{"enabled", {:boolean, :bad}}]}}]}}
+           ]}
+    }
+
+    assert {:error, %Error{code: :receipt_invalid}} =
+             CAP.prepare_signing(:receipt, value, malformed, Limits.default(), Profile.full())
   end
 
   defp value(input),
