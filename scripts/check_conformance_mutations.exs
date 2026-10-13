@@ -1,4 +1,8 @@
+Code.require_file("seeded_mutation.exs", __DIR__)
+
 defmodule CharterAgreementProtocol.ConformanceMutationGate do
+  alias CharterAgreementProtocol.SeededMutation
+
   @root Path.expand("..", __DIR__)
 
   @mutations [
@@ -213,14 +217,14 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
 
   defp run_mutation(mutation) do
     baseline_green!(mutation.command)
-    scratch = temporary(mutation.name)
+    scratch = SeededMutation.temporary!("mutation-#{mutation.name}")
 
     try do
       Enum.each(@copy_paths, &copy_path(&1, scratch))
       File.ln_s!(Path.join(@root, "deps"), Path.join(scratch, "deps"))
       copy_build(scratch)
       scratch_green!(mutation.command, scratch)
-      mutate_once!(Path.join(scratch, mutation.path), mutation.from, mutation.to)
+      SeededMutation.apply_once!(Path.join(scratch, mutation.path), mutation.from, mutation.to)
 
       {output, status} =
         System.cmd(hd(mutation.command), tl(mutation.command),
@@ -279,26 +283,6 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       File.mkdir_p!(Path.dirname(target))
       {:ok, _copied} = File.cp_r(source, target)
     end
-  end
-
-  defp mutate_once!(path, source, replacement) do
-    bytes = File.read!(path)
-
-    if length(:binary.matches(bytes, source)) != 1,
-      do: raise("mutation anchor is not exact: #{path}")
-
-    File.write!(path, String.replace(bytes, source, replacement))
-  end
-
-  defp temporary(name) do
-    path =
-      Path.join(
-        System.tmp_dir!(),
-        "cap-mutation-#{name}-#{System.unique_integer([:positive, :monotonic])}"
-      )
-
-    File.mkdir_p!(path)
-    path
   end
 end
 

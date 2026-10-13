@@ -8,7 +8,9 @@
 #
 # Run: mix run --no-start scripts/check_differential.exs
 
-alias CharterAgreementProtocol.{Base64Url, Canonicalization, Json}
+Code.require_file("seeded_mutation.exs", __DIR__)
+
+alias CharterAgreementProtocol.{Canonicalization, Json, SeededMutation}
 
 defmodule CharterAgreementProtocol.DifferentialGate do
   @moduledoc false
@@ -17,29 +19,63 @@ defmodule CharterAgreementProtocol.DifferentialGate do
 
   def run do
     texts = Enum.map(1..@case_count, &generate_text/1)
-    input_path = Path.join(System.tmp_dir!(), "cap-differential-inputs.jsonl")
+    inputs = SeededMutation.temporary!("differential-inputs")
+    input_path = Path.join(inputs, "inputs.jsonl")
     File.write!(input_path, Enum.join(texts, "\n"))
 
-    elixir_projection =
-      texts |> Enum.map(&project/1) |> tagged() |> Canonicalization.encode() |> elem(1)
+    try do
+      elixir_projection =
+        texts |> Enum.map(&project/1) |> tagged() |> Canonicalization.encode() |> elem(1)
 
-    typescript_projection = run_typescript(Path.absname("verifier"), input_path)
+      typescript_projection = run_typescript(Path.absname("verifier"), input_path)
 
-    if elixir_projection != typescript_projection do
-      raise "differential gate: Elixir and TypeScript projections diverge"
+      if elixir_projection != typescript_projection do
+        raise "differential gate: Elixir and TypeScript projections diverge"
+      end
+
+      IO.puts("differential gate: ok cases=#{@case_count}")
+
+      seeded_red!(input_path, elixir_projection)
+      IO.puts("differential gate: seeded red fired")
+    after
+      File.rm_rf!(inputs)
     end
-
-    IO.puts("differential gate: ok cases=#{@case_count}")
-
-    seeded_red!(input_path)
-    IO.puts("differential gate: seeded red fired")
   end
 
   defp generate_text(seed) do
     :rand.seed(:exsss, seed)
-    value = generate_value(3)
-    Canonicalization.encode(value) |> elem(1)
+    3 |> generate_value() |> spell()
   end
+
+  # Writes the tagged value as JSON text. Every leaf uses its canonical
+  # spelling except integral floats, which take a fraction or exponent
+  # lexeme ("2.0", "2e0", "20E-1"): canonical text would spell 2.0 as "2",
+  # and lexeme-faithful float tagging would then go untested.
+  defp spell({:float, value}) when value == trunc(value) do
+    integer = trunc(value)
+    Enum.random(["#{integer}.0", "#{integer}e0", "#{integer * 10}E-1"])
+  end
+
+  defp spell({:array, items}), do: "[" <> Enum.map_join(items, ",", &spell/1) <> "]"
+
+  # Members go in canonical order (UTF-16 code units), as the canonical text
+  # the generator wrote before; member order is not what this gate tests.
+  defp spell({:object, members}) do
+    sorted =
+      members
+      |> Enum.uniq_by(&elem(&1, 0))
+      |> Enum.sort_by(fn {key, _value} -> :unicode.characters_to_binary(key, :utf8, :utf16) end)
+
+    "{" <>
+      Enum.map_join(sorted, ",", fn {key, value} ->
+        leaf({:string, key}) <> ":" <> spell(value)
+      end) <>
+      "}"
+  end
+
+  defp spell(value), do: leaf(value)
+
+  defp leaf(value), do: value |> Canonicalization.encode() |> elem(1)
 
   defp generate_value(depth) do
     case :rand.uniform(7) do
@@ -53,7 +89,9 @@ defmodule CharterAgreementProtocol.DifferentialGate do
         {:integer, :rand.uniform(9_007_199_254_740_991) - 1}
 
       4 ->
-        {:float, :rand.normal() * :rand.uniform(1000)}
+        if :rand.uniform(2) == 1,
+          do: {:float, :rand.normal() * :rand.uniform(1000)},
+          else: {:float, (:rand.uniform(2001) - 1001) * 1.0}
 
       5 ->
         {:string, random_string()}
@@ -120,43 +158,24 @@ defmodule CharterAgreementProtocol.DifferentialGate do
     String.trim_trailing(output)
   end
 
-  defp seeded_red!(input_path) do
-    directory = Path.join(System.tmp_dir!(), "cap-differential-red")
-    File.rm_rf!(directory)
-    File.cp_r!("verifier", directory)
+  defp seeded_red!(input_path, elixir_projection) do
+    directory = SeededMutation.temporary!("differential-red")
 
-    mutated = directory |> Path.join("core.ts") |> File.read!()
+    try do
+      File.cp_r!("verifier", directory)
 
-    mutated =
-      String.replace(
-        mutated,
-        "const boxed = /[.eE]/.test(literal)",
-        "const boxed = /never-floats/"
+      # Float-typed lexemes are never boxed, so they project as integer tags.
+      SeededMutation.apply_once!(
+        Path.join(directory, "core.ts"),
+        "const boxed: CanonicalValue = /[.eE]/.test(literal) ?",
+        "const boxed: CanonicalValue = false ?"
       )
 
-    File.write!(Path.join(directory, "core.ts"), mutated)
-
-    {output, status} =
-      System.cmd("node", ["--experimental-strip-types", "--no-warnings", "diff.mjs", input_path],
-        cd: directory,
-        stderr_to_stdout: true
-      )
-
-    if status != 0, do: raise("seeded red harness failed\n#{output}")
-
-    elixir_projection =
-      input_path
-      |> File.read!()
-      |> String.split("\n", trim: true)
-      |> Enum.map(&project/1)
-      |> tagged()
-      |> Canonicalization.encode()
-      |> elem(1)
-
-    if elixir_projection == output,
-      do: raise("differential seeded red did not fire: float-collapse undetected")
-
-    File.rm_rf!(directory)
+      if run_typescript(directory, input_path) == elixir_projection,
+        do: raise("differential seeded red did not fire: float-collapse undetected")
+    after
+      File.rm_rf!(directory)
+    end
   end
 end
 

@@ -1,4 +1,8 @@
+Code.require_file("seeded_mutation.exs", __DIR__)
+
 defmodule CharterAgreementProtocol.VerifierAgreementGate do
+  alias CharterAgreementProtocol.SeededMutation
+
   @root Path.expand("..", __DIR__)
   @corpus "priv/conformance"
   @verifier "verifier"
@@ -100,7 +104,7 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
   end
 
   defp build_archive! do
-    directory = temporary("archive")
+    directory = SeededMutation.temporary!("verifier-archive")
     unpack = Path.join(directory, "package")
 
     {output, status} =
@@ -115,14 +119,14 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
   end
 
   defp seeded_red!(seed, node, baseline) do
-    directory = temporary(seed.name)
+    directory = SeededMutation.temporary!("verifier-#{seed.name}")
 
     try do
       verifier = Path.join(directory, "verifier")
       corpus = Path.join(directory, "corpus")
       File.cp_r!(Path.join(@root, @verifier), verifier)
       File.cp_r!(Path.join(@root, @corpus), corpus)
-      mutate_once!(Path.join(verifier, seed.path), seed.from, seed.to)
+      SeededMutation.apply_once!(Path.join(verifier, seed.path), seed.from, seed.to)
 
       {output, status} =
         System.cmd(node, [Path.join(verifier, "cli.ts"), "--corpus", corpus],
@@ -135,23 +139,6 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
     after
       File.rm_rf!(directory)
     end
-  end
-
-  defp mutate_once!(path, from, to) do
-    bytes = File.read!(path)
-    if length(:binary.matches(bytes, from)) != 1, do: raise("non-unique seed anchor: #{path}")
-    File.write!(path, String.replace(bytes, from, to))
-  end
-
-  defp temporary(label) do
-    path =
-      Path.join(
-        System.tmp_dir!(),
-        "cap-verifier-#{label}-#{System.unique_integer([:positive, :monotonic])}"
-      )
-
-    File.mkdir_p!(path)
-    path
   end
 
   defp find_node! do

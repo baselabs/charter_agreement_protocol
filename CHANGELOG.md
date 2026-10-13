@@ -25,6 +25,19 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   changing any verdict, while every verdict change moves the semantics
   version.
 
+### Repository-side (not shipped)
+
+- The JSON-decoder differential gate's seeded red never fired. Its mutation
+  anchor no longer matched the TypeScript source, and it compared untrimmed
+  output, so it reported a red on an unmutated copy. Its generator also wrote
+  only canonical text, where an integral float such as 2.0 is spelled `2`, so
+  lexeme-faithful float tagging was never exercised. The generator now spells
+  integral floats with a fraction or exponent, the seed targets the real
+  boxing line, and the comparison is trimmed. One shared helper
+  (`scripts/seeded_mutation.exs`) now owns the rule for every seeded red and
+  mutation: the anchor occurs exactly once and the replacement differs from
+  it. The agreement gate and the mutation battery use it too.
+
 ## [0.4.1] — 2026-09-24
 
 Packaging-correction release; `lib/` is byte-identical to 0.4.0 and the
