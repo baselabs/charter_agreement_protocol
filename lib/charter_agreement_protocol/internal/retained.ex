@@ -33,7 +33,7 @@ defmodule CharterAgreementProtocol.Internal.Retained do
       else: {:error, Error.new(:invalid_type, ["context"])}
   end
 
-  @spec verified_context?(CharterRevision.t(), DescriptorChain.t()) :: boolean()
+  @spec verified_context?(term(), term()) :: boolean()
   def verified_context?(revision, chain), do: revision_shape?(revision) and chain_shape?(chain)
 
   defp revision_shape?(%CharterRevision{} = revision) do

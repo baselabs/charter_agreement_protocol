@@ -41,6 +41,23 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
     end
   end
 
+  test "receipt limits and profile range values return their typed errors" do
+    {:ok, corpus} = Corpus.load(shipped_files())
+    receipt = Enum.find(corpus.cases, &(&1["id"] == "receipt-signed-governing-match"))
+    chain = Enum.find(corpus.cases, &(&1["surface"] == "chain.verify_profile"))
+
+    cases = [
+      {put_in(receipt, ["input", "limits"], %{"max_bytes" => -1}), "invalid_limits"},
+      {put_in(chain, ["input", "profile"], %{"revisions" => %{"min" => "1", "max" => 3}}),
+       "invalid_type"}
+    ]
+
+    for {one, code} <- cases do
+      [result] = Runner.run(%{corpus | cases: [one]})
+      assert result.actual == %{"status" => "invalid", "error_code" => code}
+    end
+  end
+
   test "option member rejection is independent of existing atoms" do
     {:ok, corpus} = Corpus.load(shipped_files())
     original = Enum.find(corpus.cases, &(&1["id"] == "signing-ed25519-party_descriptor"))

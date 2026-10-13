@@ -171,6 +171,8 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
     end
 
     refute Retained.compatible?([%{}], [%{}])
+    refute Retained.verified_context?(nil, context.descriptors)
+    refute Retained.verified_context?(context.revision, nil)
   end
 
   test "internal verified paths reject incomplete revision structs", context do

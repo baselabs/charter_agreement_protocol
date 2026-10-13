@@ -25,10 +25,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "receipt-caller-limits-skip",
       path: "lib/charter_agreement_protocol/conformance/runner.ex",
-      from:
-        "Receipt.verify(input[\"compact\"], receipt_context(input), caller_limits, case_profile(input))",
-      to:
-        "Receipt.verify(input[\"compact\"], receipt_context(input), Limits.default(), case_profile(input))",
+      from: "          caller_limits,",
+      to: "          Limits.default(),",
       command: ~w(mix test test/conformance/runner_report_cli_test.exs --seed 42)
     },
     %{
