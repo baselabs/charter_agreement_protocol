@@ -77,7 +77,11 @@ defmodule CharterAgreementProtocol.SigningPlan do
 
   @doc false
   @spec finish(term(), term()) :: {:ok, binary()} | {:error, Error.t()}
-  def finish(%__MODULE__{signing_input: %SigningInput{} = input} = plan, signature) do
+  def finish(
+        %__MODULE__{signing_input: %SigningInput{} = input, limits: _, profile: _, verify_with: _} =
+          plan,
+        signature
+      ) do
     with :ok <- options(plan.limits, plan.profile),
          {:ok, compact} <- SigningInput.assemble_under(input, signature, plan.limits),
          {:ok, _facts} <- verify(input.kind, compact, plan.verify_with, plan.limits, plan.profile) do

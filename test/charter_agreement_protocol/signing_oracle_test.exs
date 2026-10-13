@@ -40,6 +40,28 @@ defmodule CharterAgreementProtocol.SigningOracleTest do
         input = %{"kid" => header["kid"], "claims" => claims, "algorithm" => alg}
         profile = profile(source)
 
+        source_alg = header["alg"]
+
+        if source_alg in Map.keys(Algorithm.emissions()) and source_alg == alg and
+             match?({:ok, _}, verify(kind, source["compact"], context, profile)) do
+          [protected, payload, encoded_signature] = String.split(source["compact"], ".")
+          {:ok, signature} = Base64Url.decode(encoded_signature)
+
+          for {public, algorithm, kid} <- keys,
+              algorithm == alg,
+              kid == input["kid"],
+              Signature.verify(protected <> "." <> payload, signature, public, alg) == :ok do
+            assert {:ok, _plan} =
+                     CAP.prepare_signing(
+                       kind,
+                       snapshot(input, public),
+                       context,
+                       Limits.default(),
+                       profile
+                     )
+          end
+        end
+
         case SigningInput.build(kind, input, Limits.default()) do
           {:error, %Error{code: :signing_input_invalid}} ->
             assert {:error, %Error{code: :signing_input_invalid}} =

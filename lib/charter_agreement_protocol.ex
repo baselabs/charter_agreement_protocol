@@ -656,6 +656,7 @@ defmodule CharterAgreementProtocol do
       iex> claims = %{"protocol_revision" => 1}
       iex> CharterAgreementProtocol.descriptor_signing_input(%{"kid" => "key-1", "claims" => claims})
       {:error, %CharterAgreementProtocol.Error{code: :signing_input_invalid, subject: ["signing_input"], detail: nil}}
+
   For the holder's descriptor key check before signing, use `prepare_signing/5`
   and `finish_signing/2` with explicit limits and profile.
   """
@@ -679,6 +680,7 @@ defmodule CharterAgreementProtocol do
 
       iex> CharterAgreementProtocol.receipt_signing_input(%{"kid" => "key-1", "claims" => %{}})
       {:error, %CharterAgreementProtocol.Error{code: :signing_input_invalid, subject: ["signing_input"], detail: nil}}
+
   For the holder's descriptor key check before signing, use `prepare_signing/5`
   and `finish_signing/2` with explicit limits and profile.
   """
@@ -729,6 +731,7 @@ defmodule CharterAgreementProtocol do
       iex> wrong_role = Map.put(claims, "party_role", "issuer")
       iex> CharterAgreementProtocol.acceptance_signing_input(%{"kid" => "acceptor-key", "claims" => wrong_role}, proposed)
       {:error, %CharterAgreementProtocol.Error{code: :signing_refused, subject: ["signing_input", "claims"], detail: nil}}
+
   For the holder's descriptor key check before signing, use `prepare_signing/5`
   and `finish_signing/2` with explicit limits and profile.
   """
@@ -776,6 +779,7 @@ defmodule CharterAgreementProtocol do
       iex> {:ok, proposed} = CharterAgreementProtocol.build_set(set["revisions"], [], [], set["descriptors"])
       iex> CharterAgreementProtocol.termination_signing_input(%{"kid" => "genesis-key", "claims" => claims}, proposed)
       {:error, %CharterAgreementProtocol.Error{code: :signing_refused, subject: ["signing_input", "claims"], detail: nil}}
+
   For the holder's descriptor key check before signing, use `prepare_signing/5`
   and `finish_signing/2` with explicit limits and profile.
   """
