@@ -11,7 +11,19 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   3 admitted ML-DSA-44/65/87 that is wrong. Both now name the registered
   algorithms and point to core section 4.1, and the `VerificationKey`
   moduledoc follows. Spec bytes changed, so `spec_digest` is re-recorded
-  (`sha-256:nBCka9nTDoIZF5rHIBATRvmPNy-R4T99Xq7ZI1HnFlU`); no verdict changes.
+  (`sha-256:v8L9hn9mPSIrC770EDcQwGN04wRvon1wztOVRFcNesk`); no verdict changes.
+  The specification changelog records the revision.
+
+### Changed
+
+- The consumer transition contract
+  (`docs/guides/upgrading-verification-identity.md`) no longer lists
+  `spec_digest` in the tuple consumers compare on replay. Record it, but
+  compare `verification_semantics_version`, the explicit limits,
+  `signature_registry_digest`, and each artifact's `protocol_revision` and
+  `alg`: an editorial specification correction moves `spec_digest` without
+  changing any verdict, while every verdict change moves the semantics
+  version.
 
 ## [0.4.1] — 2026-09-24
 

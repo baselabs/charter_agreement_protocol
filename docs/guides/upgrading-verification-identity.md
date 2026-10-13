@@ -28,17 +28,21 @@ From 0.4.0, persist and compare this tuple on replay:
   (the manifest publishes the default and maximum values as data),
 - `signature_registry_digest` (the signature algorithm registry's
   identity),
-- `spec_digest`, unchanged,
 - the per-artifact `protocol_revision` (now exposed on every facts record;
   the signed artifacts' records also carry the envelope `alg`), so a
   revision-2 acceptance is never conflated with a revision-3 one.
 
 CAP warrants THESE stable across an upgrade when the compatibility matrix
-says so, and never silently moves them. Release-distribution identities —
-`package_version`, `package_checksum`, `corpus_digest` — are NOT warranted
-stable-under-upgrade: the census regenerates when the certified corpus
-grows, and the package version moves by definition. Bind to them for
-supply-chain reasons; do not make them your replay identity.
+says so, and never silently moves them. Record `spec_digest` beside them,
+but do not compare it on replay: it identifies the specification text, and
+an editorial correction that changes no verdict moves it (each such
+revision is listed in `spec/changelog.md`). Any verdict change moves
+`verification_semantics_version`, so comparing the semantics version
+already covers what a `spec_digest` comparison would add. Release-distribution
+identities, `package_version`, `package_checksum` and `corpus_digest`, are
+NOT warranted stable-under-upgrade either: the census regenerates when the
+certified corpus grows, and the package version moves by definition. Bind
+to them for supply-chain reasons; do not make them your replay identity.
 
 ## 3. The retroactive mapping, today
 

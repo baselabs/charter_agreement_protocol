@@ -8,6 +8,15 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-10-13: algorithm-prose correction in the considerations
+
+- `security-considerations.md` and `privacy-considerations.md`: the
+  forged-signature and public-key passages named Ed25519 as the only
+  algorithm; they now name the registered algorithms (Ed25519, or
+  ML-DSA-44, ML-DSA-65 and ML-DSA-87 from `protocol_revision` 3) and point
+  to core section 4.1. No requirement identifier, schema byte, or verdict
+  changes; the specification digest re-records.
+
 ## 2026-09-15 — signature-prose generalization correction
 
 - `core.md`: the party-descriptor and receipt signature MUST-clauses state
