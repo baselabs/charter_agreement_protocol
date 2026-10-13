@@ -10,14 +10,15 @@ release.
 
 ## 2026-10-13: Ed25519 key admission
 
-State the Ed25519 public key decoding and small-order rejection rule in
+State one Ed25519 decoding and small-order rejection rule for both the public key
+and signature `R` in
 `core.md`. Mixed-order points remain admitted. Add descriptor and signing
 cases for negative-zero encodings, a key with no curve point and a valid
 mixed-order key, plus a source mutation that restores list-only admission.
 
 ## 2026-10-13: signing profile scope
 
-The retained set check uses `Profile.full()`. The caller profile covers
+The retained set check uses the full profile (every registered algorithm and revision). The caller profile covers
 exactly the context and artifact that public verification covers.
 
 ## 2026-10-13: pre-sign API

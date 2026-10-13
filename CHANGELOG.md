@@ -16,15 +16,14 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 - Ed25519 public keys are now fully decoded on admission, so two more small-order encodings and keys that are not curve points are rejected.
 - Malformed limits structs and improper profile algorithm lists return typed errors.
 - Malformed retained context lists and envelope fields return typed errors.
-- Set verification reuses its verified context for each acceptance and
-  termination. Retained context checks group repeated record shapes before
-  comparing them.
 - `Capability.report/0` handles raising provider calls. Declared support and
   known-answer verification are cached once per key algorithm.
 
 ### Changed
 
-- Verification semantics moves to 6. Caller-built contexts with malformed
+- Verification semantics moves to 6. Ed25519 admission now rejects the two
+  remaining small-order encodings and keys that are not curve points, using
+  the same point rule for the public key and signature `R`. Caller-built contexts with malformed
   field types now return `invalid_type` consistently. Receipt revision numbers,
   chain topology and `not_verified` entries, descriptor-chain topology and
   revision `supersedes` entries are checked. Some of these contexts returned

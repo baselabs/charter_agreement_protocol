@@ -102,7 +102,7 @@ carries the same rows in its `compatibility` member.
 | 3 | 0.3.0, 0.3.1, 0.3.2 | ML-DSA-44, ML-DSA-65 and ML-DSA-87 are accepted at revision 3; seven timestamp members must be 1 to 64 bytes, so longer spellings fail; `max_artifact_set_bytes` (64 MiB by default) bounds a chain view, so larger views fail with `:limit_exceeded`; improper lists return a typed error instead of raising |
 | 4 | 0.4.0, 0.4.1 | a Party Descriptor's `effective_from` must be 1 to 64 bytes, like the other timestamps |
 | 5 | 0.5.0 | a charter's parties must be distinct: a revision that names one descriptor for two roles fails with `:revision_invalid`, and a chain view whose revision parties resolve to one party's descriptor history, or that holds a history no revision names, fails with `:chain_invalid` |
-| 6 | 0.6.0 | malformed caller-built context field types return `invalid_type` consistently; some revision numbers, topology values and list members returned `ok` in 0.5.0, while other malformed context fields raised or returned a context-specific error |
+| 6 | 0.6.0 | Ed25519 admission rejects two more small-order encodings and keys that are not curve points, applying one point rule to the public key and signature `R`; malformed caller-built context field types return `invalid_type` consistently; some revision numbers, topology values and list members returned `ok` in 0.5.0, while other malformed context fields raised or returned a context-specific error |
 
 Releases before 0.4.0 shipped no manifest. Their rows are CAP's
 classification of those releases, published afterward; their packages are

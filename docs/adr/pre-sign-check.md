@@ -19,7 +19,9 @@ arities and bytes stable, carries caller limits through assembly, and keeps
 the context in CAP.
 
 CAP Elixir 0.6.0 adds API and corpus coverage. Its verification semantics
-moves to 6 because malformed caller-built context field types now return
-`invalid_type` consistently on existing verification surfaces. The 0.6.0
+moves to 6 because Ed25519 admission rejects two more small-order encodings
+and keys that are not curve points, and malformed caller-built context
+field types now return `invalid_type` consistently on existing verification
+surfaces. The point rule applies to both the public key and signature `R`. The 0.6.0
 compatibility row records accepted-to-error, crash-to-error and error-code
 transitions; the historical wire corpora keep their verdicts.

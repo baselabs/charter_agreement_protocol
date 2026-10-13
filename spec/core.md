@@ -113,7 +113,7 @@ under the row's key algorithm — Ed25519 [RFC8032] or pure ML-DSA
 verify under that algorithm and key MUST fail
 [CAP-SIGNATURE-ed25519-verification].
 
-An Ed25519 public key MUST be exactly 32 bytes
+An Ed25519 public key and the signature `R` MUST each be exactly 32 bytes
 [CAP-SIGNATURE-ed25519-verification]. Decode `y` as the
 little-endian integer with the top bit cleared and use that bit as the sign
 of `x`. With `p = 2^255 - 19` and `d = -121665/121666 mod p`, a verifier MUST
@@ -193,10 +193,9 @@ predecessor lineage supplied as facts is re-verified, never trusted
 [CAP-PARTY-DESCRIPTOR-predecessor-binding]. A descriptor superseded by a
 later descriptor in its history MUST be reported with its position, not
 silently accepted as current
-[CAP-PARTY-DESCRIPTOR-superseded-visible]. Before signature verification,
-non-canonical point encodings and all eight low-order torsion encodings
-are rejected for both the public key and the signature `R`; this decode
-layer rule is codec-enforced and unit-proven. An ML-DSA key or signature
+[CAP-PARTY-DESCRIPTOR-superseded-visible]. The Ed25519 point rule in section
+4 applies to both the public key and the signature `R` before signature
+verification. An ML-DSA key or signature
 whose byte length differs from its parameterization's registry row is
 rejected before cryptographic work; the exact per-name lengths are
 registry data [CAP-SIGNATURE-mldsa-lengths]. A descriptor at a
@@ -279,8 +278,8 @@ verification [CAP-SIGNING-set-context]. A descriptor absent from every held chai
 `acceptance_claims_mismatch` or `termination_claims_mismatch`
 [CAP-SIGNING-set-context].
 
-The retained set check for producer refusals MUST use `Profile.full()`,
-which admits every registered algorithm and revision
+The retained set check for producer refusals MUST use the full profile
+(every registered algorithm and revision)
 [CAP-SIGNING-set-profile]. The caller's profile
 MUST apply to the revision, signing party's descriptor history and artifact
 for acceptance and termination, the whole retained set for a receipt, and
