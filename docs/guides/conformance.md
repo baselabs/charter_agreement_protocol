@@ -18,15 +18,21 @@ is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:j-uFCsKXy48LuzTmkZWJvme-qm0pLA4aCZr-CNrxz-s` |
-| Index SHA-256 (base64url) | `K8eqhmOnptmiGtB5eiM6NOzx7NpziwMUWuohPTb_YgQ` |
+| Corpus digest | `sha-256:3ZRZ6lD8UcK9aGEzjBh_Yvlj3KI3GBRgkW8ru5IilEk` |
+| Index SHA-256 (base64url) | `RvtImy1rAVyn_rorpyorhktQWWYMUXVPO5fhzTbMSS8` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:nzYsJPSYJWKJaPhu7hd___3wet65W8WzFiVMJMVGRCo` |
-| Cases | 221, in 16 case files |
+| Specification digest | `sha-256:CGchNWMy5gaXVBaK5SPi6l5fA4RhTqqU798qERjLGKI` |
+| Cases | 229, in 16 case files |
 
 The pinned TypeScript 0.7.0 verifier at `47ef74f` includes `signing.prepare`
 and certifies the earlier index. Its set profile check still applies the
 caller profile to the whole set, so `signing-set-profile-scope` differs.
+It admits a key with no curve point, so `signing-ed25519-no-curve-point`
+also differs: it returns `matched` where this corpus expects
+`signing_key_invalid`. These are the only case differences when a scratch
+copy of the pinned source reads the current index. Both negative-zero
+encodings are rejected, and the mixed-order descriptor and signing cases
+are admitted by both implementations.
 The agreement and release checks report the retained pin's corpus mismatch.
 
 What each one tells you:
