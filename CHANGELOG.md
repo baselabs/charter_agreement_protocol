@@ -26,6 +26,10 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 - `mix historical.check` replays the released 0.5.0 corpus (163 cases, no
   listed transitions).
+- `mix verifier.source` checks the newest change of the TypeScript verifier
+  pin on the first-parent history. It used to compare only with the pin at
+  `HEAD`, so a committed backward pin passed in CI, where the working tree
+  equals `HEAD`.
 
 ## [0.5.0] — 2026-10-13
 

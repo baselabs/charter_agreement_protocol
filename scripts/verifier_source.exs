@@ -138,22 +138,66 @@ defmodule CharterAgreementProtocol.VerifierSource do
   end
 
   # The pin recorded at HEAD, when there is one, must be an ancestor of the new pin.
+  # The newest pin change must move forward: the pin being materialized must
+  # descend from the newest committed pin, and the newest committed pin from
+  # the distinct pin before it on the first-parent history. A backward pin
+  # therefore fails in its own CI run, where the working tree equals HEAD,
+  # and a later forward commit repairs it. This needs a full git clone.
   defp forward_only!(cache, commit) do
-    case System.cmd("git", ["show", "HEAD:" <> @pin_path], cd: @root, stderr_to_stdout: true) do
-      {bytes, 0} ->
-        %{"commit" => previous} = :json.decode(bytes)
+    [newest | older] = Enum.dedup([commit | committed_pins()])
 
-        if previous != commit,
-          do:
-            reachable!(
-              cache,
-              previous,
-              commit,
-              "the new pin does not descend from the pin at HEAD"
-            )
+    case older do
+      [previous | _rest] ->
+        reachable!(
+          cache,
+          previous,
+          newest,
+          "the newest pin change moves backward: #{newest} does not descend from"
+        )
 
-      _no_committed_pin ->
+      [] ->
         :ok
+    end
+  end
+
+  # Pin values along the first-parent history, newest first.
+  defp committed_pins do
+    case System.cmd("git", ["rev-parse", "--is-inside-work-tree"],
+           cd: @root,
+           stderr_to_stdout: true
+         ) do
+      {"true\n", 0} -> :ok
+      _not_a_checkout -> raise("verifier source: the pin history check needs a git checkout")
+    end
+
+    case System.cmd("git", ["rev-parse", "--is-shallow-repository"], cd: @root) do
+      {"false\n", 0} ->
+        :ok
+
+      _shallow ->
+        raise("verifier source: the pin history check needs a full clone (fetch-depth 0)")
+    end
+
+    {log, 0} =
+      System.cmd("git", ["log", "--first-parent", "--format=%H", "--", @pin_path], cd: @root)
+
+    log |> String.split() |> Enum.flat_map(&pin_at/1)
+  end
+
+  # A commit in the log either changed the pin file or deleted it.
+  defp pin_at(sha) do
+    case System.cmd("git", ["cat-file", "-e", "#{sha}:#{@pin_path}"],
+           cd: @root,
+           stderr_to_stdout: true
+         ) do
+      {_out, 0} ->
+        case System.cmd("git", ["show", "#{sha}:#{@pin_path}"], cd: @root, stderr_to_stdout: true) do
+          {bytes, 0} -> [Map.fetch!(:json.decode(bytes), "commit")]
+          {out, status} -> raise("verifier source: git show failed at #{sha} (#{status}): #{out}")
+        end
+
+      _deleted_at_sha ->
+        []
     end
   end
 

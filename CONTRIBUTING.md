@@ -112,8 +112,10 @@ repository's cross-implementation checks run against:
 - the commit is on the TypeScript repository's `main` branch as fetched from
   GitHub (a commit only in a local checkout is not enough, because CI cannot
   see it);
-- the commit descends from the pin recorded at `HEAD` (the pin only moves
-  forward);
+- the newest pin change moves forward: the pin descends from the newest
+  committed pin, and that one from the pin before it on the first-parent
+  history, so a committed backward pin fails in its own CI run and a later
+  forward commit repairs it (this needs a full clone);
 - every extracted file matches the pinned commit's tree.
 
 `mix verifier.source --cached` skips the fetch and uses the local cache. A
