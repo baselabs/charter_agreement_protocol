@@ -23,14 +23,17 @@ defmodule CharterAgreementProtocol.Internal.Retained do
   def compatible?(%{__struct__: module} = supplied, %{__struct__: module} = verified) do
     Map.keys(supplied) == Map.keys(verified) and
       Enum.all?(Map.from_struct(verified), fn {field, value} ->
-        field_shape?(field, Map.get(supplied, field), value)
+        optional_scalar?(module, field, Map.get(supplied, field)) or
+          field_shape?(field, Map.get(supplied, field), value)
       end)
   end
 
   def compatible?(supplied, verified) when is_binary(verified), do: is_binary(supplied)
   def compatible?(supplied, verified) when is_integer(verified), do: is_integer(supplied)
   def compatible?(supplied, verified) when is_float(verified), do: is_float(supplied)
-  def compatible?(supplied, verified) when is_atom(verified), do: supplied == verified
+  def compatible?(supplied, nil), do: is_nil(supplied)
+  def compatible?(supplied, verified) when is_boolean(verified), do: is_boolean(supplied)
+  def compatible?(supplied, verified) when is_atom(verified), do: is_atom(supplied)
 
   def compatible?(supplied, verified) when is_list(verified) do
     list?(supplied) and list?(verified) and
@@ -43,6 +46,17 @@ defmodule CharterAgreementProtocol.Internal.Retained do
   end
 
   def compatible?(_supplied, _verified), do: false
+
+  defp optional_scalar?(module, field, nil) when field in [:alg, :protocol_revision],
+    do:
+      module in [
+        CharterAgreementProtocol.DescriptorFacts,
+        CharterAgreementProtocol.AcceptanceFacts,
+        CharterAgreementProtocol.TerminationFacts,
+        CharterAgreementProtocol.RevisionFacts
+      ]
+
+  defp optional_scalar?(_module, _field, _value), do: false
 
   defp field_shape?(field, supplied, _verified)
        when field in [
@@ -66,8 +80,6 @@ defmodule CharterAgreementProtocol.Internal.Retained do
 
   defp field_shape?(:descriptor_position, supplied, _verified),
     do: supplied in [:head, :superseded, :contested]
-
-  defp field_shape?(field, nil, _verified) when field in [:alg, :protocol_revision], do: true
 
   defp field_shape?(field, supplied, nil)
        when field in [

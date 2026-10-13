@@ -80,6 +80,20 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
              CAP.verify_descriptor(context.set.issuer.compact, bad, Limits.default())
   end
 
+  test "valid descriptive key values are reconstructed from retained bytes", context do
+    descriptors =
+      Enum.map(context.descriptors.descriptors, fn facts ->
+        keys = Enum.map(facts.descriptor.verification_keys, &%{&1 | status: :retired})
+        %{facts | descriptor: %{facts.descriptor | verification_keys: keys}}
+      end)
+
+    supplied = %{context.descriptors | descriptors: descriptors}
+    compact = ChainFixture.acceptance(context.set.genesis, context.set.issuer, "issuer").compact
+
+    assert {:ok, _facts} =
+             CAP.verify_acceptance(compact, context.revision, supplied, Limits.default())
+  end
+
   test "every context field rejects a malformed field type", context do
     limits = Limits.default()
     profile = Profile.full()
@@ -199,7 +213,13 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
           CAP.verify_acceptance(context.set.issuer.compact, changed, changed, limits),
           CAP.verify_termination(context.set.issuer.compact, changed, changed, limits),
           CAP.verify_descriptor_chain(changed, limits),
-          CAP.verify_chain(changed, changed, changed, changed, limits)
+          CAP.verify_chain(changed, changed, changed, changed, limits),
+          CAP.verify_descriptor(context.set.issuer.compact, changed, limits, profile),
+          CAP.verify_receipt(context.receipt, changed, limits, profile),
+          CAP.verify_acceptance(context.set.issuer.compact, changed, changed, limits, profile),
+          CAP.verify_termination(context.set.issuer.compact, changed, changed, limits, profile),
+          CAP.verify_descriptor_chain(changed, limits, profile),
+          CAP.verify_chain(changed, changed, changed, changed, limits, profile)
         ]
 
         assert Enum.all?(results, &typed?/1)
