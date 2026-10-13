@@ -24,7 +24,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   }
 
   defmodule VerificationKey do
-    @moduledoc "One closed, non-authorizing Ed25519 verification-key record."
+    @moduledoc "One closed, non-authorizing verification-key record (Ed25519 or ML-DSA)."
     @enforce_keys [:key_id, :algorithm, :public_key, :status]
     defstruct @enforce_keys
 

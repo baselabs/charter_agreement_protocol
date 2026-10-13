@@ -31,9 +31,11 @@ evidence in hand.
 
 ## Signature and key threats
 
-- **Forged signatures.** Every attached artifact is Ed25519 over the
-  exact RFC 7515 signing-input bytes under a key resolved from the
-  declared descriptor history. Verification paths never skip or
+- **Forged signatures.** Every attached artifact carries a signature
+  under a registered algorithm (Ed25519, or ML-DSA-44, ML-DSA-65 or
+  ML-DSA-87 from `protocol_revision` 3; core section 4.1) over the exact
+  RFC 7515 signing-input bytes, under a key resolved from the declared
+  descriptor history. Verification paths never skip or
   short-circuit the cryptographic check, and digest comparison is
   constant-time.
 - **Key-confusion and typ confusion.** The protected header is closed to

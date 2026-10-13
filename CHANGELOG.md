@@ -2,6 +2,17 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- The security and privacy considerations said every attached artifact is
+  Ed25519 and every descriptor declares Ed25519 keys; since `protocol_revision`
+  3 admitted ML-DSA-44/65/87 that is wrong. Both now name the registered
+  algorithms and point to core section 4.1, and the `VerificationKey`
+  moduledoc follows. Spec bytes changed, so `spec_digest` is re-recorded
+  (`sha-256:nBCka9nTDoIZF5rHIBATRvmPNy-R4T99Xq7ZI1HnFlU`); no verdict changes.
+
 ## [0.4.1] — 2026-09-24
 
 Packaging-correction release; `lib/` is byte-identical to 0.4.0 and the

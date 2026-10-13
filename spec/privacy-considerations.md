@@ -9,8 +9,9 @@ processing rules implementers must respect.
 
 ## Data the protocol carries
 
-- **Public keys and key identifiers.** Party descriptors declare Ed25519
-  public keys with bounded-ASCII `kid` hints. Public keys are
+- **Public keys and key identifiers.** Party descriptors declare public
+  keys of the registered algorithms (Ed25519 or ML-DSA; core section 4.1)
+  with bounded-ASCII `kid` hints. Public keys are
   pseudonymous, not identifying by themselves, but a key reused across
   contexts becomes a correlation handle. Rotating keys per relationship
   limits linkability at the cost of history continuity — a deployment
