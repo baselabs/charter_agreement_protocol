@@ -39,7 +39,8 @@ defmodule CharterAgreementProtocol.Signature do
   @ed25519_subgroup_order 2 ** 252 + 27_742_317_777_372_353_535_851_937_790_883_648_493
 
   @ed25519_d 37_095_705_934_669_439_343_138_083_508_754_565_189_542_113_879_843_219_016_388_785_533_085_940_283_555
-  @ed25519_sqrt_minus_one 19_681_161_376_707_505_956_807_079_304_988_542_015_446_066_515_923_890_162_744_021_073_123_829_784_752
+  # A square root of -1 modulo p, equal to 2^((p - 1) / 4) mod p.
+  @ed25519_sqrt_minus_one 0x2B8324804FC1DF0B2B4D00993DFBD7A72F431806AD2FE478C4EE1B274A0EA0B0
 
   @ml_dsa_crypto %{
     "ML-DSA-44" => :mldsa44,
