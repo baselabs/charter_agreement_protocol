@@ -213,7 +213,7 @@ defmodule CharterAgreementProtocol.TerminationNoticeTest do
     for descriptors <- [[], [%{}], :not_a_list] do
       forged_chain = %{setup.chain | descriptors: descriptors}
 
-      assert {:error, %Error{code: :descriptor_chain_invalid}} =
+      assert {:error, %Error{code: :invalid_type}} =
                TerminationNotice.verify(
                  setup.notice.compact,
                  setup.revision,

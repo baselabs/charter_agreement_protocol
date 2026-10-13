@@ -18,7 +18,7 @@ defmodule CharterAgreementProtocol.Architecture.PreSignCheckTest do
     chain = File.read!("lib/charter_agreement_protocol/chain.ex")
     assert length(Regex.scan(~r/defp lookup_context\(/, chain)) == 1
     assert length(Regex.scan(~r/<-\s+lookup_context\(/, chain)) == 2
-    assert source =~ "Chain.signing_context(kind, artifact, chain)"
+    assert source =~ "Chain.signing_context(kind, artifact, chain, revision)"
   end
 
   test "key shape and cached runtime checks have one owner" do

@@ -11,6 +11,7 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
     DescriptorChain,
     DescriptorFacts,
     Error,
+    Internal.Retained,
     Limits,
     ReceiptFixture,
     TerminationNotice
@@ -134,6 +135,21 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
 
     assert {:error, %Error{code: :invalid_type}} =
              CAP.verify_descriptor(context.set.issuer.compact, predecessor, limits)
+  end
+
+  test "internal verified paths reject missing and extra chain fields", context do
+    compact = ChainFixture.acceptance(context.set.genesis, context.set.issuer, "issuer").compact
+
+    for chain <- [
+          Map.delete(context.descriptors, :fork_evidence),
+          Map.put(context.descriptors, :extra, nil)
+        ],
+        verify <- [&Acceptance.verify_verified/4, &TerminationNotice.verify_verified/4] do
+      assert {:error, %Error{code: :invalid_type}} =
+               verify.(compact, context.revision, chain, Limits.default())
+    end
+
+    refute Retained.compatible?([%{}], [%{}])
   end
 
   test "every context field rejects a malformed field type", context do

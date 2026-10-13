@@ -11,8 +11,9 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
 
   ## Verification semantics
 
-  `verification_semantics/0` identifies how verification decides: for every
-  artifact-set input, under any valid `CharterAgreementProtocol.Limits`, on
+  `verification_semantics/0` identifies verification behavior for every
+  artifact set and caller-built context, under any valid
+  `CharterAgreementProtocol.Limits`, on
   a runtime that supports every algorithm, with no profile. The value
   changes from one release to the next when any of these happen:
 
@@ -116,9 +117,15 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     %{
       package_versions: ["0.6.0"],
       verification_semantics: 6,
-      census_digest: "sha-256:2-t12PxqWcNhr1MBdhlFkwRhN5K_5pYN5m7Z-sxafmQ",
+      census_digest: "sha-256:j-uFCsKXy48LuzTmkZWJvme-qm0pLA4aCZr-CNrxz-s",
       protocol_revisions: [1, 2, 3],
       transitions: [
+        %{
+          class: :verdict_narrowing,
+          direction: :green_to_red,
+          description:
+            "Every retained and descriptive field type in caller-built revisions, descriptor facts, descriptor chains and chain facts is checked; malformed fields that 0.5.0 ignored and accepted now return invalid_type"
+        },
         %{
           class: :verdict_narrowing,
           direction: :green_to_red,
@@ -141,7 +148,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :error_code_change,
           direction: :red_to_red,
           description:
-            "Malformed caller-built context field types use invalid_type consistently where receipt_invalid or descriptor_chain_invalid previously named an unusable context"
+            "Wrong context terms and malformed caller-built context field types use invalid_type consistently where receipt_invalid or descriptor_chain_invalid previously named an unusable context"
         }
       ]
     }

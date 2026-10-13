@@ -267,7 +267,8 @@ verification [CAP-SIGNING-set-context]. A descriptor absent from every held chai
 [CAP-SIGNING-set-context].
 
 The retained set check for producer refusals MUST use `Profile.full()`,
-which admits every registered algorithm and revision. The caller's profile
+which admits every registered algorithm and revision
+[CAP-SIGNING-set-profile]. The caller's profile
 MUST apply to the revision, signing party's descriptor history and artifact
 for acceptance and termination, the whole retained set for a receipt, and
 the predecessor history and artifact for a descriptor, exactly as in public

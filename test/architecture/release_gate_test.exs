@@ -16,10 +16,12 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     signing-runtime-support-invert
     signing-refusal-skip
     signing-unheld-code-collapse
+    signing-termination-code-collapse
     signing-finish-default-limits
     signing-finish-verify-skip
     signing-finish-profile-skip
     signing-set-profile-skip
+    signing-set-profile-narrow
     signing-set-limits-skip
     signing-shared-prepare-skip
     signing-retained-envelope-guard-skip

@@ -365,9 +365,8 @@ defmodule CharterAgreementProtocol.Chain do
         ) ::
           {:ok, {CharterRevision.t(), DescriptorChain.t()}} | {:error, Error.t()}
   def signing_context(kind, artifact, facts) do
-    with {:ok, revision} <- signing_revision(kind, artifact, facts) do
-      signing_context(kind, artifact, facts, revision)
-    else
+    case signing_revision(kind, artifact, facts) do
+      {:ok, revision} -> signing_context(kind, artifact, facts, revision)
       _missing -> signing_context_error(kind)
     end
   end

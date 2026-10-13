@@ -454,7 +454,7 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
 
     assert_error_code(
       PartyDescriptor.verify(genesis.compact, :forged, Limits.default()),
-      :descriptor_chain_invalid
+      :invalid_type
     )
 
     {:ok, genesis_facts} = PartyDescriptor.verify(genesis.compact, nil, Limits.default())

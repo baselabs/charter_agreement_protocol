@@ -295,6 +295,9 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
     assert {:error, %Error{code: :termination_claims_mismatch}} =
              Chain.signing_context(:termination, artifact, %{facts | descriptor_chains: []})
+
+    assert {:error, %Error{code: :termination_claims_mismatch}} =
+             Chain.signing_context(:termination, artifact, %{facts | revision_facts: []})
   end
 
   test "malformed retained fields reject through the corpus contexts" do

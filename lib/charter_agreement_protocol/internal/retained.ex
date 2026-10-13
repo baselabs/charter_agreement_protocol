@@ -5,8 +5,8 @@ defmodule CharterAgreementProtocol.Internal.Retained do
     Base64Url,
     CharterRevision,
     CompactJws,
-    Error,
     DescriptorChain,
+    Error,
     ForkEvidence
   }
 
@@ -34,14 +34,19 @@ defmodule CharterAgreementProtocol.Internal.Retained do
   end
 
   @spec verified_context?(CharterRevision.t(), DescriptorChain.t()) :: boolean()
-  def verified_context?(revision, chain) do
+  def verified_context?(revision, chain), do: revision_shape?(revision) and chain_shape?(chain)
+
+  defp revision_shape?(revision) do
     is_binary(revision.canonical_bytes) and is_integer(revision.revision_number) and
       binaries?(revision.supersedes) and
       list?(revision.parties) and
       Enum.all?(revision.parties, &is_struct(&1, CharterRevision.Party)) and
       is_struct(revision.termination_rules, CharterRevision.TerminationRules) and
-      binaries?(revision.termination_rules.reason_codes) and
-      Map.keys(chain) == Map.keys(%DescriptorChain{topology: :linear, descriptors: []}) and
+      binaries?(revision.termination_rules.reason_codes)
+  end
+
+  defp chain_shape?(chain) do
+    Map.keys(chain) == Map.keys(%DescriptorChain{topology: :linear, descriptors: []}) and
       chain.topology in [:linear, :forked] and list?(chain.descriptors) and
       (is_nil(chain.fork_evidence) or is_struct(chain.fork_evidence, ForkEvidence))
   end

@@ -2,7 +2,15 @@ defmodule CharterAgreementProtocol.ChainCostTest do
   use ExUnit.Case, async: false
 
   alias CharterAgreementProtocol, as: CAP
-  alias CharterAgreementProtocol.{Capability, CryptoTrace, Digest, Limits, SigningFixture}
+
+  alias CharterAgreementProtocol.{
+    Capability,
+    CryptoTrace,
+    Digest,
+    Internal.Retained,
+    Limits,
+    SigningFixture
+  }
 
   test "set verification checks each descriptor signature once" do
     world = SigningFixture.world("Ed25519")
@@ -72,8 +80,8 @@ defmodule CharterAgreementProtocol.ChainCostTest do
     models = List.duplicate(hd(facts.acceptance_facts), n) ++ [hd(supplied)]
 
     {true, calls} =
-      CryptoTrace.count(CAP.Internal.Retained, :compatible?, 2, fn ->
-        CAP.Internal.Retained.compatible?(supplied, models)
+      CryptoTrace.count(Retained, :compatible?, 2, fn ->
+        Retained.compatible?(supplied, models)
       end)
 
     assert length(calls) < n * 40

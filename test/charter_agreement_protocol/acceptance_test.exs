@@ -125,7 +125,7 @@ defmodule CharterAgreementProtocol.AcceptanceTest do
     for descriptors <- [[1], :not_a_list] do
       malformed_chain = %{setup.chain | descriptors: descriptors}
 
-      assert {:error, %Error{code: :descriptor_chain_invalid}} =
+      assert {:error, %Error{code: :invalid_type}} =
                Acceptance.verify(
                  setup.acceptance.compact,
                  setup.revision,
