@@ -94,6 +94,48 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
              CAP.verify_acceptance(compact, context.revision, supplied, Limits.default())
   end
 
+  test "malformed context field types use invalid_type on every verifier", context do
+    limits = Limits.default()
+
+    acceptance =
+      ChainFixture.acceptance(context.set.genesis, context.set.issuer, "issuer").compact
+
+    for revision <- [
+          %{context.revision | revision_number: "1"},
+          %{context.revision | supersedes: [:x]}
+        ],
+        verify <- [&CAP.verify_acceptance/4, &CAP.verify_termination/4] do
+      assert {:error, %Error{code: :invalid_type}} =
+               verify.(acceptance, revision, context.descriptors, limits)
+
+      assert {:error, %Error{code: :invalid_type}} =
+               CAP.verify_receipt(context.receipt, revision, limits)
+    end
+
+    for chain <- [
+          %{context.chain | chain_topology: :other},
+          %{context.chain | not_verified: ["x"]}
+        ] do
+      assert {:error, %Error{code: :invalid_type}} =
+               CAP.verify_receipt(context.receipt, chain, limits)
+    end
+
+    for verify <- [&CAP.verify_acceptance/4, &CAP.verify_termination/4] do
+      assert {:error, %Error{code: :invalid_type}} =
+               verify.(
+                 acceptance,
+                 context.revision,
+                 %{context.descriptors | topology: nil},
+                 limits
+               )
+    end
+
+    predecessor = %{hd(context.descriptors.descriptors) | not_verified: ["x"]}
+
+    assert {:error, %Error{code: :invalid_type}} =
+             CAP.verify_descriptor(context.set.issuer.compact, predecessor, limits)
+  end
+
   test "every context field rejects a malformed field type", context do
     limits = Limits.default()
     profile = Profile.full()

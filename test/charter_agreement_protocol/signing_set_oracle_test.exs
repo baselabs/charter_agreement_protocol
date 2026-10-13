@@ -208,7 +208,7 @@ defmodule CharterAgreementProtocol.SigningSetOracleTest do
            ]}
     }
 
-    assert {:error, %Error{code: :receipt_invalid}} =
+    assert {:error, %Error{code: :invalid_type}} =
              CAP.prepare_signing(:receipt, value, malformed, Limits.default(), Profile.full())
   end
 

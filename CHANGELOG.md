@@ -19,8 +19,13 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ### Changed
 
-- Existing verdicts and producer bytes stay unchanged. Verification
-  semantics remains 5; the 0.6.0 row has no transitions.
+- Verification semantics moves to 6. Caller-built contexts with malformed
+  field types now return `invalid_type` consistently. Receipt revision numbers,
+  chain topology and `not_verified` entries, descriptor-chain topology and
+  revision `supersedes` entries are checked. Some of these contexts returned
+  `ok` in 0.5.0; others raised or returned a context-specific error.
+  The 0.6.0 compatibility row records these transitions. Producer bytes stay
+  unchanged.
 
 ### Repository-side
 

@@ -25,10 +25,17 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
                  :admission,
                  :verdict_narrowing,
                  :resource_boundary,
-                 :typed_error
+                 :typed_error,
+                 :error_code_change
                ]
 
-        assert transition.direction in [:green_to_red, :red_to_green, :crash_to_typed]
+        assert transition.direction in [
+                 :green_to_red,
+                 :red_to_green,
+                 :crash_to_typed,
+                 :red_to_red
+               ]
+
         assert is_binary(transition.description) and byte_size(transition.description) > 0
       end
     end
@@ -67,10 +74,11 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
     |> Enum.each(fn {prior, later} -> assert MapSet.subset?(prior, later) end)
   end
 
-  test "the latest corpus row keeps semantics and has no transitions" do
+  test "the latest corpus row records malformed context transitions" do
     [latest | _] = Enum.reverse(ReleaseIdentity.compatibility())
     assert latest.verification_semantics == ReleaseIdentity.verification_semantics()
     assert latest.package_versions == ["0.6.0"]
-    assert latest.transitions == []
+    assert Enum.any?(latest.transitions, &(&1.direction == :green_to_red))
+    assert Enum.any?(latest.transitions, &(&1.direction == :crash_to_typed))
   end
 end

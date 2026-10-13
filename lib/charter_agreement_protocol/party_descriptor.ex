@@ -565,7 +565,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
        when is_list(lineage) and lineage != [] do
     with {:ok, verified} <-
            reverse_lineage(lineage, limits, profile),
-         true <- Retained.compatible?(supplied, verified),
+         :ok <- Retained.check(supplied, verified),
          true <- verified.descriptor_digest == supplied.descriptor_digest do
       {:ok, verified}
     else
@@ -576,7 +576,8 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
       when code in [
              :algorithm_outside_profile,
              :revision_outside_profile,
-             :algorithm_unsupported_on_substrate
+             :algorithm_unsupported_on_substrate,
+             :invalid_type
            ] ->
         {:error, error}
 
@@ -585,12 +586,12 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     end
   end
 
-  defp verify_predecessor(_predecessor, _limits, _profile), do: chain_error()
+  defp verify_predecessor(_predecessor, _limits, _profile), do: invalid_type()
 
   defp reverse_lineage(lineage, limits, profile) do
     if Retained.binaries?(lineage),
       do: lineage |> Enum.reverse() |> verify_lineage(limits, profile),
-      else: chain_error()
+      else: invalid_type()
   end
 
   defp verify_lineage([genesis | rest], limits, profile) do
@@ -687,6 +688,8 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
   defp key_error,
     do: {:error, Error.new(:descriptor_key_invalid, ["party_descriptor", "verification_keys"])}
+
+  defp invalid_type, do: {:error, Error.new(:invalid_type, ["context"])}
 
   defp chain_error,
     do: {:error, Error.new(:descriptor_chain_invalid, ["party_descriptor", "chain"])}

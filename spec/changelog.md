@@ -18,7 +18,8 @@ exactly the context and artifact that public verification covers.
 Add the CAP-SIGNING requirements for ordered preparation, caller limits,
 key shape and membership, shared context preparation, runtime support,
 finishing and malformed retained context handling. Add `signing.prepare`
-to the certified corpus. Existing verification semantics remain 5.
+to the certified corpus. Malformed caller-built contexts use `invalid_type` consistently; verification
+semantics moves to 6 with recorded transitions.
 
 ## 2026-10-13: profile admission covers re-verified context
 

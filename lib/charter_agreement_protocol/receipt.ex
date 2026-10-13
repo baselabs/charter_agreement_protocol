@@ -374,7 +374,7 @@ defmodule CharterAgreementProtocol.Receipt do
          :ok <- CharterRevision.admit(revision, profile) do
       if Retained.compatible?(supplied, revision),
         do: {:ok, {:revision, revision}},
-        else: receipt_error()
+        else: invalid_type()
     end
   end
 
@@ -387,13 +387,13 @@ defmodule CharterAgreementProtocol.Receipt do
            Chain.verify(revisions, acceptances, descriptors, terminations, limits, profile) do
       if Retained.compatible?(facts, verified),
         do: {:ok, {:chain, verified}},
-        else: receipt_error()
+        else: invalid_type()
     else
       {:error, %Error{} = error} -> {:error, error}
     end
   end
 
-  defp reverify_context(_supplied, _limits, _profile), do: receipt_error()
+  defp reverify_context(_supplied, _limits, _profile), do: invalid_type()
 
   defp retained_revisions(%ChainFacts{revision_facts: facts}) when is_list(facts) do
     collect_retained(facts, fn
@@ -405,12 +405,12 @@ defmodule CharterAgreementProtocol.Receipt do
     end)
   end
 
-  defp retained_revisions(_facts), do: receipt_error()
+  defp retained_revisions(_facts), do: invalid_type()
 
   defp retained_acceptances(%ChainFacts{acceptance_facts: facts}) when is_list(facts),
     do: collect_retained(facts, &acceptance_compact/1)
 
-  defp retained_acceptances(_facts), do: receipt_error()
+  defp retained_acceptances(_facts), do: invalid_type()
 
   defp acceptance_compact(%AcceptanceFacts{acceptance: %{envelope: %CompactJws{} = envelope}}),
     do: Retained.compact(envelope)
@@ -421,13 +421,13 @@ defmodule CharterAgreementProtocol.Receipt do
     with true <- Retained.list?(chains),
          {:ok, groups} <- collect_retained(chains, &descriptor_compacts/1) do
       compacts = groups |> List.flatten() |> Enum.uniq()
-      if compacts != [], do: {:ok, compacts}, else: receipt_error()
+      if compacts != [], do: {:ok, compacts}, else: invalid_type()
     else
-      _failure -> receipt_error()
+      _failure -> invalid_type()
     end
   end
 
-  defp retained_descriptors(_facts), do: receipt_error()
+  defp retained_descriptors(_facts), do: invalid_type()
 
   defp descriptor_compacts(%DescriptorChain{descriptors: descriptors}) do
     with true <- Retained.list?(descriptors),
@@ -451,7 +451,7 @@ defmodule CharterAgreementProtocol.Receipt do
   defp retained_terminations(%ChainFacts{termination_facts: facts}) when is_list(facts),
     do: collect_retained(facts, &termination_compact/1)
 
-  defp retained_terminations(_facts), do: receipt_error()
+  defp retained_terminations(_facts), do: invalid_type()
 
   defp termination_compact(%TerminationFacts{termination: %{envelope: %CompactJws{} = envelope}}),
     do: Retained.compact(envelope)
@@ -459,7 +459,7 @@ defmodule CharterAgreementProtocol.Receipt do
   defp termination_compact(_facts), do: :error
 
   defp collect_retained(items, function) do
-    if Retained.list?(items), do: collect_items(items, function), else: receipt_error()
+    if Retained.list?(items), do: collect_items(items, function), else: invalid_type()
   end
 
   defp collect_items(items, function) do
@@ -471,7 +471,7 @@ defmodule CharterAgreementProtocol.Receipt do
     end)
     |> case do
       {:ok, values} -> {:ok, Enum.reverse(values)}
-      :error -> receipt_error()
+      :error -> invalid_type()
     end
   end
 

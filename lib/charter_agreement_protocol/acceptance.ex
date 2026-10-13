@@ -353,17 +353,17 @@ defmodule CharterAgreementProtocol.Acceptance do
       {:ok, chain}
     else
       {:error, %Error{} = error} -> {:error, error}
-      _failure -> chain_error()
+      _failure -> invalid_type()
     end
   end
 
-  defp reverify_chain(_supplied, _limits, _profile), do: chain_error()
+  defp reverify_chain(_supplied, _limits, _profile), do: invalid_type()
 
   defp retained_compacts(descriptors) when is_list(descriptors) do
-    if Retained.list?(descriptors), do: collect_compacts(descriptors), else: chain_error()
+    if Retained.list?(descriptors), do: collect_compacts(descriptors), else: invalid_type()
   end
 
-  defp retained_compacts(_descriptors), do: chain_error()
+  defp retained_compacts(_descriptors), do: invalid_type()
 
   defp collect_compacts(descriptors) do
     Enum.reduce_while(descriptors, {:ok, []}, fn
@@ -371,10 +371,10 @@ defmodule CharterAgreementProtocol.Acceptance do
       when is_list(lineage) and lineage != [] ->
         if Retained.binaries?(lineage),
           do: {:cont, {:ok, lineage ++ compacts}},
-          else: {:halt, chain_error()}
+          else: {:halt, invalid_type()}
 
       _facts, _acc ->
-        {:halt, chain_error()}
+        {:halt, invalid_type()}
     end)
   end
 
@@ -446,9 +446,6 @@ defmodule CharterAgreementProtocol.Acceptance do
 
   defp equivocation_error,
     do: {:error, Error.new(:acceptance_equivocation_invalid, ["acceptance", "equivocation"])}
-
-  defp chain_error,
-    do: {:error, Error.new(:descriptor_chain_invalid, ["acceptance", "descriptor_chain"])}
 
   defp invalid_limits, do: {:error, Error.new(:invalid_limits, ["limits"])}
   defp invalid_type, do: {:error, Error.new(:invalid_type, ["acceptance"])}

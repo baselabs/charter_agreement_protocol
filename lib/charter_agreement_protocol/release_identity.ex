@@ -115,20 +115,50 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     },
     %{
       package_versions: ["0.6.0"],
-      verification_semantics: 5,
+      verification_semantics: 6,
       census_digest: "sha-256:2-t12PxqWcNhr1MBdhlFkwRhN5K_5pYN5m7Z-sxafmQ",
       protocol_revisions: [1, 2, 3],
-      transitions: []
+      transitions: [
+        %{
+          class: :verdict_narrowing,
+          direction: :green_to_red,
+          description:
+            "Caller-built receipt revisions with a non-integer revision_number and chain facts with an invalid chain_topology or non-atom not_verified entries now return invalid_type instead of ok"
+        },
+        %{
+          class: :verdict_narrowing,
+          direction: :green_to_red,
+          description:
+            "Caller-built acceptance and termination descriptor chains with an invalid topology, and revisions with non-binary supersedes entries, now return invalid_type instead of ok"
+        },
+        %{
+          class: :typed_error,
+          direction: :crash_to_typed,
+          description:
+            "Malformed retained context fields, including improper lineage lists and non-binary envelope message or signature fields, return invalid_type instead of raising"
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "Malformed caller-built context field types use invalid_type consistently where receipt_invalid or descriptor_chain_invalid previously named an unusable context"
+        }
+      ]
     }
   ]
 
   @manifest_version 1
-  @verification_semantics 5
+  @verification_semantics 6
 
   @typedoc "One verdict change between releases."
   @type transition :: %{
-          required(:class) => :admission | :verdict_narrowing | :resource_boundary | :typed_error,
-          required(:direction) => :green_to_red | :red_to_green | :crash_to_typed,
+          required(:class) =>
+            :admission
+            | :verdict_narrowing
+            | :resource_boundary
+            | :typed_error
+            | :error_code_change,
+          required(:direction) => :green_to_red | :red_to_green | :crash_to_typed | :red_to_red,
           required(:description) => binary()
         }
 

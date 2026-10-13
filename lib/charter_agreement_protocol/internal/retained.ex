@@ -5,6 +5,7 @@ defmodule CharterAgreementProtocol.Internal.Retained do
     Base64Url,
     CharterRevision,
     CompactJws,
+    Error,
     DescriptorChain,
     ForkEvidence
   }
@@ -25,6 +26,13 @@ defmodule CharterAgreementProtocol.Internal.Retained do
       do: {:ok, message <> "." <> Base64Url.encode(signature)}
 
   def compact(_other), do: :error
+  @spec check(term(), term()) :: :ok | {:error, Error.t()}
+  def check(supplied, verified) do
+    if compatible?(supplied, verified),
+      do: :ok,
+      else: {:error, Error.new(:invalid_type, ["context"])}
+  end
+
   @spec verified_context?(CharterRevision.t(), DescriptorChain.t()) :: boolean()
   def verified_context?(revision, chain) do
     is_binary(revision.canonical_bytes) and is_integer(revision.revision_number) and

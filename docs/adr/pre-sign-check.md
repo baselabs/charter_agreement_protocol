@@ -19,4 +19,7 @@ arities and bytes stable, carries caller limits through assembly, and keeps
 the context in CAP.
 
 CAP Elixir 0.6.0 adds API and corpus coverage. Its verification semantics
-remains 5, with no transitions on existing surfaces.
+moves to 6 because malformed caller-built context field types now return
+`invalid_type` consistently on existing verification surfaces. The 0.6.0
+compatibility row records accepted-to-error, crash-to-error and error-code
+transitions; the historical wire corpora keep their verdicts.

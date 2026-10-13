@@ -290,7 +290,7 @@ Finishing MUST assemble the external signature and invoke the public
 artifact verifier with the CAP-derived context, plan limits and profile,
 returning the compact only on success [CAP-SIGNING-finish-verification].
 
-Malformed retained context fields MUST return typed errors in public
+Malformed retained context field types MUST return `invalid_type` in public
 verification and preparation [CAP-SIGNING-retained-input-totality]. Every field of caller-supplied chain facts,
 descriptor chains, descriptor facts and revisions MUST be handled without
 an exception [CAP-SIGNING-retained-input-totality]. Facts are reconstructed
