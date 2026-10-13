@@ -48,7 +48,7 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
       envelope = Map.put(first.acceptance.envelope, unquote(field), unquote(value))
       first = %{first | acceptance: %{first.acceptance | envelope: envelope}}
 
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :invalid_type}} =
                CAP.verify_receipt(
                  context.receipt,
                  %{context.chain | acceptance_facts: [first | rest]},
@@ -66,7 +66,7 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
 
     compact = ChainFixture.acceptance(context.set.genesis, context.set.issuer, "issuer").compact
 
-    assert {:error, %Error{}} =
+    assert {:error, %Error{code: :invalid_type}} =
              CAP.verify_acceptance(compact, context.revision, bad, Limits.default())
   end
 
@@ -77,7 +77,7 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
         descriptor_digest: "x"
       )
 
-    assert {:error, %Error{}} =
+    assert {:error, %Error{code: :invalid_type}} =
              CAP.verify_descriptor(context.set.issuer.compact, bad, Limits.default())
   end
 
@@ -152,6 +152,25 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
     refute Retained.compatible?([%{}], [%{}])
   end
 
+  test "internal verified paths reject incomplete revision structs", context do
+    compact = ChainFixture.acceptance(context.set.genesis, context.set.issuer, "issuer").compact
+
+    for revision <- [
+          %{__struct__: CharterAgreementProtocol.CharterRevision},
+          Map.delete(context.revision, :canonical_bytes),
+          %{
+            context.revision
+            | termination_rules: %{
+                __struct__: CharterAgreementProtocol.CharterRevision.TerminationRules
+              }
+          }
+        ],
+        verify <- [&Acceptance.verify_verified/4, &TerminationNotice.verify_verified/4] do
+      assert {:error, %Error{code: :invalid_type}} =
+               verify.(compact, revision, context.descriptors, Limits.default())
+    end
+  end
+
   test "every context field rejects a malformed field type", context do
     limits = Limits.default()
     profile = Profile.full()
@@ -178,25 +197,32 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
         ],
         field <- Map.keys(Map.from_struct(value)) do
       changed = Map.put(value, field, fn -> :malformed end)
-      assert {:error, %Error{}} = CAP.prepare_signing(kind, input, changed, limits, profile)
 
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :invalid_type}} =
+               CAP.prepare_signing(kind, input, changed, limits, profile)
+
+      assert {:error, %Error{code: :invalid_type}} =
                CAP.prepare_signing(kind, input, Map.delete(value, field), limits, profile)
 
       if kind == :party_descriptor,
         do:
           assert(
             match?(
-              {:error, %Error{}},
+              {:error, %Error{code: :invalid_type}},
               CAP.verify_descriptor(context.set.issuer.compact, changed, limits)
             )
           ),
         else:
-          assert(match?({:error, %Error{}}, CAP.verify_receipt(context.receipt, changed, limits)))
+          assert(
+            match?(
+              {:error, %Error{code: :invalid_type}},
+              CAP.verify_receipt(context.receipt, changed, limits)
+            )
+          )
     end
 
     for field <- Map.keys(Map.from_struct(context.revision)) do
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :invalid_type}} =
                CAP.verify_acceptance(
                  compact,
                  Map.delete(context.revision, field),
@@ -204,7 +230,7 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
                  limits
                )
 
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :invalid_type}} =
                CAP.verify_termination(
                  compact,
                  Map.delete(context.revision, field),
@@ -215,12 +241,14 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
 
     [chain | rest] = context.chain.descriptor_chains
     malformed = %{context.chain | descriptor_chains: [%{chain | descriptors: [nil]} | rest]}
-    assert {:error, %Error{}} = CAP.verify_receipt(context.receipt, malformed, limits)
+
+    assert {:error, %Error{code: :invalid_type}} =
+             CAP.verify_receipt(context.receipt, malformed, limits)
 
     for field <- Map.keys(Map.from_struct(context.descriptors)) do
       changed = Map.put(context.descriptors, field, fn -> :malformed end)
 
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :invalid_type}} =
                CAP.verify_acceptance(
                  compact,
                  context.revision,
@@ -228,7 +256,7 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
                  limits
                )
 
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :invalid_type}} =
                CAP.verify_termination(
                  compact,
                  context.revision,
@@ -236,16 +264,16 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
                  limits
                )
 
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :invalid_type}} =
                CAP.verify_acceptance(compact, context.revision, changed, limits)
 
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :invalid_type}} =
                CAP.verify_termination(compact, context.revision, changed, limits)
 
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :invalid_type}} =
                Acceptance.verify_verified(compact, context.revision, changed, limits)
 
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :invalid_type}} =
                TerminationNotice.verify_verified(compact, context.revision, changed, limits)
     end
   end
@@ -368,7 +396,7 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
 
       for descriptors <- [improper, prefix ++ [bad]],
           verify <- [&CAP.verify_acceptance/4, &CAP.verify_termination/4] do
-        assert {:error, %Error{}} =
+        assert {:error, %Error{code: :invalid_type}} =
                  verify.(
                    compact,
                    context.revision,
@@ -384,10 +412,10 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
 
       malformed = %{first | lineage: lineage}
 
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :invalid_type}} =
                CAP.verify_descriptor(context.set.issuer.compact, malformed, Limits.default())
 
-      assert {:error, %Error{}} =
+      assert {:error, %Error{code: :invalid_type}} =
                CAP.verify_acceptance(
                  compact,
                  context.revision,

@@ -7,6 +7,29 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
 
   @mutations [
     %{
+      name: "termination-context-code-revert",
+      path: "lib/charter_agreement_protocol/termination_notice.ex",
+      from: "      _failure -> invalid_type()",
+      to: "      _failure -> {:error, Error.new(:descriptor_chain_invalid, [\"termination\"])}",
+      command: ~w(mix test test/charter_agreement_protocol/malformed_context_test.exs --seed 42)
+    },
+    %{
+      name: "termination-lineage-code-revert",
+      path: "lib/charter_agreement_protocol/termination_notice.ex",
+      from: "          else: {:halt, invalid_type()}",
+      to:
+        "          else: {:halt, {:error, Error.new(:descriptor_chain_invalid, [\"termination\"])}}",
+      command: ~w(mix test test/charter_agreement_protocol/malformed_context_test.exs --seed 42)
+    },
+    %{
+      name: "acceptance-lineage-code-revert",
+      path: "lib/charter_agreement_protocol/acceptance.ex",
+      from: "          else: {:halt, invalid_type()}",
+      to:
+        "          else: {:halt, {:error, Error.new(:descriptor_chain_invalid, [\"acceptance\"])}}",
+      command: ~w(mix test test/charter_agreement_protocol/malformed_context_test.exs --seed 42)
+    },
+    %{
       name: "provider-runtime-query-rescue-skip",
       path: "lib/charter_agreement_protocol/capability.ex",
       from:

@@ -36,20 +36,27 @@ defmodule CharterAgreementProtocol.Internal.Retained do
   @spec verified_context?(CharterRevision.t(), DescriptorChain.t()) :: boolean()
   def verified_context?(revision, chain), do: revision_shape?(revision) and chain_shape?(chain)
 
-  defp revision_shape?(revision) do
-    is_binary(revision.canonical_bytes) and is_integer(revision.revision_number) and
+  defp revision_shape?(%CharterRevision{} = revision) do
+    Map.keys(revision) == Map.keys(struct(CharterRevision)) and
+      is_binary(revision.canonical_bytes) and is_integer(revision.revision_number) and
       binaries?(revision.supersedes) and
       list?(revision.parties) and
       Enum.all?(revision.parties, &is_struct(&1, CharterRevision.Party)) and
-      is_struct(revision.termination_rules, CharterRevision.TerminationRules) and
-      binaries?(revision.termination_rules.reason_codes)
+      rules_shape?(revision.termination_rules)
   end
 
-  defp chain_shape?(chain) do
+  defp revision_shape?(_other), do: false
+
+  defp rules_shape?(%CharterRevision.TerminationRules{reason_codes: codes}), do: binaries?(codes)
+  defp rules_shape?(_other), do: false
+
+  defp chain_shape?(%DescriptorChain{} = chain) do
     Map.keys(chain) == Map.keys(%DescriptorChain{topology: :linear, descriptors: []}) and
       chain.topology in [:linear, :forked] and list?(chain.descriptors) and
       (is_nil(chain.fork_evidence) or is_struct(chain.fork_evidence, ForkEvidence))
   end
+
+  defp chain_shape?(_other), do: false
 
   @spec compatible?(term(), term()) :: boolean()
   def compatible?(%{__struct__: module} = supplied, %{__struct__: module} = verified) do

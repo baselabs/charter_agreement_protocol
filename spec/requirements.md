@@ -12,7 +12,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 - Requirements: 68
 - Corpus cells: 93
-- Named mutations: 68
+- Named mutations: 74
 
 ## Requirements
 
@@ -24,6 +24,9 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Mutation: `signing-retained-list-guard-skip`
 - Mutation: `signing-retained-lineage-guard-skip`
 - Mutation: `signing-retained-shape-skip`
+- Mutation: `termination-context-code-revert`
+- Mutation: `termination-lineage-code-revert`
+- Mutation: `acceptance-lineage-code-revert`
 
 ### CAP-SIGNING-prepare-order
 
@@ -77,6 +80,9 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
 - Mutation: `signing-runtime-support-invert`
 - Mutation: `signing-runtime-cache-skip`
+- Mutation: `provider-runtime-query-rescue-skip`
+- Mutation: `provider-known-answer-rescue-skip`
+- Mutation: `provider-library-query-rescue-skip`
 
 ### CAP-SIGNING-shared-preparation
 

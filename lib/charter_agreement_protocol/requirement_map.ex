@@ -16,7 +16,10 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:mutation, "signing-retained-envelope-guard-skip"},
        {:mutation, "signing-retained-list-guard-skip"},
        {:mutation, "signing-retained-lineage-guard-skip"},
-       {:mutation, "signing-retained-shape-skip"}
+       {:mutation, "signing-retained-shape-skip"},
+       {:mutation, "termination-context-code-revert"},
+       {:mutation, "termination-lineage-code-revert"},
+       {:mutation, "acceptance-lineage-code-revert"}
      ]},
     {"CAP-SIGNING-prepare-order",
      [
