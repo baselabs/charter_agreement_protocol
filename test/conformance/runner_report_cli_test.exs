@@ -11,8 +11,8 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
 
     assert report.agreement
     assert report.exit_status == 0
-    assert report.total == 229
-    assert report.agreed == 229
+    assert report.total == 243
+    assert report.agreed == 243
     assert report.disagreed == 0
 
     assert {:ok, bytes} = Report.to_bytes(corpus, results)
@@ -33,6 +33,22 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
       one = %{original | "input" => Map.merge(original["input"], changes)}
       [result] = Runner.run(%{corpus | cases: [one]})
       assert result.actual == %{"status" => "invalid", "error_code" => code}
+    end
+  end
+
+  test "option member rejection is independent of existing atoms" do
+    {:ok, corpus} = Corpus.load(shipped_files())
+    original = Enum.find(corpus.cases, &(&1["id"] == "signing-ed25519-party_descriptor"))
+
+    for {kind, members} <- [
+          {"limits", %{"algorithms" => 1}},
+          {"limits", %{"cap_unregistered_limit" => 1}},
+          {"profile", %{"other" => true}},
+          {"profile", %{"revisions" => %{"min" => 1, "max" => 3, "other" => 1}}}
+        ] do
+      one = put_in(original, ["input", kind], members)
+      [result] = Runner.run(%{corpus | cases: [one]})
+      assert result.actual == %{"status" => "invalid", "error_code" => "invalid_type"}
     end
   end
 

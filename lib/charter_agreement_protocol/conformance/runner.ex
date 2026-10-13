@@ -49,11 +49,22 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     "corpus_index" => :corpus_index
   }
 
+  @option_members %{
+    "limits" => Map.new(Limits.fields(), &{Atom.to_string(&1), &1}),
+    "profile" => %{"algorithms" => :algorithms, "revisions" => :revisions},
+    "revisions" => %{"min" => :min, "max" => :max}
+  }
+
   @doc "Execute every loaded case in corpus order."
   @spec run(Corpus.t()) :: [result()]
   def run(%Corpus{cases: cases}) do
     Enum.map(cases, fn one ->
-      actual = execute(one)
+      actual =
+        with :ok <- closed_options(one["input"]) do
+          execute(one)
+        else
+          {:error, %Error{code: code}} -> invalid(code)
+        end
 
       %{
         id: one["id"],
@@ -251,22 +262,24 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   end
 
   defp execute(%{"surface" => "receipt.verify", "input" => input}) do
-    input
-    |> case_profile()
-    |> then(&Receipt.verify(input["compact"], receipt_context(input), Limits.default(), &1))
-    |> project_ok(fn facts ->
-      %{
-        "receipt_digest" => facts.receipt_digest,
-        "revision_number" => facts.revision_number,
-        "revision_digest" => facts.revision_digest,
-        "decision" => Atom.to_string(facts.decision),
-        "outcome" => Atom.to_string(facts.outcome),
-        "chain_conflict" => Atom.to_string(facts.chain_conflict),
-        "governing_match" => Atom.to_string(facts.governing_match),
-        "deployment_digest_matched" => facts.deployment_digest_matched,
-        "optional_extensions_retained" => facts.optional_extensions_retained
-      }
-    end)
+    with {:ok, caller_limits} <- limits(input) do
+      Receipt.verify(input["compact"], receipt_context(input), caller_limits, case_profile(input))
+      |> project_ok(fn facts ->
+        %{
+          "receipt_digest" => facts.receipt_digest,
+          "revision_number" => facts.revision_number,
+          "revision_digest" => facts.revision_digest,
+          "decision" => Atom.to_string(facts.decision),
+          "outcome" => Atom.to_string(facts.outcome),
+          "chain_conflict" => Atom.to_string(facts.chain_conflict),
+          "governing_match" => Atom.to_string(facts.governing_match),
+          "deployment_digest_matched" => facts.deployment_digest_matched,
+          "optional_extensions_retained" => facts.optional_extensions_retained
+        }
+      end)
+    else
+      {:error, %Error{code: code}} -> invalid(code)
+    end
   end
 
   defp execute(%{"surface" => "signing.prepare", "input" => input}) do
@@ -303,12 +316,32 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   defp valid(output), do: %{"status" => "valid", "output" => output}
   defp invalid(code), do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
 
-  defp limits(%{"limits" => selected}) do
-    options = Enum.map(selected, fn {name, value} -> {String.to_existing_atom(name), value} end)
-    Limits.new(options)
+  defp mapped_options(selected, kind) when is_map(selected) do
+    members = Map.fetch!(@option_members, kind)
+
+    Enum.reduce_while(selected, {:ok, %{}}, fn {name, value}, {:ok, mapped} ->
+      case Map.fetch(members, name) do
+        {:ok, field} -> {:cont, {:ok, Map.put(mapped, field, value)}}
+        :error -> {:halt, {:error, Error.new(:invalid_type, [kind])}}
+      end
+    end)
   end
 
-  defp limits(_input), do: {:ok, Limits.default()}
+  defp mapped_options(_selected, kind), do: {:error, Error.new(:invalid_type, [kind])}
+
+  defp closed_options(input) do
+    with {:ok, _limits} <- mapped_options(Map.get(input, "limits", %{}), "limits"),
+         {:ok, profile} <- mapped_options(Map.get(input, "profile", %{}), "profile"),
+         {:ok, _range} <- mapped_options(Map.get(profile, :revisions, %{}), "revisions") do
+      :ok
+    end
+  end
+
+  defp limits(input) do
+    with {:ok, selected} <- mapped_options(Map.get(input, "limits", %{}), "limits") do
+      Limits.new(Map.to_list(selected))
+    end
+  end
 
   defp json_input(%{"text" => text}), do: text
 
@@ -388,9 +421,9 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   # A receipt case names its context as either a `chain` view or the bare
   # `revision_text` of a revision-only context.
   defp signing_limits(input) do
-    selected = input["limits"] || %{}
-    fields = Map.new(selected, fn {name, value} -> {String.to_existing_atom(name), value} end)
-    {:ok, struct(Limits.default(), fields)}
+    with {:ok, fields} <- mapped_options(Map.get(input, "limits", %{}), "limits") do
+      {:ok, struct(Limits.default(), fields)}
+    end
   end
 
   defp signing_profile(input) do
