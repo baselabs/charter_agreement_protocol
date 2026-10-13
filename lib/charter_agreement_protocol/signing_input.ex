@@ -20,6 +20,9 @@ defmodule CharterAgreementProtocol.SigningInput do
   signer from signing something wrong in the set it holds. They cannot stop
   a signer who means to cheat, or prove the set is complete.
 
+  Use `CharterAgreementProtocol.prepare_signing/5` for the holder's
+  descriptor key check and explicit limits before external signing.
+
   Most callers use the functions in `CharterAgreementProtocol`, which
   delegate here. The `charter_agreement_signer` package wraps the whole flow.
 
@@ -83,11 +86,9 @@ defmodule CharterAgreementProtocol.SigningInput do
   """
   @spec acceptance(term(), ArtifactSet.t()) :: {:ok, t()} | {:error, Error.t()}
   def acceptance(input, %ArtifactSet{} = set) do
-    with {:ok, signing_input, acceptance} <- build(:acceptance, input),
+    with {:ok, signing_input, acceptance} <- build(:acceptance, input, Limits.default()),
          {:ok, chain} <- verify_set(set),
-         {:ok, revision} <- acceptance_revision(acceptance, chain),
-         :ok <- no_equivocation(acceptance, chain),
-         :ok <- current_head_in_ancestry(revision, chain) do
+         {:ok, _revision} <- refusal_check(:acceptance, acceptance, chain) do
       {:ok, signing_input}
     end
   end
@@ -100,10 +101,9 @@ defmodule CharterAgreementProtocol.SigningInput do
   """
   @spec termination(term(), ArtifactSet.t()) :: {:ok, t()} | {:error, Error.t()}
   def termination(input, %ArtifactSet{} = set) do
-    with {:ok, signing_input, termination} <- build(:termination, input),
+    with {:ok, signing_input, termination} <- build(:termination, input, Limits.default()),
          {:ok, chain} <- verify_set(set),
-         {:ok, revision} <- termination_revision(termination, chain),
-         :ok <- governing_at_effective_time(termination, revision, chain) do
+         {:ok, _revision} <- refusal_check(:termination, termination, chain) do
       {:ok, signing_input}
     end
   end
@@ -117,13 +117,17 @@ defmodule CharterAgreementProtocol.SigningInput do
   `"ML-DSA-65"`. See `CharterAgreementProtocol.assemble_compact/2`.
   """
   @spec assemble(term(), term()) :: {:ok, binary()} | {:error, Error.t()}
-  def assemble(%__MODULE__{} = input, signature) when is_binary(signature) do
+  def assemble(input, signature), do: assemble_under(input, signature, Limits.default())
+
+  @doc false
+  @spec assemble_under(term(), term(), Limits.t()) :: {:ok, binary()} | {:error, Error.t()}
+  def assemble_under(%__MODULE__{} = input, signature, limits) when is_binary(signature) do
     with %{signature_bytes: length} <- Algorithm.row_for(input.alg),
          :ok <- exact_signature_length(signature, length),
-         compact <- input.message <> "." <> Base64Url.encode(signature),
          true <- valid_fields?(input),
-         {:ok, _artifact} <- decode_kind(input.kind, compact, Limits.default()),
-         true <- byte_size(compact) <= Limits.default().max_bytes do
+         compact <- input.message <> "." <> Base64Url.encode(signature),
+         {:ok, _artifact} <- decode_kind(input.kind, compact, limits),
+         true <- byte_size(compact) <= limits.max_bytes do
       {:ok, compact}
     else
       :signature_length -> signature_invalid()
@@ -131,28 +135,28 @@ defmodule CharterAgreementProtocol.SigningInput do
     end
   end
 
-  def assemble(_input, _signature), do: invalid()
+  def assemble_under(_input, _signature, _limits), do: invalid()
 
   defp exact_signature_length(signature, length) do
     if byte_size(signature) == length, do: :ok, else: :signature_length
   end
 
   defp build_only(kind, input) do
-    case build(kind, input) do
+    case build(kind, input, Limits.default()) do
       {:ok, signing_input, _artifact} -> {:ok, signing_input}
       {:error, %Error{} = error} -> {:error, error}
     end
   end
 
-  defp build(kind, %{"claims" => claims, "kid" => kid} = input)
-       when map_size(input) == 2 and is_map(claims) and is_binary(kid) do
-    build(kind, Map.put(input, "algorithm", Algorithm.default_emission_name()))
+  @doc false
+  @spec build(kind(), term(), Limits.t()) :: {:ok, t(), struct()} | {:error, Error.t()}
+  def build(kind, %{"claims" => claims, "kid" => kid} = input, limits)
+      when map_size(input) == 2 and is_map(claims) and is_binary(kid) do
+    build(kind, Map.put(input, "algorithm", Algorithm.default_emission_name()), limits)
   end
 
-  defp build(kind, %{"claims" => claims, "kid" => kid, "algorithm" => alg} = input)
-       when map_size(input) == 3 and is_map(claims) and is_binary(kid) and is_binary(alg) do
-    limits = Limits.default()
-
+  def build(kind, %{"claims" => claims, "kid" => kid, "algorithm" => alg} = input, limits)
+      when map_size(input) == 3 and is_map(claims) and is_binary(kid) and is_binary(alg) do
     with {:ok, revision} <- emission_revision(alg),
          {:ok, claims_value} <- Canonicalization.from_plain(claims),
          true <- claims_revision(claims_value, revision),
@@ -174,7 +178,7 @@ defmodule CharterAgreementProtocol.SigningInput do
     end
   end
 
-  defp build(_kind, _input), do: invalid()
+  def build(_kind, _input, _limits), do: invalid()
 
   # The closed mint set: each emission alg names mints at exactly its emission
   # revision, and the claims must already carry that revision — the
@@ -249,6 +253,26 @@ defmodule CharterAgreementProtocol.SigningInput do
       set.terminations,
       Limits.default()
     )
+  end
+
+  @doc false
+  @spec refusal_check(
+          :acceptance | :termination,
+          struct(),
+          CharterAgreementProtocol.ChainFacts.t()
+        ) ::
+          {:ok, CharterRevision.t()} | {:error, Error.t()}
+  def refusal_check(:acceptance, acceptance, chain) do
+    with {:ok, revision} <- acceptance_revision(acceptance, chain),
+         :ok <- no_equivocation(acceptance, chain),
+         :ok <- current_head_in_ancestry(revision, chain),
+         do: {:ok, revision}
+  end
+
+  def refusal_check(:termination, termination, chain) do
+    with {:ok, revision} <- termination_revision(termination, chain),
+         :ok <- governing_at_effective_time(termination, revision, chain),
+         do: {:ok, revision}
   end
 
   defp acceptance_revision(acceptance, chain) do

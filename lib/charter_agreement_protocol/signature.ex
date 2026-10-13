@@ -81,12 +81,29 @@ defmodule CharterAgreementProtocol.Signature do
 
   def verify(_message, _signature, _public_key, _alg), do: invalid()
 
+  @doc false
+  @spec valid_key?(term(), term()) :: boolean()
+  def valid_key?(public_key, alg) when is_binary(public_key) do
+    case Algorithm.row_for(alg) do
+      %{public_key_bytes: length, key_algorithm: "Ed25519"} ->
+        byte_size(public_key) == length and strict_point?(public_key)
+
+      %{public_key_bytes: length} ->
+        byte_size(public_key) == length
+
+      _other ->
+        false
+    end
+  end
+
+  def valid_key?(_public_key, _alg), do: false
+
   defp verify_ed25519(message, signature, public_key, %{
          signature_bytes: signature_bytes,
-         public_key_bytes: public_key_bytes
+         key_algorithm: key_algorithm
        }) do
     if is_binary(signature) and byte_size(signature) == signature_bytes and
-         is_binary(public_key) and byte_size(public_key) == public_key_bytes and
+         valid_key?(public_key, key_algorithm) and
          strict_ed25519_inputs?(signature, public_key) do
       substrate_outcome("Ed25519", Capability.declared?("Ed25519"), fn ->
         :crypto.verify(:eddsa, :none, message, signature, [public_key, :ed25519])
@@ -132,9 +149,9 @@ defmodule CharterAgreementProtocol.Signature do
 
   defp strict_ed25519_inputs?(
          <<r::binary-size(32), s::binary-size(32)>>,
-         public_key
+         _public_key
        ) do
-    strict_point?(public_key) and strict_point?(r) and
+    strict_point?(r) and
       :binary.decode_unsigned(s, :little) < @ed25519_subgroup_order
   end
 

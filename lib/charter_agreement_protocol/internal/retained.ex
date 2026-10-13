@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.Internal.Retained do
-  @moduledoc false
+  @moduledoc "Retained byte extraction for re-verification. CAP never authorizes."
 
   alias CharterAgreementProtocol.{Base64Url, CompactJws}
 

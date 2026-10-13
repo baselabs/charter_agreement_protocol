@@ -25,6 +25,7 @@ defmodule CharterAgreementProtocol.Acceptance do
     Digest,
     Error,
     Facts,
+    Internal.Retained,
     Limits,
     PartyDescriptor,
     Schema,
@@ -230,44 +231,50 @@ defmodule CharterAgreementProtocol.Acceptance do
     do: :acceptance_content |> Digest.hash(bytes) |> Digest.to_tagged()
 
   defp do_verify(compact, supplied_revision, supplied_chain, limits, profile) do
-    with {:ok, revision} <- reverify_revision(supplied_revision, limits, profile),
-         {:ok, chain} <- reverify_chain(supplied_chain, limits, profile),
-         {:ok, acceptance} <- decode(compact, limits),
-         :ok <- claims_match(acceptance, revision),
-         {:ok, descriptor} <- pinned_descriptor(acceptance, revision, chain),
-         :ok <- CompactJws.admit(acceptance.envelope, profile),
-         {:ok, key} <- active_key(descriptor, acceptance.envelope.kid),
-         :ok <-
-           CompactJws.verify_signature(
-             acceptance.envelope,
-             key.public_key,
-             key.algorithm,
-             profile
-           ) do
-      {:ok, facts(acceptance, descriptor)}
+    with {:ok, prepared} <- prepare(compact, supplied_revision, supplied_chain, limits, profile) do
+      verify_prepared(prepared, profile)
     end
   end
 
-  # Chain.verify supplies the revision and descriptor chain it verified itself
-  # from the same retained bytes in the same call; re-decoding and re-verifying
-  # them per acceptance is pure redundancy (O(A×D) crypto on untrusted views).
-  # The public verify/4 keeps full re-verification for caller-supplied context.
+  @doc false
+  @spec prepare(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t(), Profile.t()) ::
+          {:ok, map()} | {:error, Error.t()}
+  def prepare(compact, supplied_revision, supplied_chain, limits, profile) do
+    with {:ok, revision} <- reverify_revision(supplied_revision, limits, profile),
+         {:ok, chain} <- reverify_chain(supplied_chain, limits, profile),
+         {:ok, prepared} <- prepare_verified(compact, revision, chain, limits, profile) do
+      {:ok, Map.put(prepared, :verify_with, {revision, chain})}
+    end
+  end
+
   defp do_verify_verified(compact, revision, chain, limits, profile) do
+    with {:ok, prepared} <- prepare_verified(compact, revision, chain, limits, profile) do
+      verify_prepared(prepared, profile)
+    end
+  end
+
+  defp prepare_verified(compact, revision, chain, limits, profile) do
     with {:ok, acceptance} <- decode(compact, limits),
          :ok <- claims_match(acceptance, revision),
          {:ok, descriptor} <- pinned_descriptor(acceptance, revision, chain),
-         :ok <- CompactJws.admit(acceptance.envelope, profile),
-         {:ok, key} <- active_key(descriptor, acceptance.envelope.kid),
-         :ok <-
-           CompactJws.verify_signature(
-             acceptance.envelope,
-             key.public_key,
-             key.algorithm,
-             profile
-           ) do
-      {:ok, facts(acceptance, descriptor)}
+         :ok <- CompactJws.admit(acceptance.envelope, profile) do
+      {:ok,
+       %{
+         artifact: acceptance,
+         descriptor: descriptor,
+         keys: active_keys(descriptor, acceptance.envelope.kid)
+       }}
     end
   end
+
+  defp verify_prepared(%{artifact: artifact, descriptor: descriptor, keys: [key]}, profile) do
+    with :ok <-
+           CompactJws.verify_signature(artifact.envelope, key.public_key, key.algorithm, profile) do
+      {:ok, facts(artifact, descriptor)}
+    end
+  end
+
+  defp verify_prepared(%{keys: []}, _profile), do: acceptance_error()
 
   defp decode(compact, limits) do
     with {:ok, envelope} <- CompactJws.parse(compact, "cap+acceptance", limits),
@@ -346,23 +353,23 @@ defmodule CharterAgreementProtocol.Acceptance do
   end
 
   defp retained_compacts(descriptors) when is_list(descriptors) do
-    if CharterAgreementProtocol.Internal.Retained.list?(descriptors) do
-      Enum.reduce_while(descriptors, {:ok, []}, fn
-        %DescriptorFacts{lineage: lineage}, {:ok, compacts}
-        when is_list(lineage) and lineage != [] ->
-          if CharterAgreementProtocol.Internal.Retained.binaries?(lineage),
-            do: {:cont, {:ok, lineage ++ compacts}},
-            else: {:halt, chain_error()}
-
-        _facts, _acc ->
-          {:halt, chain_error()}
-      end)
-    else
-      chain_error()
-    end
+    if Retained.list?(descriptors), do: collect_compacts(descriptors), else: chain_error()
   end
 
   defp retained_compacts(_descriptors), do: chain_error()
+
+  defp collect_compacts(descriptors) do
+    Enum.reduce_while(descriptors, {:ok, []}, fn
+      %DescriptorFacts{lineage: lineage}, {:ok, compacts}
+      when is_list(lineage) and lineage != [] ->
+        if Retained.binaries?(lineage),
+          do: {:cont, {:ok, lineage ++ compacts}},
+          else: {:halt, chain_error()}
+
+      _facts, _acc ->
+        {:halt, chain_error()}
+    end)
+  end
 
   defp claims_match(acceptance, revision) do
     revision_digest = CharterRevision.digest(revision)
@@ -393,11 +400,8 @@ defmodule CharterAgreementProtocol.Acceptance do
       else: claims_error()
   end
 
-  defp active_key(%DescriptorFacts{descriptor: %PartyDescriptor{} = descriptor}, kid) do
-    case Enum.find(descriptor.verification_keys, &(&1.key_id == kid and &1.status == :active)) do
-      %PartyDescriptor.VerificationKey{} = key -> {:ok, key}
-      nil -> acceptance_error()
-    end
+  defp active_keys(%DescriptorFacts{descriptor: %PartyDescriptor{} = descriptor}, kid) do
+    Enum.filter(descriptor.verification_keys, &(&1.key_id == kid and &1.status == :active))
   end
 
   defp facts(acceptance, descriptor) do

@@ -20,8 +20,9 @@ defmodule CharterAgreementProtocol.Capability do
   can differ on it for the same bytes. It is not part of conformance
   results.
 
-  `report/0` reads no clock, file or environment. Call it at boot to decide
-  what your deployment supports; each verify call still checks on its own.
+  `report/0` reads no clock, file or environment. Call it at boot to check
+  what your deployment supports. Declared support and known-answer results
+  are cached once per key algorithm. A raising provider is unavailable.
   The result assumes the crypto provider is not reloaded while the node runs.
 
   Most callers use `CharterAgreementProtocol.capabilities/0`, which
@@ -121,7 +122,7 @@ defmodule CharterAgreementProtocol.Capability do
   @spec report() :: report()
   def report do
     %{
-      linked_crypto: :crypto.info_lib(),
+      linked_crypto: linked_crypto(),
       algorithms:
         Enum.map(Algorithm.registry(), fn row ->
           %{
@@ -141,6 +142,9 @@ defmodule CharterAgreementProtocol.Capability do
   @doc false
   @spec declared?(term(), [atom()] | nil, [atom()] | nil) :: boolean()
   def declared?(key_algorithm, public_keys \\ nil, curves \\ nil)
+
+  def declared?(key_algorithm, nil, nil) when is_map_key(@known_answers, key_algorithm),
+    do: cached(key_algorithm).declared
 
   def declared?("Ed25519", public_keys, curves) do
     :eddsa in declared_public_keys(public_keys) and :ed25519 in declared_curves(curves)
@@ -165,12 +169,53 @@ defmodule CharterAgreementProtocol.Capability do
   @spec kat_verifies?(term(), boolean() | nil) :: boolean()
   def kat_verifies?(key_algorithm, declared \\ nil)
 
+  def kat_verifies?(key_algorithm, nil) when is_map_key(@known_answers, key_algorithm),
+    do: cached(key_algorithm).verifiable
+
   def kat_verifies?(key_algorithm, declared) when is_map_key(@known_answers, key_algorithm) do
-    decided = if is_nil(declared), do: declared?(key_algorithm), else: declared
-    decided and known_answer_verifies(key_algorithm)
+    declared and known_answer_verifies(key_algorithm)
+  rescue
+    _error -> false
   end
 
   def kat_verifies?(_key_algorithm, _declared), do: false
+
+  defp cached(key_algorithm) do
+    cache_key = {__MODULE__, key_algorithm}
+
+    case :persistent_term.get(cache_key, :missing) do
+      :missing ->
+        :global.trans({cache_key, self()}, fn -> cache_once(cache_key, key_algorithm) end)
+
+      cached ->
+        cached
+    end
+  end
+
+  defp cache_once(cache_key, key_algorithm) do
+    case :persistent_term.get(cache_key, :missing) do
+      :missing ->
+        result = probe(key_algorithm)
+        :persistent_term.put(cache_key, result)
+        result
+
+      cached ->
+        cached
+    end
+  end
+
+  defp probe(key_algorithm) do
+    declared = declared?(key_algorithm, :crypto.supports(:public_keys), :crypto.supports(:curves))
+    %{declared: declared, verifiable: declared and known_answer_verifies(key_algorithm)}
+  rescue
+    _error -> %{declared: false, verifiable: false}
+  end
+
+  defp linked_crypto do
+    :crypto.info_lib()
+  rescue
+    _error -> []
+  end
 
   defp known_answer_verifies("Ed25519") do
     %{public_key: public_key, signature: signature} = @known_answers["Ed25519"]

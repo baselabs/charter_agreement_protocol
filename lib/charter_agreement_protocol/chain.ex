@@ -319,12 +319,11 @@ defmodule CharterAgreementProtocol.Chain do
   defp verify_acceptance(compact, revision_index, descriptor_chains, limits, profile) do
     with {:ok, revision_digest, descriptor_digest} <-
            route_claims(compact, "cap+acceptance", "revision_digest", limits),
-         %CharterRevision{} = revision <- Map.get(revision_index, revision_digest),
-         %DescriptorChain{} = chain <- chain_for_descriptor(descriptor_chains, descriptor_digest) do
+         {:ok, revision, chain} <-
+           lookup_context(revision_index, descriptor_chains, revision_digest, descriptor_digest) do
       Acceptance.verify_verified(compact, revision, chain, limits, profile)
     else
       {:error, %Error{} = error} -> {:error, error}
-      _failure -> chain_error()
     end
   end
 
@@ -337,12 +336,11 @@ defmodule CharterAgreementProtocol.Chain do
   defp verify_termination(compact, revision_index, descriptor_chains, limits, profile) do
     with {:ok, revision_digest, descriptor_digest} <-
            route_claims(compact, "cap+termination", "governing_revision_digest", limits),
-         %CharterRevision{} = revision <- Map.get(revision_index, revision_digest),
-         %DescriptorChain{} = chain <- chain_for_descriptor(descriptor_chains, descriptor_digest) do
+         {:ok, revision, chain} <-
+           lookup_context(revision_index, descriptor_chains, revision_digest, descriptor_digest) do
       TerminationNotice.verify_verified(compact, revision, chain, limits, profile)
     else
       {:error, %Error{} = error} -> {:error, error}
-      _failure -> chain_error()
     end
   end
 
@@ -356,6 +354,42 @@ defmodule CharterAgreementProtocol.Chain do
     else
       {:error, %Error{} = error} -> {:error, error}
       _failure -> chain_error()
+    end
+  end
+
+  @doc false
+  @spec signing_context(
+          :acceptance | :termination,
+          struct(),
+          CharterAgreementProtocol.ChainFacts.t()
+        ) ::
+          {:ok, {CharterRevision.t(), DescriptorChain.t()}} | {:error, Error.t()}
+  def signing_context(kind, artifact, facts) do
+    index = Map.new(facts.revision_facts, &{&1.revision_digest, &1.revision})
+
+    digest =
+      if kind == :acceptance,
+        do: artifact.revision_digest,
+        else: artifact.governing_revision_digest
+
+    case lookup_context(index, facts.descriptor_chains, digest, artifact.party_descriptor_digest) do
+      {:ok, revision, chain} ->
+        {:ok, {revision, chain}}
+
+      _missing when kind == :acceptance ->
+        {:error, Error.new(:acceptance_claims_mismatch, ["acceptance", "claims"])}
+
+      _missing ->
+        {:error, Error.new(:termination_claims_mismatch, ["termination", "claims"])}
+    end
+  end
+
+  defp lookup_context(revision_index, chains, revision_digest, descriptor_digest) do
+    with %CharterRevision{} = revision <- Map.get(revision_index, revision_digest),
+         %DescriptorChain{} = chain <- chain_for_descriptor(chains, descriptor_digest) do
+      {:ok, revision, chain}
+    else
+      _missing -> chain_error()
     end
   end
 

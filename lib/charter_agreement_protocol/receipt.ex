@@ -31,6 +31,7 @@ defmodule CharterAgreementProtocol.Receipt do
     Error,
     Extension,
     Facts,
+    Internal.Retained,
     Limits,
     ReceiptFacts,
     RevisionFacts,
@@ -241,12 +242,45 @@ defmodule CharterAgreementProtocol.Receipt do
     do: :receipt_content |> Digest.hash(bytes) |> Digest.to_tagged()
 
   defp do_verify(compact, context, limits, profile) do
+    with {:ok, prepared} <- prepare(compact, context, limits, profile),
+         :ok <- verify_prepared_signature(prepared, profile) do
+      facts(prepared.artifact, prepared.projection, prepared.context)
+    end
+  end
+
+  @doc false
+  @spec prepare(term(), ChainFacts.t() | CharterRevision.t(), Limits.t(), Profile.t()) ::
+          {:ok, map()} | {:error, Error.t()}
+  def prepare(compact, context, limits, profile) do
     with {:ok, verified_context} <- reverify_context(context, limits, profile),
          {:ok, receipt} <- decode(compact, limits),
          {:ok, projection} <- project(receipt, verified_context),
-         :ok <- verify_context_signature(receipt, verified_context, profile) do
-      facts(receipt, projection, verified_context)
+         :ok <- CompactJws.admit(receipt.envelope, profile) do
+      {:ok,
+       %{
+         artifact: receipt,
+         projection: projection,
+         context: verified_context,
+         verify_with: elem(verified_context, 1),
+         keys: context_keys(verified_context, receipt)
+       }}
     end
+  end
+
+  defp context_keys({:revision, _revision}, _receipt), do: :unnamed
+
+  defp context_keys({:chain, chain}, receipt) do
+    chain |> signing_keys(receipt) |> Enum.uniq()
+  end
+
+  defp verify_prepared_signature(%{keys: :unnamed}, _profile), do: :ok
+
+  defp verify_prepared_signature(%{artifact: receipt, keys: keys}, profile) do
+    keys
+    |> Enum.map(fn {public_key, algorithm} ->
+      CompactJws.verify_signature(receipt.envelope, public_key, algorithm, profile)
+    end)
+    |> signature_outcome()
   end
 
   defp decode(compact, limits) do
@@ -374,12 +408,12 @@ defmodule CharterAgreementProtocol.Receipt do
   defp retained_acceptances(_facts), do: receipt_error()
 
   defp acceptance_compact(%AcceptanceFacts{acceptance: %{envelope: %CompactJws{} = envelope}}),
-    do: CharterAgreementProtocol.Internal.Retained.compact(envelope)
+    do: Retained.compact(envelope)
 
   defp acceptance_compact(_facts), do: :error
 
   defp retained_descriptors(%ChainFacts{descriptor_chains: chains}) when is_list(chains) do
-    with true <- CharterAgreementProtocol.Internal.Retained.list?(chains),
+    with true <- Retained.list?(chains),
          {:ok, groups} <- collect_retained(chains, &descriptor_compacts/1) do
       compacts = groups |> List.flatten() |> Enum.uniq()
       if compacts != [], do: {:ok, compacts}, else: receipt_error()
@@ -391,7 +425,7 @@ defmodule CharterAgreementProtocol.Receipt do
   defp retained_descriptors(_facts), do: receipt_error()
 
   defp descriptor_compacts(%DescriptorChain{descriptors: descriptors}) do
-    with true <- CharterAgreementProtocol.Internal.Retained.list?(descriptors),
+    with true <- Retained.list?(descriptors),
          {:ok, groups} <- collect_retained(descriptors, &descriptor_lineage/1) do
       {:ok, List.flatten(groups)}
     else
@@ -402,7 +436,7 @@ defmodule CharterAgreementProtocol.Receipt do
   defp descriptor_compacts(_other), do: :error
 
   defp descriptor_lineage(%DescriptorFacts{lineage: lineage}) do
-    if CharterAgreementProtocol.Internal.Retained.binaries?(lineage),
+    if Retained.binaries?(lineage),
       do: {:ok, lineage},
       else: :error
   end
@@ -415,24 +449,24 @@ defmodule CharterAgreementProtocol.Receipt do
   defp retained_terminations(_facts), do: receipt_error()
 
   defp termination_compact(%TerminationFacts{termination: %{envelope: %CompactJws{} = envelope}}),
-    do: CharterAgreementProtocol.Internal.Retained.compact(envelope)
+    do: Retained.compact(envelope)
 
   defp termination_compact(_facts), do: :error
 
   defp collect_retained(items, function) do
-    if CharterAgreementProtocol.Internal.Retained.list?(items) do
-      Enum.reduce_while(items, {:ok, []}, fn item, {:ok, values} ->
-        case function.(item) do
-          {:ok, value} -> {:cont, {:ok, [value | values]}}
-          _failure -> {:halt, :error}
-        end
-      end)
-      |> case do
-        {:ok, values} -> {:ok, Enum.reverse(values)}
-        :error -> receipt_error()
+    if Retained.list?(items), do: collect_items(items, function), else: receipt_error()
+  end
+
+  defp collect_items(items, function) do
+    Enum.reduce_while(items, {:ok, []}, fn item, {:ok, values} ->
+      case function.(item) do
+        {:ok, value} -> {:cont, {:ok, [value | values]}}
+        _failure -> {:halt, :error}
       end
-    else
-      receipt_error()
+    end)
+    |> case do
+      {:ok, values} -> {:ok, Enum.reverse(values)}
+      :error -> receipt_error()
     end
   end
 
@@ -519,27 +553,6 @@ defmodule CharterAgreementProtocol.Receipt do
       {:ok, digest} when digest == receipt.revision_digest -> :match
       {:ok, :contested} -> :undetermined
       {:ok, _other} -> :mismatch
-    end
-  end
-
-  # A revision-only context names no signing key, so the signature stays
-  # unchecked (`:signature` in not_verified), but the profile still applies
-  # to the receipt's own envelope.
-  defp verify_context_signature(receipt, {:revision, %CharterRevision{}}, profile),
-    do: CompactJws.admit(receipt.envelope, profile)
-
-  # The envelope is admitted before any key is looked up, so an
-  # out-of-profile receipt reports the profile rejection in both context
-  # forms, even when its kid names no key in the view.
-  defp verify_context_signature(receipt, {:chain, chain}, profile) do
-    with :ok <- CompactJws.admit(receipt.envelope, profile) do
-      chain
-      |> signing_keys(receipt)
-      |> Enum.uniq()
-      |> Enum.map(fn {public_key, algorithm} ->
-        CompactJws.verify_signature(receipt.envelope, public_key, algorithm, profile)
-      end)
-      |> signature_outcome()
     end
   end
 

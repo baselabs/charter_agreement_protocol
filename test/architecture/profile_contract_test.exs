@@ -14,15 +14,15 @@ defmodule CharterAgreementProtocol.Architecture.ProfileContractTest do
            ["%Profile{} = profile", "revision_profile(revisions, profile)"]},
           {"lib/charter_agreement_protocol/acceptance.ex",
            [
-             "CompactJws.verify_signature(acceptance.envelope, key.public_key, key.algorithm, profile)"
+             "CompactJws.verify_signature(artifact.envelope, key.public_key, key.algorithm, profile)"
            ]},
           {"lib/charter_agreement_protocol/termination_notice.ex",
            [
-             "CompactJws.verify_signature(termination.envelope, key.public_key, key.algorithm, profile)"
+             "CompactJws.verify_signature(artifact.envelope, key.public_key, key.algorithm, profile)"
            ]},
           {"lib/charter_agreement_protocol/party_descriptor.ex",
            [
-             "CompactJws.verify_signature(descriptor.envelope, public_key, key_algorithm, profile)"
+             "CompactJws.verify_signature(descriptor.envelope, key.public_key, key.algorithm, profile)"
            ]},
           {"lib/charter_agreement_protocol/receipt.ex",
            ["CompactJws.verify_signature(receipt.envelope, public_key, algorithm, profile)"]}
