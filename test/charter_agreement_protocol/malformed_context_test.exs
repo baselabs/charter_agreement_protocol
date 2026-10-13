@@ -5,6 +5,7 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
   alias CharterAgreementProtocol, as: CAP
 
   alias CharterAgreementProtocol.{
+    Capability.Profile,
     ChainFixture,
     DescriptorChain,
     DescriptorFacts,
@@ -76,4 +77,108 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
     assert {:error, %Error{}} =
              CAP.verify_descriptor(context.set.issuer.compact, bad, Limits.default())
   end
+
+  property "every context field remains total at the public verification and signing seams",
+           context do
+    check all(replacement <- one_of([term(), constant(["x" | :tail])]), max_runs: 25) do
+      limits = Limits.default()
+      profile = Profile.full()
+
+      for value <- [
+            context.chain,
+            context.revision,
+            context.descriptors,
+            hd(context.descriptors.descriptors)
+          ],
+          field <- Map.keys(Map.from_struct(value)) do
+        changed = Map.put(value, field, replacement)
+
+        results = [
+          CAP.verify_descriptor(context.set.issuer.compact, changed, limits),
+          CAP.verify_receipt(context.receipt, changed, limits),
+          CAP.verify_acceptance(context.set.issuer.compact, changed, changed, limits),
+          CAP.verify_termination(context.set.issuer.compact, changed, changed, limits),
+          CAP.verify_descriptor_chain(changed, limits),
+          CAP.verify_chain(changed, changed, changed, changed, limits)
+        ]
+
+        assert Enum.all?(results, &typed?/1)
+
+        for kind <- [:party_descriptor, :acceptance, :termination, :receipt] do
+          claims =
+            if kind == :party_descriptor,
+              do: context.set.issuer.claims,
+              else: ReceiptFixture.claims(context.set.genesis)
+
+          [key] = context.set.issuer.claims["verification_keys"]
+
+          input = %{
+            "kid" => context.set.issuer.kid,
+            "claims" => Map.put(claims, "protocol_revision", 2),
+            "public_key" => Base.url_decode64!(key["public_key"], padding: false)
+          }
+
+          assert typed?(CAP.prepare_signing(kind, input, changed, limits, profile))
+        end
+
+        if is_struct(changed, CharterAgreementProtocol.CharterRevision) do
+          assert typed?(
+                   CAP.verify_acceptance(
+                     context.set.issuer.compact,
+                     changed,
+                     context.descriptors,
+                     limits
+                   )
+                 )
+
+          assert typed?(
+                   CAP.verify_termination(
+                     context.set.issuer.compact,
+                     changed,
+                     context.descriptors,
+                     limits
+                   )
+                 )
+        end
+
+        if is_struct(changed, DescriptorChain) do
+          assert typed?(
+                   CAP.verify_acceptance(
+                     context.set.issuer.compact,
+                     context.revision,
+                     changed,
+                     limits
+                   )
+                 )
+
+          assert typed?(
+                   CAP.verify_termination(
+                     context.set.issuer.compact,
+                     context.revision,
+                     changed,
+                     limits
+                   )
+                 )
+        end
+      end
+
+      for field <-
+            Map.keys(Map.from_struct(hd(context.chain.acceptance_facts).acceptance.envelope)) do
+        [first | rest] = context.chain.acceptance_facts
+
+        first =
+          put_in(
+            first.acceptance.envelope,
+            Map.put(first.acceptance.envelope, field, replacement)
+          )
+
+        chain = %{context.chain | acceptance_facts: [first | rest]}
+        assert typed?(CAP.verify_receipt(context.receipt, chain, limits))
+      end
+    end
+  end
+
+  defp typed?({:ok, _value}), do: true
+  defp typed?({:error, %Error{}}), do: true
+  defp typed?(_other), do: false
 end

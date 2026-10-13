@@ -656,6 +656,8 @@ defmodule CharterAgreementProtocol do
       iex> claims = %{"protocol_revision" => 1}
       iex> CharterAgreementProtocol.descriptor_signing_input(%{"kid" => "key-1", "claims" => claims})
       {:error, %CharterAgreementProtocol.Error{code: :signing_input_invalid, subject: ["signing_input"], detail: nil}}
+  For the holder's descriptor key check before signing, use `prepare_signing/5`
+  and `finish_signing/2` with explicit limits and profile.
   """
   @spec descriptor_signing_input(term()) ::
           {:ok, SigningInput.t()} | {:error, CharterAgreementProtocol.Error.t()}
@@ -677,6 +679,8 @@ defmodule CharterAgreementProtocol do
 
       iex> CharterAgreementProtocol.receipt_signing_input(%{"kid" => "key-1", "claims" => %{}})
       {:error, %CharterAgreementProtocol.Error{code: :signing_input_invalid, subject: ["signing_input"], detail: nil}}
+  For the holder's descriptor key check before signing, use `prepare_signing/5`
+  and `finish_signing/2` with explicit limits and profile.
   """
   @spec receipt_signing_input(term()) ::
           {:ok, SigningInput.t()} | {:error, CharterAgreementProtocol.Error.t()}
@@ -725,6 +729,8 @@ defmodule CharterAgreementProtocol do
       iex> wrong_role = Map.put(claims, "party_role", "issuer")
       iex> CharterAgreementProtocol.acceptance_signing_input(%{"kid" => "acceptor-key", "claims" => wrong_role}, proposed)
       {:error, %CharterAgreementProtocol.Error{code: :signing_refused, subject: ["signing_input", "claims"], detail: nil}}
+  For the holder's descriptor key check before signing, use `prepare_signing/5`
+  and `finish_signing/2` with explicit limits and profile.
   """
   @spec acceptance_signing_input(term(), ArtifactSet.t()) ::
           {:ok, SigningInput.t()} | {:error, CharterAgreementProtocol.Error.t()}
@@ -770,6 +776,8 @@ defmodule CharterAgreementProtocol do
       iex> {:ok, proposed} = CharterAgreementProtocol.build_set(set["revisions"], [], [], set["descriptors"])
       iex> CharterAgreementProtocol.termination_signing_input(%{"kid" => "genesis-key", "claims" => claims}, proposed)
       {:error, %CharterAgreementProtocol.Error{code: :signing_refused, subject: ["signing_input", "claims"], detail: nil}}
+  For the holder's descriptor key check before signing, use `prepare_signing/5`
+  and `finish_signing/2` with explicit limits and profile.
   """
   @spec termination_signing_input(term(), ArtifactSet.t()) ::
           {:ok, SigningInput.t()} | {:error, CharterAgreementProtocol.Error.t()}
@@ -997,4 +1005,69 @@ defmodule CharterAgreementProtocol do
   @spec governing_revision(term(), term()) ::
           {:ok, binary() | :contested | :none} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate governing_revision(chain_facts, at), to: Chain
+
+  @doc """
+  Check an input before external signing under explicit limits and profile.
+
+  The closed input contains `"kid"`, `"claims"`, raw `"public_key"` bytes
+  and optionally `"algorithm"`. Kinds are `:party_descriptor`, `:acceptance`,
+  `:termination` and `:receipt`. Descriptor context is nil or predecessor
+  facts. Acceptance and termination context is an `ArtifactSet`. Receipt
+  context is `ChainFacts` or a bare `CharterRevision`.
+
+  Checks run in this order: limits, profile, context type, input build, key
+  shape, set verification and producer refusals, verification preparation,
+  snapshot membership, runtime support. Limits bound the whole set read.
+  Set verification uses the full caller profile. A bare revision receipt
+  returns `key: :unnamed`; every other successful plan has `key: :matched`.
+
+  Sign the returned `signing_input.message`, then call `finish_signing/2`.
+  CAP holds only public verification material and never signs.
+
+  ## Examples
+
+      iex> CharterAgreementProtocol.prepare_signing(:receipt, %{}, nil,
+      ...>   CharterAgreementProtocol.Limits.default(), CharterAgreementProtocol.Capability.Profile.full())
+      {:error, %CharterAgreementProtocol.Error{code: :invalid_type, subject: ["signing_plan"], detail: nil}}
+
+      iex> file = Application.app_dir(:charter_agreement_protocol, "priv/conformance/cases/party_descriptor-verify.json")
+      iex> cases = File.read!(file) |> JSON.decode!() |> Map.fetch!("cases")
+      iex> compact = Enum.find(cases, &(&1["id"] == "descriptor-rev2-ed25519-valid"))["input"]["compact"]
+      iex> {:ok, descriptor} = CharterAgreementProtocol.PartyDescriptor.decode(compact, CharterAgreementProtocol.Limits.default())
+      iex> claims = JSON.decode!(descriptor.envelope.payload_bytes)
+      iex> input = %{"kid" => descriptor.envelope.kid, "claims" => claims, "public_key" => hd(descriptor.verification_keys).public_key}
+      iex> {:ok, plan} = CharterAgreementProtocol.prepare_signing(:party_descriptor, input, nil, CharterAgreementProtocol.Limits.default(), CharterAgreementProtocol.Capability.Profile.full())
+      iex> {plan.key, plan.signing_input.message == descriptor.envelope.message}
+      {:matched, true}
+      iex> CharterAgreementProtocol.finish_signing(plan, descriptor.envelope.signature) == {:ok, compact}
+      true
+  """
+  @spec prepare_signing(
+          CharterAgreementProtocol.SigningInput.kind(),
+          term(),
+          term(),
+          Limits.t(),
+          Profile.t()
+        ) ::
+          {:ok, CharterAgreementProtocol.SigningPlan.t()}
+          | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate prepare_signing(kind, input, context, limits, profile),
+    to: CharterAgreementProtocol.SigningPlan,
+    as: :prepare
+
+  @doc """
+  Assemble a signature under the plan's limits and run public verification
+  with its CAP-derived context and profile. Returns the verified compact.
+  Keep the plan's internal fields as returned by `prepare_signing/5`.
+
+  ## Examples
+
+      iex> CharterAgreementProtocol.finish_signing(nil, <<>>)
+      {:error, %CharterAgreementProtocol.Error{code: :invalid_type, subject: ["signing_plan"], detail: nil}}
+  """
+  @spec finish_signing(CharterAgreementProtocol.SigningPlan.t(), binary()) ::
+          {:ok, binary()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate finish_signing(plan, signature),
+    to: CharterAgreementProtocol.SigningPlan,
+    as: :finish
 end

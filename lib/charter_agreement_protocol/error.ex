@@ -48,7 +48,8 @@ defmodule CharterAgreementProtocol.Error do
     `:extension_unknown_critical`, `:extension_criticality_conflict`,
     `:extension_retired`, `:extension_schema_unavailable`,
     `:extension_schema_digest_mismatch`, `:extension_scope_invalid`.
-  - Producing: `:signing_input_invalid`, `:signing_refused`.
+  - Producing: `:signing_input_invalid`, `:signing_refused`,
+    `:signing_key_invalid`, `:signing_key_mismatch`.
   - Conformance corpus: `:corpus_index_invalid`, `:corpus_case_invalid`,
     `:corpus_hash_mismatch`, `:corpus_file_set_mismatch`,
     `:corpus_case_id_duplicate`, `:corpus_count_mismatch`,
@@ -131,7 +132,9 @@ defmodule CharterAgreementProtocol.Error do
     :extension_schema_digest_mismatch,
     :extension_scope_invalid,
     :signing_input_invalid,
-    :signing_refused
+    :signing_refused,
+    :signing_key_invalid,
+    :signing_key_mismatch
   ]
 
   @typedoc "One code from `codes/0`."
@@ -197,6 +200,8 @@ defmodule CharterAgreementProtocol.Error do
           | :extension_scope_invalid
           | :signing_input_invalid
           | :signing_refused
+          | :signing_key_invalid
+          | :signing_key_mismatch
   @typedoc "A path of protocol-owned names and indexes. Never caller input."
   @type subject :: [binary() | non_neg_integer()]
   @typedoc "An optional protocol-owned atom or string."
