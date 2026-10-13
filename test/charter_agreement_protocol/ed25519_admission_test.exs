@@ -94,11 +94,10 @@ defmodule CharterAgreementProtocol.Ed25519AdmissionTest do
     # Multiplying by the odd subgroup order leaves the order-two component.
     {x, y} = reference_point(@mixed)
     order = 2 ** 252 + 27_742_317_777_372_353_535_851_937_790_883_648_493
-    {tx, ty, tz, _} = multiply({x, y, 1, mod(x * y)}, order)
-    assert tx == 0 and mod(ty + tz) == 0
+    assert multiply({x, y}, order) == {0, @prime - 1}
   end
 
-  property "generated 32-byte keys agree with Euler and extended-coordinate checks" do
+  property "generated 32-byte keys agree with Tonelli-Shanks and affine addition" do
     check all(public <- binary(length: 32), max_runs: 400) do
       assert Signature.valid_key?(public, "Ed25519") == reference_admits?(public)
     end
@@ -119,7 +118,9 @@ defmodule CharterAgreementProtocol.Ed25519AdmissionTest do
 
   test "rejects noncanonical y values and wrong lengths" do
     for y <- @prime..(@prime + 18), sign <- 0..1 do
-      refute Signature.valid_key?(<<y + sign * 2 ** 255::little-unsigned-size(256)>>, "Ed25519")
+      public = <<y + sign * 2 ** 255::little-unsigned-size(256)>>
+      refute reference_admits?(public)
+      refute Signature.valid_key?(public, "Ed25519")
     end
 
     for key <- [nil, "", <<0::248>>, <<0::264>>], do: refute(Signature.valid_key?(key, "Ed25519"))
@@ -143,60 +144,73 @@ defmodule CharterAgreementProtocol.Ed25519AdmissionTest do
     }
   end
 
-  defp reference_admits?(<<encoded::little-unsigned-size(256)>> = public) do
-    y = rem(encoded, 2 ** 255)
-    sign = div(encoded, 2 ** 255)
-    numerator = mod(y * y - 1)
-    denominator = mod(@d * y * y + 1)
-    square = mod(numerator * power(denominator, @prime - 2))
-
-    if y < @prime and denominator != 0 and (square == 0 or power(square, div(@prime - 1, 2)) == 1) and
-         not (square == 0 and sign == 1) do
-      {x, y} = reference_point(public)
-      {x8, y8, z8, _} = {x, y, 1, mod(x * y)} |> double() |> double() |> double()
-      not (x8 == 0 and mod(y8 - z8) == 0)
-    else
-      false
+  # This reference uses Tonelli-Shanks, Euclidean inversion and affine addition.
+  defp reference_admits?(public) do
+    case reference_point(public) do
+      nil -> false
+      point -> multiply(point, 8) != {0, 1}
     end
   end
 
   defp reference_point(<<encoded::little-unsigned-size(256)>>) do
     y = rem(encoded, 2 ** 255)
-    square = mod((y * y - 1) * power(mod(@d * y * y + 1), @prime - 2))
-    root = power(square, div(@prime + 3, 8))
-    root = if mod(root * root) == square, do: root, else: mod(root * power(2, div(@prime - 1, 4)))
-    x = if rem(root, 2) == div(encoded, 2 ** 255), do: root, else: mod(-root)
-    {x, y}
+    sign = div(encoded, 2 ** 255)
+    denominator = mod(@d * y * y + 1)
+
+    if y < @prime and denominator != 0 do
+      square = mod((y * y - 1) * inverse(denominator))
+
+      case tonelli(square) do
+        nil -> nil
+        0 when sign == 1 -> nil
+        root -> {if(rem(root, 2) == sign, do: root, else: mod(-root)), y}
+      end
+    end
   end
 
-  defp double({x, y, z, _t}) do
-    a = mod(x * x)
-    b = mod(y * y)
-    c = mod(2 * z * z)
-    d = mod(-a)
-    e = mod((x + y) * (x + y) - a - b)
-    g = mod(d + b)
-    f = mod(g - c)
-    h = mod(d - b)
-    {mod(e * f), mod(g * h), mod(f * g), mod(e * h)}
+  defp tonelli(0), do: 0
+
+  defp tonelli(square) do
+    if power(square, div(@prime - 1, 2)) == 1 do
+      {q, s} = odd_part(@prime - 1, 0)
+      z = Enum.find(2..100, &(power(&1, div(@prime - 1, 2)) == @prime - 1))
+      tonelli_loop(s, power(z, q), power(square, q), power(square, div(q + 1, 2)))
+    end
   end
 
-  defp add({x1, y1, z1, t1}, {x2, y2, z2, t2}) do
-    a = mod((y1 - x1) * (y2 - x2))
-    b = mod((y1 + x1) * (y2 + x2))
-    c = mod(2 * @d * t1 * t2)
-    d = mod(2 * z1 * z2)
+  defp odd_part(q, s) when rem(q, 2) == 0, do: odd_part(div(q, 2), s + 1)
+  defp odd_part(q, s), do: {q, s}
 
-    {mod((b - a) * (d - c)), mod((d + c) * (b + a)), mod((d - c) * (d + c)),
-     mod((b - a) * (b + a))}
+  defp tonelli_loop(_m, _c, 1, root), do: root
+
+  defp tonelli_loop(m, c, t, root) do
+    i = first_one(t, 0)
+    b = power(c, 2 ** (m - i - 1))
+    tonelli_loop(i, mod(b * b), mod(t * b * b), mod(root * b))
   end
 
-  defp multiply(_point, 0), do: {0, 1, 1, 0}
+  defp first_one(1, i), do: i
+  defp first_one(t, i), do: first_one(mod(t * t), i + 1)
+
+  defp add({x1, y1}, {x2, y2}) do
+    k = mod(@d * x1 * x2 * y1 * y2)
+
+    {mod((x1 * y2 + y1 * x2) * inverse(mod(1 + k))),
+     mod((y1 * y2 + x1 * x2) * inverse(mod(1 - k)))}
+  end
+
+  defp multiply(_point, 0), do: {0, 1}
 
   defp multiply(point, scalar) do
-    half = multiply(double(point), div(scalar, 2))
+    half = multiply(add(point, point), div(scalar, 2))
     if rem(scalar, 2) == 1, do: add(half, point), else: half
   end
+
+  defp inverse(value), do: euclid(value, @prime, 1, 0)
+  defp euclid(1, _other, coefficient, _previous), do: mod(coefficient)
+
+  defp euclid(value, other, coefficient, previous),
+    do: euclid(rem(other, value), value, previous - div(other, value) * coefficient, coefficient)
 
   defp mod(value), do: Integer.mod(value, @prime)
 
