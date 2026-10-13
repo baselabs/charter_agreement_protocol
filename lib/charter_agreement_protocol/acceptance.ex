@@ -346,16 +346,20 @@ defmodule CharterAgreementProtocol.Acceptance do
   end
 
   defp retained_compacts(descriptors) when is_list(descriptors) do
-    Enum.reduce_while(descriptors, {:ok, []}, fn
-      %DescriptorFacts{lineage: lineage}, {:ok, compacts}
-      when is_list(lineage) and lineage != [] ->
-        if Enum.all?(lineage, &is_binary/1),
-          do: {:cont, {:ok, lineage ++ compacts}},
-          else: {:halt, chain_error()}
+    if CharterAgreementProtocol.Internal.Retained.list?(descriptors) do
+      Enum.reduce_while(descriptors, {:ok, []}, fn
+        %DescriptorFacts{lineage: lineage}, {:ok, compacts}
+        when is_list(lineage) and lineage != [] ->
+          if CharterAgreementProtocol.Internal.Retained.binaries?(lineage),
+            do: {:cont, {:ok, lineage ++ compacts}},
+            else: {:halt, chain_error()}
 
-      _facts, _acc ->
-        {:halt, chain_error()}
-    end)
+        _facts, _acc ->
+          {:halt, chain_error()}
+      end)
+    else
+      chain_error()
+    end
   end
 
   defp retained_compacts(_descriptors), do: chain_error()

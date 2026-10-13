@@ -20,7 +20,6 @@ defmodule CharterAgreementProtocol.Receipt do
 
   alias CharterAgreementProtocol.{
     AcceptanceFacts,
-    Base64Url,
     Capability.Profile,
     Chain,
     ChainFacts,
@@ -375,28 +374,40 @@ defmodule CharterAgreementProtocol.Receipt do
   defp retained_acceptances(_facts), do: receipt_error()
 
   defp acceptance_compact(%AcceptanceFacts{acceptance: %{envelope: %CompactJws{} = envelope}}),
-    do: {:ok, envelope_compact(envelope)}
+    do: CharterAgreementProtocol.Internal.Retained.compact(envelope)
 
   defp acceptance_compact(_facts), do: :error
 
   defp retained_descriptors(%ChainFacts{descriptor_chains: chains}) when is_list(chains) do
-    compacts =
-      Enum.flat_map(chains, fn
-        %DescriptorChain{descriptors: descriptors} when is_list(descriptors) ->
-          Enum.flat_map(descriptors, fn
-            %DescriptorFacts{lineage: lineage} when is_list(lineage) -> lineage
-            _facts -> []
-          end)
-
-        _chain ->
-          []
-      end)
-      |> Enum.uniq()
-
-    if compacts != [] and Enum.all?(compacts, &is_binary/1), do: {:ok, compacts}, else: :error
+    with true <- CharterAgreementProtocol.Internal.Retained.list?(chains),
+         {:ok, groups} <- collect_retained(chains, &descriptor_compacts/1) do
+      compacts = groups |> List.flatten() |> Enum.uniq()
+      if compacts != [], do: {:ok, compacts}, else: receipt_error()
+    else
+      _failure -> receipt_error()
+    end
   end
 
   defp retained_descriptors(_facts), do: receipt_error()
+
+  defp descriptor_compacts(%DescriptorChain{descriptors: descriptors}) do
+    with true <- CharterAgreementProtocol.Internal.Retained.list?(descriptors),
+         {:ok, groups} <- collect_retained(descriptors, &descriptor_lineage/1) do
+      {:ok, List.flatten(groups)}
+    else
+      _failure -> :error
+    end
+  end
+
+  defp descriptor_compacts(_other), do: :error
+
+  defp descriptor_lineage(%DescriptorFacts{lineage: lineage}) do
+    if CharterAgreementProtocol.Internal.Retained.binaries?(lineage),
+      do: {:ok, lineage},
+      else: :error
+  end
+
+  defp descriptor_lineage(_other), do: :error
 
   defp retained_terminations(%ChainFacts{termination_facts: facts}) when is_list(facts),
     do: collect_retained(facts, &termination_compact/1)
@@ -404,25 +415,26 @@ defmodule CharterAgreementProtocol.Receipt do
   defp retained_terminations(_facts), do: receipt_error()
 
   defp termination_compact(%TerminationFacts{termination: %{envelope: %CompactJws{} = envelope}}),
-    do: {:ok, envelope_compact(envelope)}
+    do: CharterAgreementProtocol.Internal.Retained.compact(envelope)
 
   defp termination_compact(_facts), do: :error
 
   defp collect_retained(items, function) do
-    Enum.reduce_while(items, {:ok, []}, fn item, {:ok, values} ->
-      case function.(item) do
-        {:ok, value} -> {:cont, {:ok, [value | values]}}
-        :error -> {:halt, :error}
+    if CharterAgreementProtocol.Internal.Retained.list?(items) do
+      Enum.reduce_while(items, {:ok, []}, fn item, {:ok, values} ->
+        case function.(item) do
+          {:ok, value} -> {:cont, {:ok, [value | values]}}
+          _failure -> {:halt, :error}
+        end
+      end)
+      |> case do
+        {:ok, values} -> {:ok, Enum.reverse(values)}
+        :error -> receipt_error()
       end
-    end)
-    |> case do
-      {:ok, values} -> {:ok, Enum.reverse(values)}
-      :error -> receipt_error()
+    else
+      receipt_error()
     end
   end
-
-  defp envelope_compact(envelope),
-    do: envelope.message <> "." <> Base64Url.encode(envelope.signature)
 
   defp project(receipt, {:revision, revision}) do
     with :ok <- recognized_claims(receipt, revision) do

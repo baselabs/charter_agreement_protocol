@@ -533,7 +533,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   defp verify_predecessor(%DescriptorFacts{lineage: lineage} = supplied, limits, profile)
        when is_list(lineage) and lineage != [] do
     with {:ok, verified} <-
-           lineage |> Enum.reverse() |> verify_lineage(limits, profile),
+           reverse_lineage(lineage, limits, profile),
          true <- verified.descriptor_digest == supplied.descriptor_digest do
       {:ok, verified}
     else
@@ -554,6 +554,12 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   end
 
   defp verify_predecessor(_predecessor, _limits, _profile), do: chain_error()
+
+  defp reverse_lineage(lineage, limits, profile) do
+    if CharterAgreementProtocol.Internal.Retained.binaries?(lineage),
+      do: lineage |> Enum.reverse() |> verify_lineage(limits, profile),
+      else: chain_error()
+  end
 
   defp verify_lineage([genesis | rest], limits, profile) do
     with {:ok, first} <- verify_one(genesis, nil, limits, profile) do
