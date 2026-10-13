@@ -123,8 +123,46 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
           assert(match?({:error, %Error{}}, CAP.verify_receipt(context.receipt, changed, limits)))
     end
 
+    for field <- Map.keys(Map.from_struct(context.revision)) do
+      assert {:error, %Error{}} =
+               CAP.verify_acceptance(
+                 compact,
+                 Map.delete(context.revision, field),
+                 context.descriptors,
+                 limits
+               )
+
+      assert {:error, %Error{}} =
+               CAP.verify_termination(
+                 compact,
+                 Map.delete(context.revision, field),
+                 context.descriptors,
+                 limits
+               )
+    end
+
+    [chain | rest] = context.chain.descriptor_chains
+    malformed = %{context.chain | descriptor_chains: [%{chain | descriptors: [nil]} | rest]}
+    assert {:error, %Error{}} = CAP.verify_receipt(context.receipt, malformed, limits)
+
     for field <- Map.keys(Map.from_struct(context.descriptors)) do
       changed = Map.put(context.descriptors, field, fn -> :malformed end)
+
+      assert {:error, %Error{}} =
+               CAP.verify_acceptance(
+                 compact,
+                 context.revision,
+                 Map.delete(context.descriptors, field),
+                 limits
+               )
+
+      assert {:error, %Error{}} =
+               CAP.verify_termination(
+                 compact,
+                 context.revision,
+                 Map.delete(context.descriptors, field),
+                 limits
+               )
 
       assert {:error, %Error{}} =
                CAP.verify_acceptance(compact, context.revision, changed, limits)

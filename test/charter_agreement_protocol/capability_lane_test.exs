@@ -99,6 +99,137 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
                profile
              )
   end
+
+  test "preparation checks runtime support for every kind and bare revision receipts" do
+    %{"cases" => cases} = :json.decode(File.read!("priv/conformance/cases/signing-prepare.json"))
+
+    for kind <- [:party_descriptor, :acceptance, :termination, :receipt] do
+      id = "signing-mldsa65-#{kind}"
+      input = Enum.find(cases, &(&1["id"] == id))["input"]
+
+      value =
+        Map.take(input, ["kid", "claims", "algorithm"])
+        |> Map.put("public_key", Base.url_decode64!(input["public_key"], padding: false))
+
+      context =
+        case input["context"] do
+          :null ->
+            nil
+
+          %{"set" => set} ->
+            struct(CharterAgreementProtocol.ArtifactSet,
+              revisions: set["revisions"],
+              acceptances: set["acceptances"],
+              descriptors: set["descriptors"],
+              terminations: set["terminations"]
+            )
+
+          %{"chain" => set} ->
+            retained_chain(set)
+        end
+
+      result =
+        CharterAgreementProtocol.prepare_signing(
+          kind,
+          value,
+          context,
+          Limits.default(),
+          Profile.full()
+        )
+
+      if Capability.kat_verifies?("ML-DSA-65"),
+        do: assert(match?({:ok, _}, result)),
+        else: assert(match?({:error, %Error{code: :algorithm_unsupported_on_substrate}}, result))
+
+      assert {:error, %Error{code: :signing_key_invalid}} =
+               CharterAgreementProtocol.prepare_signing(
+                 kind,
+                 Map.put(value, "public_key", <<>>),
+                 context,
+                 Limits.default(),
+                 Profile.full()
+               )
+
+      if kind == :receipt do
+        set = input["context"]["chain"]
+
+        {:ok, revision} =
+          CharterAgreementProtocol.CharterRevision.decode(hd(set["revisions"]), Limits.default())
+
+        result =
+          CharterAgreementProtocol.prepare_signing(
+            :receipt,
+            value,
+            revision,
+            Limits.default(),
+            Profile.full()
+          )
+
+        if Capability.kat_verifies?("ML-DSA-65"),
+          do: assert(match?({:ok, _}, result)),
+          else:
+            assert(match?({:error, %Error{code: :algorithm_unsupported_on_substrate}}, result))
+      end
+    end
+  end
+
+  test "runtime results are retained per key algorithm" do
+    for algorithm <- ["Ed25519", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87"] do
+      result = Capability.kat_verifies?(algorithm)
+      assert :persistent_term.get({Capability, algorithm}).verifiable == result
+
+      assert :persistent_term.get({Capability, algorithm}).declared ==
+               Capability.declared?(algorithm)
+
+      assert Capability.kat_verifies?(algorithm) == result
+    end
+  end
+
+  defp retained_chain(set) do
+    if Capability.kat_verifies?("ML-DSA-65") do
+      {:ok, chain} =
+        Chain.verify(
+          set["revisions"],
+          set["acceptances"],
+          set["descriptors"],
+          [],
+          Limits.default()
+        )
+
+      chain
+    else
+      retained_bytes(set)
+    end
+  end
+
+  defp retained_bytes(set) do
+    # Retain the real corpus bytes without requiring this lane to verify them.
+    revisions =
+      Enum.map(set["revisions"], fn text ->
+        {:ok, revision} = CharterAgreementProtocol.CharterRevision.decode(text, Limits.default())
+        struct(CharterAgreementProtocol.RevisionFacts, revision: revision)
+      end)
+
+    acceptances =
+      Enum.map(set["acceptances"], fn compact ->
+        {:ok, acceptance} =
+          CharterAgreementProtocol.Acceptance.decode_for_signing(compact, Limits.default())
+
+        struct(CharterAgreementProtocol.AcceptanceFacts, acceptance: acceptance)
+      end)
+
+    descriptors =
+      Enum.map(set["descriptors"], fn compact -> struct(DescriptorFacts, lineage: [compact]) end)
+
+    struct(CharterAgreementProtocol.ChainFacts,
+      revision_facts: revisions,
+      acceptance_facts: acceptances,
+      descriptor_chains: [
+        struct(CharterAgreementProtocol.DescriptorChain, descriptors: descriptors)
+      ],
+      termination_facts: []
+    )
+  end
 end
 
 defmodule CharterAgreementProtocol.CapabilityLaneProbe do

@@ -2,6 +2,8 @@ defmodule CharterAgreementProtocol.SigningPlanTest do
   use ExUnit.Case, async: true
 
   alias CharterAgreementProtocol, as: CAP
+  alias CharterAgreementProtocol.Signature
+
   alias CharterAgreementProtocol.{Capability.Profile, DescriptorFixture, Error, Limits}
 
   setup do
@@ -48,6 +50,20 @@ defmodule CharterAgreementProtocol.SigningPlanTest do
                  Profile.full()
                )
     end
+  end
+
+  test "key shape handles unknown algorithms and nonbinary snapshots", %{input: input} do
+    refute Signature.valid_key?(input["public_key"], "other")
+    refute Signature.valid_key?(nil, "Ed25519")
+
+    assert {:error, %Error{code: :signing_key_invalid}} =
+             CAP.prepare_signing(
+               :party_descriptor,
+               Map.put(input, "public_key", nil),
+               nil,
+               Limits.default(),
+               Profile.full()
+             )
   end
 
   test "options and context precede building and key shape", %{input: input} do

@@ -134,11 +134,8 @@ defmodule CharterAgreementProtocol.Capability do
     }
   end
 
-  # Test seam, hidden from the docs: whether the runtime declares one key
-  # algorithm (Ed25519 needs both `:eddsa` and the `:ed25519` curve; each
-  # ML-DSA set needs its own atom). The lists are injectable so tests can
-  # cover the decision as data; production reads them live. Signature also
-  # calls this per verify.
+  # Explicit provider metadata preserves the existing declared?/3 data query.
+  # Calls without metadata use the cached runtime result.
   @doc false
   @spec declared?(term(), [atom()] | nil, [atom()] | nil) :: boolean()
   def declared?(key_algorithm, public_keys \\ nil, curves \\ nil)
@@ -172,10 +169,9 @@ defmodule CharterAgreementProtocol.Capability do
   def kat_verifies?(key_algorithm, nil) when is_map_key(@known_answers, key_algorithm),
     do: cached(key_algorithm).verifiable
 
-  def kat_verifies?(key_algorithm, declared) when is_map_key(@known_answers, key_algorithm) do
-    declared and known_answer_verifies(key_algorithm)
-  rescue
-    _error -> false
+  def kat_verifies?(key_algorithm, declared)
+      when is_map_key(@known_answers, key_algorithm) and is_boolean(declared) do
+    declared and safe_known_answer(key_algorithm)
   end
 
   def kat_verifies?(_key_algorithm, _declared), do: false
@@ -205,10 +201,20 @@ defmodule CharterAgreementProtocol.Capability do
   end
 
   defp probe(key_algorithm) do
-    declared = declared?(key_algorithm, :crypto.supports(:public_keys), :crypto.supports(:curves))
-    %{declared: declared, verifiable: declared and known_answer_verifies(key_algorithm)}
+    declared = runtime_declared?(key_algorithm)
+    %{declared: declared, verifiable: declared and safe_known_answer(key_algorithm)}
+  end
+
+  defp runtime_declared?(key_algorithm) do
+    declared?(key_algorithm, :crypto.supports(:public_keys), :crypto.supports(:curves))
   rescue
-    _error -> %{declared: false, verifiable: false}
+    _error -> false
+  end
+
+  defp safe_known_answer(key_algorithm) do
+    known_answer_verifies(key_algorithm)
+  rescue
+    _error -> false
   end
 
   defp linked_crypto do
