@@ -22,11 +22,12 @@ is the one place in the guides where they are recorded.
 | Index SHA-256 (base64url) | `vkrz0Xrt37EFuRxVI-rIp5R36RSSohCqFnPT98SREFU` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
 | Specification digest | `sha-256:90C5jxxLRRBTEhq9IdoRUmA9ZGImDCmr3iUagyIfrLo` |
+| Cases | 221, in 16 case files |
 
-The pinned TypeScript 0.6.0 verifier has the earlier certified index and no
-`signing.prepare` surface. Its harness, agreement check and release-candidate
-identity check report the expected corpus mismatch for this checkout.
-| Cases | 216, in 15 case files |
+The pinned TypeScript 0.7.0 verifier at `47ef74f` includes `signing.prepare`
+and certifies the earlier index. Its set profile check still applies the
+caller profile to the whole set, so `signing-set-profile-scope` differs.
+The agreement and release checks report the retained pin's corpus mismatch.
 
 What each one tells you:
 

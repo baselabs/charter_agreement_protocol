@@ -252,7 +252,7 @@ library's own tests through the public API (`test-exercised`).
 | `:invalid_encoding` | corpus-exercised | a corpus case expects this code |
 | `:invalid_limits` | corpus-exercised | a corpus case expects this code |
 | `:invalid_number` | corpus-exercised | a corpus case expects this code |
-| `:invalid_profile` | corpus-exercised | needs a malformed profile, which the runner does not pass |
+| `:invalid_profile` | corpus-exercised | a signing preparation case passes a malformed profile |
 | `:invalid_syntax` | corpus-exercised | a corpus case expects this code |
 | `:invalid_type` | corpus-exercised | a corpus case expects this code |
 | `:limit_exceeded` | corpus-exercised | a corpus case expects this code |
