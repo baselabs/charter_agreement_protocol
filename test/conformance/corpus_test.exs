@@ -233,19 +233,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
             if plan.signing_input.alg == "Ed25519" do
               public = Base.url_decode64!(input["public_key"], padding: false)
 
-              byte =
-                Enum.find(1..9, fn n ->
-                  elem(:crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<n>>, 32)), 0) ==
-                    public
-                end)
-
-              assert is_integer(byte), one["id"]
-
-              {_public, private} =
-                :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<byte>>, 32))
-
-              signature =
-                :crypto.sign(:eddsa, :none, plan.signing_input.message, [private, :ed25519])
+              signature = signing_signature(plan, public, one["id"])
 
               assert {:ok, _compact} = CharterAgreementProtocol.finish_signing(plan, signature)
 
@@ -426,6 +414,30 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   defp signing_context(:null), do: nil
   defp signing_context(value), do: value
 
+  defp signing_signature(plan, public, "signing-ed25519-mixed-order") do
+    assert Base.encode16(public, case: :lower) ==
+             "9599999999999999999999999999999999999999999999999999999999999999"
+
+    %{"cases" => cases} =
+      :json.decode(File.read!("priv/conformance/cases/party_descriptor-verify.json"))
+
+    one = Enum.find(cases, &(&1["id"] == "descriptor-ed25519-mixed-order"))
+    [protected, payload, signature] = String.split(one["input"]["compact"], ".")
+    assert protected <> "." <> payload == plan.signing_input.message
+    Base.url_decode64!(signature, padding: false)
+  end
+
+  defp signing_signature(plan, public, id) do
+    byte =
+      Enum.find(1..9, fn n ->
+        elem(:crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<n>>, 32)), 0) == public
+      end)
+
+    assert is_integer(byte), id
+    {_public, private} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<byte>>, 32))
+    :crypto.sign(:eddsa, :none, plan.signing_input.message, [private, :ed25519])
+  end
+
   defp shipped_files do
     "priv/conformance/**/*"
     |> Path.wildcard()
@@ -440,7 +452,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
         &(&1["surface"] in ["party_descriptor.verify", "descriptor_chain.verify"])
       )
 
-    assert length(verify_cases) == 29
+    assert length(verify_cases) == 33
     Enum.each(verify_cases, &assert_verify_case/1)
   end
 

@@ -39,7 +39,8 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:corpus, ["signing.prepare:invalid_constraint"]},
        {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
        {:mutation, "signing-key-shape-skip"},
-       {:mutation, "signing-strict-point-skip"}
+       {:mutation, "signing-strict-point-skip"},
+       {:mutation, "ed25519-list-only-admission"}
      ]},
     {"CAP-SIGNING-snapshot-membership",
      [
@@ -219,9 +220,16 @@ defmodule CharterAgreementProtocol.RequirementMap do
      ]},
     {"CAP-SIGNATURE-ed25519-verification",
      [
-       {:corpus, ["acceptance.verify:signature_invalid"]},
+       {:corpus,
+        [
+          "acceptance.verify:signature_invalid",
+          "party_descriptor.verify:signature_invalid",
+          "party_descriptor.verify:valid"
+        ]},
+       {:gate, CharterAgreementProtocol.Ed25519AdmissionTest},
        {:gate, CharterAgreementProtocol.Architecture.SigningBoundaryTest},
-       {:mutation, "ed25519-defeat"}
+       {:mutation, "ed25519-defeat"},
+       {:mutation, "ed25519-list-only-admission"}
      ]},
     {"CAP-COMPACT-JWS-type-isolation",
      [

@@ -1,4 +1,5 @@
 Code.require_file("signing_prepare_cases.exs", __DIR__)
+Code.require_file("ed25519_key_cases.exs", __DIR__)
 
 alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest, ExtensionRegistry}
 alias CharterAgreementProtocol.Conformance.Corpus
@@ -2467,7 +2468,8 @@ cases =
     displacement_cases ++
     context_profile_cases ++
     supplemental_cases ++
-    CharterAgreementProtocol.SigningPrepareCases.cases()
+    CharterAgreementProtocol.SigningPrepareCases.cases() ++
+    CharterAgreementProtocol.Ed25519KeyCases.cases()
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 

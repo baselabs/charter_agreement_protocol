@@ -65,6 +65,25 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       command: ~w(mix test test/charter_agreement_protocol/party_descriptor_test.exs --seed 42)
     },
     %{
+      name: "ed25519-list-only-admission",
+      path: "lib/charter_agreement_protocol/signature.ex",
+      from: "strict_decoded_point?(y, Bitwise.bsr(last, 7))",
+      to: """
+      y < @ed25519_field_prime and <<prefix::binary, last>> not in Enum.map([
+        "0100000000000000000000000000000000000000000000000000000000000000",
+        "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+        "0000000000000000000000000000000000000000000000000000000000000080",
+        "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+        "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+        "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+        "0000000000000000000000000000000000000000000000000000000000000000",
+        "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa"
+      ], &Base.decode16!(&1, case: :mixed))
+      """,
+      command:
+        ~w(mix test test/charter_agreement_protocol/ed25519_admission_test.exs test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
       name: "typ-confusion",
       path: "lib/charter_agreement_protocol/compact_jws.ex",
       from: "        \"typ\" => {:string, ^expected_typ}",

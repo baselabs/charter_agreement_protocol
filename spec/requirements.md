@@ -12,7 +12,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 - Requirements: 68
 - Corpus cells: 93
-- Named mutations: 67
+- Named mutations: 68
 
 ## Requirements
 
@@ -47,6 +47,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
 - Mutation: `signing-key-shape-skip`
 - Mutation: `signing-strict-point-skip`
+- Mutation: `ed25519-list-only-admission`
 
 ### CAP-SIGNING-snapshot-membership
 
@@ -194,9 +195,11 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ### CAP-SIGNATURE-ed25519-verification
 
-- Corpus: `acceptance.verify:signature_invalid`
+- Corpus: `acceptance.verify:signature_invalid`, `party_descriptor.verify:signature_invalid`, `party_descriptor.verify:valid`
+- Gate: `CharterAgreementProtocol.Ed25519AdmissionTest`
 - Gate: `CharterAgreementProtocol.Architecture.SigningBoundaryTest`
 - Mutation: `ed25519-defeat`
+- Mutation: `ed25519-list-only-admission`
 
 ### CAP-COMPACT-JWS-type-isolation
 
