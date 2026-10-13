@@ -79,7 +79,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     source = File.read!("scripts/check_conformance_mutations.exs")
 
     assert source =~
-             "scratch_green!(mutation.command, scratch)\n      mutate_once!(Path.join(scratch, mutation.path)"
+             "scratch_green!(mutation.command, scratch)\n      SeededMutation.apply_once!(Path.join(scratch, mutation.path)"
   end
 
   test "requirement evidence resolves in both directions" do
