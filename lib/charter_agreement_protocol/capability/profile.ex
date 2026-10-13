@@ -99,7 +99,7 @@ defmodule CharterAgreementProtocol.Capability.Profile do
 
       {:ok, %__MODULE__{algorithms: algorithms, revisions: revisions}}
     else
-      {:error, Error.new(:invalid_profile, ["profile"])}
+      invalid()
     end
   end
 
@@ -137,6 +137,10 @@ defmodule CharterAgreementProtocol.Capability.Profile do
 
   defp valid_range?(_bounds, _accepted), do: false
 
+  @doc false
+  @spec check(term()) :: :ok | {:error, Error.t()}
+  def check(value), do: if(valid?(value), do: :ok, else: invalid())
+
   defp valid_options?(options) when is_list(options) do
     if Keyword.keyword?(options) do
       keys = Keyword.keys(options)
@@ -164,4 +168,6 @@ defmodule CharterAgreementProtocol.Capability.Profile do
 
   defp valid_revisions_option?(bounds),
     do: valid_range?(bounds, Algorithm.accepted_protocol_revisions())
+
+  defp invalid, do: {:error, Error.new(:invalid_profile, ["profile"])}
 end

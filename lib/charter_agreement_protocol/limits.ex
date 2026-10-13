@@ -130,6 +130,10 @@ defmodule CharterAgreementProtocol.Limits do
 
   def valid?(_limits), do: false
 
+  @doc false
+  @spec check(term()) :: :ok | {:error, Error.t()}
+  def check(value), do: if(valid?(value), do: :ok, else: invalid())
+
   defp valid_options?(options) when is_list(options) do
     if Keyword.keyword?(options) do
       keys = Keyword.keys(options)

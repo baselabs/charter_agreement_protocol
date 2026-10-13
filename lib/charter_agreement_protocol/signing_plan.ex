@@ -92,11 +92,7 @@ defmodule CharterAgreementProtocol.SigningPlan do
   def finish(_plan, _signature), do: invalid_type()
 
   defp options(limits, profile) do
-    cond do
-      not Limits.valid?(limits) -> {:error, Error.new(:invalid_limits, ["limits"])}
-      not Profile.valid?(profile) -> {:error, Error.new(:invalid_profile, ["profile"])}
-      true -> :ok
-    end
+    with :ok <- Limits.check(limits), do: Profile.check(profile)
   end
 
   defp context_type(:party_descriptor, nil), do: :ok
@@ -132,8 +128,8 @@ defmodule CharterAgreementProtocol.SigningPlan do
              limits,
              Profile.full()
            ),
-         {:ok, _revision} <- SigningInput.refusal_check(kind, artifact, chain) do
-      Chain.signing_context(kind, artifact, chain)
+         {:ok, revision} <- SigningInput.refusal_check(kind, artifact, chain) do
+      Chain.signing_context(kind, artifact, chain, revision)
     end
   end
 

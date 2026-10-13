@@ -229,7 +229,7 @@ defmodule CharterAgreementProtocol.Chain do
          :ok <- revision_profile(revisions, profile),
          indexed <- Enum.map(revisions, &{CharterRevision.digest(&1), &1}),
          true <- unique_revision_digests?(indexed),
-         revision_index <- Map.new(indexed),
+         revision_index <- revision_index(indexed),
          {:ok, charter_id} <- one_charter(indexed),
          :ok <- revision_links(indexed, revision_index, charter_id) do
       {:ok, indexed, revision_index, charter_id}
@@ -365,24 +365,50 @@ defmodule CharterAgreementProtocol.Chain do
         ) ::
           {:ok, {CharterRevision.t(), DescriptorChain.t()}} | {:error, Error.t()}
   def signing_context(kind, artifact, facts) do
-    index = Map.new(facts.revision_facts, &{&1.revision_digest, &1.revision})
+    with {:ok, revision} <- signing_revision(kind, artifact, facts) do
+      signing_context(kind, artifact, facts, revision)
+    else
+      _missing -> signing_context_error(kind)
+    end
+  end
 
+  @doc false
+  @spec signing_context(:acceptance | :termination, struct(), ChainFacts.t(), CharterRevision.t()) ::
+          {:ok, {CharterRevision.t(), DescriptorChain.t()}} | {:error, Error.t()}
+  def signing_context(kind, artifact, facts, revision) do
+    case chain_for_descriptor(facts.descriptor_chains, artifact.party_descriptor_digest) do
+      %DescriptorChain{} = chain -> {:ok, {revision, chain}}
+      _missing -> signing_context_error(kind)
+    end
+  end
+
+  @doc false
+  @spec signing_revision(:acceptance | :termination, struct(), ChainFacts.t()) ::
+          {:ok, CharterRevision.t()} | {:error, Error.t()}
+  def signing_revision(kind, artifact, facts) do
     digest =
       if kind == :acceptance,
         do: artifact.revision_digest,
         else: artifact.governing_revision_digest
 
-    case lookup_context(index, facts.descriptor_chains, digest, artifact.party_descriptor_digest) do
-      {:ok, revision, chain} ->
-        {:ok, {revision, chain}}
-
-      _missing when kind == :acceptance ->
-        {:error, Error.new(:acceptance_claims_mismatch, ["acceptance", "claims"])}
-
-      _missing ->
-        {:error, Error.new(:termination_claims_mismatch, ["termination", "claims"])}
+    case Map.get(revision_index(facts), digest) do
+      %CharterRevision{} = revision -> {:ok, revision}
+      _missing -> chain_error()
     end
   end
+
+  @doc false
+  @spec revision_index(ChainFacts.t() | [{binary(), CharterRevision.t()}]) :: map()
+  def revision_index(%ChainFacts{} = facts),
+    do: facts.revision_facts |> Enum.map(&{&1.revision_digest, &1.revision}) |> revision_index()
+
+  def revision_index(indexed), do: Map.new(indexed)
+
+  defp signing_context_error(:acceptance),
+    do: {:error, Error.new(:acceptance_claims_mismatch, ["acceptance", "claims"])}
+
+  defp signing_context_error(:termination),
+    do: {:error, Error.new(:termination_claims_mismatch, ["termination", "claims"])}
 
   defp lookup_context(revision_index, chains, revision_digest, descriptor_digest) do
     with %CharterRevision{} = revision <- Map.get(revision_index, revision_digest),

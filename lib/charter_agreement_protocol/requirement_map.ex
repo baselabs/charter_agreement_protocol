@@ -59,9 +59,14 @@ defmodule CharterAgreementProtocol.RequirementMap do
     {"CAP-SIGNING-set-profile",
      [
        {:corpus,
-        ["signing.prepare:profile_algorithm_outside", "signing.prepare:profile_revision_outside"]},
+        [
+          "signing.prepare:valid",
+          "signing.prepare:profile_algorithm_outside",
+          "signing.prepare:profile_revision_outside"
+        ]},
        {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
-       {:mutation, "signing-set-profile-skip"}
+       {:mutation, "signing-set-profile-skip"},
+       {:mutation, "signing-set-profile-narrow"}
      ]},
     {"CAP-SIGNING-runtime-support",
      [

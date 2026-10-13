@@ -320,15 +320,15 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "signing-limits-order-skip",
       path: "lib/charter_agreement_protocol/signing_plan.ex",
-      from: "      not Limits.valid?(limits) ->",
-      to: "      false ->",
+      from: "Limits.check(limits)",
+      to: ":ok",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
       name: "signing-profile-order-skip",
       path: "lib/charter_agreement_protocol/signing_plan.ex",
-      from: "      not Profile.valid?(profile) ->",
-      to: "      false ->",
+      from: "Profile.check(profile)",
+      to: ":ok",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
@@ -420,6 +420,13 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       path: "lib/charter_agreement_protocol/chain.ex",
       from: "Error.new(:termination_claims_mismatch, [\"termination\", \"claims\"])",
       to: "Error.new(:chain_invalid, [\"termination\", \"claims\"])",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "signing-set-profile-narrow",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from: "             Profile.full()\n           ),",
+      to: "             _profile\n           ),",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{

@@ -276,8 +276,8 @@ defmodule CharterAgreementProtocol.SigningInput do
   end
 
   defp acceptance_revision(acceptance, chain) do
-    case Enum.find(chain.revision_facts, &(&1.revision_digest == acceptance.revision_digest)) do
-      %{revision: revision} ->
+    case Chain.signing_revision(:acceptance, acceptance, chain) do
+      {:ok, revision} ->
         charter_id = revision.charter_id || CharterRevision.digest(revision)
 
         party_matches? =
@@ -292,17 +292,14 @@ defmodule CharterAgreementProtocol.SigningInput do
            do: {:ok, revision},
            else: refused()
 
-      nil ->
+      _missing ->
         refused()
     end
   end
 
   defp termination_revision(termination, chain) do
-    case Enum.find(
-           chain.revision_facts,
-           &(&1.revision_digest == termination.governing_revision_digest)
-         ) do
-      %{revision: revision} ->
+    case Chain.signing_revision(:termination, termination, chain) do
+      {:ok, revision} ->
         charter_id = revision.charter_id || CharterRevision.digest(revision)
 
         party_matches? =
@@ -316,7 +313,7 @@ defmodule CharterAgreementProtocol.SigningInput do
            do: {:ok, revision},
            else: refused()
 
-      nil ->
+      _missing ->
         refused()
     end
   end
@@ -343,7 +340,7 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   defp current_head_in_ancestry(revision, chain) do
     accepted = Enum.filter(chain.revision_facts, &(&1.acceptance_status == :accepted))
-    revision_index = Map.new(chain.revision_facts, &{&1.revision_digest, &1.revision})
+    revision_index = Chain.revision_index(chain)
     candidate_digest = CharterRevision.digest(revision)
 
     covered? =

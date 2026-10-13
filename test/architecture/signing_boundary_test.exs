@@ -51,6 +51,19 @@ defmodule CharterAgreementProtocol.Architecture.SigningBoundaryTest do
            end)
   end
 
+  test "signing routes revision lookup and option errors through their owners" do
+    input = File.read!("lib/charter_agreement_protocol/signing_input.ex")
+    plan = File.read!("lib/charter_agreement_protocol/signing_plan.ex")
+    assert input =~ "Chain.signing_revision(:acceptance, acceptance, chain)"
+    assert input =~ "Chain.signing_revision(:termination, termination, chain)"
+    refute input =~ "Enum.find(chain.revision_facts"
+    assert plan =~ "Chain.signing_context(kind, artifact, chain, revision)"
+    assert plan =~ "Limits.check(limits)"
+    assert plan =~ "Profile.check(profile)"
+    refute plan =~ "Limits.valid?(limits)"
+    refute plan =~ "Profile.valid?(profile)"
+  end
+
   defp production_module?(module) do
     source = module.module_info(:compile)[:source] |> List.to_string()
     String.starts_with?(source, Path.expand("lib/"))
