@@ -1,7 +1,7 @@
 defmodule CharterAgreementProtocol.MixProject do
   use Mix.Project
 
-  @version "0.4.1"
+  @version "0.5.0"
   @source_url "https://github.com/baselabs/charter_agreement_protocol"
 
   def project do
@@ -94,6 +94,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "lib",
         "priv/conformance",
         "priv/release-metadata.json",
+        "priv/verifier-source.json",
         ".formatter.exs",
         "mix.exs",
         "spec",
@@ -103,9 +104,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "LICENSE",
         "NOTICE",
         "SECURITY.md",
-        "docs/protocol.md",
         "docs/errata.md",
-        "docs/test-vectors.md",
         "docs/guides",
         "docs/notebooks",
         "docs/profiles/indexed-price.md",
@@ -132,73 +131,86 @@ defmodule CharterAgreementProtocol.MixProject do
       source_ref: "v#{@version}",
       source_url: @source_url,
       extras: [
-        "README.md",
-        "CHANGELOG.md",
-        "CONTRIBUTING.md",
-        "LICENSE",
-        "NOTICE",
-        "SECURITY.md",
-        "docs/protocol.md",
-        "docs/errata.md",
-        "docs/test-vectors.md",
-        "docs/guides/getting-started.md",
+        {"README.md", [filename: "readme"]},
         "docs/guides/overview.md",
-        "docs/guides/artifacts.md",
+        "docs/guides/getting-started.md",
+        "docs/guides/produce-and-verify.md",
+        "docs/notebooks/charter-tour.livemd",
+        "docs/notebooks/fork-repair.livemd",
+        "docs/guides/integration.md",
+        "docs/guides/recipes.md",
+        "docs/guides/error-codes.md",
+        "docs/guides/upgrading-verification-identity.md",
+        "docs/guides/implementing.md",
         "docs/guides/verification.md",
         "docs/guides/receipts.md",
         "docs/guides/extensions.md",
         "docs/guides/security-model.md",
-        "docs/guides/recipes.md",
-        "docs/guides/conformance.md",
-        "docs/guides/error-codes.md",
+        "docs/guides/design-decisions.md",
         "docs/guides/faq.md",
-        "docs/notebooks/charter-tour.livemd",
-        "docs/notebooks/fork-repair.livemd",
+        "docs/guides/cheatsheet.cheatmd",
+        "docs/guides/artifacts.md",
+        "docs/guides/limits-and-profiles.md",
+        "docs/guides/conformance.md",
+        "docs/guides/glossary.md",
         "docs/profiles/indexed-price.md",
         "docs/adr/no-versioning-rule.md",
         "docs/adr/conformance-release-candidate.md",
         "docs/adr/algorithm-name-agility.md",
         "docs/adr/ml-dsa-admission.md",
-        "docs/adr/supported-otp-set.md",
-        "docs/adr/dependency-currency-gate.md",
-        "docs/release-runbook.md",
+        "docs/adr/release-identity.md",
         "spec/core.md",
         "spec/requirements.md",
         "spec/security-considerations.md",
         "spec/privacy-considerations.md",
         "spec/registry-policy.md",
-        "spec/evolution.md"
+        "spec/evolution.md",
+        {"spec/schemas/README.md", [filename: "schemas", title: "Wire grammar schemas"]},
+        "spec/changelog.md",
+        "CHANGELOG.md",
+        "SECURITY.md",
+        "CONTRIBUTING.md",
+        "docs/errata.md"
       ],
       groups_for_extras: [
-        Guides: [
+        Start: [
+          "docs/guides/overview.md"
+        ],
+        Tutorials: [
           "docs/guides/getting-started.md",
-          "docs/guides/overview.md",
-          "docs/guides/artifacts.md",
+          "docs/guides/produce-and-verify.md",
+          "docs/notebooks/charter-tour.livemd",
+          "docs/notebooks/fork-repair.livemd"
+        ],
+        "How-to guides": [
+          "docs/guides/integration.md",
+          "docs/guides/recipes.md",
+          "docs/guides/error-codes.md",
+          "docs/guides/upgrading-verification-identity.md",
+          "docs/guides/implementing.md"
+        ],
+        Explanation: [
           "docs/guides/verification.md",
           "docs/guides/receipts.md",
           "docs/guides/extensions.md",
           "docs/guides/security-model.md",
-          "docs/guides/recipes.md",
-          "docs/guides/conformance.md",
-          "docs/guides/error-codes.md",
+          "docs/guides/design-decisions.md",
           "docs/guides/faq.md"
         ],
-        Notebooks: [
-          "docs/notebooks/charter-tour.livemd",
-          "docs/notebooks/fork-repair.livemd"
-        ],
         Reference: [
-          "docs/protocol.md",
-          "docs/errata.md",
-          "docs/test-vectors.md",
-          "docs/profiles/indexed-price.md",
+          "docs/guides/cheatsheet.cheatmd",
+          "docs/guides/artifacts.md",
+          "docs/guides/limits-and-profiles.md",
+          "docs/guides/conformance.md",
+          "docs/guides/glossary.md",
+          "docs/profiles/indexed-price.md"
+        ],
+        "Design records": [
           "docs/adr/no-versioning-rule.md",
           "docs/adr/conformance-release-candidate.md",
           "docs/adr/algorithm-name-agility.md",
           "docs/adr/ml-dsa-admission.md",
-          "docs/adr/supported-otp-set.md",
-          "docs/adr/dependency-currency-gate.md",
-          "docs/release-runbook.md"
+          "docs/adr/release-identity.md"
         ],
         Specification: [
           "spec/core.md",
@@ -206,59 +218,117 @@ defmodule CharterAgreementProtocol.MixProject do
           "spec/security-considerations.md",
           "spec/privacy-considerations.md",
           "spec/registry-policy.md",
-          "spec/evolution.md"
+          "spec/evolution.md",
+          "spec/schemas/README.md",
+          "spec/changelog.md"
+        ],
+        Project: [
+          "CHANGELOG.md",
+          "SECURITY.md",
+          "CONTRIBUTING.md",
+          "docs/errata.md"
         ]
       ],
+      filter_modules: fn module, _metadata ->
+        module not in [
+          CharterAgreementProtocol.Internal.Unicode,
+          CharterAgreementProtocol.Conformance.Cli.Main
+        ]
+      end,
+      nest_modules_by_prefix: [CharterAgreementProtocol],
       groups_for_modules: [
+        "Start here": [
+          CharterAgreementProtocol
+        ],
+        Facts: [
+          CharterAgreementProtocol.ChainFacts,
+          CharterAgreementProtocol.RevisionFacts,
+          CharterAgreementProtocol.AcceptanceFacts,
+          CharterAgreementProtocol.DescriptorFacts,
+          CharterAgreementProtocol.TerminationFacts,
+          CharterAgreementProtocol.ReceiptFacts,
+          CharterAgreementProtocol.ForkEvidence,
+          CharterAgreementProtocol.AcceptanceEquivocation,
+          CharterAgreementProtocol.Facts
+        ],
+        "Options and identity": [
+          CharterAgreementProtocol.Limits,
+          CharterAgreementProtocol.Capability,
+          CharterAgreementProtocol.Capability.Profile,
+          CharterAgreementProtocol.Algorithm,
+          CharterAgreementProtocol.ReleaseIdentity,
+          CharterAgreementProtocol.SpecificationIdentity,
+          CharterAgreementProtocol.Error
+        ],
         Artifacts: [
           CharterAgreementProtocol.PartyDescriptor,
           CharterAgreementProtocol.DescriptorChain,
           CharterAgreementProtocol.CharterRevision,
           CharterAgreementProtocol.Acceptance,
-          CharterAgreementProtocol.AcceptanceEquivocation,
           CharterAgreementProtocol.TerminationNotice,
           CharterAgreementProtocol.Receipt,
           CharterAgreementProtocol.ArtifactSet
         ],
-        Facts: [
-          CharterAgreementProtocol.DescriptorFacts,
-          CharterAgreementProtocol.AcceptanceFacts,
-          CharterAgreementProtocol.RevisionFacts,
-          CharterAgreementProtocol.TerminationFacts,
-          CharterAgreementProtocol.ChainFacts,
-          CharterAgreementProtocol.ReceiptFacts
-        ],
-        Verification: [
+        "Verification and signing": [
           CharterAgreementProtocol.Chain,
-          CharterAgreementProtocol.Facts,
           CharterAgreementProtocol.Signature,
           CharterAgreementProtocol.SigningInput,
           CharterAgreementProtocol.CompactJws
         ],
-        Primitives: [
+        Encoding: [
           CharterAgreementProtocol.Base64Url,
           CharterAgreementProtocol.Json,
           CharterAgreementProtocol.Canonicalization,
           CharterAgreementProtocol.Digest,
-          CharterAgreementProtocol.Error,
-          CharterAgreementProtocol.Limits,
           CharterAgreementProtocol.Timestamp,
           CharterAgreementProtocol.Schema
         ],
         Extensions: [
           CharterAgreementProtocol.Extension,
-          CharterAgreementProtocol.ExtensionRegistry,
-          CharterAgreementProtocol.RequirementMap
+          CharterAgreementProtocol.ExtensionRegistry
         ],
         Conformance: [
           CharterAgreementProtocol.Conformance.Corpus,
           CharterAgreementProtocol.Conformance.Runner,
           CharterAgreementProtocol.Conformance.Report,
-          CharterAgreementProtocol.Conformance.Cli
+          CharterAgreementProtocol.Conformance.Cli,
+          CharterAgreementProtocol.RequirementMap
         ]
-      ]
+      ],
+      before_closing_body_tag: &before_closing_body_tag/1
     ]
   end
+
+  # Renders the Mermaid diagrams in the guides (the overview's artifact map).
+  defp before_closing_body_tag(:html) do
+    """
+    <script defer src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+    <script>
+      let initialized = false;
+      window.addEventListener("exdoc:loaded", () => {
+        if (!initialized) {
+          mermaid.initialize({startOnLoad: false, theme: document.body.className.includes("dark") ? "dark" : "default"});
+          initialized = true;
+        }
+        let id = 0;
+        for (const codeEl of document.querySelectorAll("pre code.mermaid")) {
+          const preEl = codeEl.parentElement;
+          const graphDefinition = codeEl.textContent;
+          const graphEl = document.createElement("div");
+          const graphId = "mermaid-graph-" + id++;
+          mermaid.render(graphId, graphDefinition).then(({svg, bindFunctions}) => {
+            graphEl.innerHTML = svg;
+            bindFunctions?.(graphEl);
+            preEl.insertAdjacentElement("afterend", graphEl);
+            preEl.remove();
+          });
+        }
+      });
+    </script>
+    """
+  end
+
+  defp before_closing_body_tag(_format), do: ""
 
   defp aliases do
     [
@@ -266,6 +336,7 @@ defmodule CharterAgreementProtocol.MixProject do
       "conformance.verify": "run --no-start scripts/check_conformance.exs",
       "historical.check": "run --no-start scripts/check_historical_differential.exs",
       "conformance.mutations": "run --no-start scripts/check_conformance_mutations.exs",
+      "verifier.source": "run --no-start scripts/materialize_verifier_source.exs",
       "verifier.agreement": "run --no-start scripts/check_verifier_agreement.exs",
       "differential.check": "run --no-start scripts/check_differential.exs",
       "release.candidate": "run --no-start scripts/check_release_candidate.exs",
@@ -278,6 +349,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "format --check-formatted",
         "compile --warnings-as-errors",
         "credo --strict",
+        "verifier.source",
         "test --cover --seed 42",
         "conformance.verify",
         "historical.check",

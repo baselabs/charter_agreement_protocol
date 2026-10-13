@@ -1,10 +1,13 @@
+Code.require_file("verifier_source.exs", __DIR__)
+
 defmodule CharterAgreementProtocol.ReleaseCandidateGate do
   alias CharterAgreementProtocol.{
     Algorithm,
     Canonicalization,
     Digest,
     ReleaseIdentity,
-    SpecificationIdentity
+    SpecificationIdentity,
+    VerifierSource
   }
 
   alias CharterAgreementProtocol.Conformance.Report
@@ -16,6 +19,7 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
   @forbidden_prefixes [".env", ".kimosabe", "scripts/", "test/", "verifier/"]
 
   def run do
+    VerifierSource.current!()
     verify_metadata!()
     verify_project!()
     verify_package_inputs!()
@@ -114,19 +118,15 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
 
     pins = [
       {"lib/charter_agreement_protocol/conformance/cli.ex", index_identity},
-      {"verifier/core.ts", index_identity},
-      {"verifier/core.ts", index["registry_digest"]},
+      {Path.join(VerifierSource.path(), "core.ts"), index_identity},
+      {Path.join(VerifierSource.path(), "core.ts"), index["registry_digest"]},
       # The shipped docs' certified-identity tables must carry the live
       # values — a truncated or stale transcription (the 0.3.1 review caught
       # a 42-character index SHA) must fail this gate, not reach consumers.
       {"docs/guides/conformance.md", index_identity},
       {"docs/guides/conformance.md", index["corpus_digest"]},
       {"docs/guides/conformance.md", index["registry_digest"]},
-      {"docs/guides/conformance.md", live_spec_digest()},
-      {"docs/test-vectors.md", index_identity},
-      {"docs/test-vectors.md", index["corpus_digest"]},
-      {"docs/test-vectors.md", index["registry_digest"]},
-      {"docs/test-vectors.md", live_spec_digest()}
+      {"docs/guides/conformance.md", live_spec_digest()}
     ]
 
     Enum.each(pins, fn {path, pin} ->
@@ -253,6 +253,11 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
   defp verify_package_inputs! do
     inputs = package_inputs()
     if inputs == [], do: raise("empty package boundary")
+
+    # The verifier pin ships: a released archive names the TypeScript commit
+    # its agreement gates ran, and the TypeScript release job reads it there.
+    unless Path.join(@root, "priv/verifier-source.json") in inputs,
+      do: raise("the verifier source pin is not a package input")
 
     Enum.each(inputs, fn path ->
       relative = Path.relative_to(path, @root)

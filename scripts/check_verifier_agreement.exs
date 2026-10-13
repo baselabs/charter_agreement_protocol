@@ -1,11 +1,12 @@
 Code.require_file("seeded_mutation.exs", __DIR__)
+Code.require_file("verifier_source.exs", __DIR__)
 
 defmodule CharterAgreementProtocol.VerifierAgreementGate do
-  alias CharterAgreementProtocol.SeededMutation
+  alias CharterAgreementProtocol.{SeededMutation, VerifierSource}
 
   @root Path.expand("..", __DIR__)
   @corpus "priv/conformance"
-  @verifier "verifier"
+  @verifier VerifierSource.path()
   @escript "charter_agreement_protocol"
 
   @seeded_reds [
@@ -24,19 +25,11 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
       from: "const REPORT_FORMAT = \"charter-agreement-protocol-conformance-report\";",
       to: "const REPORT_FORMAT = \"charter-agreement-protocol-conformance-report-drift\";",
       exit: 0
-    },
-    %{
-      name: "certified-index-drift",
-      path: "core.ts",
-      from:
-        "export const CERTIFIED_INDEX_SHA256_BASE64URL = \"f--8DXp39J4wJkrpkD8ZTQpHkMlduX43Xvnz0HeObeA\";",
-      to:
-        "export const CERTIFIED_INDEX_SHA256_BASE64URL = \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\";",
-      exit: 1
     }
   ]
 
   def run do
+    VerifierSource.current!()
     verify_vendored_corpus_snapshot()
     node = find_node!()
     build_escript!()
@@ -62,11 +55,29 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
         )
 
       IO.write(self_output)
-      Enum.each(@seeded_reds, &seeded_red!(&1, node, typescript))
+      Enum.each(@seeded_reds ++ [index_drift_seed()], &seeded_red!(&1, node, typescript))
       IO.puts("verifier agreement: byte-identical repository and archive reports")
     after
       File.rm(Path.join(@root, @escript))
     end
+  end
+
+  # The pinned verifier must refuse a corpus whose index differs from the one it
+  # certifies. The seed reads the live index, so it never goes stale.
+  defp index_drift_seed do
+    pin =
+      :sha256
+      |> :crypto.hash(File.read!(Path.join([@root, @corpus, "index.json"])))
+      |> Base.url_encode64(padding: false)
+
+    %{
+      name: "certified-index-drift",
+      path: "core.ts",
+      from: "export const CERTIFIED_INDEX_SHA256_BASE64URL = \"#{pin}\";",
+      to:
+        "export const CERTIFIED_INDEX_SHA256_BASE64URL = \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\";",
+      exit: 1
+    }
   end
 
   defp build_escript! do
@@ -149,12 +160,12 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
     path
   end
 
-  # The npm package's vendored corpus snapshot must be byte-identical to the
-  # Elixir package's certified corpus: a drifted snapshot ships verdicts the
-  # reference repository never certified.
+  # The pinned TypeScript repository's vendored corpus must be byte-identical
+  # to the certified corpus: a drifted snapshot ships verdicts the reference
+  # never certified.
   defp verify_vendored_corpus_snapshot do
     source = "priv/conformance"
-    vendored = "verifier/conformance"
+    vendored = Path.join(@verifier, "conformance")
 
     source_files =
       source

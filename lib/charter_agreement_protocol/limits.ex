@@ -1,12 +1,48 @@
 defmodule CharterAgreementProtocol.Limits do
   @moduledoc """
-  CAP never authorizes.
+  Size bounds for decoding and verification. CAP never authorizes; limits
+  only bound how much input it will read.
 
-  Caller-supplied ceilings for bounded protocol decoding.
+  Every artifact decode and verify call in `CharterAgreementProtocol` takes
+  a `Limits` value. Lower-level helpers such as
+  `CharterAgreementProtocol.Canonicalization.verify/1` do not. Input bytes
+  and the artifact-set bounds are checked before parsing; nesting depth,
+  member and item counts and string sizes are checked while the JSON is
+  parsed. The exact bound is accepted: one more fails with the value-free
+  `:limit_exceeded` error. Limits are plain data. CAP reads no
+  environment or application config for them.
 
-  Callers may narrow the defaults or widen them only as far as the compiled
-  maximums. The values are pure data: no environment or application config is
-  consulted.
+  Start from `default/0`. Use `new/1` to tighten a field, or to raise it as
+  far as `maximums/0` allows.
+
+  ## Fields
+
+  | Field | Bounds | Default | Greatest |
+  |---|---|---:|---:|
+  | `max_bytes` | bytes in one input (a revision, or one compact JWS) | 1,048,576 | 16,777,216 |
+  | `max_depth` | JSON nesting depth | 64 | 128 |
+  | `max_object_members` | members in one JSON object | 1,024 | 65,536 |
+  | `max_array_items` | items in one JSON array | 4,096 | 65,536 |
+  | `max_string_bytes` | UTF-8 bytes in one string or member name, after unescaping | 65,536 | 1,048,576 |
+  | `max_artifact_set_items` | artifacts in each list passed to a set-level call | 1,024 | 4,096 |
+  | `max_artifact_set_bytes` | total artifact bytes in one `verify_chain` call | 67,108,864 | 1,073,741,824 |
+
+  `max_artifact_set_items` applies to each list given to
+  `CharterAgreementProtocol.verify_chain/5` and to the list given to
+  `CharterAgreementProtocol.verify_descriptor_chain/2`.
+  `max_artifact_set_bytes` applies to `verify_chain/5`, including the one
+  `CharterAgreementProtocol.verify_receipt/3` runs on chain facts. Both
+  checks run before any decoding or signature work.
+
+  ## Examples
+
+      iex> {:ok, limits} = CharterAgreementProtocol.Limits.new(max_depth: 16)
+      iex> limits.max_depth
+      16
+      iex> CharterAgreementProtocol.Limits.new(max_depth: 129)
+      {:error, %CharterAgreementProtocol.Error{code: :invalid_limits, subject: ["limits"], detail: nil}}
+      iex> CharterAgreementProtocol.Limits.new(max_widgets: 1)
+      {:error, %CharterAgreementProtocol.Error{code: :invalid_limits, subject: ["limits"], detail: nil}}
   """
 
   alias CharterAgreementProtocol.Error
@@ -44,6 +80,7 @@ defmodule CharterAgreementProtocol.Limits do
   @enforce_keys @fields
   defstruct @defaults
 
+  @typedoc "One complete set of limits. See the module doc for each field."
   @type t :: %__MODULE__{
           max_bytes: non_neg_integer(),
           max_depth: non_neg_integer(),
@@ -54,19 +91,25 @@ defmodule CharterAgreementProtocol.Limits do
           max_artifact_set_bytes: non_neg_integer()
         }
 
-  @doc "The closed limit-field set."
+  @doc "The field names a `Limits` value has, in order."
   @spec fields() :: [atom()]
   def fields, do: @fields
 
-  @doc "The default bounded-decoding limits."
+  @doc "The default limits. See the module doc for each value."
   @spec default() :: t()
   def default, do: struct!(__MODULE__, @defaults)
 
-  @doc "The greatest caller-selectable value for each limit."
+  @doc "The greatest value `new/1` accepts for each field."
   @spec maximums() :: t()
   def maximums, do: struct!(__MODULE__, @maximums)
 
-  @doc "Build caller-supplied limits, rejecting unknown or out-of-range values."
+  @doc """
+  Build limits from the defaults plus the fields you give.
+
+  Each value must be a non-negative integer no greater than its maximum.
+  Unknown fields, repeated fields and out-of-range values return
+  `:invalid_limits`.
+  """
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(options \\ []) do
     if valid_options?(options) do
@@ -76,7 +119,7 @@ defmodule CharterAgreementProtocol.Limits do
     end
   end
 
-  @doc "Whether a limits struct is complete and within the compiled maximums."
+  @doc "Whether a value is a complete `Limits` struct within the maximums."
   @spec valid?(term()) :: boolean()
   def valid?(%__MODULE__{} = limits) do
     Enum.all?(@fields, fn field ->

@@ -4,8 +4,8 @@ Status: initial candidate. This document is the normative specification of the
 Charter Agreement Protocol (CAP). The generated requirements matrix
 (`requirements.md`) binds every requirement identifier cited here to its
 certified evidence; the wire grammar schemas (`schemas/`) are the single
-normative machine grammar; the implementation guide lives at
-`../docs/protocol.md`.
+normative machine grammar; the guides under `../docs/guides/` explain how to
+use and implement it.
 
 ## 1. Conformance language and requirement identifiers
 
@@ -147,7 +147,13 @@ before any cryptographic work; an artifact outside the profile's name set
 MUST be rejected as out of profile, and an artifact whose
 `protocol_revision` is outside the profile's revision range MUST be
 rejected as out of profile, on every substrate alike
-[CAP-PROFILE-admission-axes]. A profile never widens admission, and
+[CAP-PROFILE-admission-axes]. A call that re-verifies caller-supplied
+context MUST apply the same profile to every artifact in that context:
+the supplied revision first, then the supplied descriptor history or
+artifact set, then the artifact under verification; a revision-only
+receipt context names no signing key, so the receipt's signature stays
+unchecked, but its envelope is still admitted against the profile
+[CAP-PROFILE-context-admission]. A profile never widens admission, and
 verification under the full profile is exactly verification without one
 [CAP-PROFILE-narrow-verification]. The `typ` value MUST be one of the four
 registered artifact types (`cap+party`, `cap+acceptance`,
@@ -262,11 +268,22 @@ history; an unverifiable link invalidates the chain
 not adjudicated: a history with signed sibling forks reports a forked
 topology with every contested position named.
 
+A chain view MUST be bounded before any decode or signature check, with
+each artifact list holding at most `max_artifact_set_items` items and the
+byte lengths of all artifacts across the lists summing to at most
+`max_artifact_set_bytes` [CAP-CHAIN-artifact-set-bounds]. A view exactly at
+either ceiling verifies; one item or one byte above it rejects with
+`limit_exceeded` [CAP-CHAIN-artifact-set-bounds].
+
 ## 6. Chain verification and governing revision
 
 A set of revisions, acceptances, and descriptors whose acceptances pair
 exactly and whose topology is linear verifies as a valid chain
-[CAP-CHAIN-valid-topology]. A chain input MUST carry at least one
+[CAP-CHAIN-valid-topology]. A charter's parties MUST be distinct parties: a
+revision MUST NOT name one descriptor for two roles, a revision's parties MUST
+resolve to different descriptor histories, and every descriptor history in a
+chain view MUST be one that a revision of the view names; any other view
+rejects [CAP-CHAIN-distinct-parties]. A chain input MUST carry at least one
 revision — an empty revision set rejects [CAP-CHAIN-input-nonempty]. A fork between accepted siblings MUST be
 visible in the verified view — the forked topology and the sibling
 digests are reported, never collapsed
@@ -279,7 +296,11 @@ governing digest while history is retained
 [CAP-CHAIN-supersession-applied]. Where a unique governing revision
 exists, the revision with the highest precedence among eligible accepted
 revisions MUST govern [CAP-CHAIN-highest-precedence], with eligibility
-inclusive of the instant boundary.
+inclusive of the instant boundary. A verified termination notice that names
+the revision governing at its `effective_at` MUST close the charter from
+that instant: the governing computation at or after it returns `none`, and
+a receipt for an effect at or after it does not match a governing revision
+[CAP-CHAIN-termination-closes].
 
 ## 7. Facts and error surface
 

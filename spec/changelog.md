@@ -8,6 +8,42 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-10-13: profile admission covers re-verified context
+
+- `core.md` section 4: a call that re-verifies caller-supplied context
+  applies the caller's profile to every artifact in it, the supplied
+  revision first, then the descriptor history or artifact set, then the
+  artifact itself; a revision-only receipt context still admits the
+  receipt's envelope against the profile,
+  [CAP-PROFILE-context-admission].
+- The reference before 0.5.0 applied the profile only to the artifact under
+  verification in standalone acceptance, termination and receipt calls, so
+  a narrowed profile could pass a call whose context it excluded. Only
+  calls given a narrowed profile change; under the full profile every
+  verdict is unchanged [CAP-PROFILE-narrow-verification].
+- The `party_descriptor.verify`, `acceptance.verify`, `termination.verify`
+  and `receipt.verify` surfaces take an optional `profile` input,
+  `party_descriptor.verify` takes a `predecessor_compacts` history, and
+  `receipt.verify` takes a `revision_text` context in place of `chain`; twenty-four cases evidence the rule.
+- `requirements.md`: regenerated with the new requirement.
+
+## 2026-10-13: termination closure and artifact-set ceilings stated
+
+- `core.md` section 5: the artifact-set ceilings become a normative
+  statement, [CAP-CHAIN-artifact-set-bounds]: each artifact list holds at
+  most `max_artifact_set_items` items and all artifacts together at most
+  `max_artifact_set_bytes` bytes, checked before any decode or signature
+  check.
+- `core.md` section 6: a verified termination naming the revision governing
+  at its `effective_at` closes the charter from that instant,
+  [CAP-CHAIN-termination-closes].
+- Both describe behavior the reference already had (`Limits` since 0.3.0,
+  termination closure since 0.1.0); a second implementation that lacked
+  them passed every previously certified case. No verdict changes.
+- `requirements.md`: regenerated with the two new requirements and the
+  corpus cells that now evidence the closed claim sets, revision decode
+  strictness, and the new cases.
+
 ## 2026-10-13: algorithm-prose correction in the considerations
 
 - `security-considerations.md` and `privacy-considerations.md`: the

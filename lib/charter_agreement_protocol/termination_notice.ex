@@ -201,11 +201,12 @@ defmodule CharterAgreementProtocol.TerminationNotice do
     do: :termination_content |> Digest.hash(bytes) |> Digest.to_tagged()
 
   defp do_verify(compact, supplied_revision, supplied_chain, limits, profile) do
-    with {:ok, revision} <- reverify_revision(supplied_revision, limits),
-         {:ok, chain} <- reverify_chain(supplied_chain, limits),
+    with {:ok, revision} <- reverify_revision(supplied_revision, limits, profile),
+         {:ok, chain} <- reverify_chain(supplied_chain, limits, profile),
          {:ok, termination} <- decode(compact, limits),
          :ok <- claims_match(termination, revision),
          {:ok, descriptor} <- pinned_descriptor(termination, revision, chain),
+         :ok <- CompactJws.admit(termination.envelope, profile),
          {:ok, key} <- active_key(descriptor, termination.envelope.kid),
          :ok <-
            CompactJws.verify_signature(
@@ -225,6 +226,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
     with {:ok, termination} <- decode(compact, limits),
          :ok <- claims_match(termination, revision),
          {:ok, descriptor} <- pinned_descriptor(termination, revision, chain),
+         :ok <- CompactJws.admit(termination.envelope, profile),
          {:ok, key} <- active_key(descriptor, termination.envelope.kid),
          :ok <-
            CompactJws.verify_signature(
@@ -302,13 +304,17 @@ defmodule CharterAgreementProtocol.TerminationNotice do
       else: termination_error()
   end
 
-  defp reverify_revision(%CharterRevision{canonical_bytes: bytes}, limits),
-    do: CharterRevision.decode(bytes, limits)
+  defp reverify_revision(%CharterRevision{canonical_bytes: bytes}, limits, profile) do
+    with {:ok, revision} <- CharterRevision.decode(bytes, limits),
+         :ok <- CharterRevision.admit(revision, profile) do
+      {:ok, revision}
+    end
+  end
 
-  defp reverify_chain(%DescriptorChain{descriptors: descriptors}, limits) do
+  defp reverify_chain(%DescriptorChain{descriptors: descriptors}, limits, profile) do
     with {:ok, compacts} <- retained_compacts(descriptors),
          true <- compacts != [] do
-      DescriptorChain.verify(Enum.uniq(compacts), limits)
+      DescriptorChain.verify(Enum.uniq(compacts), limits, profile)
     else
       _failure -> chain_error()
     end

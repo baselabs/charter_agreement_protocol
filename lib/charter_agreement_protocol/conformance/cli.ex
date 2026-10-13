@@ -3,19 +3,26 @@ defmodule CharterAgreementProtocol.Conformance.Cli do
   CAP never authorizes.
 
   Filesystem adapter for the pure corpus loader, runner, and report. The CLI
-  accepts only an explicit corpus directory and refuses bytes whose raw index
-  identity is not the certified release identity. The specification digest —
-  the fourth certified identity — is pinned in `priv/release-metadata.json`
-  and enforced by the release-candidate gate, not by corpus verification.
+  accepts only an explicit corpus directory and refuses any corpus whose
+  index SHA-256 differs from the one pinned for this release. The
+  specification digest, the fourth release identity, is recorded in
+  `priv/release-metadata.json` and checked when a release is prepared, not
+  by corpus verification.
   """
 
   alias CharterAgreementProtocol.Conformance.{Corpus, Report, Runner}
 
-  @certified_index_sha256_base64url "f--8DXp39J4wJkrpkD8ZTQpHkMlduX43Xvnz0HeObeA"
+  @certified_index_sha256_base64url "n2Se2on9kG3cdeFMiy9OW9lKalvM_02Fmdw-XbYe-A4"
   @maximum_files 64
   @maximum_bytes 33_554_432
 
-  @doc "Run conformance verification and return a process exit status."
+  @doc """
+  Verify a conformance corpus directory and return a process exit status.
+
+  `arguments` must be `["--corpus", directory]`. Once the corpus loads, the
+  canonical JSON report goes to standard output. Returns `0` when every case agreed,
+  `1` when loading or any case failed, and `2` for any other arguments.
+  """
   @spec run([binary()]) :: 0 | 1 | 2
   def run(["--corpus", root]) do
     with {:ok, files} <- read_files(root),

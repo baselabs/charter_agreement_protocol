@@ -39,10 +39,20 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
     all_versions = history |> Enum.flat_map(& &1.package_versions) |> Enum.sort()
     assert all_versions == Enum.uniq(all_versions)
 
-    # monotone semantics across the ordered families
+    # semantics never decreases across the ordered rows; a family may span
+    # several rows (one per certified census), and only a family's first row
+    # carries transitions: a later row in the same family changed no verdict
     semantics = Enum.map(history, & &1.verification_semantics)
     assert semantics == Enum.sort(semantics)
-    assert semantics == Enum.uniq(semantics)
+
+    Enum.zip(history, tl(history))
+    |> Enum.filter(fn {prior, later} ->
+      prior.verification_semantics == later.verification_semantics
+    end)
+    |> Enum.each(fn {prior, later} ->
+      assert later.transitions == []
+      assert later.census_digest != prior.census_digest
+    end)
   end
 
   test "revision coverage grows monotonically and stays within the registry" do
@@ -57,9 +67,10 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
     |> Enum.each(fn {prior, later} -> assert MapSet.subset?(prior, later) end)
   end
 
-  test "the latest family row exists and carries exactly the descriptor timestamp transition" do
-    [s4 | _] = Enum.reverse(ReleaseIdentity.compatibility())
-    assert s4.verification_semantics == 4
-    assert [%{class: :verdict_narrowing, direction: :green_to_red}] = s4.transitions
+  test "the latest family opens with the distinct-parties narrowing" do
+    [latest | _] = Enum.reverse(ReleaseIdentity.compatibility())
+    assert latest.verification_semantics == ReleaseIdentity.verification_semantics()
+    assert latest.package_versions == ["0.5.0"]
+    assert [%{class: :verdict_narrowing, direction: :green_to_red}] = latest.transitions
   end
 end

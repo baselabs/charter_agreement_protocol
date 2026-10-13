@@ -81,7 +81,7 @@ defmodule CharterAgreementProtocol.CompactJws do
   cryptographic work: an envelope outside the profile's `alg` set rejects
   with `:algorithm_outside_profile`, an envelope whose payload
   `protocol_revision` is outside the profile's revision range rejects with
-  `:revision_outside_profile` — on every substrate alike, deterministically.
+  `:revision_outside_profile`. This happens the same way on every runtime.
   The profile never constrains the key material a descriptor declares.
   """
   @spec verify_signature(t(), term(), term()) :: :ok | {:error, Error.t()}
@@ -117,7 +117,9 @@ defmodule CharterAgreementProtocol.CompactJws do
     revision
   end
 
-  defp admit(envelope, profile) do
+  @doc false
+  @spec admit(t(), Profile.t()) :: :ok | {:error, Error.t()}
+  def admit(%__MODULE__{} = envelope, %Profile{} = profile) do
     cond do
       envelope.alg not in profile.algorithms ->
         {:error, Error.new(:algorithm_outside_profile, ["compact_jws", "alg"])}

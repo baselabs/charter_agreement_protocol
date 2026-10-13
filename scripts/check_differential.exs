@@ -9,8 +9,9 @@
 # Run: mix run --no-start scripts/check_differential.exs
 
 Code.require_file("seeded_mutation.exs", __DIR__)
+Code.require_file("verifier_source.exs", __DIR__)
 
-alias CharterAgreementProtocol.{Canonicalization, Json, SeededMutation}
+alias CharterAgreementProtocol.{Canonicalization, Json, SeededMutation, VerifierSource}
 
 defmodule CharterAgreementProtocol.DifferentialGate do
   @moduledoc false
@@ -18,6 +19,7 @@ defmodule CharterAgreementProtocol.DifferentialGate do
   @case_count 300
 
   def run do
+    VerifierSource.current!()
     texts = Enum.map(1..@case_count, &generate_text/1)
     inputs = SeededMutation.temporary!("differential-inputs")
     input_path = Path.join(inputs, "inputs.jsonl")
@@ -27,7 +29,7 @@ defmodule CharterAgreementProtocol.DifferentialGate do
       elixir_projection =
         texts |> Enum.map(&project/1) |> tagged() |> Canonicalization.encode() |> elem(1)
 
-      typescript_projection = run_typescript(Path.absname("verifier"), input_path)
+      typescript_projection = run_typescript(Path.absname(VerifierSource.path()), input_path)
 
       if elixir_projection != typescript_projection do
         raise "differential gate: Elixir and TypeScript projections diverge"
@@ -162,7 +164,7 @@ defmodule CharterAgreementProtocol.DifferentialGate do
     directory = SeededMutation.temporary!("differential-red")
 
     try do
-      File.cp_r!("verifier", directory)
+      File.cp_r!(VerifierSource.path(), directory)
 
       # Float-typed lexemes are never boxed, so they project as integer tags.
       SeededMutation.apply_once!(

@@ -1,29 +1,46 @@
 defmodule CharterAgreementProtocol.Capability.Profile do
   @moduledoc """
-  CAP never authorizes.
+  A capability profile: the `alg` names and `protocol_revision` values one
+  deployment accepts. CAP never authorizes; a profile only narrows what
+  verification admits.
 
-  Caller-supplied capability profile: the subset of registry `alg` names and
-  `protocol_revision` values one deployment verifies.
+  A profile is plain data, like `CharterAgreementProtocol.Limits`. The
+  default, `full/0`, is every registry name and every accepted revision, so
+  verifying without a profile is the same as verifying with the full one.
+  Both axes apply to every signed artifact a verify call checks, including
+  the context a standalone call verifies again: the revision and descriptor
+  chain passed to `CharterAgreementProtocol.verify_acceptance/5` and
+  `CharterAgreementProtocol.verify_termination/5`, and the chain view or bare
+  revision passed to `CharterAgreementProtocol.verify_receipt/4`. A Charter
+  Revision is unsigned, so only the revision axis applies to it.
 
-  Pure data like `Limits`: no environment or application config is consulted.
-  The default (`full/0`) is the whole registry and every accepted revision,
-  so verification without a profile is exactly verification with the full
-  profile. Two axes, applied per artifact (acceptances and terminations
-  included): the accepted envelope `alg` names, and the accepted
-  `protocol_revision` range.
+  A profile does not constrain the keys a descriptor declares. Mixed key
+  sets are legal, so a descriptor that declares ML-DSA keys but is signed
+  with an Ed25519 key from its predecessor is in profile for an
+  Ed25519-only deployment. To exclude ML-DSA-keyed descriptors, narrow the
+  revision axis instead: ML-DSA keys are legal from `protocol_revision` 3,
+  so `revisions: {1, 2}` excludes them.
 
-  A profile deliberately does NOT constrain the key material a descriptor
-  declares: mixed-algorithm key sets are legal, and a descriptor declaring
-  ML-DSA keys that is Ed25519-signed by a predecessor key is in profile for
-  an Ed25519-only deployment. A deployment that must exclude ML-DSA-keyed
-  lineages narrows the revision axis instead — ML-DSA key material is legal
-  from `protocol_revision` 3, so `revisions: {1, 2}` excludes it structurally.
+  An artifact outside the profile fails before its own signature is
+  checked, on every runtime alike, with `:algorithm_outside_profile` or
+  `:revision_outside_profile`. A malformed profile fails with
+  `:invalid_profile` before verification begins.
 
-  Out-of-profile artifacts fail closed before any cryptographic work, on
-  every substrate alike: `:algorithm_outside_profile` or
-  `:revision_outside_profile`, never a signature verdict. A malformed
-  profile fails closed with `:invalid_profile` before verification begins,
-  exactly as a malformed limits value fails with `:invalid_limits`.
+  ## Fields
+
+  - `algorithms`: the accepted `alg` names, a non-empty list without
+    duplicates.
+  - `revisions`: the accepted `protocol_revision` range as `{min, max}`.
+
+  ## Examples
+
+      iex> {:ok, profile} = CharterAgreementProtocol.Capability.Profile.new(algorithms: ["Ed25519", "ML-DSA-65"])
+      iex> CharterAgreementProtocol.Capability.Profile.admits?(profile, "Ed25519", 2)
+      true
+      iex> CharterAgreementProtocol.Capability.Profile.admits?(profile, "EdDSA", 1)
+      false
+      iex> CharterAgreementProtocol.Capability.Profile.new(revisions: {2, 9})
+      {:error, %CharterAgreementProtocol.Error{code: :invalid_profile, subject: ["profile"], detail: nil}}
   """
 
   alias CharterAgreementProtocol.{Algorithm, Error}
@@ -31,7 +48,9 @@ defmodule CharterAgreementProtocol.Capability.Profile do
   @enforce_keys [:algorithms, :revisions]
   defstruct [:algorithms, :revisions]
 
+  @typedoc "An inclusive `{min, max}` range of protocol revisions."
   @type revision_range :: {pos_integer(), pos_integer()}
+  @typedoc "One capability profile. See the module doc for each field."
   @type t :: %__MODULE__{
           algorithms: [binary()],
           revisions: revision_range()
@@ -49,12 +68,15 @@ defmodule CharterAgreementProtocol.Capability.Profile do
   end
 
   @doc """
-  Build a caller-supplied profile, rejecting unknown names and out-of-range
-  revision bounds.
+  Build a profile from options.
 
-  Options: `:algorithms` (a non-empty duplicate-free list of registry `alg`
-  names; omitted means all) and `:revisions` (`{min, max}` inside the
-  accepted set with `min <= max`; omitted means the full accepted range).
+  - `:algorithms`: a non-empty list of registry `alg` names without
+    duplicates. Omitted or `nil` means all.
+  - `:revisions`: `{min, max}` with both values accepted revisions and
+    `min <= max`. Omitted or `nil` means the full accepted range.
+
+  Unknown options, unknown names and out-of-range bounds return
+  `:invalid_profile`.
   """
   @spec new(keyword()) :: {:ok, t()} | {:error, Error.t()}
   def new(options \\ []) do

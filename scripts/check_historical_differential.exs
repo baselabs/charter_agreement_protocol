@@ -38,7 +38,9 @@ defmodule CharterAgreementProtocol.HistoricalDifferentialGate do
     "v0.2.0" => ["0.2.0", "0.2.1"],
     "v0.2.1" => ["0.2.0", "0.2.1"],
     "v0.3.0" => ["0.3.0", "0.3.1", "0.3.2"],
-    "v0.3.2" => ["0.3.0", "0.3.1", "0.3.2"]
+    "v0.3.2" => ["0.3.0", "0.3.1", "0.3.2"],
+    "v0.4.0" => ["0.4.0", "0.4.1"],
+    "v0.4.1" => ["0.4.0", "0.4.1"]
   }
 
   @expected_counts %{
@@ -46,7 +48,9 @@ defmodule CharterAgreementProtocol.HistoricalDifferentialGate do
     "v0.2.0" => 90,
     "v0.2.1" => 90,
     "v0.3.0" => 100,
-    "v0.3.2" => 100
+    "v0.3.2" => 100,
+    "v0.4.0" => 104,
+    "v0.4.1" => 104
   }
 
   def run do

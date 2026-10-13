@@ -595,6 +595,95 @@ revision_cases = [
   )
 ]
 
+# Decode strictness a second implementation can get wrong while still passing
+# the cases above: the bytes must be canonical, members unique, and every
+# member must meet its schema type and constraint.
+revision_text = canonical.(revision_claims)
+
+revision_text_case = fn id, class, text, expectation ->
+  %{
+    "id" => id,
+    "surface" => "charter_revision.decode",
+    "class" => class,
+    "input" => %{"text" => text},
+    "expect" => expectation
+  }
+end
+
+[_issuer | single_party] = revision_claims["parties"]
+
+revision_cases =
+  revision_cases ++
+    [
+      revision_text_case.(
+        "charter-revision-insignificant-whitespace",
+        "non_canonical_bytes",
+        String.replace(revision_text, ~s("parties":), ~s("parties": ), global: false),
+        invalid.("non_canonical_bytes")
+      ),
+      revision_text_case.(
+        "charter-revision-duplicate-member",
+        "invalid_encoding",
+        String.replace(revision_text, ~s({"abp_bindings"), ~s({"abp_bindings":[],"abp_bindings"),
+          global: false
+        ),
+        invalid.("duplicate_member")
+      ),
+      revision_case.(
+        "charter-revision-precedence-outside-enumeration",
+        "invalid_constraint",
+        Map.put(revision_claims, "precedence_declaration", "unlisted_precedence"),
+        invalid.("constraint_violation")
+      ),
+      revision_case.(
+        "charter-revision-effective-from-unparsable",
+        "invalid_constraint",
+        Map.put(revision_claims, "effective_from", "not-a-time"),
+        invalid.("timestamp_invalid")
+      ),
+      revision_case.(
+        "charter-revision-unknown-protocol-revision",
+        "invalid_constraint",
+        Map.put(revision_claims, "protocol_revision", 99),
+        invalid.("constraint_violation")
+      ),
+      revision_case.(
+        "charter-revision-number-as-string",
+        "invalid_type",
+        Map.put(revision_claims, "revision_number", "1"),
+        invalid.("invalid_type")
+      ),
+      revision_case.(
+        "charter-revision-legal-text-as-number",
+        "invalid_type",
+        Map.put(revision_claims, "legal_text", 5),
+        invalid.("invalid_type")
+      ),
+      revision_case.(
+        "charter-revision-one-party",
+        "invalid_cardinality",
+        Map.put(revision_claims, "parties", single_party),
+        invalid.("cardinality_violation")
+      ),
+      revision_case.(
+        "charter-revision-three-parties",
+        "invalid_cardinality",
+        Map.put(
+          revision_claims,
+          "parties",
+          revision_claims["parties"] ++
+            [
+              %{
+                "party_descriptor_digest" =>
+                  :party_descriptor_content |> Digest.hash("party:third") |> Digest.to_tagged(),
+                "role" => "observer"
+              }
+            ]
+        ),
+        invalid.("cardinality_violation")
+      )
+    ]
+
 acceptance_compact = fn claims, kid, private ->
   sign_compact.(claims, kid, private, "EdDSA", "cap+acceptance", :acceptance_content)
 end
@@ -1251,6 +1340,27 @@ coverage_cases = [
     "expect" => invalid.("duplicate_member")
   },
   %{
+    "id" => "json-duplicate-member-not-last",
+    "surface" => "json.decode",
+    "class" => "invalid_encoding",
+    "input" => %{"text" => "{\"a\":1,\"a\":2,\"b\":3}"},
+    "expect" => invalid.("duplicate_member")
+  },
+  %{
+    "id" => "json-integer-like-member-order",
+    "surface" => "json.decode",
+    "class" => "valid",
+    "input" => %{"text" => "{\"10\":1,\"9\":2}"},
+    "expect" =>
+      valid.(%{
+        "tag" => "object",
+        "members" => [
+          ["10", %{"tag" => "integer", "value" => 1}],
+          ["9", %{"tag" => "integer", "value" => 2}]
+        ]
+      })
+  },
+  %{
     "id" => "json-number-not-double-expressible",
     "surface" => "json.decode",
     "class" => "invalid_type",
@@ -1437,6 +1547,890 @@ coverage_cases = [
   }
 ]
 
+# Closed claim sets: one extra member in otherwise valid, validly signed claims
+# rejects on every signed surface.
+extra_member = fn claims -> Map.put(claims, "note", "unlisted member") end
+
+closed_claims_cases = [
+  %{
+    "id" => "acceptance-claims-unknown-member",
+    "surface" => "acceptance.verify",
+    "class" => "unknown_member",
+    "input" => %{
+      "compact" =>
+        acceptance_claims_value
+        |> extra_member.()
+        |> acceptance_compact.("genesis-key", genesis_private)
+        |> Map.fetch!(:compact),
+      "revision_text" => revision_bytes,
+      "descriptor_compacts" => [genesis.compact]
+    },
+    "expect" => invalid.("unknown_member")
+  },
+  %{
+    "id" => "termination-claims-unknown-member",
+    "surface" => "termination.verify",
+    "class" => "unknown_member",
+    "input" =>
+      termination_input.(
+        termination_claims
+        |> extra_member.()
+        |> termination_compact.("genesis-key", genesis_private)
+        |> Map.fetch!(:compact)
+      ),
+    "expect" => invalid.("unknown_member")
+  },
+  %{
+    "id" => "receipt-claims-unknown-member",
+    "surface" => "receipt.verify",
+    "class" => "unknown_member",
+    "input" => %{
+      "chain" => receipt_chain_input,
+      "compact" =>
+        receipt_claims |> extra_member.() |> receipt_compact.("genesis-key", genesis_private)
+    },
+    "expect" => invalid.("unknown_member")
+  },
+  %{
+    "id" => "descriptor-claims-unknown-member",
+    "surface" => "party_descriptor.verify",
+    "class" => "unknown_member",
+    "input" => %{
+      "compact" =>
+        coverage_descriptor_compact.(
+          extra_member.(genesis_claims),
+          "genesis-key",
+          genesis_private,
+          %{}
+        ),
+      "predecessor" => nil
+    },
+    "expect" => invalid.("unknown_member")
+  }
+]
+
+# A verified termination closes the charter at its effective instant:
+# governing selection returns none from then on, and a receipt for an effect
+# after that instant no longer matches a governing revision.
+chain_termination =
+  termination_claims
+  |> Map.merge(%{
+    "charter_id" => chain_genesis_digest,
+    "governing_revision_digest" => chain_genesis_digest
+  })
+  |> termination_compact.("genesis-key", genesis_private)
+
+terminated_chain_input = %{valid_chain_input | "terminations" => [chain_termination.compact]}
+
+post_termination_receipt_claims =
+  Map.merge(receipt_claims, %{
+    "occurred_at" => "2026-08-26T13:00:01Z",
+    "recorded_at" => "2026-08-26T13:00:02Z"
+  })
+
+termination_effect_cases = [
+  %{
+    "id" => "governing-revision-closed-by-termination",
+    "surface" => "governing_revision",
+    "class" => "terminated",
+    "input" =>
+      Map.put(terminated_chain_input, "queries", [
+        %{"at" => "2026-08-26T12:59:59Z", "governing_revision" => chain_genesis_digest},
+        %{"at" => "2026-08-26T13:00:00Z", "governing_revision" => "none"},
+        %{"at" => "2026-08-26T13:00:01Z", "governing_revision" => "none"}
+      ]),
+    "expect" => valid.(%{"governing_revisions" => [chain_genesis_digest, "none", "none"]})
+  },
+  %{
+    "id" => "receipt-after-termination-mismatch",
+    "surface" => "receipt.verify",
+    "class" => "terminated",
+    "input" => %{
+      "chain" => terminated_chain_input,
+      "compact" =>
+        receipt_compact.(post_termination_receipt_claims, "genesis-key", genesis_private)
+    },
+    "expect" =>
+      valid.(%{
+        "receipt_digest" =>
+          :receipt_content
+          |> Digest.hash(canonical.(post_termination_receipt_claims))
+          |> Digest.to_tagged(),
+        "revision_number" => 1,
+        "revision_digest" => chain_genesis_digest,
+        "decision" => "accepted",
+        "outcome" => "effect_committed",
+        "chain_conflict" => "none",
+        "governing_match" => "mismatch",
+        "deployment_digest_matched" => true,
+        "optional_extensions_retained" => []
+      })
+  }
+]
+
+# Descriptor histories are grouped per party: one history per descriptor
+# chain, a successor must name its party, and a chain view must carry exactly
+# the histories of the revision's parties.
+{successor_key, _successor_private} = descriptor_key.(5, "successor-key")
+
+successor_without_party =
+  descriptor_compact.(
+    %{
+      "protocol_revision" => 1,
+      "descriptor_number" => 2,
+      "prev_descriptor_digest" => genesis.digest,
+      "verification_keys" => [successor_key],
+      "attestation_hints" => [],
+      "extensions" => %{"critical" => %{}, "optional" => %{}},
+      "effective_from" => "2026-08-25T10:00:01Z"
+    },
+    "genesis-key",
+    genesis_private
+  )
+
+party_grouping_cases = [
+  %{
+    "id" => "descriptor-chain-two-party-set",
+    "surface" => "descriptor_chain.verify",
+    "class" => "chain_invalid",
+    "input" => %{"compacts" => [genesis.compact, acceptor.compact]},
+    "expect" => invalid.("descriptor_chain_invalid")
+  },
+  %{
+    "id" => "descriptor-chain-successor-without-party",
+    "surface" => "descriptor_chain.verify",
+    "class" => "chain_invalid",
+    "input" => %{"compacts" => [genesis.compact, successor_without_party.compact]},
+    "expect" => invalid.("descriptor_chain_invalid")
+  },
+  %{
+    "id" => "chain-one-party-history",
+    "surface" => "chain.verify",
+    "class" => "chain_invalid",
+    "input" => %{valid_chain_input | "descriptors" => [genesis.compact]},
+    "expect" => invalid.("chain_invalid")
+  }
+]
+
+# The artifact-set ceilings bound a chain view: max_artifact_set_items caps
+# each list, max_artifact_set_bytes caps the total over all lists. Each holds
+# at its exact bound and rejects one below it.
+[dual_acceptance_valid] = Enum.filter(chain_cases, &(&1["id"] == "chain-dual-acceptance-valid"))
+
+view_lists = Enum.map(~w(revisions acceptances descriptors terminations), &valid_chain_input[&1])
+view_item_count = view_lists |> Enum.map(&length/1) |> Enum.max()
+view_byte_count = view_lists |> List.flatten() |> Enum.map(&byte_size/1) |> Enum.sum()
+
+set_limit_case = fn id, class, limits, expectation ->
+  %{
+    "id" => id,
+    "surface" => "chain.verify",
+    "class" => class,
+    "input" => Map.put(valid_chain_input, "limits", limits),
+    "expect" => expectation
+  }
+end
+
+set_limit_cases = [
+  set_limit_case.(
+    "chain-artifact-set-items-exact-bound",
+    "exact_bound",
+    %{"max_artifact_set_items" => view_item_count},
+    dual_acceptance_valid["expect"]
+  ),
+  set_limit_case.(
+    "chain-artifact-set-items-maximum-plus-one",
+    "maximum_plus_one",
+    %{"max_artifact_set_items" => view_item_count - 1},
+    invalid.("limit_exceeded")
+  ),
+  set_limit_case.(
+    "chain-artifact-set-bytes-exact-bound",
+    "exact_bound",
+    %{"max_artifact_set_bytes" => view_byte_count},
+    dual_acceptance_valid["expect"]
+  ),
+  set_limit_case.(
+    "chain-artifact-set-bytes-maximum-plus-one",
+    "maximum_plus_one",
+    %{"max_artifact_set_bytes" => view_byte_count - 1},
+    invalid.("limit_exceeded")
+  )
+]
+
+# The indexed-price critical body is closed and fully typed; every member
+# contract holds, not only the formula.
+price_revision_case = fn id, body, code ->
+  revision_case.(
+    id,
+    "extension_invalid",
+    Map.put(revision_claims, "extensions", %{
+      "critical" => %{"com.example/pricing-indexed" => body},
+      "optional" => %{}
+    }),
+    invalid.(code)
+  )
+end
+
+observation_receipt = fn body ->
+  receipt_claims
+  |> Map.put("extensions", %{
+    "critical" => %{},
+    "optional" => %{"com.example/pricing-indexed-observation" => body}
+  })
+  |> receipt_compact.("genesis-key", genesis_private)
+end
+
+price_body_cases = [
+  price_revision_case.(
+    "revision-indexed-price-missing-currency",
+    Map.delete(price_terms_body, "currency"),
+    "missing_required"
+  ),
+  price_revision_case.(
+    "revision-indexed-price-unlisted-currency",
+    Map.put(price_terms_body, "currency", "XXQ"),
+    "constraint_violation"
+  ),
+  price_revision_case.(
+    "revision-indexed-price-spread-out-of-range",
+    Map.put(price_terms_body, "spread_bps", 10_001),
+    "constraint_violation"
+  ),
+  price_revision_case.(
+    "revision-indexed-price-cap-below-floor",
+    Map.put(price_terms_body, "cap_amount_minor", 8000),
+    "cross_field_invalid"
+  ),
+  price_revision_case.(
+    "revision-indexed-price-index-unknown-member",
+    put_in(price_terms_body, ["index", "note"], "unlisted member"),
+    "nested_invalid"
+  ),
+  %{
+    "id" => "receipt-indexed-price-observation-negative-amount",
+    "surface" => "receipt.verify",
+    "class" => "extension_invalid",
+    "input" => %{
+      "chain" => receipt_chain_input,
+      "compact" =>
+        observation_receipt.(%{
+          "observed_index_digest" => "sha-256:DAb9EB60I7UfAUC37DnTnkuaQd0GC3aUJCd7dMQG0Ck",
+          "observation_instant" => "2026-08-25T12:00:00Z",
+          "computed_amount_minor" => -1
+        })
+    },
+    "expect" => invalid.("constraint_violation")
+  }
+]
+
+# A charter's parties are distinct parties. One descriptor may not hold two
+# roles, and two descriptors of the same party may not either: before 0.5.0 a
+# single party could satisfy "every party accepted" that way while an
+# unrelated history stood in the view.
+{_left_key, left_private} = descriptor_key.(2, "left-key")
+
+same_party_claims =
+  Map.put(revision_claims, "parties", [
+    %{"party_descriptor_digest" => genesis.digest, "role" => "issuer"},
+    %{"party_descriptor_digest" => left.digest, "role" => "acceptor"}
+  ])
+
+same_party_bytes = canonical.(same_party_claims)
+
+same_party_digest =
+  :charter_revision_content |> Digest.hash(same_party_bytes) |> Digest.to_tagged()
+
+same_party_acceptance = fn descriptor_digest, role, kid, private ->
+  %{
+    "protocol_revision" => 1,
+    "charter_id" => same_party_digest,
+    "revision_number" => 1,
+    "revision_digest" => same_party_digest,
+    "party_descriptor_digest" => descriptor_digest,
+    "party_role" => role,
+    "accepted_at" => "2026-08-25T13:00:00Z"
+  }
+  |> acceptance_compact.(kid, private)
+  |> Map.fetch!(:compact)
+end
+
+distinct_party_cases = [
+  revision_case.(
+    "charter-revision-shared-descriptor",
+    "invalid_constraint",
+    put_in(revision_claims, ["parties", Access.at(1), "party_descriptor_digest"], genesis.digest),
+    invalid.("revision_invalid")
+  ),
+  %{
+    "id" => "chain-one-party-both-roles",
+    "surface" => "chain.verify",
+    "class" => "chain_invalid",
+    "input" => %{
+      "revisions" => [same_party_bytes],
+      "acceptances" => [
+        same_party_acceptance.(genesis.digest, "issuer", "genesis-key", genesis_private),
+        same_party_acceptance.(left.digest, "acceptor", "left-key", left_private)
+      ],
+      "descriptors" => [genesis.compact, left.compact, acceptor.compact],
+      "terminations" => []
+    },
+    "expect" => invalid.("chain_invalid")
+  }
+]
+
+# RFC 3339 admits year 0000; both implementations must read it the same way.
+year_zero_claims = Map.put(revision_claims, "effective_from", "0000-01-01T00:00:00Z")
+year_zero_bytes = canonical.(year_zero_claims)
+
+year_zero_cases = [
+  revision_case.(
+    "charter-revision-effective-from-year-zero",
+    "valid",
+    year_zero_claims,
+    valid.(%{
+      "revision_digest" =>
+        :charter_revision_content |> Digest.hash(year_zero_bytes) |> Digest.to_tagged(),
+      "revision_number" => 1,
+      "precedence_declaration" => "legal_text_governs",
+      "abp_binding" => %{
+        "blueprint_id" => "example.demo/echo",
+        "release_number" => 1,
+        "content_digest" => "sha-256:b1Aw4cU5AbV9k8bdbZkRCsySDHGpTAwB-aQm57Wh7B8",
+        "deployment_digest" => "sha-256:tWFr0caS0AWFJd2UcB9gZv3kNjIUP8xZ08WWM_h8xgo"
+      }
+    })
+  )
+]
+
+# A digest inside signed claims is strict base64url: one changed spare bit
+# makes a different spelling of the same bytes, and it must reject.
+noncanonical_digest =
+  String.slice(chain_genesis_digest, 0..-2//1) <>
+    if(String.ends_with?(chain_genesis_digest, "o"), do: "p", else: "o")
+
+strict_digest_cases = [
+  %{
+    "id" => "receipt-revision-digest-noncanonical",
+    "surface" => "receipt.verify",
+    "class" => "invalid_encoding",
+    "input" => %{
+      "chain" => receipt_chain_input,
+      "compact" =>
+        receipt_claims
+        |> Map.put("revision_digest", noncanonical_digest)
+        |> receipt_compact.("genesis-key", genesis_private)
+    },
+    "expect" => invalid.("receipt_invalid")
+  }
+]
+
+# A two-party view holds exactly two key histories. Without that bound, a
+# successor naming a third party, accepted by that party and the one who
+# stays, would govern without the displaced party ever signing.
+{third_key, third_private} = descriptor_key.(8, "third-key")
+
+third =
+  descriptor_compact.(
+    %{
+      "protocol_revision" => 1,
+      "descriptor_number" => 1,
+      "verification_keys" => [third_key],
+      "attestation_hints" => [],
+      "extensions" => %{"critical" => %{}, "optional" => %{}},
+      "effective_from" => "2026-08-25T10:00:00Z"
+    },
+    "third-key",
+    third_private
+  )
+
+displacing = chain_successor.(chain_genesis_digest, 2, "displacing terms\n", [])
+
+displacing_claims =
+  Map.put(displacing.claims, "parties", [
+    %{"party_descriptor_digest" => genesis.digest, "role" => "issuer"},
+    %{"party_descriptor_digest" => third.digest, "role" => "acceptor"}
+  ])
+
+displacing_bytes = canonical.(displacing_claims)
+
+displacing_digest =
+  :charter_revision_content |> Digest.hash(displacing_bytes) |> Digest.to_tagged()
+
+displacement_cases = [
+  %{
+    "id" => "chain-two-party-third-history-displacement",
+    "surface" => "chain.verify",
+    "class" => "chain_invalid",
+    "input" => %{
+      "revisions" => [chain_genesis_bytes, displacing_bytes],
+      "acceptances" =>
+        dual_chain_acceptances.(chain_genesis_claims, chain_genesis_digest) ++
+          [
+            chain_acceptance.(
+              displacing_claims,
+              displacing_digest,
+              genesis.digest,
+              "issuer",
+              "genesis-key",
+              genesis_private
+            ),
+            chain_acceptance.(
+              displacing_claims,
+              displacing_digest,
+              third.digest,
+              "acceptor",
+              "third-key",
+              third_private
+            )
+          ],
+      "descriptors" => [genesis.compact, acceptor.compact, third.compact],
+      "terminations" => []
+    },
+    "expect" => invalid.("chain_invalid")
+  }
+]
+
+# A caller's profile reaches the context a single-artifact call re-verifies:
+# the supplied revision first, then the supplied descriptor history, then the
+# artifact itself. Every artifact here is in profile except the context.
+narrow_profile = %{"algorithms" => ["EdDSA", "Ed25519"], "revisions" => %{"min" => 1, "max" => 2}}
+algorithm_profile = %{"algorithms" => ["Ed25519"], "revisions" => %{"min" => 1, "max" => 3}}
+
+revision_profile = %{
+  "algorithms" => ["EdDSA", "Ed25519"],
+  "revisions" => %{"min" => 2, "max" => 3}
+}
+
+rev2_termination =
+  sign_compact.(
+    Map.put(termination_claims, "protocol_revision", 2),
+    "genesis-key",
+    genesis_private,
+    "Ed25519",
+    "cap+termination",
+    :termination_content
+  )
+
+rev2_receipt_claims = Map.put(receipt_claims, "protocol_revision", 2)
+
+rev2_receipt =
+  sign_compact.(
+    rev2_receipt_claims,
+    "genesis-key",
+    genesis_private,
+    "Ed25519",
+    "cap+receipt",
+    :receipt_content
+  )
+
+rev1_receipt = receipt_compact.(receipt_claims, "genesis-key", genesis_private)
+
+single_artifact_profile_cases = fn surface, prefix, compact, output ->
+  input = %{
+    "compact" => compact,
+    "revision_text" => revision_bytes,
+    "descriptor_compacts" => [genesis.compact]
+  }
+
+  [
+    %{
+      "id" => prefix <> "-profile-narrow-valid",
+      "surface" => surface,
+      "class" => "profile_narrow_valid",
+      "input" => Map.put(input, "profile", narrow_profile),
+      "expect" => valid.(output)
+    },
+    %{
+      "id" => prefix <> "-profile-context-algorithm-outside",
+      "surface" => surface,
+      "class" => "profile_algorithm_outside",
+      "input" => Map.put(input, "profile", algorithm_profile),
+      "expect" => invalid.("algorithm_outside_profile")
+    },
+    %{
+      "id" => prefix <> "-profile-context-revision-outside",
+      "surface" => surface,
+      "class" => "profile_revision_outside",
+      "input" => Map.put(input, "profile", revision_profile),
+      "expect" => invalid.("revision_outside_profile")
+    }
+  ]
+end
+
+# Only the supplied revision is outside the profile here: a revision-2
+# charter beside a revision-1 descriptor and revision-1 artifacts, under a
+# profile admitting revision 1 alone.
+rev2_revision_claims = Map.put(revision_claims, "protocol_revision", 2)
+rev2_revision_bytes = canonical.(rev2_revision_claims)
+
+rev2_revision_digest =
+  :charter_revision_content |> Digest.hash(rev2_revision_bytes) |> Digest.to_tagged()
+
+revision_one_profile = %{
+  "algorithms" => ["EdDSA", "Ed25519"],
+  "revisions" => %{"min" => 1, "max" => 1}
+}
+
+rev2_revision_acceptance =
+  rev2_revision_claims
+  |> acceptance_claims.(rev2_revision_digest)
+  |> acceptance_compact.("genesis-key", genesis_private)
+
+rev2_revision_termination =
+  termination_claims
+  |> Map.merge(%{
+    "charter_id" => rev2_revision_digest,
+    "governing_revision_digest" => rev2_revision_digest
+  })
+  |> termination_compact.("genesis-key", genesis_private)
+
+revision_only_outside = fn surface, prefix, compact ->
+  %{
+    "id" => prefix <> "-profile-revision-alone-outside",
+    "surface" => surface,
+    "class" => "profile_revision_outside",
+    "input" => %{
+      "compact" => compact,
+      "revision_text" => rev2_revision_bytes,
+      "descriptor_compacts" => [genesis.compact],
+      "profile" => revision_one_profile
+    },
+    "expect" => invalid.("revision_outside_profile")
+  }
+end
+
+# Both context axes are excluded: the supplied revision is revision 1 and
+# the descriptor is EdDSA at revision 1, under an Ed25519-only profile for
+# revisions 2 and 3. The revision is checked first, so the code is the
+# revision's.
+both_axes_profile = %{"algorithms" => ["Ed25519"], "revisions" => %{"min" => 2, "max" => 3}}
+
+both_axes_outside = fn surface, prefix, compact ->
+  %{
+    "id" => prefix <> "-profile-revision-before-descriptor",
+    "surface" => surface,
+    "class" => "profile_revision_outside",
+    "input" => %{
+      "compact" => compact,
+      "revision_text" => revision_bytes,
+      "descriptor_compacts" => [genesis.compact],
+      "profile" => both_axes_profile
+    },
+    "expect" => invalid.("revision_outside_profile")
+  }
+end
+
+# Only the descriptor is outside, and only on the revision axis: a revision-2
+# charter and a revision-2 Ed25519 artifact beside the revision-1 descriptor.
+rev2_context_acceptance =
+  sign_compact.(
+    rev2_revision_claims
+    |> acceptance_claims.(rev2_revision_digest)
+    |> Map.put("protocol_revision", 2),
+    "genesis-key",
+    genesis_private,
+    "Ed25519",
+    "cap+acceptance",
+    :acceptance_content
+  )
+
+rev2_context_termination =
+  sign_compact.(
+    termination_claims
+    |> Map.merge(%{
+      "protocol_revision" => 2,
+      "charter_id" => rev2_revision_digest,
+      "governing_revision_digest" => rev2_revision_digest
+    }),
+    "genesis-key",
+    genesis_private,
+    "Ed25519",
+    "cap+termination",
+    :termination_content
+  )
+
+descriptor_revision_outside = fn surface, prefix, compact ->
+  %{
+    "id" => prefix <> "-profile-descriptor-revision-outside",
+    "surface" => surface,
+    "class" => "profile_revision_outside",
+    "input" => %{
+      "compact" => compact,
+      "revision_text" => rev2_revision_bytes,
+      "descriptor_compacts" => [genesis.compact],
+      "profile" => revision_profile
+    },
+    "expect" => invalid.("revision_outside_profile")
+  }
+end
+
+# A successor descriptor verified against its supplied predecessor history:
+# the profile reaches the predecessor too.
+rev2_successor_key = descriptor_key.(6, "successor-key") |> elem(0)
+
+rev2_successor =
+  sign_compact.(
+    %{
+      "protocol_revision" => 2,
+      "party_id" => genesis.digest,
+      "descriptor_number" => 2,
+      "prev_descriptor_digest" => genesis.digest,
+      "verification_keys" => [rev2_successor_key],
+      "attestation_hints" => [],
+      "extensions" => %{"critical" => %{}, "optional" => %{}},
+      "effective_from" => "2026-08-25T10:00:01Z"
+    },
+    "genesis-key",
+    genesis_private,
+    "Ed25519",
+    "cap+party",
+    :party_descriptor_content
+  )
+
+predecessor_case = fn id, class, profile, expectation ->
+  %{
+    "id" => id,
+    "surface" => "party_descriptor.verify",
+    "class" => class,
+    "input" => %{
+      "compact" => rev2_successor.compact,
+      "predecessor_compacts" => [genesis.compact],
+      "profile" => profile
+    },
+    "expect" => expectation
+  }
+end
+
+# A receipt outside the profile whose kid names no key in the chain view: the
+# profile rejection is reported, never a forgery verdict. The revision-1 chain
+# is inside the profile; only the revision-2 receipt is outside it.
+unknown_kid_receipt =
+  sign_compact.(
+    Map.put(receipt_claims, "protocol_revision", 2),
+    "unknown-key",
+    genesis_private,
+    "Ed25519",
+    "cap+receipt",
+    :receipt_content
+  ).compact
+
+# Artifacts outside the profile whose kid names no key: the profile code is
+# reported, not the key lookup failure. Their context is inside the profile.
+unknown_kid_acceptance =
+  sign_compact.(
+    Map.put(acceptance_claims_value, "protocol_revision", 2),
+    "unknown-key",
+    genesis_private,
+    "Ed25519",
+    "cap+acceptance",
+    :acceptance_content
+  )
+
+unknown_kid_termination =
+  sign_compact.(
+    Map.put(termination_claims, "protocol_revision", 2),
+    "unknown-key",
+    genesis_private,
+    "Ed25519",
+    "cap+termination",
+    :termination_content
+  )
+
+unknown_kid_descriptor =
+  sign_compact.(
+    Map.put(genesis_claims, "protocol_revision", 2),
+    "unknown-key",
+    genesis_private,
+    "Ed25519",
+    "cap+party",
+    :party_descriptor_content
+  )
+
+unknown_kid_case = fn surface, prefix, compact ->
+  %{
+    "id" => prefix <> "-profile-unknown-kid-revision-outside",
+    "surface" => surface,
+    "class" => "profile_revision_outside",
+    "input" => %{
+      "compact" => compact,
+      "revision_text" => revision_bytes,
+      "descriptor_compacts" => [genesis.compact],
+      "profile" => revision_one_profile
+    },
+    "expect" => invalid.("revision_outside_profile")
+  }
+end
+
+# A profile that names one axis leaves the other at its full range.
+single_axis_case = %{
+  "id" => "acceptance-profile-algorithms-only-valid",
+  "surface" => "acceptance.verify",
+  "class" => "profile_narrow_valid",
+  "input" => %{
+    "compact" => rev2_acceptance.compact,
+    "revision_text" => revision_bytes,
+    "descriptor_compacts" => [genesis.compact],
+    "profile" => %{"algorithms" => ["EdDSA", "Ed25519"]}
+  },
+  "expect" =>
+    valid.(%{
+      "acceptance_digest" => rev2_acceptance.digest,
+      "revision_digest" => revision_digest,
+      "party_descriptor_digest" => genesis.digest,
+      "descriptor_position" => "head"
+    })
+}
+
+context_profile_cases =
+  [
+    single_axis_case,
+    unknown_kid_case.("acceptance.verify", "acceptance", unknown_kid_acceptance.compact),
+    unknown_kid_case.("termination.verify", "termination", unknown_kid_termination.compact),
+    %{
+      "id" => "descriptor-profile-unknown-kid-revision-outside",
+      "surface" => "party_descriptor.verify",
+      "class" => "profile_revision_outside",
+      "input" => %{
+        "compact" => unknown_kid_descriptor.compact,
+        "predecessor" => nil,
+        "profile" => revision_one_profile
+      },
+      "expect" => invalid.("revision_outside_profile")
+    },
+    predecessor_case.(
+      "descriptor-profile-predecessor-narrow-valid",
+      "profile_narrow_valid",
+      narrow_profile,
+      valid.(%{
+        "descriptor_digest" => rev2_successor.digest,
+        "party_id" => genesis.digest,
+        "descriptor_number" => 2
+      })
+    ),
+    predecessor_case.(
+      "descriptor-profile-predecessor-algorithm-outside",
+      "profile_algorithm_outside",
+      algorithm_profile,
+      invalid.("algorithm_outside_profile")
+    ),
+    predecessor_case.(
+      "descriptor-profile-predecessor-revision-outside",
+      "profile_revision_outside",
+      revision_profile,
+      invalid.("revision_outside_profile")
+    ),
+    both_axes_outside.("acceptance.verify", "acceptance", rev2_acceptance.compact),
+    both_axes_outside.("termination.verify", "termination", rev2_termination.compact),
+    descriptor_revision_outside.(
+      "acceptance.verify",
+      "acceptance",
+      rev2_context_acceptance.compact
+    ),
+    descriptor_revision_outside.(
+      "termination.verify",
+      "termination",
+      rev2_context_termination.compact
+    ),
+    %{
+      "id" => "receipt-profile-unknown-kid-revision-outside",
+      "surface" => "receipt.verify",
+      "class" => "profile_revision_outside",
+      "input" => %{
+        "chain" => receipt_chain_input,
+        "compact" => unknown_kid_receipt,
+        "profile" => revision_one_profile
+      },
+      "expect" => invalid.("revision_outside_profile")
+    },
+    revision_only_outside.("acceptance.verify", "acceptance", rev2_revision_acceptance.compact),
+    revision_only_outside.(
+      "termination.verify",
+      "termination",
+      rev2_revision_termination.compact
+    )
+  ] ++
+    single_artifact_profile_cases.(
+      "acceptance.verify",
+      "acceptance",
+      rev2_acceptance.compact,
+      %{
+        "acceptance_digest" => rev2_acceptance.digest,
+        "revision_digest" => revision_digest,
+        "party_descriptor_digest" => genesis.digest,
+        "descriptor_position" => "head"
+      }
+    ) ++
+    single_artifact_profile_cases.(
+      "termination.verify",
+      "termination",
+      rev2_termination.compact,
+      %{
+        "termination_digest" => rev2_termination.digest,
+        "governing_revision_digest" => revision_digest,
+        "party_descriptor_digest" => genesis.digest,
+        "reason_code" => "mutual",
+        "descriptor_position" => "head"
+      }
+    ) ++
+    [
+      %{
+        "id" => "receipt-profile-narrow-valid",
+        "surface" => "receipt.verify",
+        "class" => "profile_narrow_valid",
+        "input" => %{
+          "chain" => receipt_chain_input,
+          "compact" => rev2_receipt.compact,
+          "profile" => narrow_profile
+        },
+        "expect" =>
+          valid.(%{
+            "receipt_digest" => rev2_receipt.digest,
+            "revision_number" => 1,
+            "revision_digest" => chain_genesis_digest,
+            "decision" => "accepted",
+            "outcome" => "effect_committed",
+            "chain_conflict" => "none",
+            "governing_match" => "match",
+            "deployment_digest_matched" => true,
+            "optional_extensions_retained" => []
+          })
+      },
+      %{
+        "id" => "receipt-profile-context-algorithm-outside",
+        "surface" => "receipt.verify",
+        "class" => "profile_algorithm_outside",
+        "input" => %{
+          "chain" => receipt_chain_input,
+          "compact" => rev2_receipt.compact,
+          "profile" => algorithm_profile
+        },
+        "expect" => invalid.("algorithm_outside_profile")
+      },
+      %{
+        "id" => "receipt-profile-revision-only-algorithm-outside",
+        "surface" => "receipt.verify",
+        "class" => "profile_algorithm_outside",
+        "input" => %{
+          "revision_text" => chain_genesis_bytes,
+          "compact" => rev1_receipt,
+          "profile" => algorithm_profile
+        },
+        "expect" => invalid.("algorithm_outside_profile")
+      },
+      %{
+        "id" => "receipt-profile-revision-only-revision-outside",
+        "surface" => "receipt.verify",
+        "class" => "profile_revision_outside",
+        "input" => %{
+          "revision_text" => chain_genesis_bytes,
+          "compact" => rev2_receipt.compact,
+          "profile" => revision_profile
+        },
+        "expect" => invalid.("revision_outside_profile")
+      }
+    ]
+
 cases =
   cases ++
     descriptor_cases ++
@@ -1446,6 +2440,16 @@ cases =
     chain_cases ++
     profile_cases ++
     coverage_cases ++
+    closed_claims_cases ++
+    termination_effect_cases ++
+    party_grouping_cases ++
+    set_limit_cases ++
+    price_body_cases ++
+    distinct_party_cases ++
+    year_zero_cases ++
+    strict_digest_cases ++
+    displacement_cases ++
+    context_profile_cases ++
     supplemental_cases
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end

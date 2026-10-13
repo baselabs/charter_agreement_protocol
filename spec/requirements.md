@@ -10,9 +10,9 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ## Bound evidence
 
-- Requirements: 54
-- Corpus cells: 64
-- Named mutations: 26
+- Requirements: 58
+- Corpus cells: 85
+- Named mutations: 43
 
 ## Requirements
 
@@ -36,7 +36,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ### CAP-SCHEMA-closed-members
 
-- Corpus: `schema.validate:unknown_member`
+- Corpus: `schema.validate:unknown_member`, `acceptance.verify:unknown_member`, `termination.verify:unknown_member`, `receipt.verify:unknown_member`
 - Gate: `CharterAgreementProtocol.Architecture.PublicContractCoverageTest`
 - Mutation: `unknown-member-acceptance`
 
@@ -80,10 +80,26 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Corpus: `chain.verify_profile:profile_algorithm_outside`, `chain.verify_profile:profile_revision_outside`
 - Gate: `CharterAgreementProtocol.Architecture.ProfileContractTest`
 - Mutation: `profile-gate-defeat`
+- Mutation: `profile-revision-gate-defeat`
+
+### CAP-PROFILE-context-admission
+
+- Corpus: `party_descriptor.verify:profile_algorithm_outside`, `party_descriptor.verify:profile_revision_outside`, `acceptance.verify:profile_algorithm_outside`, `acceptance.verify:profile_revision_outside`, `termination.verify:profile_algorithm_outside`, `termination.verify:profile_revision_outside`, `receipt.verify:profile_algorithm_outside`, `receipt.verify:profile_revision_outside`
+- Gate: `CharterAgreementProtocol.Architecture.ContextProfileTest`
+- Mutation: `context-descriptor-profile-skip`
+- Mutation: `context-revision-profile-skip`
+- Mutation: `context-order-swapped`
+- Mutation: `termination-descriptor-profile-skip`
+- Mutation: `chain-receipt-context-profile-skip`
+- Mutation: `chain-receipt-admission-skip`
+- Mutation: `predecessor-profile-code-swallowed`
+- Mutation: `termination-order-swapped`
+- Mutation: `descriptor-admission-before-key-skip`
+- Mutation: `revision-only-receipt-profile-skip`
 
 ### CAP-PROFILE-narrow-verification
 
-- Corpus: `chain.verify_profile:profile_narrow_valid`
+- Corpus: `chain.verify_profile:profile_narrow_valid`, `party_descriptor.verify:profile_narrow_valid`, `acceptance.verify:profile_narrow_valid`, `termination.verify:profile_narrow_valid`, `receipt.verify:profile_narrow_valid`
 - Gate: `CharterAgreementProtocol.Architecture.ProfileContractTest`
 
 ### CAP-DESCRIPTOR-timestamp-floor
@@ -210,8 +226,9 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ### CAP-CANONICALIZATION-noncanonical-rejected
 
-- Corpus: `canonicalization.encode:non_canonical_bytes`, `canonicalization.encode:invalid_encoding`, `canonicalization.encode:invalid_type`
+- Corpus: `canonicalization.encode:non_canonical_bytes`, `canonicalization.encode:invalid_encoding`, `canonicalization.encode:invalid_type`, `charter_revision.decode:non_canonical_bytes`
 - Gate: `CharterAgreementProtocol.Architecture.PublicContractCoverageTest`
+- Mutation: `revision-canonical-bytes-skip`
 
 ### CAP-CHAIN-valid-topology
 
@@ -245,7 +262,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ### CAP-JSON-decoder-closed-grammar
 
-- Corpus: `json.decode:valid`, `json.decode:invalid_type`, `json.decode:invalid_encoding`
+- Corpus: `json.decode:valid`, `json.decode:invalid_type`, `json.decode:invalid_encoding`, `charter_revision.decode:invalid_encoding`
 - Gate: `CharterAgreementProtocol.Architecture.PublicContractCoverageTest`
 
 ### CAP-JSON-number-boundaries
@@ -297,6 +314,26 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 - Corpus: `chain.verify:chain_invalid`
 - Gate: `CharterAgreementProtocol.Architecture.ChainRoutingShapeTest`
+
+### CAP-CHAIN-artifact-set-bounds
+
+- Corpus: `chain.verify:exact_bound`, `chain.verify:maximum_plus_one`
+- Gate: `CharterAgreementProtocol.Architecture.ChainRoutingShapeTest`
+- Mutation: `artifact-set-bytes-ceiling-skip`
+
+### CAP-CHAIN-distinct-parties
+
+- Corpus: `charter_revision.decode:invalid_constraint`, `chain.verify:chain_invalid`
+- Gate: `CharterAgreementProtocol.Architecture.ChainRoutingShapeTest`
+- Mutation: `distinct-descriptors-skip`
+- Mutation: `party-histories-skip`
+- Mutation: `two-party-history-count-relaxed`
+
+### CAP-CHAIN-termination-closes
+
+- Corpus: `governing_revision:terminated`, `receipt.verify:terminated`
+- Gate: `CharterAgreementProtocol.Architecture.ChainRoutingShapeTest`
+- Mutation: `termination-close-ignored`
 
 ### CAP-EXTENSION-envelope-closed
 

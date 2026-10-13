@@ -4,9 +4,9 @@ defmodule CharterAgreementProtocol.ExtensionRegistry do
 
   Compiled extension-profile registry. Registry changes are code releases;
   entries carry exactly the seven protocol fields and never read runtime files.
-  `promoted_at_revision` records registry-release governance; artifact validators
-  enforce the protocol revision declared by each artifact schema rather than
-  reinterpreting that historical record as a runtime feature gate.
+  `promoted_at_revision` records when an entry was promoted in the registry;
+  artifact validators enforce the protocol revision declared by each artifact
+  schema and never treat that historical record as a runtime switch.
   """
 
   alias CharterAgreementProtocol.{Canonicalization, Digest, Schema}

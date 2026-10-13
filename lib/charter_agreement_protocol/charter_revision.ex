@@ -11,6 +11,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
 
   alias CharterAgreementProtocol.{
     Canonicalization,
+    Capability.Profile,
     Digest,
     Error,
     Extension,
@@ -306,6 +307,33 @@ defmodule CharterAgreementProtocol.CharterRevision do
 
   def decode(_bytes, _limits), do: {:error, Error.new(:invalid_type, ["limits"])}
 
+  @doc """
+  Build one revision's canonical bytes from a plain claims map.
+
+  The bytes are returned only when they decode as a valid revision, so an
+  invalid claims map fails with the same error `decode/2` reports for it.
+  """
+  @spec encode(term()) :: {:ok, binary()} | {:error, Error.t()}
+  def encode(claims) when is_map(claims) do
+    with {:ok, bytes} <- Canonicalization.encode_plain(claims),
+         {:ok, _revision} <- decode(bytes, Limits.default()),
+         do: {:ok, bytes}
+  end
+
+  def encode(_claims), do: {:error, Error.new(:invalid_type, ["charter_revision"])}
+
+  # Unsigned revisions carry no envelope: the profile's revision axis applies
+  # to the decoded protocol_revision member; there is no algorithm axis for
+  # them (the alg names live on the signed artifacts that anchor them).
+  @doc false
+  @spec admit(t(), Profile.t()) :: :ok | {:error, Error.t()}
+  def admit(%__MODULE__{protocol_revision: revision}, %Profile{revisions: {minimum, maximum}})
+      when revision >= minimum and revision <= maximum,
+      do: :ok
+
+  def admit(%__MODULE__{}, %Profile{}),
+    do: {:error, Error.new(:revision_outside_profile, ["revision", "protocol_revision"])}
+
   @doc "Return the revision's domain-separated content digest."
   @spec digest(t()) :: binary()
   def digest(%__MODULE__{canonical_bytes: bytes}),
@@ -348,6 +376,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
          :ok <- genesis_shape(revision_number, charter_id, previous, supersedes),
          :ok <- ordered_interval(effective_from, effective_until),
          :ok <- unique_roles(parties),
+         :ok <- distinct_descriptors(parties),
          :ok <- binding_roles(bindings, parties) do
       {:ok,
        %__MODULE__{
@@ -540,6 +569,12 @@ defmodule CharterAgreementProtocol.CharterRevision do
   defp unique_roles(parties) do
     roles = Enum.map(parties, & &1.role)
     if roles == Enum.uniq(roles), do: :ok, else: revision_error()
+  end
+
+  # Each role belongs to a different party, so no descriptor may hold two.
+  defp distinct_descriptors(parties) do
+    digests = Enum.map(parties, & &1.party_descriptor_digest)
+    if digests == Enum.uniq(digests), do: :ok, else: revision_error()
   end
 
   defp binding_roles(bindings, parties) do

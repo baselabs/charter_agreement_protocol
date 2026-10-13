@@ -1,113 +1,116 @@
 # Overview
 
-Charter Agreement Protocol (CAP) is a portable, non-authorizing format and
-verification protocol for bilateral commercial agreements between two parties —
-acquirers and issuers, platforms and suppliers, agents and their principals —
-where each side needs cryptographic evidence of what was agreed, by whom, and
-which revision governed a given action, without a central authority deciding for
-them.
+Two companies, or two companies' software agents, agree on terms. Later they amend
+them, maybe end them, and act under them in between. Each side keeps its own records,
+and there is no shared database to settle what was agreed. CAP gives both sides the
+same evidence: signed, byte-exact artifacts that either side, or an auditor years
+later, can verify and get the same answer from.
 
-CAP verifies. It never authorizes. Every API, guide, and notebook in this
-package repeats that boundary because it is the product: CAP produces signed,
-byte-exact, portable *evidence* that two hosts can independently re-verify and
-compare — the decision to act stays with each host.
+## The questions CAP answers
 
-## The problem CAP solves
+- **Which revision is in force right now?** Agreements change. Both parties need the
+  same answer for the same instant, computed from evidence each can check.
+- **Did both parties accept this exact revision?** An acceptance signs the revision's
+  exact bytes, with a key the other side can trace to the signer's published key
+  history.
+- **What if a party signs two different revisions at the same number?** CAP keeps both
+  as evidence and, for an instant at which both compete, reports the charter as
+  contested. It never picks a winner. A new revision that both parties accept, and
+  that descends from or supersedes each competing one, repairs the fork. The answer
+  is per instant, so a contest also ends at instants after a competing revision's
+  effective window closes; the fork evidence stays in the facts either way.
+- **Which revision was an action taken under?** A receipt ties a signed action to the
+  exact revision and deployment it ran under, so anyone can check it later.
 
-A bilateral agreement between two independent parties has recurring failure
-points that a shared database cannot answer, because there is no shared
-database:
+CAP answers these with facts derived from verified signatures and digests. It does not
+answer whether the evidence is enough for your purpose. That is your application's
+decision.
 
-- **Which text governs right now?** Agreements are amended, superseded, and
-  terminated. Both parties need the same answer at the same instant, computed
-  from evidence either side can re-verify.
-- **Did both sides actually assent to *this* revision?** Acceptance must bind
-  the exact bytes of the exact revision, signed by a key the counterparty can
-  tie to the signing party's declared key history.
-- **What happens when a party equivocates?** If one party signs two different
-  revisions at the same number, CAP retains both as signed equivocation
-  evidence instead of silently picking a winner.
-- **Which agreement governed this action?** Receipts bind a signed action to
-  the exact charter revision, deployment identity, and grant evidence that
-  governed it, so an auditor can recompute the answer years later.
+## How the artifacts fit together
 
-CAP answers each question with structural facts derived from re-verified
-signatures and digests. It answers none of them with policy: hosts decide
-whether evidence is sufficient.
+```mermaid
+flowchart LR
+  D1[Party descriptor<br/>party A's keys] --> A1[Acceptance by A]
+  D2[Party descriptor<br/>party B's keys] --> A2[Acceptance by B]
+  R[Charter revision<br/>the terms] --> A1
+  R --> A2
+  A1 --> G{Governing<br/>revision}
+  A2 --> G
+  T[Termination notice] --> G
+  G --> RC[Receipt<br/>an action under that revision]
+```
 
-## The artifact family
+- A **party descriptor** is one party's signed key history. Each new descriptor is
+  signed by a key from the one before it, so a rotation or a retired key stays
+  visible.
+- A **charter revision** is the agreed terms as canonical JSON. It names both parties
+  (by their descriptor digests), the digest of the legal text, whether the legal text
+  or machine-readable terms govern, when it takes effect, and the reasons either party
+  may terminate. Revisions are unsigned. Assent comes from acceptances.
+- An **acceptance** is one party's signature over one exact revision. A revision
+  counts as accepted when every party has accepted it.
+- A **termination notice** is one party's signed notice that the charter ends at a
+  stated instant, for a reason the revision lists.
+- A **receipt** is a signed record of an action, tied to the revision that governed it.
 
-| Artifact | Form | Proves |
-|---|---|---|
-| Party Descriptor | signed compact JWS (`cap+party`) | A party's declared key history — Ed25519, and ML-DSA from `protocol_revision` 3 — with predecessor-bound key transitions and fork evidence |
-| Charter Revision | canonical JSON (unsigned) | The agreed terms: parties, roles, legal-text digest, precedence, effective window, termination reasons, deployment bindings |
-| Acceptance | signed compact JWS (`cap+acceptance`) | One party's signed assent to one exact revision, tied to its descriptor key history |
-| Termination Notice | signed compact JWS (`cap+termination`) | A pinned party's signed notice that a listed reason takes effect at a pure UTC instant |
-| Receipt | signed compact JWS (`cap+receipt`) | That a signed action was decided under an exact revision, deployment digest, and grant reference |
+`verify_chain/5` takes the descriptors, revisions, acceptances and termination
+notices as raw bytes, verifies every one, and returns facts about the whole set.
+Receipts are verified separately, with `verify_receipt/3` against those facts. `governing_revision/2` then tells you which revision was in
+force at a given instant. The [artifacts reference](artifacts.md) lists every member,
+and [verification semantics](verification.md) explains how forks, supersession and
+termination work.
 
-Set-level verification composes the full picture: `verify_chain/5` re-verifies
-every artifact from raw bytes and returns structural `ChainFacts`;
-`governing_revision/2` answers "which revision governed at this UTC instant"
-with a digest, `:contested`, or `:none`. See
-[Artifacts](artifacts.md) and [Verification semantics](verification.md).
+## What CAP checks and what it leaves to you
 
-## Design principles
+CAP checks:
 
-- **Byte-exactness.** Strict unpadded base64url, deterministic JSON decoding,
-  RFC 8785 canonicalization, and domain-separated SHA-256 digests. Two
-  implementations — pure Elixir and a builtins-only TypeScript verifier —
-  recompute the complete projected fact document of every certified corpus case
-  and must produce byte-identical canonical reports.
-- **No tie-breaking, ever.** Forked histories are reported as fork evidence and
-  contested views. Digest ordering never selects a winner; only an explicitly
-  countersigned supersession repair resolves a contested view.
-- **Purity.** The production runtime uses only OTP `:crypto`. No filesystem,
-  clock, network, environment, process dictionary, or application callbacks in
-  verification paths. Callers supply time, limits, trust anchors, and keys.
-- **Value-free errors.** Every failure is a closed typed-error vocabulary with
-  protocol-owned subjects — rejected input values never appear in errors, so
-  verification failures are safe to log.
-- **Non-authorizing by construction.** Every facts record carries a closed
-  twelve-item `not_verified` floor — tenancy, live policy, authority, effect
-  ownership, execution, billing, evaluation truth, legal validity, term
-  satisfaction, view completeness, counterparty view, wall clock — that no API
-  can shrink. See [Security model](security-model.md).
-- **Zero runtime dependencies.** The package runs on OTP crypto alone. ABP and
-  BAP enter only as exact, runtime-disabled development/test pins behind the
-  frozen cross-protocol conformance vectors. See [Receipts](receipts.md).
+- every signature, against the key the signer's descriptor history says was active;
+- that each acceptance names the exact revision bytes and a party the revision lists;
+- key-history continuity, and forks in a history;
+- which revision governs at an instant, and when the view is contested;
+- that every artifact is canonical, well formed, and within the size limits you set.
 
-## Where CAP sits relative to its siblings
+CAP does not decide, and says so in every result:
 
-CAP binds to two sibling protocols at exact published identities and keeps its
-wire identities disjoint from both:
+- whether a party may take an action;
+- whether the terms were met;
+- whether an effect actually happened;
+- legal validity;
+- whether you were shown every artifact that exists;
+- what time it is. You pass the instant in.
 
-- **ABP (Agent Blueprint Protocol)** — a Charter Revision names the exact
-  blueprint content and deployment digests each party role runs. CAP proves the
-  binding is byte-exact; ABP owns what a deployment is.
-- **BAP (Bounded Authority Protocol)** — a Receipt's grant reference can carry
-  a BAP grant digest, composed exactly from the grant compact's `ath` value.
-  CAP proves the digest bytes; BAP owns grant semantics.
+Each facts record carries this list under `not_verified`, and no option can shorten it.
+The [security model](security-model.md) covers what that means for an application.
 
-Each protocol owns its surface; CAP composes their identities without consuming
-their code at runtime.
+## Design choices that matter to you
+
+- **Same bytes, same answer.** Encoding is strict: unpadded base64url, canonical
+  JSON, and domain-separated SHA-256 digests. Two implementations (this one, and the
+  TypeScript verifier) must produce byte-identical reports on every case in the
+  conformance corpus.
+- **No silent tie-breaks.** A fork is reported as a fork. Nothing in CAP orders
+  digests to pick a winner.
+- **No side effects.** Verification reads no clock, file, network or environment. You
+  supply the time, the limits and the key material.
+- **Errors you can log.** Every failure is a typed error with a fixed code. Errors
+  never contain the input that failed.
+- **No runtime dependencies.** CAP uses OTP's `:crypto` and nothing else.
+
+## Related protocols
+
+- **Agent Blueprint Protocol (ABP).** A revision can name, for each party, the exact
+  agent build and deployment it runs. CAP checks that those digests are byte-exact;
+  ABP defines what they mean.
+- **Bounded Authority Protocol (BAP).** A receipt's `grant` member can carry the digest
+  of a BAP grant. CAP checks the digest bytes; BAP defines what a grant is.
+
+CAP uses neither package at runtime. It shares fixed test vectors with both.
 
 ## What CAP is not
 
-- Not an identity provider: descriptor verification proves signed key
-  continuity, not organizational identity or legal existence.
-- Not a revocation oracle: no live key-revocation or transparency-log check.
-- Not a policy engine: term satisfaction (for example, an indexed price
-  meeting a spread) stays in the facts omission floor; hosts compute terms
-  independently.
-- Not an effect executor: a receipt with `outcome: "effect_committed"` is
-  signed evidence from the issuing party, not proof an effect occurred.
-- Not a lawyer: legal validity is explicitly outside every verified fact.
-
-## Status
-
-The approved protocol core, certified 100-case corpus, independent second
-verifier, 25-mutation battery, and release-candidate gates are implemented
-and green in CI. The package is published on Hex — the 0.3.x line carries
-the revision-3 ML-DSA registry act, and the release gate certifies the
-exact package content identity; see the README status section and
-[Conformance](conformance.md) for the certified identities.
+- Not an identity provider. A descriptor proves key continuity, not who a company is.
+- Not a revocation service. It does not check live revocation or transparency logs.
+- Not a policy engine. It does not evaluate terms.
+- Not a record of effects. A receipt that says an effect was committed is the issuing
+  party's signed claim, not proof the effect happened.
+- Not legal advice. Legal validity is outside every result.

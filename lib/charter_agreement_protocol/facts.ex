@@ -1,5 +1,45 @@
 defmodule CharterAgreementProtocol.Facts do
-  @moduledoc "Shared constructor for CAP's redacted, non-authorizing facts records."
+  @moduledoc """
+  The one constructor behind every facts record, and the list of what CAP
+  does not verify. Facts are non-authorizing: they describe signed evidence
+  and never grant anything.
+
+  Verification returns facts records: `CharterAgreementProtocol.ChainFacts`,
+  `CharterAgreementProtocol.RevisionFacts`,
+  `CharterAgreementProtocol.AcceptanceFacts`,
+  `CharterAgreementProtocol.DescriptorFacts`,
+  `CharterAgreementProtocol.TerminationFacts`,
+  `CharterAgreementProtocol.ReceiptFacts` and
+  `CharterAgreementProtocol.ForkEvidence`. Each one is built here, and each
+  one carries a `not_verified` list that starts with these twelve atoms:
+
+  `:tenancy`, `:live_policy`, `:authority`, `:effect_ownership`,
+  `:execution`, `:billing`, `:evaluation_truth`, `:legal_validity`,
+  `:term_satisfaction`, `:view_completeness`, `:counterparty_view` and
+  `:wall_clock`.
+
+  These name things a signature cannot prove, so your application has to
+  establish them. A record may add atoms to the list (a receipt verified
+  against a single revision adds `:signature`), but it never drops one. The
+  [security model](security-model.md) explains each item.
+
+  Every facts record prints as `#Name<redacted>` so that charter contents do
+  not end up in logs. Read fields directly (`facts.charter_id`), or call
+  `inspect(facts, structs: false)` to see everything while debugging.
+
+  You do not need `build/3` to use CAP. It is public so the library's own
+  modules share one constructor.
+
+  `CharterAgreementProtocol.AcceptanceEquivocation` is evidence, not a facts
+  record: it is not built here and has no `not_verified` list.
+
+  ## Examples
+
+      iex> CharterAgreementProtocol.Facts.not_verified_floor()
+      [:tenancy, :live_policy, :authority, :effect_ownership, :execution, :billing,
+       :evaluation_truth, :legal_validity, :term_satisfaction, :view_completeness,
+       :counterparty_view, :wall_clock]
+  """
 
   alias CharterAgreementProtocol.{
     AcceptanceFacts,
@@ -23,7 +63,13 @@ defmodule CharterAgreementProtocol.Facts do
     TerminationFacts
   ]
 
-  @doc "Build one known facts struct, forcing the twelve-atom floor and unioning additions."
+  @doc """
+  Build one facts struct of a known module.
+
+  Sets `not_verified` to the twelve atoms plus `additions`, whatever `attrs`
+  says. Returns `:invalid_type` for an unknown module, unknown fields or
+  non-atom additions.
+  """
   @spec build(module(), map() | keyword(), [atom()]) :: {:ok, struct()} | {:error, Error.t()}
   def build(module, attrs, additions \\ [])
 
@@ -45,7 +91,7 @@ defmodule CharterAgreementProtocol.Facts do
 
   def build(_module, _attrs, _additions), do: invalid()
 
-  @doc "The fixed host-owned floor, exposed for architecture and property gates."
+  @doc "The twelve atoms every facts record lists in `not_verified`, in order."
   @spec not_verified_floor() :: [atom()]
   def not_verified_floor, do: @not_verified
 

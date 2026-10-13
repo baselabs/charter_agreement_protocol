@@ -24,7 +24,8 @@ defmodule CharterAgreementProtocol.AcceptanceFixture do
     private = Keyword.get(options, :private, descriptor.private)
     typ = Keyword.get(options, :typ, "cap+acceptance")
     payload_bytes = canonical!(claims)
-    protected_bytes = canonical!(%{"alg" => "EdDSA", "kid" => kid, "typ" => typ})
+    alg = Keyword.get(options, :alg, "EdDSA")
+    protected_bytes = canonical!(%{"alg" => alg, "kid" => kid, "typ" => typ})
     protected_segment = Base64Url.encode(protected_bytes)
     payload_segment = Base64Url.encode(payload_bytes)
     message = protected_segment <> "." <> payload_segment

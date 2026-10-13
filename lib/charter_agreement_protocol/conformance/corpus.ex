@@ -67,6 +67,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "profile_narrow_valid",
     "supersession",
     "precedence_selection",
+    "terminated",
     "outcome_indeterminate",
     "extension_unknown_critical",
     "extension_optional_roundtrip",
@@ -97,7 +98,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       n_a: "byte encoding and digest behavior is outside artifact schema validation"
     },
     "party_descriptor.verify" => %{
-      required: ~w(valid signature_invalid invalid_encoding unknown_member invalid_constraint),
+      required:
+        ~w(valid signature_invalid invalid_encoding unknown_member invalid_constraint profile_narrow_valid profile_algorithm_outside profile_revision_outside),
       n_a:
         "set topology and foundational codec-only behavior are outside one descriptor verification"
     },
@@ -107,11 +109,12 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     },
     "charter_revision.decode" => %{
       required:
-        ~w(valid invalid_type invalid_constraint invalid_cardinality unknown_member missing_required extension_unknown_critical extension_invalid),
+        ~w(valid invalid_encoding invalid_type invalid_constraint invalid_cardinality unknown_member missing_required non_canonical_bytes extension_unknown_critical extension_invalid),
       n_a: "signature, chain, and foundational codec-only behavior are outside revision decoding"
     },
     "acceptance.verify" => %{
-      required: ~w(valid invalid_constraint signature_invalid),
+      required:
+        ~w(valid invalid_constraint signature_invalid unknown_member profile_narrow_valid profile_algorithm_outside profile_revision_outside),
       n_a:
         "set-level equivocation and foundational codec-only behavior are outside one acceptance"
     },
@@ -121,12 +124,13 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
         "single-artifact and foundational codec-only behavior are outside paired acceptance evidence"
     },
     "termination.verify" => %{
-      required: ~w(valid invalid_constraint signature_invalid),
+      required:
+        ~w(valid invalid_constraint signature_invalid unknown_member profile_narrow_valid profile_algorithm_outside profile_revision_outside),
       n_a:
         "governance effects and foundational codec-only behavior are outside one termination notice"
     },
     "chain.verify" => %{
-      required: ~w(valid chain_fork supersession chain_invalid),
+      required: ~w(valid exact_bound maximum_plus_one chain_fork supersession chain_invalid),
       n_a: "single-artifact and foundational codec-only behavior are outside set verification"
     },
     "chain.verify_profile" => %{
@@ -134,12 +138,12 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       n_a: "unprofiled set verification is the chain.verify surface"
     },
     "governing_revision" => %{
-      required: ~w(precedence_selection),
+      required: ~w(precedence_selection terminated),
       n_a: "set integrity and single-artifact behavior are outside temporal precedence selection"
     },
     "receipt.verify" => %{
       required:
-        ~w(valid invalid_constraint signature_invalid chain_fork outcome_indeterminate extension_optional_roundtrip invalid_encoding extension_invalid),
+        ~w(valid invalid_constraint signature_invalid unknown_member chain_fork terminated outcome_indeterminate extension_optional_roundtrip invalid_encoding extension_invalid profile_narrow_valid profile_algorithm_outside profile_revision_outside),
       n_a: "non-receipt codec and set-construction behavior is outside receipt verification"
     }
   }
@@ -170,13 +174,18 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
   @doc """
   Load and integrity-check a complete in-memory corpus.
 
-  `historical` relaxes exactly one check for a corpus certified by an
-  EARLIER release: the compiled applicability floor is a
-  current-certification instrument, so a frozen index that predates
-  surfaces or classes this package compiles cannot satisfy it. Every
-  integrity check that matters for a released artifact — the corpus
-  self-digest, the per-file hashes, the file set, the count reconciliation,
-  and the observed-versus-indexed cell counts — still applies unchanged.
+  `historical` is for a corpus released with an earlier version of this
+  package. It relaxes two checks:
+
+  - the compiled applicability floor, because a frozen index that predates
+    surfaces or classes this package compiles cannot cover them;
+  - equality of the index's `registry_digest` with the extension registry
+    compiled into this package, because a frozen index records the registry
+    of its own release.
+
+  Every integrity check on the corpus itself still applies unchanged: the
+  corpus self-digest, the per-file hashes, the file set, the count
+  reconciliation, and the observed-versus-indexed cell counts.
   """
   @spec load(term()) :: {:ok, t()} | {:error, Error.t()}
   @spec load(term(), boolean()) :: {:ok, t()} | {:error, Error.t()}

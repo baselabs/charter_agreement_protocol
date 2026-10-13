@@ -4,39 +4,203 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
-### Fixed
+One verdict change: a charter's parties must be distinct parties (see
+Security). The verification semantics version moves from 4 to 5. Apart from
+that change, this release gives the same verdict as 0.4.1 on every case of
+the 0.4.0 and 0.4.1 corpora. Separately, a narrowed capability profile now
+reaches the context a standalone call re-verifies, and a profile rejection
+is reported under its own code. On a runtime that verifies every algorithm,
+calls under the full profile are unaffected.
 
+### Security
+
+- Releases 0.1.0 through 0.4.1 accepted a charter in which one party held
+  both roles, as long as an unrelated second key history was present in the
+  view. "Every party accepted" could then be satisfied by a single party. Two
+  checks now reject that:
+  - a charter revision whose parties name the same descriptor fails to
+    decode with `:revision_invalid`;
+  - a chain view fails with `:chain_invalid` when a revision's parties
+    resolve to the same key history, or when the view holds a key history
+    that no revision names.
+
+  To check charters you stored under an earlier release, re-verify them with
+  this release, or look for a revision whose `parties` repeat a
+  `party_descriptor_digest` and for any descriptor history the revisions do
+  not name. The TypeScript verifier already rejected these views.
+- Releases 0.4.0 through 0.4.1 applied a caller's narrowed capability
+  profile only partly in `verify_acceptance/5`, `verify_termination/5` and
+  `verify_receipt/4`. The supplied revision and descriptor history and the
+  chain view a receipt names were verified under the full profile, and a
+  receipt checked against a bare revision was not checked against the
+  profile at all, so a profile that excluded an algorithm or a
+  `protocol_revision` could still pass a call whose context or receipt used
+  it. The profile now applies to every artifact these calls verify and fails
+  with `:algorithm_outside_profile` or `:revision_outside_profile`. Acceptance
+  and termination calls check the supplied revision first, then the
+  descriptor history; a receipt call checks its chain view as
+  `verify_chain/6` does, or its bare revision, then the receipt. If you rely
+  on a profile to keep an algorithm or revision out, verify stored results
+  from these calls again.
+- Profile rejections were reported under another code in some cases. An
+  acceptance, termination, descriptor or receipt outside the profile whose
+  `kid` names no key failed with the key lookup code (`:acceptance_invalid`,
+  `:termination_invalid`, `:descriptor_key_invalid`) or, for a receipt in a
+  chain view, `:signature_invalid`; the envelope is now admitted before the
+  key is looked up, so it fails with the profile code. `verify_descriptor/4` given a predecessor outside
+  the profile failed with `:descriptor_chain_invalid`; it now fails with the
+  profile code, as `verify_descriptor_chain/3` does, and a predecessor whose
+  signature the runtime cannot check reports
+  `:algorithm_unsupported_on_substrate`.
+
+### Added
+
+- `CharterAgreementProtocol.encode_charter_revision/1` builds a Charter
+  Revision's canonical bytes from a plain claims map. It checks the result
+  with the decoder verification uses, so invalid claims fail with the error a
+  verifier would report.
+- `Canonicalization.from_plain/1` converts a plain Elixir term (maps with
+  string keys, lists, binaries, integers, floats, booleans and `nil`) to the
+  tagged JSON form, and `Canonicalization.encode_plain/1` encodes it to the
+  same bytes `Canonicalization.encode/1` gives for that tagged form. Floats
+  stay floats. Any other term returns an `:invalid_type` error. You no longer
+  need your own tagging helper to build claims.
+- `priv/verifier-source.json` ships in the package. It names the TypeScript
+  verifier repository and the commit this release was checked against, so
+  you can match an npm verifier version to this release.
+
+### Conformance
+
+- The conformance corpus grows from 104 to 163 cases. Apart from the two
+  distinct-party cases and the 24 profile cases on single-artifact surfaces
+  (which record the corrected profile behavior; 0.4.1 differs on most of
+  them), each new case records a verdict this package already returned. A second implementation could pass the earlier 104 cases and still
+  get these wrong. The new cases cover:
+  - a verified termination closing the charter at its effective instant, for
+    governing-revision selection and for receipts;
+  - strict revision decoding: non-canonical bytes, a duplicate member, a
+    precedence value outside the enumeration, an unparsable
+    `effective_from`, an unknown `protocol_revision`, wrong member types, and
+    one or three parties;
+  - one extra member in acceptance, termination, receipt and descriptor
+    claims;
+  - descriptor histories grouped per party: a two-party descriptor set, a
+    successor without `party_id`, and a chain view holding one party's
+    history;
+  - artifact sets exactly at each size limit and one past it;
+  - the full indexed-price body and its receipt observation body;
+  - a duplicate JSON member that is not the last member, and member order for
+    integer-like keys;
+  - a digest inside signed receipt claims spelled with non-canonical
+    base64url;
+  - an `effective_from` in year 0000, which RFC 3339 allows;
+  - the distinct-party rule: one descriptor named for both roles, and one
+    party's two descriptors holding both roles beside an unrelated history;
+  - a narrowed profile on `party_descriptor.verify` (with a predecessor
+    history), `acceptance.verify`, `termination.verify` and
+    `receipt.verify`: each context artifact outside on each axis, the
+    revision checked before the descriptor history, a receipt checked against
+    a bare revision, artifacts outside the profile whose `kid` names no key,
+    and a profile that names one axis only.
+- The `party_descriptor.verify`, `acceptance.verify`, `termination.verify`
+  and `receipt.verify` cases take an optional `profile` input; a
+  `party_descriptor.verify` case may give `predecessor_compacts`, its
+  predecessor history genesis first; and a `receipt.verify` case may give
+  `revision_text` instead of `chain` as its context.
+- The corpus now requires these case classes, so a later corpus cannot drop
+  them: `invalid_encoding` and `non_canonical_bytes` on
+  `charter_revision.decode`; `unknown_member` on `acceptance.verify`,
+  `termination.verify` and `receipt.verify`; `exact_bound` and
+  `maximum_plus_one` on `chain.verify`; `profile_narrow_valid`,
+  `profile_algorithm_outside` and `profile_revision_outside` on
+  `party_descriptor.verify`, `acceptance.verify`, `termination.verify` and
+  `receipt.verify`; and a new
+  class, `terminated`, on `governing_revision` and `receipt.verify`.
+- The conformance runner passes a case's `limits` to chain views, as it
+  already did for JSON decoding.
+- The compatibility table (`ReleaseIdentity.compatibility/0` and
+  `priv/release-metadata.json`) gains a row for 0.5.0: verification
+  semantics 5, the new corpus digest, and one green-to-red transition (the
+  distinct-party rule). A semantics family may now span more than one row,
+  one per released corpus.
+
+### Specification
+
+- [CAP-CHAIN-distinct-parties]: a revision may not name one descriptor for
+  two roles, a revision's parties must resolve to different key histories,
+  and every key history in a view must be one a revision names.
+- [CAP-PROFILE-context-admission]: a call that re-verifies caller-supplied
+  context applies the caller's profile to every artifact in it.
+- Two behaviors the reference already had are now normative requirements.
+  [CAP-CHAIN-artifact-set-bounds]: each artifact list holds at most
+  `max_artifact_set_items` items and the whole set at most
+  `max_artifact_set_bytes` bytes, checked before any decode or signature
+  check. [CAP-CHAIN-termination-closes]: a verified termination that names
+  the revision governing at its `effective_at` closes the charter from that
+  instant.
 - The security and privacy considerations said every attached artifact is
-  Ed25519 and every descriptor declares Ed25519 keys; since `protocol_revision`
-  3 admitted ML-DSA-44/65/87 that is wrong. Both now name the registered
-  algorithms and point to core section 4.1, and the `VerificationKey`
-  moduledoc follows. Spec bytes changed, so `spec_digest` is re-recorded
-  (`sha-256:v8L9hn9mPSIrC770EDcQwGN04wRvon1wztOVRFcNesk`); no verdict changes.
-  The specification changelog records the revision.
+  Ed25519 and every descriptor declares Ed25519 keys. Since
+  `protocol_revision` 3 admitted ML-DSA, that was wrong. Both now name the
+  registered algorithms (Ed25519, ML-DSA-44, ML-DSA-65 and ML-DSA-87) and
+  point to core section 4.1. The `PartyDescriptor.VerificationKey` docs say
+  the same.
+- These changes alter specification bytes, so `spec_digest` moves.
+  `spec/changelog.md` records each one.
 
 ### Changed
 
-- The consumer transition contract
-  (`docs/guides/upgrading-verification-identity.md`) no longer lists
-  `spec_digest` in the tuple consumers compare on replay. Record it, but
-  compare `verification_semantics_version`, the explicit limits,
-  `signature_registry_digest`, and each artifact's `protocol_revision` and
-  `alg`: an editorial specification correction moves `spec_digest` without
-  changing any verdict, while every verdict change moves the semantics
-  version.
+- The [upgrade guide](docs/guides/upgrading-verification-identity.md) no
+  longer lists `spec_digest` among the values to compare when you replay
+  stored verdicts. Record it, but compare `verification_semantics_version`,
+  the explicit limits, `signature_registry_digest`, and each artifact's
+  `protocol_revision` and `alg`. An editorial specification fix moves
+  `spec_digest` without changing any verdict, while every verdict change
+  moves the semantics version.
 
-### Repository-side (not shipped)
+### Documentation
 
-- The JSON-decoder differential gate's seeded red never fired. Its mutation
-  anchor no longer matched the TypeScript source, and it compared untrimmed
-  output, so it reported a red on an unmutated copy. Its generator also wrote
-  only canonical text, where an integral float such as 2.0 is spelled `2`, so
-  lexeme-faithful float tagging was never exercised. The generator now spells
-  integral floats with a fraction or exponent, the seed targets the real
-  boxing line, and the comparison is trimmed. One shared helper
-  (`scripts/seeded_mutation.exs`) now owns the rule for every seeded red and
-  mutation: the anchor occurs exactly once and the replacement differs from
-  it. The agreement gate and the mutation battery use it too.
+- The guides are rewritten for this release and organized as tutorials,
+  how-to guides, explanations and reference. New pages: "Your first verified
+  charter", "Produce and verify with the signer", "Integrate CAP into an
+  application", "Handle errors" (the meaning of each error code and what the
+  caller should do), "Implement CAP in another language", limits and
+  profiles, a glossary and a cheatsheet. The upgrade guide is now on HexDocs.
+- The recipes used `protocol_revision` 1, which the default Ed25519 producer
+  refuses with `:signing_input_invalid`. They now use 2, and a test runs
+  them.
+- Both notebooks install the package from Hex and open from HexDocs with
+  "Run in Livebook". The charter tour produces its artifacts with
+  `charter_agreement_signer`.
+- The API reference documents every facts struct's fields and gives examples
+  for the main module's functions. Internal modules no longer appear.
+- `docs/protocol.md` and `docs/test-vectors.md` are merged into the
+  reference and implementer pages.
+
+### Repository-side
+
+- The checks that compare the two implementations now run the TypeScript
+  verifier's own repository at the commit in `priv/verifier-source.json`.
+  The in-tree `verifier/` copy had drifted from the npm package and is
+  removed. `mix verifier.source` fetches and checks the pinned commit.
+- The JSON-decoder differential check could not fail on its deliberately
+  broken TypeScript copy; now it can. Its generated input now includes
+  integral floats written with a fraction or exponent. One helper,
+  `scripts/seeded_mutation.exs`, applies every such edit and requires its
+  anchor text to occur exactly once.
+- The named source mutations grow from 26 to 43. New: `termination-close-ignored`,
+  `revision-canonical-bytes-skip`, `artifact-set-bytes-ceiling-skip`,
+  `distinct-descriptors-skip`, `party-histories-skip`,
+  `two-party-history-count-relaxed`, `context-descriptor-profile-skip`,
+  `context-revision-profile-skip`, `context-order-swapped`,
+  `termination-order-swapped`, `termination-descriptor-profile-skip`,
+  `chain-receipt-context-profile-skip`, `chain-receipt-admission-skip`,
+  `revision-only-receipt-profile-skip`, `predecessor-profile-code-swallowed`,
+  `descriptor-admission-before-key-skip` and `profile-revision-gate-defeat`.
+  `profile-gate-defeat` now targets the admission rule itself, since every
+  caller admits the envelope before it looks a key up.
+- `mix historical.check` adds the v0.4.0 and v0.4.1 corpora (104 cases
+  each, no listed transitions).
+- CI runs on Linux only and skips pushes that change only documentation.
 
 ## [0.4.1] — 2026-09-24
 

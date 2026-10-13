@@ -1,0 +1,160 @@
+# Cheatsheet
+
+## Verify
+{: .col-2}
+
+### A whole charter
+
+```elixir
+alias CharterAgreementProtocol, as: CAP
+alias CharterAgreementProtocol.Limits
+
+{:ok, facts} =
+  CAP.verify_chain(
+    revisions,     # [binary] canonical revision bytes
+    acceptances,   # [binary] compact JWS
+    descriptors,   # [binary] compact JWS, every party's history
+    terminations,  # [binary] compact JWS
+    Limits.default()
+  )
+```
+
+Every argument is a list of raw bytes. Pass `[]` when there are no terminations.
+
+### Which revision is in force
+
+```elixir
+CAP.governing_revision(facts, ~U[2026-09-01 00:00:00Z])
+#=> {:ok, "sha-256:..."}   # one revision
+#=> {:ok, :contested}      # two valid revisions compete
+#=> {:ok, :none}           # nothing in force (not yet, or terminated)
+```
+
+### One artifact
+
+```elixir
+CAP.verify_descriptor(compact, predecessor_or_nil, limits)
+CAP.verify_descriptor_chain(compacts, limits)
+CAP.decode_charter_revision(bytes, limits)
+CAP.verify_acceptance(compact, revision, descriptor_chain, limits)
+CAP.verify_termination(compact, revision, descriptor_chain, limits)
+CAP.verify_receipt(compact, chain_facts_or_revision, limits)
+```
+
+### Narrow what you accept
+
+```elixir
+{:ok, profile} =
+  CharterAgreementProtocol.Capability.Profile.new(
+    algorithms: ["Ed25519"],
+    revisions: {2, 2}
+  )
+
+CAP.verify_chain(revisions, acceptances, descriptors, terminations,
+                 Limits.default(), profile)
+```
+
+An artifact outside the profile fails with `:algorithm_outside_profile` or
+`:revision_outside_profile` before its own signature is checked.
+
+## Produce
+{: .col-2}
+
+### Revision bytes from a plain map
+
+```elixir
+{:ok, revision_bytes} = CAP.encode_charter_revision(claims)
+{:ok, revision} = CAP.decode_charter_revision(revision_bytes, Limits.default())
+CAP.revision_digest(revision)
+#=> "sha-256:..."
+```
+
+### Bytes to sign, then the compact
+
+```elixir
+{:ok, input} =
+  CAP.descriptor_signing_input(%{"kid" => kid, "claims" => claims})
+
+signature = your_signer.(input.message)
+{:ok, compact} = CAP.assemble_compact(input, signature)
+```
+
+`"algorithm"` is optional: `"Ed25519"` (the default, claims at
+`protocol_revision` 2) or `"ML-DSA-65"` (`protocol_revision` 3). The signature is
+64 bytes for Ed25519 and 3309 for ML-DSA-65.
+
+### Set-aware producers
+
+```elixir
+{:ok, set} = CAP.build_set(revisions, acceptances, terminations, descriptors)
+CAP.acceptance_signing_input(%{"kid" => kid, "claims" => claims}, set)
+CAP.termination_signing_input(%{"kid" => kid, "claims" => claims}, set)
+CAP.receipt_signing_input(%{"kid" => kid, "claims" => claims})
+```
+
+Note the argument order: `build_set/4` takes terminations before descriptors;
+`verify_chain/5` takes descriptors before terminations. The producers return
+`{:error, %Error{code: :signing_refused}}` when the claims conflict with the set.
+
+## Results
+{: .col-2}
+
+### What a result never proves
+
+Every facts record has `not_verified`, always these twelve:
+
+```elixir
+[:tenancy, :live_policy, :authority, :effect_ownership, :execution, :billing,
+ :evaluation_truth, :legal_validity, :term_satisfaction, :view_completeness,
+ :counterparty_view, :wall_clock]
+```
+
+### Errors
+
+```elixir
+{:error, %CharterAgreementProtocol.Error{code: code, subject: subject}}
+```
+
+`code` is an atom from a closed list. `subject` names where it failed. Neither
+contains the input, so errors are safe to log. See
+[Handle errors](error-codes.md).
+
+### What this runtime can verify
+
+```elixir
+CAP.capabilities()
+#=> %{algorithms: [%{name: "EdDSA", key_algorithm: "Ed25519", verifiable: true}, ...],
+#     linked_crypto: ...}
+```
+
+A well-formed artifact whose algorithm is marked `verifiable: false` fails with
+`:algorithm_unsupported_on_substrate`: the signature could not be checked. A
+signature of the wrong length still fails with `:signature_invalid` first.
+
+## Limits and the CLI
+{: .col-2}
+
+### Limits
+
+| Field | Default | Maximum |
+|---|---|---|
+| `max_bytes` | 1,048,576 | 16,777,216 |
+| `max_depth` | 64 | 128 |
+| `max_object_members` | 1,024 | 65,536 |
+| `max_array_items` | 4,096 | 65,536 |
+| `max_string_bytes` | 65,536 | 1,048,576 |
+| `max_artifact_set_items` (per list) | 1,024 | 4,096 |
+| `max_artifact_set_bytes` (all lists) | 67,108,864 | 1,073,741,824 |
+
+```elixir
+{:ok, limits} = Limits.new(max_artifact_set_items: 64)
+```
+
+### Check the shipped corpus
+
+```console
+$ mix run -e 'System.halt(CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"]))'
+```
+
+Exit status `0` when every case agrees, `1` when any disagrees or the corpus fails
+to load, `2` for a usage error.

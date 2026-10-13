@@ -13,8 +13,10 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
     Capability.Profile,
     Chain,
     ChainFixture,
+    DescriptorFacts,
     Error,
     Limits,
+    PartyDescriptor,
     Signature
   }
 
@@ -45,6 +47,39 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
       # gate fires after the deterministic length checks, before crypto.
       assert {:error, %Error{code: :algorithm_unsupported_on_substrate}} =
                Signature.verify("lane", <<0::3309*8>>, <<0::1952*8>>, "ML-DSA-65")
+    end
+  end
+
+  test "a predecessor the runtime cannot check reports the substrate diagnostic, never a broken chain" do
+    corpus = :json.decode(File.read!("priv/conformance/cases/party_descriptor-verify.json"))
+    compact_of = fn id -> Enum.find(corpus["cases"], &(&1["id"] == id))["input"]["compact"] end
+    mldsa_genesis = compact_of.("descriptor-mldsa65-rev3-valid")
+    {:ok, decoded} = PartyDescriptor.decode(mldsa_genesis, Limits.default())
+    digest = PartyDescriptor.digest(decoded)
+
+    # The supplied facts only name the history; verification re-verifies it.
+    predecessor = %DescriptorFacts{
+      descriptor: decoded,
+      descriptor_digest: digest,
+      party_id: digest,
+      descriptor_number: 1,
+      prev_descriptor_digest: nil,
+      signing_key_id: decoded.envelope.kid,
+      descriptor_position: :head,
+      optional_extensions_retained: [],
+      lineage: [mldsa_genesis],
+      not_verified: []
+    }
+
+    # The target is an unrelated genesis, so once the predecessor history
+    # verifies the call fails as a broken chain.
+    target = compact_of.("party-descriptor-genesis-valid")
+    result = PartyDescriptor.verify(target, predecessor, Limits.default())
+
+    if Capability.kat_verifies?("ML-DSA-65") do
+      assert {:error, %Error{code: :descriptor_chain_invalid}} = result
+    else
+      assert {:error, %Error{code: :algorithm_unsupported_on_substrate}} = result
     end
   end
 

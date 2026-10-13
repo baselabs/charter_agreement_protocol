@@ -3,7 +3,8 @@ defmodule CharterAgreementProtocol.Conformance.Report do
   CAP never authorizes.
 
   Canonical, corpus-identity-bound conformance report. Agreement requires the
-  complete projected result of every case to match its certified expectation.
+  complete projected result of every case to match the expected result the
+  released corpus records for it.
   """
 
   alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest}

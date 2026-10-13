@@ -4,30 +4,30 @@ defmodule CharterAgreementProtocol.Signature do
 
   Strict verification boundary for already-framed protocol bytes.
 
-  Ed25519: before invoking OTP crypto, this module rejects noncanonical
-  point encodings, the complete eight-point torsion set for both the public
-  key and `R`, and scalars outside the canonical subgroup-order range. This
-  prevents low-order universal forgeries that the raw runtime primitive can
-  accept.
+  Ed25519: before calling OTP crypto, this module requires the exact key and
+  signature lengths and strict, canonical encodings of the public key and
+  the signature, as the specification's signature section requires.
 
-  ML-DSA: lattice signatures carry no torsion or point-encoding surface;
-  the strictness rule is the registry row's exact public-key and signature
-  byte lengths for the named parameterization, enforced before OTP crypto.
-  Verification is pure ML-DSA with the context fixed to the empty string
-  (RFC 9964).
+  ML-DSA: the strictness rule is the registry row's exact public-key and
+  signature byte lengths for the named parameter set, checked before OTP
+  crypto. Verification is pure ML-DSA with the context fixed to the empty
+  string (RFC 9964).
 
-  ## Substrate honesty
+  ## When the runtime cannot verify
 
-  When the runtime does not declare the row's key algorithm, verification is
-  impossible for substrate reasons and fails with the named implementation
-  local diagnostic `:algorithm_unsupported_on_substrate` — never conflated
-  with `signature_invalid`. The diagnostic fires only after every
-  deterministic check has passed and the substrate is the sole obstacle: a
-  wrong-length or malformed input rejects with `signature_invalid` first, on
-  every substrate alike, so a forged artifact never earns a retryable
-  diagnosis. The diagnostic is outside the conformance verdict surface and
-  outside cross-verifier report identity; it is an honesty property of one
-  implementation on one substrate, not a protocol verdict.
+  When the runtime does not declare the row's key algorithm, or declares it
+  but cannot perform the operation (the call raises and the pinned
+  known-answer vector fails too), verification returns the
+  implementation-local diagnostic `:algorithm_unsupported_on_substrate`
+  instead of a verdict. It means the signature could not be checked. The
+  checks that run before it passed, but whether the signature is valid is
+  unknown: a forged signature of the right length gets the same diagnostic.
+  Never treat it as verified. A wrong-length or malformed input rejects with
+  `signature_invalid` first, on every runtime alike.
+
+  The diagnostic is outside the conformance verdict surface and outside
+  cross-verifier report identity; it describes one implementation on one
+  runtime, not a protocol verdict.
 
   The module accepts only public verification material. It never signs,
   selects trust, or authorizes an artifact.

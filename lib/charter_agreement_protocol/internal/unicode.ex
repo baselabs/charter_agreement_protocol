@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.Internal.Unicode do
-  @moduledoc "Internal, non-authorizing Unicode predicates."
+  @moduledoc "Internal, non-authorizing Unicode checks used by the JSON decoder. Not part of the public API."
 
   @doc false
   @spec ijson_string?(binary()) :: boolean()

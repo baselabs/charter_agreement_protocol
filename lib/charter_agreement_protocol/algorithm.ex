@@ -1,43 +1,55 @@
 defmodule CharterAgreementProtocol.Algorithm do
   @moduledoc """
-  CAP never authorizes.
+  The signature algorithm registry: one row per accepted JWS `alg` name.
+  CAP never authorizes; the registry only says which signatures it can
+  check.
 
-  The closed algorithm registry — one row per accepted JWS `alg` name.
+  Each row gives the `alg` name, the lowest `protocol_revision` that may use
+  it, the key algorithm it verifies with, and that key algorithm's exact
+  public-key and signature lengths in bytes. Framing, the descriptor key
+  grammar and the signing-input builders all read this one table. A new
+  algorithm is added as a new row (plus the key grammar it needs), never as a
+  new artifact family, media type or header shape. `spec/evolution.md`
+  describes that process.
 
-  This table IS the algorithm registry `spec/evolution.md` describes as
-  data-driven: a new algorithm lands by the same registry-and-revision act
-  (a row here plus the key grammar its `key_algorithm` column requires),
-  never by a parallel artifact family, media type, or header shape. Each
-  row carries the accepted `alg` name, the minimum `protocol_revision` the
-  name is legal at, the key algorithm it verifies with, and that key
-  algorithm's exact public-key and signature byte lengths — the single
-  source of truth the framing layer, key grammar, and producer seam all
-  consult.
+  | `alg` | Lowest `protocol_revision` | Key algorithm | Public key bytes | Signature bytes |
+  |---|---:|---|---:|---:|
+  | `EdDSA` | 1 | Ed25519 | 32 | 64 |
+  | `Ed25519` | 2 | Ed25519 | 32 | 64 |
+  | `ML-DSA-44` | 3 | ML-DSA-44 | 1312 | 2420 |
+  | `ML-DSA-65` | 3 | ML-DSA-65 | 1952 | 3309 |
+  | `ML-DSA-87` | 3 | ML-DSA-87 | 2592 | 4627 |
 
-  For revisions 1–2 both classical rows verify with Ed25519 keys: RFC 9864's
-  fully-specified `Ed25519` names exactly the RFC 8032
-  EdDSA-with-Ed25519-key operation CAP already performs. Revision 3 admits
-  ML-DSA (FIPS 204) under its RFC 9964 JOSE names — pure ML-DSA with the
-  context fixed to the empty string — exercising the registry's second key
-  grammar and second cryptographic primitive.
+  `EdDSA` and `Ed25519` name the same operation: RFC 9864's fully specified
+  `Ed25519` is exactly the RFC 8032 EdDSA-with-Ed25519 check CAP already
+  performs. Revision 3 adds ML-DSA (FIPS 204) under its JOSE names, as pure
+  ML-DSA with an empty context string.
 
-  ## The binding rule (per-artifact, not per-view)
+  ## Which name is legal at which revision
 
-  Decoding accepts `alg: "EdDSA"` at any accepted `protocol_revision`;
-  `alg: "Ed25519"` requires `protocol_revision >= 2`; each `alg: "ML-DSA-*"`
-  name requires `protocol_revision >= 3`; unknown revisions fail closed. An
-  artifact carrying a name below its row's minimum is rejected — no honest
-  producer could have minted the pair. Views mix revisions freely; the rule
-  binds per artifact.
+  The rule binds each artifact on its own. `EdDSA` is accepted at every
+  accepted `protocol_revision`, `Ed25519` needs revision 2 or later, and
+  each `ML-DSA-*` name needs revision 3 or later. An artifact with a name
+  below its row's minimum is rejected, and unknown revisions fail closed. A
+  set may mix revisions freely.
 
-  ## Emission
+  ## What producers emit
 
-  New minting is exactly the pairs (`"Ed25519"`, `protocol_revision` 2) and
-  (`"ML-DSA-65"`, `protocol_revision` 3): the producer emits one of the
-  fully-specified names at its emission revision. Old artifacts verify
-  forever; nothing new mints a registry-deprecated identifier (RFC 9864
-  marks `EdDSA` Deprecated, not Prohibited — see
-  `docs/adr/algorithm-name-agility.md` and `docs/adr/ml-dsa-admission.md`).
+  New artifacts use exactly one of two pairs: `"Ed25519"` at
+  `protocol_revision` 2 (the default) or `"ML-DSA-65"` at
+  `protocol_revision` 3. Older artifacts keep verifying. Nothing new is
+  minted under `EdDSA`, which RFC 9864 marks deprecated. The
+  [algorithm name ADR](algorithm-name-agility.md) and the
+  [ML-DSA ADR](ml-dsa-admission.md) record why.
+
+  ## Examples
+
+      iex> CharterAgreementProtocol.Algorithm.emissions()
+      %{"Ed25519" => 2, "ML-DSA-65" => 3}
+      iex> CharterAgreementProtocol.Algorithm.binds?("Ed25519", 1)
+      false
+      iex> CharterAgreementProtocol.Algorithm.row_for("ML-DSA-65").signature_bytes
+      3309
   """
 
   alias CharterAgreementProtocol.{Canonicalization, Digest}
@@ -83,6 +95,7 @@ defmodule CharterAgreementProtocol.Algorithm do
   @accepted_protocol_revisions [1, 2, 3]
   @emissions %{"Ed25519" => 2, "ML-DSA-65" => 3}
 
+  @typedoc "One registry row."
   @type row :: %{
           required(:name) => binary(),
           required(:min_protocol_revision) => pos_integer(),
@@ -91,33 +104,34 @@ defmodule CharterAgreementProtocol.Algorithm do
           required(:signature_bytes) => pos_integer()
         }
 
-  @doc "The closed registry (one row per accepted alg name)."
+  @doc "Every registry row, one per accepted `alg` name."
   @spec registry() :: [row()]
   def registry, do: @registry
 
-  @doc "The accepted protocol_revision set (unknown revisions fail closed)."
+  @doc "Every accepted `protocol_revision`. Any other revision fails closed."
   @spec accepted_protocol_revisions() :: [pos_integer()]
   def accepted_protocol_revisions, do: @accepted_protocol_revisions
 
   @doc """
-  The closed mint set: each emission alg name paired with the exact
-  protocol_revision its producer mints.
+  The two `alg` names producers emit, each with the exact
+  `protocol_revision` its claims must carry.
   """
   @spec emissions() :: %{binary() => pos_integer()}
   def emissions, do: @emissions
 
-  @doc "The registry row for one alg name, or nil for unknown names."
+  @doc "The registry row for one `alg` name, or `nil` for an unknown name."
   @spec row_for(term()) :: row() | nil
   def row_for(name) when is_binary(name), do: Enum.find(@registry, &(&1.name == name))
   def row_for(_name), do: nil
 
   @doc """
-  Whether the (alg, protocol_revision) pair is legal on ONE artifact.
+  Whether an `alg` name and `protocol_revision` are legal together on one
+  artifact.
 
-  The binding rule: the name must be a registry row, the revision must be
-  accepted, and the revision must meet the row's minimum. Revision range
-  alone is separately enforced by the per-artifact schemas; this check
-  binds the name to the revision.
+  The name must be a registry row, the revision must be accepted, and the
+  revision must be at least the row's minimum. The artifact schemas check
+  the revision range on their own; this check ties the name to the
+  revision.
   """
   @spec binds?(term(), term()) :: boolean()
   def binds?(name, protocol_revision)
@@ -133,7 +147,7 @@ defmodule CharterAgreementProtocol.Algorithm do
 
   def binds?(_name, _protocol_revision), do: false
 
-  @doc "Whether the name is a registry row (any revision)."
+  @doc "Whether a name is a registry row, at any revision."
   @spec accepted_name?(term()) :: boolean()
   def accepted_name?(name) when is_binary(name), do: row_for(name) != nil
   def accepted_name?(_name), do: false
@@ -147,18 +161,17 @@ defmodule CharterAgreementProtocol.Algorithm do
     end
   end
 
-  @doc "The emission name producers use when the caller selects none."
+  @doc "The `alg` name producers use when the caller names none: `\"Ed25519\"`."
   @spec default_emission_name() :: binary()
   def default_emission_name, do: "Ed25519"
 
   @doc """
-  The domain-separated digest of every registry row.
+  The digest of every registry row.
 
-  The signature algorithm registry's published identity: changes iff a row
-  changes. The extension registry's digest (the manifest's historic
-  `registry_digest` member) identifies extension profiles, not signature
-  algorithms — this digest is the identity for the signature registry
-  itself.
+  This identifies the signature algorithm registry: it changes exactly when
+  a row changes. It is a different value from the extension registry digest
+  (the release manifest's `registry_digest` member), which identifies
+  extension profiles.
   """
   @spec registry_digest() :: Digest.t()
   def registry_digest do
@@ -181,11 +194,10 @@ defmodule CharterAgreementProtocol.Algorithm do
   end
 
   @doc """
-  The registry row for one key algorithm, or nil.
+  The registry row for one key algorithm, or `nil`.
 
-  The descriptor key grammar is written in key-algorithm terms: this lookup
-  carries the exact public-key byte length each `algorithm` member value
-  requires.
+  Descriptor keys name a key algorithm in their `algorithm` member. This
+  lookup gives the exact public-key length that value requires.
   """
   @spec key_row_for(term()) :: row() | nil
   def key_row_for(key_algorithm) when is_binary(key_algorithm),

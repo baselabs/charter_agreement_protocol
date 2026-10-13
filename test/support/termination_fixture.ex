@@ -22,8 +22,10 @@ defmodule CharterAgreementProtocol.TerminationFixture do
     private = Keyword.get(options, :private, descriptor.private)
     payload_bytes = canonical!(claims)
 
+    alg = Keyword.get(options, :alg, "EdDSA")
+
     protected_bytes =
-      canonical!(%{"alg" => "EdDSA", "kid" => kid, "typ" => "cap+termination"})
+      canonical!(%{"alg" => alg, "kid" => kid, "typ" => "cap+termination"})
 
     protected_segment = Base64Url.encode(protected_bytes)
     payload_segment = Base64Url.encode(payload_bytes)

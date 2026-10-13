@@ -1,35 +1,31 @@
 defmodule CharterAgreementProtocol.Capability do
   @moduledoc """
-  CAP never authorizes.
+  Report which signature algorithms this runtime can verify.
 
-  Runtime verification-capability probe for the closed algorithm registry.
+  It never authorizes anything; it reports what this runtime can verify.
 
-  The probe answers one question per registry key algorithm: can THIS runtime
-  actually verify under it? The answer is derived from pinned known-answer
-  verification vectors — a real public key, message, and signature that a
-  capable substrate must verify — gated on the runtime's declared public-key
-  algorithms. Deriving from an executed operation, not from the runtime's
-  claim about itself, keeps the answer honest on substrates where the two
-  diverge; the declaration gate keeps the probe from invoking an operation
-  the substrate does not expose.
+  `report/0` answers per registry algorithm by running a real check: a
+  pinned test vector (public key, message and signature) that a capable
+  runtime must verify. It first checks that the runtime declares the
+  algorithm, so it never calls an operation the runtime does not offer.
+  Running the check, rather than trusting the declaration alone, keeps the
+  answer right on runtimes where the two disagree.
 
-  The linked crypto library is reported alongside as informational data
-  (`:crypto.info_lib/0`); it identifies the substrate but never decides the
-  verdict.
+  The linked crypto library (`:crypto.info_lib/0`) is included for your
+  logs. It never changes the result.
 
-  The substrate diagnostic this module underpins
-  (`:algorithm_unsupported_on_substrate`) is an implementation-local
-  diagnostic, not a protocol verdict: it is outside the conformance verdict
-  surface and outside cross-verifier report identity. Two conforming
-  verifiers on different substrates may differ on it for the same bytes by
-  design — a substrate-limited verifier reports honestly that it cannot
-  verify, where a capable one verifies.
+  When a verify call meets an algorithm the runtime cannot verify, it
+  returns `:algorithm_unsupported_on_substrate`. That error describes the
+  runtime, not the artifact, so two correct verifiers on different runtimes
+  can differ on it for the same bytes. It is not part of conformance
+  results.
 
-  Probe cadence: `report/0` is a pure snapshot of the running runtime
-  (it reads no clock, file, or environment). Consistency within one runtime
-  assumes the crypto provider is not reloaded mid-run; consumers may probe
-  at boot for policy and must enforce per verify call — the per-verify
-  diagnostic is the enforcement, the snapshot is advisory.
+  `report/0` reads no clock, file or environment. Call it at boot to decide
+  what your deployment supports; each verify call still checks on its own.
+  The result assumes the crypto provider is not reloaded while the node runs.
+
+  Most callers use `CharterAgreementProtocol.capabilities/0`, which
+  delegates here.
   """
 
   alias CharterAgreementProtocol.Algorithm
@@ -95,24 +91,32 @@ defmodule CharterAgreementProtocol.Capability do
     }
   }
 
+  @typedoc "One algorithm's entry in the report."
   @type row_report :: %{
           required(:name) => binary(),
           required(:key_algorithm) => binary(),
           required(:verifiable) => boolean()
         }
 
+  @typedoc "The report: one entry per registry algorithm plus the linked crypto library."
   @type report :: %{
           required(:linked_crypto) => [{binary(), non_neg_integer(), binary()}],
           required(:algorithms) => [row_report()]
         }
 
   @doc """
-  One verifiable verdict per registry row plus the linked crypto library.
+  One entry per registry algorithm, plus the linked crypto library.
 
-  The verdict is per key algorithm (mixed-algorithm key sets are legal, so a
-  single boolean could not answer for a whole registry). Each verdict derives
-  from the pinned known-answer vector actually being verified, gated on the
-  runtime's declared public-key algorithms.
+  Each entry has `:name`, `:key_algorithm` and `:verifiable`. The answer is
+  per algorithm because a descriptor may mix key algorithms. `:verifiable`
+  is `true` only when the runtime declares the algorithm and its pinned test
+  vector verifies.
+
+  ## Examples
+
+      iex> report = CharterAgreementProtocol.Capability.report()
+      iex> Enum.map(report.algorithms, & &1.key_algorithm)
+      ["Ed25519", "Ed25519", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]
   """
   @spec report() :: report()
   def report do
@@ -129,14 +133,12 @@ defmodule CharterAgreementProtocol.Capability do
     }
   end
 
-  @doc """
-  Whether the runtime declares support for one registry key algorithm.
-
-  The Ed25519 key algorithm needs both the `:eddsa` public-key operation and
-  the `:ed25519` curve declared; each ML-DSA parameterization needs its own
-  atom. The declared lists are injectable so the decision boundary is testable
-  as data; production reads them live.
-  """
+  # Test seam, hidden from the docs: whether the runtime declares one key
+  # algorithm (Ed25519 needs both `:eddsa` and the `:ed25519` curve; each
+  # ML-DSA set needs its own atom). The lists are injectable so tests can
+  # cover the decision as data; production reads them live. Signature also
+  # calls this per verify.
+  @doc false
   @spec declared?(term(), [atom()] | nil, [atom()] | nil) :: boolean()
   def declared?(key_algorithm, public_keys \\ nil, curves \\ nil)
 
@@ -155,13 +157,11 @@ defmodule CharterAgreementProtocol.Capability do
 
   def declared?(_key_algorithm, _public_keys, _curves), do: false
 
-  @doc """
-  Whether the pinned known-answer vector for one key algorithm verifies.
-
-  Declaration-gated: an undeclared algorithm short-circuits to false without
-  invoking crypto, so the probe is safe on limited substrates. The gate is
-  injectable for the same reason as `declared?/3`.
-  """
+  # Test seam, hidden from the docs: whether the pinned test vector for one
+  # key algorithm verifies. An undeclared algorithm returns false without
+  # calling crypto; the declaration is injectable for the same reason as
+  # declared?/3.
+  @doc false
   @spec kat_verifies?(term(), boolean() | nil) :: boolean()
   def kat_verifies?(key_algorithm, declared \\ nil)
 

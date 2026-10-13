@@ -3,8 +3,9 @@ defmodule CharterAgreementProtocol.RequirementMap do
   CAP never authorizes.
 
   Compiled traceability from stable public requirements to corpus cells,
-  architecture gates, and red-capable source mutations. This map is evidence
-  routing metadata; it is not a protocol decision surface.
+  architecture tests, and source mutations that a test must catch. This map
+  records where the evidence for each requirement lives; it does not change
+  any verdict.
   """
 
   @entries [
@@ -28,7 +29,13 @@ defmodule CharterAgreementProtocol.RequirementMap do
      ]},
     {"CAP-SCHEMA-closed-members",
      [
-       {:corpus, ["schema.validate:unknown_member"]},
+       {:corpus,
+        [
+          "schema.validate:unknown_member",
+          "acceptance.verify:unknown_member",
+          "termination.verify:unknown_member",
+          "receipt.verify:unknown_member"
+        ]},
        {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest},
        {:mutation, "unknown-member-acceptance"}
      ]},
@@ -75,11 +82,44 @@ defmodule CharterAgreementProtocol.RequirementMap do
           "chain.verify_profile:profile_revision_outside"
         ]},
        {:gate, CharterAgreementProtocol.Architecture.ProfileContractTest},
-       {:mutation, "profile-gate-defeat"}
+       {:mutation, "profile-gate-defeat"},
+       {:mutation, "profile-revision-gate-defeat"}
+     ]},
+    {"CAP-PROFILE-context-admission",
+     [
+       {:corpus,
+        [
+          "party_descriptor.verify:profile_algorithm_outside",
+          "party_descriptor.verify:profile_revision_outside",
+          "acceptance.verify:profile_algorithm_outside",
+          "acceptance.verify:profile_revision_outside",
+          "termination.verify:profile_algorithm_outside",
+          "termination.verify:profile_revision_outside",
+          "receipt.verify:profile_algorithm_outside",
+          "receipt.verify:profile_revision_outside"
+        ]},
+       {:gate, CharterAgreementProtocol.Architecture.ContextProfileTest},
+       {:mutation, "context-descriptor-profile-skip"},
+       {:mutation, "context-revision-profile-skip"},
+       {:mutation, "context-order-swapped"},
+       {:mutation, "termination-descriptor-profile-skip"},
+       {:mutation, "chain-receipt-context-profile-skip"},
+       {:mutation, "chain-receipt-admission-skip"},
+       {:mutation, "predecessor-profile-code-swallowed"},
+       {:mutation, "termination-order-swapped"},
+       {:mutation, "descriptor-admission-before-key-skip"},
+       {:mutation, "revision-only-receipt-profile-skip"}
      ]},
     {"CAP-PROFILE-narrow-verification",
      [
-       {:corpus, ["chain.verify_profile:profile_narrow_valid"]},
+       {:corpus,
+        [
+          "chain.verify_profile:profile_narrow_valid",
+          "party_descriptor.verify:profile_narrow_valid",
+          "acceptance.verify:profile_narrow_valid",
+          "termination.verify:profile_narrow_valid",
+          "receipt.verify:profile_narrow_valid"
+        ]},
        {:gate, CharterAgreementProtocol.Architecture.ProfileContractTest}
      ]},
     {"CAP-DESCRIPTOR-timestamp-floor",
@@ -211,9 +251,11 @@ defmodule CharterAgreementProtocol.RequirementMap do
         [
           "canonicalization.encode:non_canonical_bytes",
           "canonicalization.encode:invalid_encoding",
-          "canonicalization.encode:invalid_type"
+          "canonicalization.encode:invalid_type",
+          "charter_revision.decode:non_canonical_bytes"
         ]},
-       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
+       {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest},
+       {:mutation, "revision-canonical-bytes-skip"}
      ]},
     {"CAP-CHAIN-valid-topology",
      [
@@ -258,7 +300,12 @@ defmodule CharterAgreementProtocol.RequirementMap do
     {"CAP-JSON-decoder-closed-grammar",
      [
        {:corpus,
-        ["json.decode:valid", "json.decode:invalid_type", "json.decode:invalid_encoding"]},
+        [
+          "json.decode:valid",
+          "json.decode:invalid_type",
+          "json.decode:invalid_encoding",
+          "charter_revision.decode:invalid_encoding"
+        ]},
        {:gate, CharterAgreementProtocol.Architecture.PublicContractCoverageTest}
      ]},
     {"CAP-JSON-number-boundaries",
@@ -319,6 +366,26 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:corpus, ["chain.verify:chain_invalid"]},
        {:gate, CharterAgreementProtocol.Architecture.ChainRoutingShapeTest}
      ]},
+    {"CAP-CHAIN-artifact-set-bounds",
+     [
+       {:corpus, ["chain.verify:exact_bound", "chain.verify:maximum_plus_one"]},
+       {:gate, CharterAgreementProtocol.Architecture.ChainRoutingShapeTest},
+       {:mutation, "artifact-set-bytes-ceiling-skip"}
+     ]},
+    {"CAP-CHAIN-distinct-parties",
+     [
+       {:corpus, ["charter_revision.decode:invalid_constraint", "chain.verify:chain_invalid"]},
+       {:gate, CharterAgreementProtocol.Architecture.ChainRoutingShapeTest},
+       {:mutation, "distinct-descriptors-skip"},
+       {:mutation, "party-histories-skip"},
+       {:mutation, "two-party-history-count-relaxed"}
+     ]},
+    {"CAP-CHAIN-termination-closes",
+     [
+       {:corpus, ["governing_revision:terminated", "receipt.verify:terminated"]},
+       {:gate, CharterAgreementProtocol.Architecture.ChainRoutingShapeTest},
+       {:mutation, "termination-close-ignored"}
+     ]},
     {"CAP-EXTENSION-envelope-closed",
      [
        {:corpus,
@@ -344,8 +411,8 @@ defmodule CharterAgreementProtocol.RequirementMap do
   def entries, do: @entries
 
   @doc """
-  Extract declared mutation names, in declaration order, from the conformance
-  mutation gate script source.
+  Extract declared mutation names, in declaration order, from the source of
+  the conformance mutation script.
 
   Parsed from the AST, so a commented-out entry cannot masquerade as a
   declared mutation and names outside kebab-case are still observed.

@@ -1,36 +1,35 @@
 defmodule CharterAgreementProtocol.ReleaseIdentity do
   @moduledoc """
-  CAP never authorizes.
+  The release facts a consumer can pin instead of a package version. They
+  are non-authorizing release metadata.
 
-  The release-identity contract: the versioned, machine-readable facts a
-  consumer binds to instead of a package number.
+  Every value here is also written to `priv/release-metadata.json`, and the
+  release check confirms the file matches these functions. The manifest only
+  grows: ignore members you do not know. Removing or retyping a member
+  changes `manifest_version/0` in a breaking release. A released identity is
+  never edited; a correction is a new release.
 
-  Every value here is data-in-code mirrored into `priv/release-metadata.json`
-  by the recorder; the release-candidate gate asserts the manifest bytes
-  equal these functions. The manifest's shape is additive-only: consumers
-  MUST ignore unknown members, and removing or retyping a member bumps
-  `manifest_version/0` in a breaking release. Released identities are never
-  mutated in place — corrections are new releases.
+  ## Verification semantics
 
-  ## The verification-semantics identity
+  `verification_semantics/0` identifies how verification decides: for every
+  artifact-set input, under any valid `CharterAgreementProtocol.Limits`, on
+  a runtime that supports every algorithm, with no profile. The value
+  changes from one release to the next when any of these happen:
 
-  `verification_semantics/0` identifies the verdict function of the
-  verification core over artifact-set inputs, quantified over all valid
-  `Limits`, on a capable substrate, with no profile narrowing. It moves to a
-  new value against the immediately prior release if any of these hold:
-  some input that returned a verdict now returns a different verdict class
-  (green to red, or red to green — admissions count), the error code for
-  some input changes, any `Limits.default/0` value changes, or some input
-  that returned a verdict now raises. Error subjects and details, substrate
-  capability outcomes (an implementation-local diagnostic), crash-to-typed
-  conversions, and facts-record fields are outside the identity.
+  - an input that got a verdict now gets the other verdict (valid to
+    invalid, or invalid to valid, including newly admitted algorithms or
+    revisions);
+  - the error code for an input changes;
+  - a `CharterAgreementProtocol.Limits.default/0` value changes;
+  - an input that got a verdict now raises.
 
-  This is deliberately the strict definition: an identity that can hold
-  constant across a change that flips the requesting consumer's evidence
-  red is not an identity. The cost — a registry act (new admissions) bumps
-  the value — is the honest cost; documentation-only releases hold it
-  constant while the certified census digest moves, which is the whole
-  point of separating the two.
+  These do not change it: error subjects and details, runtime capability
+  results, a crash that becomes a typed error, and facts-record fields.
+
+  Store this value with your verification results. An unchanged value after
+  an upgrade means the release declares no verdict or error-code change for
+  any input; `compatibility/0` holds the corpus evidence. A release that only
+  adds conformance cases keeps the value and records a new corpus digest.
   """
 
   @compatibility [
@@ -99,18 +98,34 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "PartyDescriptor effective_from gains the 1..64 string-byte floor its seven sibling timestamp members took in 0.3.0 — the last live timestamp asymmetry"
         }
       ]
+    },
+    %{
+      package_versions: ["0.5.0"],
+      verification_semantics: 5,
+      census_digest: "sha-256:ivfIdXDtMDpq5ElpaVgRr8gqRVXsmMMr2oeXyuH4bw4",
+      protocol_revisions: [1, 2, 3],
+      transitions: [
+        %{
+          class: :verdict_narrowing,
+          direction: :green_to_red,
+          description:
+            "A charter's parties must be distinct parties: a revision naming one descriptor for two roles rejects (revision_invalid), and a chain view whose revision parties resolve to one descriptor history, or that holds a history no revision names, rejects (chain_invalid)"
+        }
+      ]
     }
   ]
 
   @manifest_version 1
-  @verification_semantics 4
+  @verification_semantics 5
 
+  @typedoc "One verdict change between releases."
   @type transition :: %{
           required(:class) => :admission | :verdict_narrowing | :resource_boundary | :typed_error,
           required(:direction) => :green_to_red | :red_to_green | :crash_to_typed,
           required(:description) => binary()
         }
 
+  @typedoc "One row of the compatibility table."
   @type release_row :: %{
           required(:package_versions) => [binary()],
           required(:verification_semantics) => pos_integer(),
@@ -119,35 +134,34 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           required(:transitions) => [transition()]
         }
 
-  @doc "The release-manifest schema version. Additive-only evolution."
+  @doc "The release manifest's schema version. New members never change it."
   @spec manifest_version() :: pos_integer()
   def manifest_version, do: @manifest_version
 
-  @doc "The verification-semantics identity this package implements."
+  @doc "The verification-semantics value this package implements. See the module doc."
   @spec verification_semantics() :: pos_integer()
   def verification_semantics, do: @verification_semantics
 
   @doc """
-  The retroactive semantics mapping for every released package.
+  The verification-semantics value of every released package.
 
-  S1 = 0.1.0; S2 = 0.2.0–0.2.1 (revision-2 admissions); S3 = 0.3.0–0.3.2
-  (ML-DSA admissions, timestamp floors, the default byte budget); S4 =
-  0.4.0 (the descriptor timestamp floor). Pre-0.4.0 releases never carried
-  these members: this table is CAP's documented classification of already
-  released artifacts, never a rewrite of a released manifest.
+  Each row lists package versions, their semantics value, the digest of
+  their conformance corpus, the protocol revisions they verify, and the
+  verdict changes since the previous row. Releases before the manifest
+  existed are included as CAP's classification of what they already did;
+  their published manifests are not rewritten.
   """
   @spec verification_semantics_history() :: [release_row()]
   def verification_semantics_history, do: @compatibility
 
   @doc """
-  The machine-readable compatibility matrix: one row per semantics family.
+  The compatibility table: one row per conformance corpus.
 
-  Each row names the package versions, the semantics identity, the certified
-  census digest of that family's corpus, the protocol revisions the family
-  verifies, and the enumerated verdict transitions since the prior family —
-  the finite evidence the standing per-release differential gate reproduces.
-  It is evidence over named inputs, not a proof of universal equivalence,
-  and CAP does not claim one.
+  One semantics value can span several rows. A release that adds cases
+  without changing any verdict keeps the semantics value and adds a row with
+  an empty `transitions` list. Each transition names its class, its
+  direction and what changed. The rows are evidence over the named corpus
+  inputs, not a proof that every possible input behaves the same.
   """
   @spec compatibility() :: [release_row()]
   def compatibility, do: @compatibility

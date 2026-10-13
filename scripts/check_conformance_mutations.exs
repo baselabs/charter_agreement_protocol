@@ -186,8 +186,135 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "profile-gate-defeat",
       path: "lib/charter_agreement_protocol/compact_jws.ex",
-      from: "    with :ok <- admit(envelope, profile) do",
-      to: "    with :ok <- :ok do",
+      from: "      envelope.alg not in profile.algorithms ->",
+      to: "      false ->",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "profile-revision-gate-defeat",
+      path: "lib/charter_agreement_protocol/compact_jws.ex",
+      from: "      not Profile.admits?(profile, envelope.alg, protocol_revision(envelope)) ->",
+      to: "      false ->",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "termination-close-ignored",
+      path: "lib/charter_agreement_protocol/chain.ex",
+      from: "      effective and\n        do_select(",
+      to: "      effective and false and\n        do_select(",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "revision-canonical-bytes-skip",
+      path: "lib/charter_agreement_protocol/charter_revision.ex",
+      from: "         :ok <- exact_bytes(bytes, canonical),",
+      to: "         :ok <- exact_bytes(canonical, canonical),",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "artifact-set-bytes-ceiling-skip",
+      path: "lib/charter_agreement_protocol/chain.ex",
+      from: "    if total <= limits.max_artifact_set_bytes,",
+      to: "    if total <= limits.max_artifact_set_bytes + 1,",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "distinct-descriptors-skip",
+      path: "lib/charter_agreement_protocol/charter_revision.ex",
+      from: "         :ok <- distinct_descriptors(parties),",
+      to: "         :ok <- :ok,",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "party-histories-skip",
+      path: "lib/charter_agreement_protocol/chain.ex",
+      from: "         :ok <- party_histories(indexed_revisions, descriptor_chains),",
+      to: "         :ok <- :ok,",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "two-party-history-count-relaxed",
+      path: "lib/charter_agreement_protocol/chain.ex",
+      from: "         true <- map_size(groups) == 2,",
+      to: "         true <- map_size(groups) >= 2,",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "context-descriptor-profile-skip",
+      path: "lib/charter_agreement_protocol/acceptance.ex",
+      from: "      DescriptorChain.verify(Enum.uniq(compacts), limits, profile)",
+      to: "      DescriptorChain.verify(Enum.uniq(compacts), limits)",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "context-revision-profile-skip",
+      path: "lib/charter_agreement_protocol/acceptance.ex",
+      from: "         :ok <- CharterRevision.admit(revision, profile) do",
+      to: "         :ok <- :ok do",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "context-order-swapped",
+      path: "lib/charter_agreement_protocol/acceptance.ex",
+      from:
+        "    with {:ok, revision} <- reverify_revision(supplied_revision, limits, profile),\n         {:ok, chain} <- reverify_chain(supplied_chain, limits, profile),",
+      to:
+        "    with {:ok, chain} <- reverify_chain(supplied_chain, limits, profile),\n         {:ok, revision} <- reverify_revision(supplied_revision, limits, profile),",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "termination-descriptor-profile-skip",
+      path: "lib/charter_agreement_protocol/termination_notice.ex",
+      from: "      DescriptorChain.verify(Enum.uniq(compacts), limits, profile)",
+      to: "      DescriptorChain.verify(Enum.uniq(compacts), limits)",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "chain-receipt-context-profile-skip",
+      path: "lib/charter_agreement_protocol/receipt.ex",
+      from: "Chain.verify(revisions, acceptances, descriptors, terminations, limits, profile)",
+      to: "Chain.verify(revisions, acceptances, descriptors, terminations, limits)",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "chain-receipt-admission-skip",
+      path: "lib/charter_agreement_protocol/receipt.ex",
+      from: "    with :ok <- CompactJws.admit(receipt.envelope, profile) do\n      chain",
+      to: "    with :ok <- :ok do\n      chain",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "predecessor-profile-code-swallowed",
+      path: "lib/charter_agreement_protocol/party_descriptor.ex",
+      from:
+        "      # other predecessor failure is a broken chain.\n      {:error, %Error{code: code} = error}\n      when code in [",
+      to:
+        "      # other predecessor failure is a broken chain.\n      {:error, %Error{code: code} = error}\n      when code in [:never] and code in [",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "termination-order-swapped",
+      path: "lib/charter_agreement_protocol/termination_notice.ex",
+      from:
+        "    with {:ok, revision} <- reverify_revision(supplied_revision, limits, profile),\n         {:ok, chain} <- reverify_chain(supplied_chain, limits, profile),",
+      to:
+        "    with {:ok, chain} <- reverify_chain(supplied_chain, limits, profile),\n         {:ok, revision} <- reverify_revision(supplied_revision, limits, profile),",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "descriptor-admission-before-key-skip",
+      path: "lib/charter_agreement_protocol/party_descriptor.ex",
+      from:
+        "    with :ok <- CompactJws.admit(descriptor.envelope, profile),\n         {:ok, key} <- active_key(descriptor.verification_keys, descriptor.envelope.kid) do",
+      to:
+        "    with {:ok, key} <- active_key(descriptor.verification_keys, descriptor.envelope.kid) do",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "revision-only-receipt-profile-skip",
+      path: "lib/charter_agreement_protocol/receipt.ex",
+      from: "    do: CompactJws.admit(receipt.envelope, profile)",
+      to: "    do: :ok",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{

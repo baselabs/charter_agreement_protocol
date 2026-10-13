@@ -1,175 +1,135 @@
 # Charter Agreement Protocol
 
-Portable, non-authorizing charter-agreement format and verification protocol
-for bilateral commercial agreements. CAP verifies signed, byte-exact evidence
-of what two parties agreed, which revision governed a given instant, and which
-agreement state governed a signed action — without a central authority, and
-without ever making the decision for you.
+CAP is a format and a verifier for agreements between two independent parties.
+Each party signs exact bytes, and anyone holding those bytes can check later, with
+no server and no shared account, what was agreed, which revision was in force at a
+given moment, and which agreement a signed action was taken under.
 
-**CAP verifies. It never authorizes.** Every facts record carries a closed
-twelve-item `not_verified` floor — authority, execution, billing, term
-satisfaction, legal validity, and more — that no API can shrink. Hosts read
-the evidence and decide.
+CAP verifies evidence. It never decides anything for you. Every verification result
+says what was proven and lists, by name, what it does not prove (who may act, whether
+terms were met, legal validity, and so on). Your application makes those calls.
 
-## What it does
+## When to use it
 
-| Artifact | Form | Proves |
-|---|---|---|
-| Party Descriptor | signed JWS (`cap+party`) | A party's declared key history (Ed25519, and ML-DSA from `protocol_revision` 3) with predecessor-bound transitions and fork evidence |
-| Charter Revision | canonical JSON | Agreed terms: parties, roles, legal-text digest, precedence, effective window, termination reasons, exact deployment bindings |
-| Acceptance | signed JWS (`cap+acceptance`) | Bilateral signed assent to exact revision bytes |
-| Termination Notice | signed JWS (`cap+termination`) | Signed closure of the charter at a pure UTC instant |
-| Receipt | signed JWS (`cap+receipt`) | A signed action bound to exact revision coordinates, deployment digest, and grant evidence |
+Use CAP when two parties need agreement evidence they can exchange as files or
+messages and re-check at any time:
 
-Set-level verification composes the artifacts into structural facts:
-`verify_chain/5` re-verifies everything from raw bytes;
-`governing_revision/2` answers "which revision governed at this instant" with
-a digest, `:contested`, or `:none` — never a silent tie-break. Same-signer
-equivocation is retained as signed evidence with no winner. The only repair
-for a contested view is a countersigned supersession revision.
+- bilateral terms between companies or between their software agents;
+- a party's key history, so rotations and retirements stay checkable;
+- signed receipts that tie an action to the agreement it was taken under.
 
-The foundation is byte-exact by construction: strict unpadded base64url,
-deterministic tagged JSON decoding, RFC 8785 canonicalization, and
-domain-separated SHA-256 digests. A certified 100-case corpus runs through a
-pure Elixir runner and a builtins-only Node TypeScript verifier that must
-produce byte-identical canonical reports — two independent implementations,
-zero shared code.
+Do not use CAP to decide whether an action is allowed, to check live revocation, to
+evaluate contract terms, or to settle legal questions. CAP reports evidence for those
+decisions. The [security model](docs/guides/security-model.md) lists exactly what is
+and is not proven.
 
-## When to use it — and when not
-
-Use CAP when two independent parties need portable, re-verifiable agreement
-evidence exchanged as bytes: agent commerce charters, bilateral supplier
-terms, key-history continuity proofs, action receipts for audit.
-
-Do not use CAP for authorization decisions, live revocation checks, term
-evaluation (CAP leaves `term_satisfaction` in its omission floor), legal
-adjudication, or single-party self-attestation — every one of those is
-explicitly outside what verification proves. See the
-[security model](docs/guides/security-model.md) for the full proves/never-proves
-table.
-
-## Quick start
-
-Elixir ~> 1.19 (tested lines 1.19.x and 1.20.x) on Erlang/OTP 28 or 29 —
-the range and the supported-OTP set are enforced in-repo (Mix refuses an
-Elixir outside the range and `config/config.exs` refuses an OTP major outside
-the set, both before anything compiles), and they move in lockstep with
-`.tool-versions` and the CI lanes (see
-[the supported-toolchain ADR](docs/adr/supported-otp-set.md)). Zero runtime
-dependencies (OTP `:crypto` only). From
-`protocol_revision` 3 the runtime floor has a second axis: ML-DSA verification
-needs an OTP runtime whose linked crypto library is OpenSSL ≥ 3.5 (FIPS 204
-landed there; OTP ≥ 28.1 with OpenSSL ≥ 3.5 is the declared floor — a runtime
-linked against OpenSSL 3.0.x cannot generate or verify ML-DSA keys, and OTP 27
-exposes no ML-DSA algorithms to `:crypto` even with OpenSSL ≥ 3.5 linked). The
-shipped corpus contains ML-DSA cases, so the quick-start verification below
-needs that floor too:
+## Install
 
 ```elixir
-{:charter_agreement_protocol, "~> 0.4.0"}
+def deps do
+  [{:charter_agreement_protocol, "~> 0.5.0"}]
+end
 ```
 
-Then verify the shipped, certified corpus from your dependent project:
+CAP requires Elixir `~> 1.19` (tested on 1.19 and 1.20) on Erlang/OTP 28 or 29, and has no runtime
+dependencies beyond OTP's `:crypto`. To verify ML-DSA (post-quantum) signatures, OTP
+must be linked against OpenSSL 3.5 or later. `CharterAgreementProtocol.capabilities/0`
+tells you what your runtime can verify.
 
-```console
-$ mix run -e 'System.halt(CharterAgreementProtocol.Conformance.Cli.run(["--corpus", "deps/charter_agreement_protocol/priv/conformance"]))'
+## Verify a charter
+
+The package ships a two-party charter you can verify right away:
+
+```elixir
+alias CharterAgreementProtocol, as: CAP
+
+set =
+  :charter_agreement_protocol
+  |> Application.app_dir("priv/conformance/cases/chain-verify.json")
+  |> File.read!()
+  |> JSON.decode!()
+  |> Map.fetch!("cases")
+  |> Enum.find(&(&1["id"] == "chain-dual-acceptance-valid"))
+  |> Map.fetch!("input")
+
+{:ok, facts} =
+  CAP.verify_chain(set["revisions"], set["acceptances"], set["descriptors"],
+                   set["terminations"], CharterAgreementProtocol.Limits.default())
+
+CAP.governing_revision(facts, ~U[2026-09-01 00:00:00Z])
+#=> {:ok, "sha-256:j9vaSLLwxMwF1zzLniUdZwUUAB6aTGEvwMRzP526s3o"}
 ```
 
-The command prints the canonical JSON report and exits `0` when
-all 100 certified cases recomputed and agreed. Full walkthrough:
-[Getting started](docs/guides/getting-started.md).
+`verify_chain/5` checks every signature, key history and acceptance from the raw
+bytes. `governing_revision/2` returns the revision in force at that instant, or
+`:contested` when two valid revisions compete, or `:none` when nothing is in force.
+It never picks a winner silently.
 
-## Try it
+[Your first verified charter](docs/guides/getting-started.md) walks through this and
+what the facts mean.
 
-- TypeScript verifier on npm:
-  `npm install @charter-agreement-protocol/verifier` — the independent
-  second verifier as a standalone package under the
-  `charter-agreement-protocol` organization, with the certified corpus
-  vendored inside.
-- Runnable notebooks: [charter tour](docs/notebooks/charter-tour.livemd) and
-  [fork repair](docs/notebooks/fork-repair.livemd) — a complete bilateral
-  charter with real Ed25519 signatures, and a manufactured equivocation with
-  its countersigned repair.
-- Repository demo: `mix run examples/supplier_fork_demo.exs` — equivocation
-  evidence, contested governing view, an action receipt inside the fork, and
-  the repair, in nine lines of output.
+## Produce artifacts
 
-## Guarantees at the call boundary
+CAP builds the exact bytes to sign and checks the result. Signing happens outside CAP,
+with your keys. The companion package
+[`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer) does the
+signing for you: it takes your key handle, refuses to sign an acceptance or termination
+that conflicts with the artifacts you give it, and verifies its own output before
+returning it.
+[Produce and verify with the signer](docs/guides/produce-and-verify.md) shows the whole
+flow.
 
-- Failures are typed and **value-free** — closed error codes, protocol-owned
-  subjects, never rejected input — so verification failures are safe to log.
-- Facts implement **redacted inspection** — retained signed artifacts never
-  appear in logs.
-- Verification is **pure**: no clock, filesystem, network, or environment.
-  Callers supply time, limits, trust anchors, and keys.
-- Key custody stays outside the protocol: CAP builds the exact RFC 7515
-  signing input, you sign it, `assemble_compact/2` accepts only an external
-  raw signature at the registry row's exact length (64 bytes for `Ed25519`;
-  2420/3309/4627 for the ML-DSA parameterizations), and hosts post-verify
-  before serving the compact.
-  A reviewed companion signer implements that host glue for you —
-  [`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer) (atomic kid/key snapshot,
-  wrong-key guard, post-sign verify, refusal surfacing); verifiers never
-  depend on it, and hosts may always hand-roll per the spec instead.
+## The artifacts
 
-## Guides
+| Artifact | Form | What it records |
+|---|---|---|
+| Party descriptor | signed (`cap+party`) | One party's verification keys and their history (Ed25519, and ML-DSA from protocol revision 3) |
+| Charter revision | canonical JSON | The agreed terms: parties, legal text digest, which text governs, when it takes effect, termination reasons |
+| Acceptance | signed (`cap+acceptance`) | One party's signed assent to exact revision bytes |
+| Termination notice | signed (`cap+termination`) | One party ending the charter at a stated instant, under a listed reason |
+| Receipt | signed (`cap+receipt`) | A signed action tied to the exact revision it was taken under |
 
-- [Overview](docs/guides/overview.md) — the problem, the artifact family, the
-  design principles
-- [Getting started](docs/guides/getting-started.md) — install, first
-  verification, first signature
-- [Artifacts](docs/guides/artifacts.md) — every artifact's wire shape and
-  closed claim set
-- [Verification semantics](docs/guides/verification.md) — forks, contested
-  views, supersession, governing computation
-- [Receipts](docs/guides/receipts.md) — binding actions to agreements; ABP
-  and BAP identity composition
-- [Extensions and profiles](docs/guides/extensions.md) — the registry,
-  criticality, quarantine
-- [Security model](docs/guides/security-model.md) — proves / never proves,
-  the omission floor, architecture enforcement
-- [Recipes](docs/guides/recipes.md) — end-to-end integration patterns
-- [Conformance](docs/guides/conformance.md) — the certified corpus, the gate
-  battery, the certified identities
-- [FAQ](docs/guides/faq.md)
-- [Protocol foundation](docs/protocol.md) — the normative specification
-- [Indexed-price profile](docs/profiles/indexed-price.md),
-  [errata policy](docs/errata.md), ADRs:
-  [no version tokens in identifiers](docs/adr/no-versioning-rule.md),
-  [conformance and release-candidate boundary](docs/adr/conformance-release-candidate.md)
+## The family
+
+| Package | Language | Role |
+|---|---|---|
+| `charter_agreement_protocol` (this package) | Elixir | Reference verifier and the bytes to sign |
+| [`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer) | Elixir | Signs artifacts with your key handle |
+| [`@charter-agreement-protocol/verifier`](https://www.npmjs.com/package/@charter-agreement-protocol/verifier) | TypeScript | Independent second verifier |
+| [`@charter-agreement-protocol/signer`](https://www.npmjs.com/package/@charter-agreement-protocol/signer) | TypeScript | Signer for Node |
+
+The two verifiers share no code. Both must give the same answer, byte for byte, on
+every case in the conformance corpus that ships with this package.
+
+## Documentation
+
+- [Overview](docs/guides/overview.md): how the artifacts fit together.
+- Tutorials: [your first verified charter](docs/guides/getting-started.md),
+  [produce and verify with the signer](docs/guides/produce-and-verify.md), and two
+  Livebook notebooks ([charter tour](docs/notebooks/charter-tour.livemd),
+  [fork repair](docs/notebooks/fork-repair.livemd)).
+- How-to: [integrate CAP into an application](docs/guides/integration.md),
+  [recipes](docs/guides/recipes.md), [handle errors](docs/guides/error-codes.md),
+  [upgrade](docs/guides/upgrading-verification-identity.md),
+  [implement CAP in another language](docs/guides/implementing.md).
+- Reference: [cheatsheet](docs/guides/cheatsheet.cheatmd),
+  [artifacts](docs/guides/artifacts.md),
+  [limits and profiles](docs/guides/limits-and-profiles.md),
+  [the conformance corpus](docs/guides/conformance.md),
+  [glossary](docs/guides/glossary.md), and the
+  [specification](spec/core.md).
 
 ## Status
 
-The approved protocol core, normative specification set, certified corpus
-with four recorded identities, independent second verifier, mutation
-battery, and release-candidate gates are implemented and green in CI. The
-0.3.x line carries `protocol_revision` 3 — the ML-DSA registry act
-(RFC 9964): the `ML-DSA-44/65/87` names verify from revision 3, the
-descriptor key grammar admits ML-DSA keys gated on revision, producers
-mint `ML-DSA-65` at revision 3 alongside `Ed25519` at revision 2, and the
-resource boundary is byte-weighted for PQ-sized artifacts. 0.3.1 corrects
-the declared runtime floor (OTP ≥ 28.1 **with a linked OpenSSL ≥ 3.5**),
-runs CI on an ML-DSA-capable substrate, and re-trues the shipped
-documentation to the revision-3 surface. `protocol_revision` 2
-(RFC 9864 alg names) and revision-1 artifacts remain verifiable. Building
-an archive remains verification evidence only — never authority to
-publish.
+Version 0.5.0. Protocol revisions 1, 2 and 3 verify. See the [changelog](CHANGELOG.md)
+for what changed, and [upgrading](docs/guides/upgrading-verification-identity.md) before
+moving between versions.
 
-## Development
+## Contributing and security
 
-```
-mix deps.get
-mix quality
-```
-
-`mix quality` is the complete gate — audits, formatting, warnings-as-errors
-compile, strict credo, the full test suite with its coverage threshold,
-certified-conformance verification and regeneration identity, all 25 named
-source mutations, Elixir/TypeScript verifier agreement over repository and
-unpacked-package corpora, dialyzer, docs, and the reproducible
-release-candidate archive. Contribution bar and invariants:
-[CONTRIBUTING.md](CONTRIBUTING.md).
+[CONTRIBUTING.md](CONTRIBUTING.md) covers setup and the checks every change must pass.
+Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](https://github.com/baselabs/charter_agreement_protocol/blob/main/LICENSE).

@@ -31,6 +31,23 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     mldsa-binding-defeat
     mldsa-key-grammar-gate-defeat
     profile-gate-defeat
+    profile-revision-gate-defeat
+    termination-close-ignored
+    revision-canonical-bytes-skip
+    artifact-set-bytes-ceiling-skip
+    distinct-descriptors-skip
+    party-histories-skip
+    two-party-history-count-relaxed
+    context-descriptor-profile-skip
+    context-revision-profile-skip
+    context-order-swapped
+    termination-descriptor-profile-skip
+    chain-receipt-context-profile-skip
+    chain-receipt-admission-skip
+    predecessor-profile-code-swallowed
+    termination-order-swapped
+    descriptor-admission-before-key-skip
+    revision-only-receipt-profile-skip
   )
 
   @minimum_quality_steps [
@@ -41,6 +58,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     "format --check-formatted",
     "compile --warnings-as-errors",
     "credo --strict",
+    "verifier.source",
     "test --cover --seed 42",
     "conformance.verify",
     "historical.check",

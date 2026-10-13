@@ -27,6 +27,71 @@ defmodule CharterAgreementProtocol.Canonicalization do
     end
   end
 
+  @doc """
+  Encode a plain Elixir term as canonical UTF-8 JSON.
+
+  Accepts maps with string keys, lists, binaries, integers, floats, booleans,
+  and `nil`. The bytes equal `encode/1` of the tagged form `from_plain/1`
+  returns. Any other term is an `:invalid_type` error.
+  """
+  @spec encode_plain(term()) :: {:ok, binary()} | {:error, Error.t()}
+  def encode_plain(term) do
+    with {:ok, value} <- from_plain(term), do: encode(value)
+  end
+
+  @doc """
+  Convert a plain Elixir term to the tagged JSON form.
+
+  Maps need string keys; floats stay `{:float, _}` and integers stay
+  `{:integer, _}`. Any other term is an `:invalid_type` error.
+  """
+  @spec from_plain(term()) :: {:ok, Json.value()} | {:error, Error.t()}
+  def from_plain(term) do
+    case tag(term) do
+      {:ok, value} -> {:ok, value}
+      :error -> {:error, Error.new(:invalid_type, ["canonical_json"])}
+    end
+  end
+
+  defp tag(value) when is_map(value) do
+    value
+    |> Enum.reduce_while({:ok, []}, fn
+      {name, item}, {:ok, members} when is_binary(name) ->
+        case tag(item) do
+          {:ok, tagged} -> {:cont, {:ok, [{name, tagged} | members]}}
+          :error -> {:halt, :error}
+        end
+
+      _member, _acc ->
+        {:halt, :error}
+    end)
+    |> case do
+      {:ok, members} -> {:ok, {:object, Enum.reverse(members)}}
+      :error -> :error
+    end
+  end
+
+  defp tag(value) when is_list(value) do
+    value
+    |> Enum.reduce_while({:ok, []}, fn item, {:ok, items} ->
+      case tag(item) do
+        {:ok, tagged} -> {:cont, {:ok, [tagged | items]}}
+        :error -> {:halt, :error}
+      end
+    end)
+    |> case do
+      {:ok, items} -> {:ok, {:array, Enum.reverse(items)}}
+      :error -> :error
+    end
+  end
+
+  defp tag(value) when is_binary(value), do: {:ok, {:string, value}}
+  defp tag(value) when is_integer(value), do: {:ok, {:integer, value}}
+  defp tag(value) when is_float(value), do: {:ok, {:float, value}}
+  defp tag(value) when is_boolean(value), do: {:ok, {:boolean, value}}
+  defp tag(nil), do: {:ok, :null}
+  defp tag(_value), do: :error
+
   @doc "Verify that received JSON bytes are already canonical."
   @spec verify(term()) :: {:ok, Json.value()} | {:error, Error.t()}
   def verify(input) when is_binary(input) do

@@ -242,7 +242,7 @@ defmodule CharterAgreementProtocol.Receipt do
     do: :receipt_content |> Digest.hash(bytes) |> Digest.to_tagged()
 
   defp do_verify(compact, context, limits, profile) do
-    with {:ok, verified_context} <- reverify_context(context, limits),
+    with {:ok, verified_context} <- reverify_context(context, limits, profile),
          {:ok, receipt} <- decode(compact, limits),
          {:ok, projection} <- project(receipt, verified_context),
          :ok <- verify_context_signature(receipt, verified_context, profile) do
@@ -336,20 +336,20 @@ defmodule CharterAgreementProtocol.Receipt do
     if Timestamp.compare(recorded_at, occurred_at) in [:eq, :gt], do: :ok, else: receipt_error()
   end
 
-  defp reverify_context(%CharterRevision{canonical_bytes: bytes}, limits) do
-    case CharterRevision.decode(bytes, limits) do
-      {:ok, revision} -> {:ok, {:revision, revision}}
-      {:error, %Error{} = error} -> {:error, error}
+  defp reverify_context(%CharterRevision{canonical_bytes: bytes}, limits, profile) do
+    with {:ok, revision} <- CharterRevision.decode(bytes, limits),
+         :ok <- CharterRevision.admit(revision, profile) do
+      {:ok, {:revision, revision}}
     end
   end
 
-  defp reverify_context(%ChainFacts{} = facts, limits) do
+  defp reverify_context(%ChainFacts{} = facts, limits, profile) do
     with {:ok, revisions} <- retained_revisions(facts),
          {:ok, acceptances} <- retained_acceptances(facts),
          {:ok, descriptors} <- retained_descriptors(facts),
          {:ok, terminations} <- retained_terminations(facts),
          {:ok, verified} <-
-           Chain.verify(revisions, acceptances, descriptors, terminations, limits) do
+           Chain.verify(revisions, acceptances, descriptors, terminations, limits, profile) do
       {:ok, {:chain, verified}}
     else
       {:error, %Error{} = error} -> {:error, error}
@@ -510,16 +510,25 @@ defmodule CharterAgreementProtocol.Receipt do
     end
   end
 
-  defp verify_context_signature(_receipt, {:revision, %CharterRevision{}}, _profile), do: :ok
+  # A revision-only context names no signing key, so the signature stays
+  # unchecked (`:signature` in not_verified), but the profile still applies
+  # to the receipt's own envelope.
+  defp verify_context_signature(receipt, {:revision, %CharterRevision{}}, profile),
+    do: CompactJws.admit(receipt.envelope, profile)
 
+  # The envelope is admitted before any key is looked up, so an
+  # out-of-profile receipt reports the profile rejection in both context
+  # forms, even when its kid names no key in the view.
   defp verify_context_signature(receipt, {:chain, chain}, profile) do
-    chain
-    |> signing_keys(receipt)
-    |> Enum.uniq()
-    |> Enum.map(fn {public_key, algorithm} ->
-      CompactJws.verify_signature(receipt.envelope, public_key, algorithm, profile)
-    end)
-    |> signature_outcome()
+    with :ok <- CompactJws.admit(receipt.envelope, profile) do
+      chain
+      |> signing_keys(receipt)
+      |> Enum.uniq()
+      |> Enum.map(fn {public_key, algorithm} ->
+        CompactJws.verify_signature(receipt.envelope, public_key, algorithm, profile)
+      end)
+      |> signature_outcome()
+    end
   end
 
   @doc false

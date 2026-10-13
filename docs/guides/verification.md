@@ -1,114 +1,190 @@
 # Verification semantics
 
-How CAP computes structural facts from raw bytes, and the exact semantics of
-forks, contested views, supersession, and governing revisions. The theme
-throughout: CAP reports evidence and never selects a winner on your behalf.
+This page explains how CAP turns raw artifact bytes into facts, and how it treats
+forks, supersession, the governing revision and termination. One rule runs through
+all of it: CAP reports what the evidence shows and never picks a winner for you.
 
-## Everything is reverified from bytes
+The terms used here (descriptor history, governing revision, contested, supersession)
+are defined in the [glossary](glossary.md). The [artifacts reference](artifacts.md)
+lists every member of every artifact.
 
-`CharterAgreementProtocol.verify_chain/5` accepts complete caller-supplied
-lists of canonical revision bytes, attached acceptances, Party Descriptor
-compacts, and termination compacts, plus explicit limits. It re-decodes and
-re-verifies every artifact; raw routing claims inside artifacts never establish
-trust. Set sizes are bounded by `max_artifact_set_items` — the exact ceiling is
-accepted, ceiling plus one returns `:limit_exceeded`.
+## Every call starts from bytes
+
+`CharterAgreementProtocol.verify_chain/5` takes four lists of raw bytes, in this
+order, and then your limits:
+
+- `revisions`: canonical charter revision bytes;
+- `acceptances`: acceptance compacts;
+- `descriptors`: party descriptor compacts for both parties;
+- `terminations`: termination notice compacts, often `[]`.
+
+`build_set/4`, which you use before producing an acceptance or a termination, takes the
+same lists in a different order: revisions, acceptances, terminations, descriptors.
+
+CAP decodes and verifies every artifact on every call. Nothing is cached between
+calls. A member that points from one artifact to another (a digest, a role, a key id)
+only tells CAP where to look. CAP still verifies the artifact it points at.
+
+## Artifact-set bounds
+
+Before CAP decodes anything or checks a signature, it bounds the whole view with two
+limits:
+
+| Limit | What it bounds | Default | Greatest value |
+|---|---|---:|---:|
+| `max_artifact_set_items` | the number of items in each of the four lists | 1,024 | 4,096 |
+| `max_artifact_set_bytes` | the byte lengths of every artifact in all four lists, added together | 67,108,864 (64 MiB) | 1,073,741,824 (1 GiB) |
+
+A view exactly at either ceiling verifies. One item or one byte above it returns
+`:limit_exceeded`, with subject `["chain", "artifacts"]` for the item count and
+`["chain", "bytes"]` for the byte total. Each artifact is then decoded under the
+per-artifact limits (`max_bytes`, `max_depth` and the rest). See
+[limits and profiles](limits-and-profiles.md) for all of them.
+
+The byte bound matters most for post-quantum keys. An ML-DSA descriptor is many times
+larger than an Ed25519 one, so a view can stay well under the item count and still be
+large.
 
 ## Descriptor histories
 
-`verify_descriptor_chain/2` accepts the complete in-view descriptor set in any
+`verify_descriptor_chain/2` takes every descriptor you hold for one party, in any
 order:
 
-- One reachable history returns topology `:linear`; every non-head descriptor
-  is marked `:superseded`.
-- Two or more individually valid descriptors naming the same predecessor
-  return `:forked`; all returned descriptor facts are marked `:contested` and
-  the sibling digests are retained as signed fork evidence.
-- The verifier never selects a winner and never claims the caller's view is
-  globally complete.
+- One history with no branches returns topology `:linear`. The newest descriptor is
+  `:head` and every older one is `:superseded`.
+- Two or more valid descriptors that name the same predecessor return `:forked`.
+  Every descriptor in the result is marked `:contested`, and the sibling digests are
+  kept as fork evidence.
 
-Descriptor verification proves signed key continuity only — not organizational
-identity, legal validity, authorization, current revocation status, or
-ownership of an attestation target.
+Either way, CAP does not choose a branch, and it does not claim you hold every
+descriptor that exists.
+
+A descriptor history proves signed key continuity: each descriptor after the first
+was signed by a key that was active in the one before it. It does not prove who the
+party is, whether the party may act, whether a key has been revoked since, or that the
+party controls anything an attestation names.
 
 ## Acceptances and equivocation
 
-A single acceptance is verified against the exact revision and the
-reconstructed descriptor chain: chain coordinates must match exactly, the
-signer's role must be one of the revision's two bound party roles, and the
-protected `kid` resolves only against a key active in the pinned descriptor.
+An acceptance is checked against the exact revision and the signer's verified
+descriptor history:
 
-Two individually verified acceptances from the same Party Descriptor and role
-at one charter/revision number over **different revision digests** produce
-`AcceptanceEquivocation` evidence: both signed content digests and both
-revision digests are retained, and `winner` is `nil`. Acceptances by *different
-parties* on competing branches are set-level contested-view evidence, not
-equivocation — only a party contradicting itself is equivocation.
+- its claims must equal the revision's coordinates exactly: charter id, revision
+  number, revision digest and predecessor digest;
+- the descriptor digest and role it claims must be a party the revision lists;
+- the `kid` in its header must name a key that is active in that descriptor.
 
-## Chain-level rules
+If the same party, under the same descriptor and role, signs acceptances of two
+different revisions at the same revision number, that is equivocation. CAP returns
+`AcceptanceEquivocation` evidence holding both signed content digests and both
+revision digests, and `winner` is `nil`.
 
-`verify_chain/5` enforces, over the complete supplied view:
+Acceptances by different parties on competing branches are not equivocation. Each
+party signed one thing. That case shows up as a contested view at the chain level.
 
-- exactly two distinct descriptor histories matching the revision's two bound
-  roles;
-- unique revision digests, one genesis defining the charter identity, every
-  successor binding the exact prior-numbered digest;
-- supersession targets existing in the same charter at a lower number; and
-- a revision is **accepted** only when both bound party-role pairs have one
-  verified Acceptance.
+## Chain rules
 
-Signed same-number siblings remain fork evidence and make the active view
-contested. An accepted successor may explicitly supersede accepted
-lower-numbered branches: historical fork and equivocation evidence is
-retained, while the named branches lose current precedence. Digest ordering
-never selects a winner.
+Over the complete view you supply, `verify_chain/5` requires:
 
-## Governing computation
+- exactly two descriptor histories, every one of them a party that some revision
+  names;
+- each revision's parties resolving to different histories, so one party cannot hold
+  both roles (a revision that names the same descriptor twice already fails to decode,
+  with `:revision_invalid`);
+- unique revision digests and one genesis revision, whose digest is the charter id;
+- every later revision naming, as `prev_revision_digest`, a revision in the view with
+  the number one lower;
+- every `supersedes` target being a revision of the same charter with a lower number,
+  and, for an accepted revision, an accepted one.
 
-`governing_revision/2` takes the verified `ChainFacts` and a caller-supplied
-UTC `DateTime`:
+A revision is **accepted** when every party-and-role pair it lists has one verified
+acceptance. Otherwise it is **proposed**. Proposed revisions stay in the facts as
+data, and they never govern.
 
-- returns the highest effective **accepted** revision on one ancestry;
-- returns `:contested` when multiple branches are eligible at that instant;
-- returns `:none` when nothing is eligible;
-- effective intervals are start-inclusive and end-exclusive.
+Two accepted revisions at the same number are fork evidence and make the view
+contested. An accepted later revision can list contested branches in `supersedes`.
+The superseded revisions stay in the history, along with the fork and equivocation
+evidence, but they no longer compete. Nothing in CAP orders digests to break a tie.
 
-CAP reads no clock. Two hosts asking about the same instant with the same view
-get the same answer; hosts asking about different instants get
-instant-correct answers — "now" is a caller decision.
+## The governing revision
 
-## Termination closure
+`governing_revision/2` takes the verified `ChainFacts` and an instant, either a UTC
+`DateTime` or a `CharterAgreementProtocol.Timestamp`. It returns `{:ok, digest}`,
+`{:ok, :contested}` or `{:ok, :none}`.
 
-A verified Termination Notice closes the charter at and after its
-`effective_at` **only when the notice names the unique governing revision at
-that instant**. Closure never reactivates an older revision. A notice that
-names a non-governing revision is still valid signed evidence — it just does
-not close the chain in the verifier's view.
+It considers accepted, non-superseded revisions that are in effect at that instant.
+A revision is in effect from `effective_from` (inclusive) to `effective_until`
+(exclusive), or with no end when `effective_until` is absent. Then:
 
-## The honest-signer seam
+- if one revision has the highest number and every other candidate is its ancestor,
+  it returns that revision's digest;
+- if competing branches remain, it returns `:contested`;
+- if nothing is in effect, or a termination has closed the charter, it returns
+  `:none`.
 
-Signing-input producers (`acceptance_signing_input/2`,
-`termination_signing_input/2`) cold-verify the caller's `ArtifactSet` first and
-refuse coordinates that would manufacture equivocation or stale ancestry: the
-Acceptance producer refuses a charter number already occupied by an acceptance
-for another digest and refuses candidates whose ancestry excludes any maximum
-dual-accepted head; the Termination producer requires its named revision to be
-the unique governing revision at the notice's own `effective_at`. These guards
-constrain honest signers relative to the supplied set — they cannot constrain
-a dishonest signer or prove the view complete.
+A `DateTime` in any zone other than UTC returns `:governing_invalid`.
 
-## The only no-tie-break repair
+CAP reads no clock. Two hosts that ask about the same instant with the same artifacts
+get the same answer. Which instant to ask about ("now", the time of an invoice, the
+time an action happened) is up to you.
 
-A contested view is resolved exactly one way: both parties countersign a later
-revision that names each contested sibling in `supersedes`. The
-[fork-repair notebook](../notebooks/fork-repair.livemd) walks the full
-sequence — equivocation evidence, contested governing view, countersigned
-repair, unique governing digest.
+## Termination closes the charter
 
-## What the returned facts contain
+A verified termination notice closes the charter from its `effective_at` instant, if
+the notice names the revision that governs at that instant. From then on:
 
-`ChainFacts` are structural and view-relative: reverified revision,
-acceptance, descriptor-chain, termination, supersession, and fork facts — and
-no time-dependent verdict. Every facts record carries the closed
-twelve-item `not_verified` floor (see [Security model](security-model.md)),
-and `build_set/4` — which only constructs a typed raw set without verifying —
-reports all twelve as not verified.
+- `governing_revision/2` returns `:none` at and after `effective_at`;
+- a receipt for an action at or after `effective_at` reports
+  `governing_match: :mismatch`.
+
+Before `effective_at`, the notice has no effect: governance follows the revision
+windows and ancestry as if it were absent, so, for example, nothing governs before the
+revision's `effective_from`. Closure never brings an older revision back into force.
+
+A notice that names a revision that does not govern at its `effective_at` is still
+valid signed evidence, and it stays in `termination_facts`. It does not close the
+charter.
+
+## Checks when you produce artifacts
+
+The two producers that depend on other artifacts, `acceptance_signing_input/2` and
+`termination_signing_input/2`, verify the `ArtifactSet` you give them before they
+build anything to sign. They return `:signing_refused` when:
+
+- an acceptance would land at a revision number where the set already holds an
+  acceptance of a different revision;
+- an acceptance names a revision that neither descends from nor supersedes every
+  accepted revision at the highest number;
+- a termination names a revision that does not govern at the notice's own
+  `effective_at`.
+
+These checks stop you from creating equivocation or stale evidence from the artifacts
+you hold. They cannot stop a counterparty that signs without them, and they cannot
+prove your view is complete. A verifier still checks everything it receives.
+
+## Repairing a contested view
+
+To repair a contested view, both parties accept a later revision that covers every
+competing branch: each competing revision is either an ancestor of the new one
+through `prev_revision_digest` or listed in its `supersedes`. Descending from one
+branch and superseding the other is enough; listing every sibling in `supersedes` also
+works. The [fork-repair notebook](../notebooks/fork-repair.livemd) runs one repair
+from start to finish: the equivocation evidence, the contested answer, the repair
+revision and its two acceptances, and the single governing digest afterward.
+
+The governing answer is also per instant. If a competing revision's
+`effective_until` passes, later instants can have a single governing revision without
+any repair, while the fork stays recorded in the chain facts.
+
+## What the facts contain
+
+`ChainFacts` describe the view you supplied: the revision, acceptance, descriptor and
+termination facts, the superseded digests, the fork evidence, and the topology. They
+carry no answer that depends on time. You get that from `governing_revision/2`.
+
+Every facts record also carries `not_verified`, the twelve things the record does not
+prove. No option shortens it. The [security model](security-model.md) explains what
+each one leaves to your application.
+
+`build_set/4` verifies nothing. It only checks that each list holds binaries and
+returns a typed `ArtifactSet` for the producers.

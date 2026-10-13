@@ -214,13 +214,13 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
         &(&1["surface"] in ["party_descriptor.verify", "descriptor_chain.verify"])
       )
 
-    assert length(verify_cases) == 22
+    assert length(verify_cases) == 29
     Enum.each(verify_cases, &assert_verify_case/1)
   end
 
   defp assert_revision_expectations(cases) do
     revision_cases = Enum.filter(cases, &(&1["surface"] == "charter_revision.decode"))
-    assert length(revision_cases) == 15
+    assert length(revision_cases) == 31
 
     Enum.each(revision_cases, fn one ->
       actual = CharterRevision.decode(one["input"]["text"], Limits.default())
@@ -252,7 +252,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_acceptance_expectations(cases) do
     acceptance_cases = Enum.filter(cases, &String.starts_with?(&1["surface"], "acceptance."))
-    assert length(acceptance_cases) == 8
+    assert length(acceptance_cases) == 17
     Enum.each(acceptance_cases, &assert_acceptance_case/1)
   end
 
@@ -260,7 +260,10 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     input = one["input"]
     {:ok, revision} = CharterRevision.decode(input["revision_text"], Limits.default())
     {:ok, chain} = DescriptorChain.verify(input["descriptor_compacts"], Limits.default())
-    actual = Acceptance.verify(input["compact"], revision, chain, Limits.default())
+
+    actual =
+      Acceptance.verify(input["compact"], revision, chain, Limits.default(), case_profile(input))
+
     assert projected_acceptance_result(actual) == one["expect"]
   end
 
@@ -296,13 +299,22 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_termination_expectations(cases) do
     termination_cases = Enum.filter(cases, &(&1["surface"] == "termination.verify"))
-    assert length(termination_cases) == 4
+    assert length(termination_cases) == 12
 
     Enum.each(termination_cases, fn one ->
       input = one["input"]
       {:ok, revision} = CharterRevision.decode(input["revision_text"], Limits.default())
       {:ok, chain} = DescriptorChain.verify(input["descriptor_compacts"], Limits.default())
-      actual = TerminationNotice.verify(input["compact"], revision, chain, Limits.default())
+
+      actual =
+        TerminationNotice.verify(
+          input["compact"],
+          revision,
+          chain,
+          Limits.default(),
+          case_profile(input)
+        )
+
       assert projected_termination_result(actual) == one["expect"]
     end)
   end
@@ -327,7 +339,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     chain_cases =
       Enum.filter(cases, &(&1["surface"] in ["chain.verify", "governing_revision"]))
 
-    assert length(chain_cases) == 7
+    assert length(chain_cases) == 15
     Enum.each(chain_cases, &assert_chain_case/1)
 
     profile_cases = Enum.filter(cases, &(&1["surface"] == "chain.verify_profile"))
@@ -398,9 +410,20 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       input["acceptances"],
       input["descriptors"],
       input["terminations"],
-      Limits.default()
+      case_limits(input)
     )
   end
+
+  defp case_limits(%{"limits" => selected}) do
+    {:ok, limits} =
+      selected
+      |> Enum.map(fn {name, value} -> {String.to_existing_atom(name), value} end)
+      |> Limits.new()
+
+    limits
+  end
+
+  defp case_limits(_input), do: Limits.default()
 
   defp projected_set_result({:ok, facts}) do
     %{
@@ -419,15 +442,45 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_receipt_expectations(cases) do
     receipt_cases = Enum.filter(cases, &(&1["surface"] == "receipt.verify"))
-    assert length(receipt_cases) == 11
+    assert length(receipt_cases) == 20
 
     Enum.each(receipt_cases, fn one ->
       input = one["input"]
-      {:ok, chain} = verify_chain_input(input["chain"])
-      actual = Receipt.verify(input["compact"], chain, Limits.default())
+
+      actual =
+        Receipt.verify(
+          input["compact"],
+          receipt_context(input),
+          Limits.default(),
+          case_profile(input)
+        )
+
       assert projected_receipt_result(actual) == one["expect"]
     end)
   end
+
+  defp receipt_context(%{"revision_text" => text}) do
+    {:ok, revision} = CharterRevision.decode(text, Limits.default())
+    revision
+  end
+
+  defp receipt_context(input) do
+    {:ok, chain} = verify_chain_input(input["chain"])
+    chain
+  end
+
+  defp case_profile(%{"profile" => spec}) do
+    revisions =
+      case spec["revisions"] do
+        %{"min" => minimum, "max" => maximum} -> {minimum, maximum}
+        nil -> nil
+      end
+
+    {:ok, profile} = Profile.new(algorithms: spec["algorithms"], revisions: revisions)
+    profile
+  end
+
+  defp case_profile(_input), do: Profile.full()
 
   defp projected_receipt_result({:ok, facts}) do
     %{
@@ -465,7 +518,16 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   defp assert_verify_case(%{"surface" => "party_descriptor.verify"} = one) do
-    actual = PartyDescriptor.verify(one["input"]["compact"], nil, Limits.default())
+    input = one["input"]
+
+    predecessor =
+      Enum.reduce(input["predecessor_compacts"] || [], nil, fn compact, previous ->
+        {:ok, facts} = PartyDescriptor.verify(compact, previous, Limits.default())
+        facts
+      end)
+
+    actual =
+      PartyDescriptor.verify(input["compact"], predecessor, Limits.default(), case_profile(input))
 
     assert projected_party_result(actual) == one["expect"]
   end

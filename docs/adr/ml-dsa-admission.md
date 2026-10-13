@@ -1,183 +1,159 @@
-# ML-DSA admission: the revision-3 registry act
+# ML-DSA admission: the revision-3 registry change
 
-Date: 2026-09-14
+Date: September 14, 2026
 
 ## Status
 
-Accepted. Governs `protocol_revision` 3. Input design: the scoped release spec at
-`.kimosabe/specs/2026-09-14-cap-0.3.0-revision-3-ml-dsa-release.md`, itself backed
-by substrate probes (executed 2026-09-14 on the CI-pinned Elixir 1.20.3 / OTP 29.0.3
-/ Node 24.18.0), an independent adversarial design pass, and a full 0.2.1 audit.
-This ADR records the wire-visible decisions; the audit-remediation items riding the
-same package release are engineering work, not ADR scope.
+Accepted. Governs `protocol_revision` 3. This record covers the decisions visible on
+the wire.
 
-Amended 2026-09-15: the substrate claim below understated one axis — "OTP's
-`:crypto` verifies `mldsa44/65/87` from OTP 28.1" holds only when the runtime
-links OpenSSL ≥ 3.5 (FIPS 204 landed in OpenSSL 3.5.0). The 2026-09-14 probes
-ran on a local toolchain linked against OpenSSL 3.6.3; CI's ubuntu-24.04
-substrate links OpenSSL 3.0.x and could neither generate nor verify ML-DSA
-(the `Bad key type` CI failures), because bob's OTP builds dynamically link
-the distro `libcrypto.so.3`. No decision changes; decision 8's declared floor
-is corrected to OTP ≥ 28.1 with a linked OpenSSL ≥ 3.5, and CI runs the
-quality gate on ubuntu-26.04 (OpenSSL 3.5.x). The corpus and verdict surface
-are untouched; the repository's two ML-DSA test sign calls pass the
-documented `mldsa_private` tuple form so crypto 5.7 (OTP 28.1) can sign —
-verification needs no accommodation and the corpus agrees 100/100 at the
-floor.
+Amended September 15, 2026. OTP's `:crypto` verifies `mldsa44/65/87` from OTP 28.1
+only when the runtime links OpenSSL 3.5 or later, since FIPS 204 support landed in
+OpenSSL 3.5.0. Precompiled OTP builds link the operating system's `libcrypto.so.3`
+dynamically, so on Ubuntu 24.04 (OpenSSL 3.0.x) they can neither generate nor verify
+ML-DSA. No decision changes. Decision 8's declared floor is corrected to OTP 28.1 or
+later with OpenSSL 3.5 or later linked, and CI runs the full check suite on
+ubuntu-26.04 (OpenSSL 3.5.x). The corpus and the verdicts are unchanged.
 
 ## Context
 
-Revision 2 closed the alg-name question for the classical operation: RFC 9864
-deprecates the polymorphic `EdDSA` name, CAP mints the fully-specified `Ed25519`
+Revision 2 settled the alg-name question for the classical operation. RFC 9864
+deprecates the polymorphic `EdDSA` name, CAP mints the fully specified `Ed25519`
 name, and the per-artifact binding rule ties every name to a minimum
-`protocol_revision`. But both registry rows verify with Ed25519 keys
-(`algorithm.ex` carries `key_algorithm: "Ed25519"` twice), so the agility mechanism
-`spec/evolution.md` advertises — data-driven dispatch, second key grammar, second
-cryptographic primitive — has never been exercised. Revision 2 was a name-only act.
+`protocol_revision`. But both registry rows verify with Ed25519 keys (`algorithm.ex`
+carries `key_algorithm: "Ed25519"` twice). So the agility that `spec/evolution.md`
+describes (data-driven dispatch, a second key grammar, a second cryptographic
+primitive) had never been exercised. Revision 2 changed only a name.
 
-The migration target has been named since the spec set was written: ML-DSA
-(FIPS 204), registered for JOSE and COSE by RFC 9964 (Proposed Standard,
-May 2026) as `ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87` — pure ML-DSA only, `ctx`
-fixed to the empty string, keys 1312/1952/2592 bytes, signatures 2420/3309/4627
-bytes. NIST IR 8547 directs that ML-DSA "can and should be put into use now"
-(quantum-vulnerable algorithms, including EdDSA, deprecated ~2030, disallowed
-~2035); CNSA 2.0 requires ML-DSA-87 for signatures in national security systems
-by 2030–2033; RFC 9958 (PQUIP) publishes the engineer guidance a protocol reviewer
-will apply. A protocol entering external standardization in late 2026 with one
-classical-only algorithm and a paper migration plan answers its first question
-with a promise; revision 3 answers it with a diff.
+The migration target had been named since the specification was written: ML-DSA
+(FIPS 204), registered for JOSE and COSE by RFC 9964 (Proposed Standard, May 2026) as
+`ML-DSA-44`, `ML-DSA-65` and `ML-DSA-87`. That means pure ML-DSA only, `ctx` fixed to
+the empty string, keys of 1312, 1952 and 2592 bytes, and signatures of 2420, 3309 and
+4627 bytes. NIST IR 8547 says ML-DSA "can and should be put into use now". CNSA 2.0
+requires ML-DSA-87 for signatures in national security systems by 2030 to 2033. RFC
+9958 (PQUIP) gives guidance for adding post-quantum signatures to a protocol.
 
-The substrate is ready: OTP's `:crypto` verifies `mldsa44/65/87` from OTP 28.1
-(raw public-key bytes — probed cross-implementation against Node-generated
-signatures; ML-DSA-65 verify ≈ 1.9× an Ed25519 verify, no cliff), and Node's
-builtins cover all three parameterizations from the 24.6–24.8 minors.
+The runtime was ready. OTP's `:crypto` verifies `mldsa44/65/87` from OTP 28.1 with raw
+public-key bytes, including signatures that Node generated. Node's built-ins cover all
+three parameter sets from the 24.6 to 24.8 minor releases.
 
 ## Decision
 
-Revision 3 carries exactly one semantic change — ML-DSA admission — implemented
-as the registry-and-revision act the no-versioning rule and `spec/evolution.md`
-define. No parallel artifact family, media type, or header shape.
+Revision 3 carries exactly one semantic change, ML-DSA admission, made as the registry
+and revision change that the no-versioning rule and `spec/evolution.md` describe.
+There is no parallel artifact family, media type or header shape.
 
 1. **Registry rows.** The closed alg registry gains three rows:
-   `{name: "ML-DSA-44", min_protocol_revision: 3, key_algorithm: "ML-DSA-44"}`,
-   and likewise `ML-DSA-65`, `ML-DSA-87`. The accepted revision set becomes
-   `{1, 2, 3}`; unknown revisions still fail closed. The binding rule applies
-   unchanged: `ML-DSA-*` at revisions 1–2 is rejected — no honest producer could
-   have minted the pair — and (everything, revision ≥ 4) stays red.
-2. **Per-name bounds are registry data.** Each row carries the exact public-key
-   and signature byte lengths for its key algorithm
-   (Ed25519: 32/64; ML-DSA-44: 1312/2420; ML-DSA-65: 1952/3309; ML-DSA-87:
-   2592/4627). The framing layer enforces the signature length per row AFTER
-   protected-header parse (revision 2's fixed 64-byte check ran before `alg` was
-   known); `verify_signature` dispatches on the row's `key_algorithm`; the
-   producer frames its provisional zero-signature at the row's length; and
-   `assemble_compact/2` accepts the row's length, not the literal 64. ML-DSA
-   strictness is exactly the per-name byte lengths — lattice schemes have no
-   torsion/small-order surface, and the Ed25519 non-canonical-encoding pre-checks
-   remain Ed25519-row behavior.
+   `{name: "ML-DSA-44", min_protocol_revision: 3, key_algorithm: "ML-DSA-44"}`, and the
+   same for `ML-DSA-65` and `ML-DSA-87`. The accepted revision set becomes {1, 2, 3},
+   and unknown revisions still fail closed. The binding rule applies unchanged:
+   `ML-DSA-*` at revisions 1 and 2 is rejected, since no conforming producer could
+   have minted the pair, and any name at revision 4 or higher is still rejected.
+2. **Per-name bounds are registry data.** Each row carries the exact public-key and
+   signature byte lengths for its key algorithm (Ed25519: 32 and 64; ML-DSA-44: 1312
+   and 2420; ML-DSA-65: 1952 and 3309; ML-DSA-87: 2592 and 4627). The framing layer
+   checks the signature length for the row after parsing the protected header
+   (revision 2's fixed 64-byte check ran before `alg` was known). `verify_signature`
+   dispatches on the row's `key_algorithm`. The producer frames its provisional
+   all-zero signature at the row's length, and `assemble_compact/2` accepts the row's
+   length, not the literal 64. ML-DSA strictness is exactly the per-name byte lengths.
+   The Ed25519 encoding checks apply to the Ed25519 rows only.
 3. **Key grammar, gated one layer down exactly as the name was.** Descriptor
-   `verification_keys[].algorithm` widens to the closed set
-   {`Ed25519`, `ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87`}; the `public_key` member's
-   byte length is bound to the sibling `algorithm` member (the schema bounds
-   length to the union of legal encodings; the codec binds the exact length, the
-   key algorithm, and the descriptor's `protocol_revision` together). **A
-   revision-2 descriptor carrying an ML-DSA key rejects** — widening the key
-   grammar without gating it on revision 3 would retroactively widen a published
-   revision's grammar, the "pure set-widening" alternative revision 2 rejected,
-   reincarnated one layer down.
-4. **Mixed-algorithm key sets are legal.** Envelope `alg` is determined by the
-   signing key actually used. Descriptor N+1 may declare ML-DSA keys while being
-   Ed25519-signed by a key active in N — the bridge/overlap transition that lets
-   a party rotate classical→PQ inside one continuous history. The predecessor-
-   binding rule is unchanged; a mixed set is still one descriptor lineage.
+   `verification_keys[].algorithm` widens to the closed set {`Ed25519`, `ML-DSA-44`,
+   `ML-DSA-65`, `ML-DSA-87`}. The `public_key` member's byte length is bound to the
+   sibling `algorithm` member: the schema bounds the length to the union of legal
+   encodings, and the codec binds the exact length, the key algorithm and the
+   descriptor's `protocol_revision` together. **A revision-2 descriptor carrying an
+   ML-DSA key is rejected.** Widening the key grammar without tying it to revision 3
+   would widen a published revision's grammar after the fact. That is the
+   set-widening alternative revision 2 rejected, one layer down.
+4. **Mixed-algorithm key sets are legal.** The envelope `alg` is set by the signing key
+   actually used. Descriptor N+1 may declare ML-DSA keys while being signed with an
+   Ed25519 key active in N. That overlap lets a party rotate from classical to
+   post-quantum keys inside one continuous history. The predecessor-binding rule is
+   unchanged, and a mixed set is still one descriptor lineage.
 5. **Emission.** Producers mint exactly the pairs (`Ed25519`, revision 2) and
-   (`ML-DSA-65`, revision 3). The signing-input input shape widens to
-   `%{"kid" => …, "claims" => …, "algorithm" => …}` (the third member optional,
-   defaulting to `Ed25519`); the chosen name selects the emission revision, the
-   provisional signature length, and the assemble length. The by-construction
-   mint enforcement survives: the provisional decode still runs the full
+   (`ML-DSA-65`, revision 3). The signing-input shape widens to
+   `%{"kid" => ..., "claims" => ..., "algorithm" => ...}`, with the third member
+   optional and defaulting to `Ed25519`. The chosen name selects the emission revision,
+   the provisional signature length and the length `assemble_compact/2` accepts. The
+   mint contract still holds by construction: the provisional decode runs the full
    binding rule against the framed bytes.
-6. **Acceptance vs minting asymmetry is deliberate.** Verifiers admit all three
-   parameterizations from revision 3 — a CNSA 2.0-aligned counterparty minting
-   ML-DSA-87 must not be redded by a CAP verifier. Minting stays closed at
-   ML-DSA-65 (NIST category 3, comfortably above Ed25519's classical strength)
-   so the emission contract remains a closed pair set, mirroring revision 2's
-   accept-EdDSA/mint-Ed25519 pattern. CNSA-constrained minting of ML-DSA-87 is
-   a signer-profile decision, never a CAP registry act.
+6. **Verifiers accept more than producers mint, on purpose.** Verifiers accept all
+   three parameter sets from revision 3, so a counterparty aligned with CNSA 2.0 that
+   mints ML-DSA-87 is not rejected by a CAP verifier. Minting stays at ML-DSA-65 (NIST
+   category 3), so the emission contract
+   stays a closed set of pairs. This mirrors revision 2, which accepts `EdDSA` and
+   mints `Ed25519`. Minting ML-DSA-87 for CNSA reasons is a choice for a signer
+   profile, never a CAP registry change.
 7. **Cross-revision composition is unchanged.** Acceptance-claim equality never
-   compares `protocol_revision`; a revision-3 ML-DSA acceptance anchors a
-   revision-2 or revision-1 charter exactly as revision-2 acceptances anchor
-   revision-1 charters today.
-8. **Runtime floors become declared facts.** OTP ≥ 28.1 (the corpus gains
-   ML-DSA cases, and repository/unpacked-package report byte-identity forbids
-   runtime-conditional cases, so the package's own gates need it) and the Node
-   floor rises to the probed minor that satisfies the verifier's calling
-   convention. Both are stated in the README and CHANGELOG and matrix-tested in
-   CI at the floor. (Amendment 2026-09-15: the declared floor also requires the
-   runtime's linked crypto library to be OpenSSL ≥ 3.5 — see the Status
-   amendment above.)
+   compares `protocol_revision`. A revision-3 ML-DSA acceptance anchors a revision-2 or
+   revision-1 charter exactly as revision-2 acceptances anchor revision-1 charters.
+8. **Runtime floors become declared facts.** OTP 28.1 or later, because the corpus
+   gains ML-DSA cases, and byte-identical reports between the repository and the
+   unpacked package rule out cases that depend on the runtime, so the package's own
+   checks need it. The Node floor rises to the probed minor release that supports the
+   verifier's calling convention. Both are stated in the README and the CHANGELOG and
+   tested in CI at the floor. (Amended September 15, 2026: the floor also requires the
+   runtime to link OpenSSL 3.5 or later. See the Status section.)
 
 ## Consequences
 
-- Verdict audit. Nothing green→red. Red→green, deliberate: (`ML-DSA-44/65/87`,
-  revision 3); (`EdDSA`, revision 3) — currently a certified fail-closed corpus
-  case, whose expectation is rewritten while the unknown-revision duty re-mints
-  at revision 4; (`Ed25519`, revision 3); mixed-revision views including ML-DSA
-  acceptances. Stays red: (`ML-DSA-*`, revisions 1–2); (`Ed25519`, 1);
-  (`anything`, ≥ 4); HashML-DSA and `Ed448` names; case-mutated names; ML-DSA
-  keys in revision-2 descriptors; wrong-length ML-DSA keys and signatures.
-- Corpus: the ML-DSA population (primary mint `(ML-DSA-65, 3)`, mixed-key
-  bridge descriptor, mixed-revision view), the per-name negatives above, and
-  revision-4 fail-closed — legacy `(EdDSA, 1)` fixtures stay literally pinned.
-  Named mutations join the battery for the binding rows and the key-grammar
-  gate; the pinned mutation list in the release gate moves in lockstep. The
-  per-name length pre-checks earned no mutation of their own: the seeded
-  mutation survived because the crypto layer already rejects wrong-length
-  inputs with the same code — verdict-redundant by the revision-2 ADR's
-  dead-logic discipline, the checks remain as pre-crypto work bounds.
-- Identities: `corpus_digest`, `index_sha256_base64url`, `spec_digest` re-pin
-  (spec/core.md's Ed25519-specific signature prose generalizes to the registry;
-  `spec/evolution.md`'s migration-target section becomes the record of the act).
-  The extension `registry_digest` is unaffected.
-- Artifact scale: an ML-DSA-65 descriptor key is ~61× an Ed25519 key and a
-  signature ~52×; a 32-key ML-DSA-87 descriptor is ~113 KB canonical. The
-  package release carrying revision 3 also lands the byte-weighted aggregate
-  input budget and verified-context re-verification (no per-acceptance chain
-  re-verification), so the resource boundary is calibrated for PQ-sized
-  artifacts, not Ed25519-era sizes.
-- Downstream: the companion signer releases alongside (RFC 9964 `priv` is the
-  32-byte seed; `ctx` empty; hedged signing recommended — verification is
-  agnostic). Its deliberate-bump wall governs adoption.
-- Requirement identifiers: `CAP-SIGNATURE-ed25519-verification`'s statement
-  generalizes to "verify under the algorithm the registry row names" with its
-  evidence re-certified across both populations; no requirement ID is renamed.
+- Verdict changes. Nothing that verified before stops verifying. Newly accepted, on
+  purpose: (`ML-DSA-44/65/87`, revision 3); (`EdDSA`, revision 3), which had been a
+  fail-closed corpus case, so its expectation was rewritten and the unknown-revision
+  case moved to revision 4; (`Ed25519`, revision 3); and mixed-revision views that
+  include ML-DSA acceptances. Still rejected: (`ML-DSA-*`, revisions 1 and 2);
+  (`Ed25519`, revision 1); any name at revision 4 or higher; HashML-DSA and `Ed448`
+  names; case-changed names; ML-DSA keys in revision-2 descriptors; ML-DSA keys and
+  signatures of the wrong length.
+- Corpus. It gains the ML-DSA population (the primary mint `(ML-DSA-65, 3)`, a
+  descriptor that bridges to mixed keys, and a mixed-revision view), the per-name
+  negative cases above, and the revision-4 fail-closed case. The legacy `(EdDSA, 1)`
+  fixtures stay pinned literally. New named source mutations cover the binding rows
+  and the key-grammar check. The per-name length pre-checks have no mutation of their
+  own, because the crypto layer rejects wrong-length input with the same code. They
+  stay as bounds on work done before the cryptographic call.
+- Identities. `corpus_digest`, `index_sha256_base64url` and `spec_digest` are recorded
+  again (spec/core.md's Ed25519-specific signature text generalizes to the registry,
+  and the migration-target section of `spec/evolution.md` becomes the record of this
+  change). The extension `registry_digest` does not change.
+- Artifact size. An ML-DSA-65 descriptor key is about 61 times the size of an Ed25519
+  key, and a signature about 52 times. A 32-key ML-DSA-87 descriptor is about 113 KB of
+  canonical JSON. The package release carrying revision 3 also adds the byte-weighted
+  bound on the whole input and re-verification of an already verified context (no
+  chain re-verification per acceptance), so the resource limits fit post-quantum
+  artifact sizes, not Ed25519-era ones.
+- Downstream. The companion signer releases alongside (RFC 9964 `priv` is the 32-byte
+  seed, `ctx` is empty, and hedged signing is recommended; verification does not
+  depend on it). The signer adopts the new CAP release in a reviewed release of its
+  own.
+- Requirement identifiers. The statement of `CAP-SIGNATURE-ed25519-verification`
+  generalizes to "verify under the algorithm the registry row names", with its
+  evidence checked again across both populations. No requirement ID is renamed.
 
 ## Rejected alternatives
 
-- **Deferring ML-DSA under `spec/evolution.md`'s revisit triggers** — the
-  triggers (composite-sig RFCs, EdDSA Prohibited) are external and unfired, but
-  the operative bar was already met: the standards submission is itself the
-  event that makes the migration expected, and deferral ships the untested
-  agility claim into the review that will probe it.
-- **Splitting hardening and ML-DSA across two releases** — two full
-  recertification cycles, two chances to drift the pinned legacy fixtures, and
-  a PQ story one release later, for an end state reviewers evaluate identically.
-  Recorded as the fallback had the producer/floor seams proved blocking; they
-  did not.
-- **A full dispatch-table registry at revision 2** (carried forward from the
-  revision-2 ADR's rejection) — revision 3 is the act that makes the row shape
-  carry real differences; the machinery lands now, with two key grammars and
-  two crypto primitives to prove it.
-- **Adopting PQ composites or hybrids** — still Internet-Drafts;
-  `spec/evolution.md`'s standing decision (land pure ML-DSA alongside
-  still-accepted Ed25519; revisit composites when one reaches RFC) is unchanged.
+- **Deferring ML-DSA under the revisit triggers in `spec/evolution.md`.** Those
+  triggers (composite-signature RFCs, `EdDSA` becoming Prohibited) are external and
+  had not fired. Admitting a second key algorithm is what the registry design exists
+  for, and without one the agility that `spec/evolution.md` describes stays untested.
+- **Splitting the hardening work and ML-DSA across two releases.** That means two
+  rounds of recording identities again and two chances for the pinned legacy fixtures
+  to drift, for the same end state.
+- **A full dispatch-table registry at revision 2** (rejected in the revision-2 record
+  too). Revision 3 is the change that gives the row shape real differences to carry,
+  so the machinery lands now, with two key grammars and two crypto primitives to show
+  it works.
+- **Adopting post-quantum composites or hybrids.** They are still Internet-Drafts. The
+  standing position in `spec/evolution.md` (add pure ML-DSA beside Ed25519, which stays
+  accepted, and revisit composites when one becomes an RFC) is unchanged.
 
 ## Revisit triggers
 
-- A composite-signature RFC reaching Proposed Standard: lands in the same
-  agility slot by the same registry-and-revision act.
-- `EdDSA` moving Deprecated→Prohibited in the JOSE registry: a future revision
-  drops the row; the pre-existing-artifact policy question is recorded there,
-  not here.
-- HashML-DSA registration changes in JOSE: currently out of scope of RFC 9964;
-  any future admission is a new act, never a widening of the pure names.
+- A composite-signature RFC reaching Proposed Standard. It would use the same
+  registry slot, through the same kind of registry and revision change.
+- `EdDSA` moving from Deprecated to Prohibited in the JOSE registry. A later revision
+  drops the row; the question of existing artifacts is recorded there, not here.
+- Changes to HashML-DSA registration in JOSE. HashML-DSA is outside RFC 9964's scope
+  today. Admitting it later is a new change, never a widening of the pure names.

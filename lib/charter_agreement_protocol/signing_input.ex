@@ -1,23 +1,36 @@
 defmodule CharterAgreementProtocol.SigningInput do
   @moduledoc """
-  CAP never authorizes.
+  Build the exact bytes a signer signs, and assemble the signed result. CAP
+  never authorizes, never holds a key and never signs.
 
-  Deterministic attached-JWS framing plus the honest-signer refusal boundary.
+  Callers pass `%{"kid" => kid, "claims" => claims}` with an optional
+  `"algorithm"` member: `"Ed25519"` (the default) or `"ML-DSA-65"`. The
+  claims' `protocol_revision` must equal that algorithm's emission revision:
+  2 for `"Ed25519"` and 3 for `"ML-DSA-65"`. This module builds the closed
+  protected header, canonicalizes the claims, checks them with the same
+  decoder verification uses, and returns the exact RFC 7515 signing bytes in
+  `message`.
 
-  Callers provide exactly `%{"kid" => kid, "claims" => claims}` with an
-  optional `"algorithm"` member selecting the emission pair — `"Ed25519"`
-  (protocol_revision 2, the default) or `"ML-DSA-65"` (protocol_revision 3).
-  This module
-  constructs the closed protected header, canonicalizes and validates the
-  payload through the existing artifact codec, and returns only the exact RFC
-  7515 signing bytes. The set-aware Acceptance producer refuses false
-  coordinates, equivocation, and ancestry that excludes any maximum accepted
-  head. The set-aware Termination producer refuses every revision except the
-  unique governing revision at the notice's own effective time.
+  The Acceptance and termination builders also verify the artifact set the
+  signer holds and refuse with `:signing_refused` when signing would be
+  wrong in that set: an Acceptance with false coordinates, one that
+  equivocates, or one whose revision does not descend from every newest
+  accepted revision; a termination notice for any revision except the one
+  that governs at the notice's own `effective_at`. These checks keep a
+  signer from signing something wrong in the set it holds. They cannot stop
+  a signer who means to cheat, or prove the set is complete.
 
-  This module never accepts a key, signer, callback, or custody handle and
-  never signs. These refusal checks protect honest signers relative to their
-  supplied view; they cannot constrain a dishonest signer or prove completeness.
+  Most callers use the functions in `CharterAgreementProtocol`, which
+  delegate here. The `charter_agreement_signer` package wraps the whole flow.
+
+  ## Fields
+
+  - `kind`: `:party_descriptor`, `:acceptance`, `:termination` or `:receipt`.
+  - `alg`: the JWS `alg` in the protected header.
+  - `protected_segment` and `payload_segment`: the base64url header and
+    claims segments.
+  - `message`: `protected_segment <> "." <> payload_segment`, the bytes to
+    sign.
   """
 
   alias CharterAgreementProtocol.{
@@ -38,7 +51,9 @@ defmodule CharterAgreementProtocol.SigningInput do
   @enforce_keys [:kind, :alg, :protected_segment, :payload_segment, :message]
   defstruct @enforce_keys
 
+  @typedoc "The artifact kind a signing input is for."
   @type kind :: :party_descriptor | :acceptance | :termination | :receipt
+  @typedoc "The exact bytes to sign for one artifact. See the module doc for each field."
   @type t :: %__MODULE__{
           kind: kind(),
           alg: binary(),
@@ -54,15 +69,18 @@ defmodule CharterAgreementProtocol.SigningInput do
     receipt: "cap+receipt"
   }
 
-  @doc "Build a canonical Party Descriptor signing input without signing."
+  @doc "Build a Party Descriptor signing input. See `CharterAgreementProtocol.descriptor_signing_input/1`."
   @spec descriptor(term()) :: {:ok, t()} | {:error, Error.t()}
   def descriptor(input), do: build_only(:party_descriptor, input)
 
-  @doc "Build a canonical Receipt signing input without signing."
+  @doc "Build a receipt signing input. See `CharterAgreementProtocol.receipt_signing_input/1`."
   @spec receipt(term()) :: {:ok, t()} | {:error, Error.t()}
   def receipt(input), do: build_only(:receipt, input)
 
-  @doc "Build an Acceptance signing input after R1/R2/R3 set refusal checks."
+  @doc """
+  Build an Acceptance signing input after checking it against `set`.
+  See `CharterAgreementProtocol.acceptance_signing_input/2`.
+  """
   @spec acceptance(term(), ArtifactSet.t()) :: {:ok, t()} | {:error, Error.t()}
   def acceptance(input, %ArtifactSet{} = set) do
     with {:ok, signing_input, acceptance} <- build(:acceptance, input),
@@ -76,7 +94,10 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   def acceptance(_input, _set), do: invalid()
 
-  @doc "Build a Termination signing input after R1/R2/R3 set refusal checks."
+  @doc """
+  Build a termination signing input after checking it against `set`.
+  See `CharterAgreementProtocol.termination_signing_input/2`.
+  """
   @spec termination(term(), ArtifactSet.t()) :: {:ok, t()} | {:error, Error.t()}
   def termination(input, %ArtifactSet{} = set) do
     with {:ok, signing_input, termination} <- build(:termination, input),
@@ -90,10 +111,10 @@ defmodule CharterAgreementProtocol.SigningInput do
   def termination(_input, _set), do: invalid()
 
   @doc """
-  Assemble a validated signing input and its exact raw signature.
+  Join a signing input and its raw signature into a compact JWS.
 
-  The signature byte length must equal the registry row's value for the
-  input's emission alg (64 for the classical names, 3309 for ML-DSA-65).
+  The signature must be exactly 64 bytes for `"Ed25519"` or 3309 bytes for
+  `"ML-DSA-65"`. See `CharterAgreementProtocol.assemble_compact/2`.
   """
   @spec assemble(term(), term()) :: {:ok, binary()} | {:error, Error.t()}
   def assemble(%__MODULE__{} = input, signature) when is_binary(signature) do
@@ -133,7 +154,7 @@ defmodule CharterAgreementProtocol.SigningInput do
     limits = Limits.default()
 
     with {:ok, revision} <- emission_revision(alg),
-         {:ok, claims_value} <- tagged(claims),
+         {:ok, claims_value} <- Canonicalization.from_plain(claims),
          true <- claims_revision(claims_value, revision),
          {:ok, payload_bytes} <- Canonicalization.encode(claims_value),
          {:ok, protected_bytes} <- protected(kind, kid, alg),
@@ -331,45 +352,6 @@ defmodule CharterAgreementProtocol.SigningInput do
         false
     end
   end
-
-  defp tagged(value) when is_map(value) do
-    value
-    |> Enum.reduce_while({:ok, []}, fn
-      {name, item}, {:ok, members} when is_binary(name) ->
-        case tagged(item) do
-          {:ok, tagged_item} -> {:cont, {:ok, [{name, tagged_item} | members]}}
-          :error -> {:halt, :error}
-        end
-
-      _member, _acc ->
-        {:halt, :error}
-    end)
-    |> case do
-      {:ok, members} -> {:ok, {:object, Enum.reverse(members)}}
-      :error -> :error
-    end
-  end
-
-  defp tagged(value) when is_list(value) do
-    value
-    |> Enum.reduce_while({:ok, []}, fn item, {:ok, items} ->
-      case tagged(item) do
-        {:ok, tagged_item} -> {:cont, {:ok, [tagged_item | items]}}
-        :error -> {:halt, :error}
-      end
-    end)
-    |> case do
-      {:ok, items} -> {:ok, {:array, Enum.reverse(items)}}
-      :error -> :error
-    end
-  end
-
-  defp tagged(value) when is_binary(value), do: {:ok, {:string, value}}
-  defp tagged(value) when is_integer(value), do: {:ok, {:integer, value}}
-  defp tagged(value) when is_float(value), do: {:ok, {:float, value}}
-  defp tagged(value) when is_boolean(value), do: {:ok, {:boolean, value}}
-  defp tagged(nil), do: {:ok, :null}
-  defp tagged(_value), do: :error
 
   defp valid_kid?(kid) when byte_size(kid) in 1..128,
     do: valid_kid_bytes?(kid)

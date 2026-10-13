@@ -48,6 +48,7 @@ defmodule CharterAgreementProtocol.Chain do
          {:ok, descriptor_chains} <- verify_descriptor_chains(descriptors, limits, profile),
          {:ok, indexed_revisions, revision_index, charter_id} <-
            verify_revisions(revisions, limits, profile),
+         :ok <- party_histories(indexed_revisions, descriptor_chains),
          {:ok, acceptance_facts} <-
            verify_acceptances(acceptances, revision_index, descriptor_chains, limits, profile),
          :ok <- unique_acceptance_coordinates(acceptance_facts),
@@ -178,6 +179,42 @@ defmodule CharterAgreementProtocol.Chain do
     |> collect_ok()
   end
 
+  # Every revision's parties resolve to different descriptor histories, and
+  # every supplied history is one some revision names: a single party cannot
+  # hold two roles, and no unnamed history can stand in as the other party.
+  defp party_histories(indexed_revisions, descriptor_chains) do
+    owner =
+      for %DescriptorChain{descriptors: descriptors} <- descriptor_chains,
+          facts <- descriptors,
+          into: %{},
+          do: {facts.descriptor_digest, facts.party_id}
+
+    named =
+      Enum.reduce_while(indexed_revisions, {:ok, MapSet.new()}, fn {_digest, revision},
+                                                                   {:ok, seen} ->
+        # A descriptor the view does not hold resolves to nothing; only the
+        # histories that are present can be compared.
+        party_ids =
+          revision.parties
+          |> Enum.map(&Map.get(owner, &1.party_descriptor_digest))
+          |> Enum.reject(&is_nil/1)
+
+        if party_ids == Enum.uniq(party_ids),
+          do: {:cont, {:ok, MapSet.union(seen, MapSet.new(party_ids))}},
+          else: {:halt, :error}
+      end)
+
+    histories = MapSet.new(descriptor_chains, &descriptor_chain_id/1)
+
+    case named do
+      {:ok, party_ids} ->
+        if MapSet.subset?(histories, party_ids), do: :ok, else: chain_error()
+
+      :error ->
+        chain_error()
+    end
+  end
+
   defp descriptor_party_id({_compact, descriptor}),
     do: descriptor.party_id || PartyDescriptor.digest(descriptor)
 
@@ -202,21 +239,12 @@ defmodule CharterAgreementProtocol.Chain do
     end
   end
 
-  # Unsigned revisions carry no envelope: the profile's revision axis applies
-  # to the decoded protocol_revision member; there is no algorithm axis for
-  # them (the alg names live on the signed artifacts that anchor them).
+  # Every revision decodes before any is admitted, so a malformed revision
+  # outranks a profile rejection whatever the input order.
   defp revision_profile([], _profile), do: :ok
 
   defp revision_profile([revision | rest], profile) do
-    if revision_in_profile?(revision.protocol_revision, profile),
-      do: revision_profile(rest, profile),
-      else: {:error, Error.new(:revision_outside_profile, ["revision", "protocol_revision"])}
-  end
-
-  defp revision_in_profile?(protocol_revision, %Profile{} = profile)
-       when is_integer(protocol_revision) do
-    {minimum, maximum} = profile.revisions
-    protocol_revision >= minimum and protocol_revision <= maximum
+    with :ok <- CharterRevision.admit(revision, profile), do: revision_profile(rest, profile)
   end
 
   defp unique_revision_digests?(indexed) do

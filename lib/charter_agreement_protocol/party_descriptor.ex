@@ -198,7 +198,9 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
   @doc """
   Verify one descriptor under a caller-supplied capability profile. The
-  profile applies per artifact before any cryptographic work.
+  profile applies to each descriptor in the supplied predecessor history and
+  to this descriptor, each before its own signature is checked and before
+  its `kid` is looked up.
   """
   @spec verify(term(), nil | DescriptorFacts.t(), Limits.t(), Profile.t()) ::
           {:ok, DescriptorFacts.t()} | {:error, Error.t()}
@@ -352,7 +354,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     with {:ok, verified_predecessor} <- verify_predecessor(predecessor, limits, profile),
          {:ok, descriptor} <- decode(compact, limits),
          {:ok, party_id, public_key, key_algorithm, lineage} <-
-           verification_context(descriptor, verified_predecessor, compact),
+           verification_context(descriptor, verified_predecessor, compact, profile),
          :ok <-
            CompactJws.verify_signature(descriptor.envelope, public_key, key_algorithm, profile) do
       {:ok, facts(descriptor, party_id, lineage)}
@@ -535,7 +537,19 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
          true <- verified.descriptor_digest == supplied.descriptor_digest do
       {:ok, verified}
     else
-      _failure -> chain_error()
+      # A profile rejection or a runtime that cannot check a predecessor's
+      # signature is reported as itself, as a chain view reports it; any
+      # other predecessor failure is a broken chain.
+      {:error, %Error{code: code} = error}
+      when code in [
+             :algorithm_outside_profile,
+             :revision_outside_profile,
+             :algorithm_unsupported_on_substrate
+           ] ->
+        {:error, error}
+
+      _failure ->
+        chain_error()
     end
   end
 
@@ -562,7 +576,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
   defp verify_decoded(descriptor, compact, predecessor, profile) do
     with {:ok, party_id, public_key, key_algorithm, lineage} <-
-           verification_context(descriptor, predecessor, compact),
+           verification_context(descriptor, predecessor, compact, profile),
          :ok <-
            CompactJws.verify_signature(descriptor.envelope, public_key, key_algorithm, profile) do
       {:ok, facts(descriptor, party_id, lineage)}
@@ -574,22 +588,32 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   defp artifact_set_length([_item | rest], count), do: artifact_set_length(rest, count + 1)
   defp artifact_set_length(_improper, _count), do: :improper
 
-  defp verification_context(%__MODULE__{descriptor_number: 1} = descriptor, nil, compact) do
-    with {:ok, key} <- active_key(descriptor.verification_keys, descriptor.envelope.kid) do
+  # The envelope is admitted against the profile before its kid is looked up,
+  # so an out-of-profile descriptor reports the profile code even when its kid
+  # names no key.
+  defp verification_context(%__MODULE__{descriptor_number: 1} = descriptor, nil, compact, profile) do
+    with :ok <- CompactJws.admit(descriptor.envelope, profile),
+         {:ok, key} <- active_key(descriptor.verification_keys, descriptor.envelope.kid) do
       {:ok, digest(descriptor), key.public_key, key.algorithm, [compact]}
     end
   end
 
-  defp verification_context(%__MODULE__{descriptor_number: 1}, _predecessor, _compact),
+  defp verification_context(%__MODULE__{descriptor_number: 1}, _predecessor, _compact, _profile),
     do: chain_error()
 
-  defp verification_context(%__MODULE__{} = descriptor, %DescriptorFacts{} = predecessor, compact) do
+  defp verification_context(
+         %__MODULE__{} = descriptor,
+         %DescriptorFacts{} = predecessor,
+         compact,
+         profile
+       ) do
     expected_number = predecessor.descriptor_number + 1
 
     if descriptor.descriptor_number == expected_number and
          descriptor.prev_descriptor_digest == predecessor.descriptor_digest and
          descriptor.party_id == predecessor.party_id do
-      with {:ok, key} <-
+      with :ok <- CompactJws.admit(descriptor.envelope, profile),
+           {:ok, key} <-
              active_key(predecessor.descriptor.verification_keys, descriptor.envelope.kid) do
         {:ok, predecessor.party_id, key.public_key, key.algorithm,
          [compact | predecessor.lineage]}
@@ -599,7 +623,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     end
   end
 
-  defp verification_context(_descriptor, _predecessor, _compact), do: chain_error()
+  defp verification_context(_descriptor, _predecessor, _compact, _profile), do: chain_error()
 
   defp active_key(keys, kid) do
     case Enum.find(keys, &(&1.key_id == kid and &1.status == :active)) do

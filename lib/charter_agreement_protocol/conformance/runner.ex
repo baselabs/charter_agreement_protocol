@@ -118,7 +118,12 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   end
 
   defp execute(%{"surface" => "party_descriptor.verify", "input" => input}) do
-    PartyDescriptor.verify(input["compact"], nil, Limits.default())
+    input["compact"]
+    |> PartyDescriptor.verify(
+      case_predecessor(input),
+      Limits.default(),
+      case_profile(input)
+    )
     |> project_ok(fn facts ->
       %{
         "descriptor_digest" => facts.descriptor_digest,
@@ -156,7 +161,9 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     {:ok, revision} = CharterRevision.decode(input["revision_text"], Limits.default())
     {:ok, chain} = DescriptorChain.verify(input["descriptor_compacts"], Limits.default())
 
-    Acceptance.verify(input["compact"], revision, chain, Limits.default())
+    input
+    |> case_profile()
+    |> then(&Acceptance.verify(input["compact"], revision, chain, Limits.default(), &1))
     |> project_ok(fn facts ->
       %{
         "acceptance_digest" => facts.acceptance_digest,
@@ -192,7 +199,9 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     {:ok, revision} = CharterRevision.decode(input["revision_text"], Limits.default())
     {:ok, chain} = DescriptorChain.verify(input["descriptor_compacts"], Limits.default())
 
-    TerminationNotice.verify(input["compact"], revision, chain, Limits.default())
+    input
+    |> case_profile()
+    |> then(&TerminationNotice.verify(input["compact"], revision, chain, Limits.default(), &1))
     |> project_ok(fn facts ->
       %{
         "termination_digest" => facts.termination_digest,
@@ -242,9 +251,9 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   end
 
   defp execute(%{"surface" => "receipt.verify", "input" => input}) do
-    {:ok, chain} = verify_chain(input["chain"])
-
-    Receipt.verify(input["compact"], chain, Limits.default())
+    input
+    |> case_profile()
+    |> then(&Receipt.verify(input["compact"], receipt_context(input), Limits.default(), &1))
     |> project_ok(fn facts ->
       %{
         "receipt_digest" => facts.receipt_digest,
@@ -349,16 +358,46 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     }
   end
 
-  defp verify_chain_profile(input) do
+  # A receipt case names its context as either a `chain` view or the bare
+  # `revision_text` of a revision-only context.
+  defp receipt_context(%{"revision_text" => text}) do
+    {:ok, revision} = CharterRevision.decode(text, Limits.default())
+    revision
+  end
+
+  defp receipt_context(input) do
+    {:ok, chain} = verify_chain(input["chain"])
+    chain
+  end
+
+  # A descriptor case may name its predecessor history, genesis first; each
+  # entry verifies under the full profile against the one before it.
+  defp case_predecessor(%{"predecessor_compacts" => compacts}) do
+    Enum.reduce(compacts, nil, fn compact, previous ->
+      {:ok, facts} = PartyDescriptor.verify(compact, previous, Limits.default())
+      facts
+    end)
+  end
+
+  defp case_predecessor(_input), do: nil
+
+  # A certified single-artifact case carries a well-formed profile or none.
+  defp case_profile(input) do
+    {:ok, profile} = parse_profile(input)
+    profile
+  end
+
+  defp parse_profile(input) do
     spec = input["profile"] || %{}
 
     with {:ok, algorithms} <- profile_algorithms(spec["algorithms"]),
-         {:ok, revisions} <- profile_revisions(spec["revisions"]),
-         {:ok, profile} <-
-           Profile.new(
-             algorithms: algorithms,
-             revisions: revisions
-           ) do
+         {:ok, revisions} <- profile_revisions(spec["revisions"]) do
+      Profile.new(algorithms: algorithms, revisions: revisions)
+    end
+  end
+
+  defp verify_chain_profile(input) do
+    with {:ok, profile} <- parse_profile(input) do
       Chain.verify(
         input["revisions"],
         input["acceptances"],
@@ -385,12 +424,14 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   defp profile_revisions(_other), do: {:error, Error.new(:invalid_type, ["profile"])}
 
   defp verify_chain(input) do
-    Chain.verify(
-      input["revisions"],
-      input["acceptances"],
-      input["descriptors"],
-      input["terminations"],
-      Limits.default()
-    )
+    with {:ok, limits} <- limits(input) do
+      Chain.verify(
+        input["revisions"],
+        input["acceptances"],
+        input["descriptors"],
+        input["terminations"],
+        limits
+      )
+    end
   end
 end

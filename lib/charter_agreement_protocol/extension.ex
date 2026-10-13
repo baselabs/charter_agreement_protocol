@@ -4,8 +4,9 @@ defmodule CharterAgreementProtocol.Extension do
 
   Validates the one positional extension envelope against the compiled
   registry, artifact placement, lifecycle state, and digest-bound schemas.
-  Unknown optional bodies remain in the artifact and are named as quarantined;
-  no extension body enters a facts record.
+  Unknown optional bodies remain in the artifact and are named as quarantined.
+  No facts field holds an extension body, but descriptor and revision facts
+  keep the decoded artifact, and with it its bytes and retained bodies.
   """
 
   alias CharterAgreementProtocol.{Canonicalization, Digest, Error, ExtensionRegistry, Schema}

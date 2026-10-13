@@ -1,87 +1,75 @@
-# ADR: no version tokens in identifiers
+# No version tokens in identifiers
 
-Status: accepted (2026-08-24).
+Status: accepted, August 24, 2026.
 
 ## Context
 
-Charter Agreement Protocol artifacts carry `protocol_revision` as a
-digest-covered member of every artifact, and consumers declare an explicit
-revision set; compatibility is identity-exact or an error. Identifier-level
-version tokens — module names like `V2Decoder`, paths like `priv/v1/`,
-function names like `decode_v2`, test file names, config keys — would create a
-second, uncoordinated versioning axis: the classic drift surface where two
-names each claim to be current and neither is. The approved specification
-states this posture as "ABP no-token" (spec, Implementation Decisions).
+Every Charter Agreement Protocol artifact carries `protocol_revision` as a
+digest-covered member, and consumers declare an explicit set of revisions they accept.
+Compatibility is exact, or it is an error. Version tokens in identifiers (module names
+like `V2Decoder`, paths like `priv/v1/`, function names like `decode_v2`, test file
+names, config keys) would create a second versioning axis that nothing coordinates.
+That is the classic drift problem: two names each claim to be current, and neither
+is. The specification takes the same position: `spec/evolution.md` makes
+`protocol_revision` the sole version identity of the wire, with no parallel module
+families, path families or media types for new revisions.
 
-The Mix/Hex package, by contrast, must carry a semantic version — a released
-library without one cannot be depended on. Conflating "no version token in the
-protocol surface" with "no version anywhere" is the misreading this ADR closes.
+The Mix and Hex package, on the other hand, must carry a semantic version. A released
+library without one cannot be depended on. Reading "no version token in the protocol
+surface" as "no version anywhere" is the mistake this record rules out.
 
 ## Decision
 
-No version token appears in any shipped protocol identifier: module segment,
-function or macro name, atom, struct key, corpus path, config key, artifact
-separator, or `typ` value.
+No version token appears in any shipped protocol identifier: module segment, function
+or macro name, atom, struct key, corpus path, config key, artifact separator, or `typ`
+value.
 
-The Hex package's semantic version and its exact `mix.exs` package-tag source
-reference — `source_ref: "v#{@version}"` — are the sole permitted
-version-bearing durable identities. Path, source kind, and spelling are part of
-the allowlist; a version-token lookalike in any other identifier or location is
-rejected.
+The Hex package's semantic version and its exact `mix.exs` source reference for the
+package tag, `source_ref: "v#{@version}"`, are the only version-bearing durable
+identities allowed. Path, source kind and spelling are all part of the allowlist. A
+version-like token in any other identifier or location is rejected.
 
-ADR filenames are slug-only, with no numeric sequence prefixes, for the same
-reason — document sequence numbers are themselves a versioning axis.
+ADR file names are slugs with no numeric sequence prefix, for the same reason:
+document sequence numbers are a versioning axis too.
 
-## Boundary exceptions (explicitly approved 2026-09-24)
+## Boundary exceptions (added September 24, 2026)
 
-The release-manifest contract admitted two version-bearing members as
-explicitly approved compatibility headers — the sole boundary exceptions
-beyond the package semver, each with its own stated scope (owner approval
-2026-09-24, recorded with the release-identity act):
+The release-manifest contract admitted two version-bearing members as compatibility
+headers. They are the only exceptions besides the package version, and each has its
+own stated scope. Both were added with the release-identity change:
 
 1. **The manifest schema version** (`manifest_version`, an integer in
-   `priv/release-metadata.json`): the version of the manifest's own SHAPE,
-   not of any protocol identity. It bumps only when a member is removed,
-   renamed, or retyped; additive members never bump it. Consumers must
-   ignore unknown members, so the number moves rarely and always means a
-   breaking change in the machine-readable contract.
-2. **The verification-semantics identity** (`verification_semantics_version`,
-   an integer mirrored from `ReleaseIdentity.verification_semantics/0`): the
-   identity of the verdict function, defined and scoped in
-   `docs/adr/release-identity.md`. It versions VERDICT BEHAVIOR, which the
-   wire's `protocol_revision` deliberately does not (a release may hold the
-   wire grammar fixed while verdict semantics move, and vice versa); the two
-   axes are coordinated through that ADR, never conflated.
+   `priv/release-metadata.json`). It versions the manifest's own shape, not any
+   protocol identity. It changes only when a member is removed, renamed or retyped;
+   added members never change it. Consumers must ignore unknown members, so the number
+   changes rarely and always means a breaking change in the machine-readable contract.
+2. **The verification-semantics identity** (`verification_semantics_version`, an
+   integer mirrored from `ReleaseIdentity.verification_semantics/0`). It identifies the
+   verdict function, as defined in the [release identity record](release-identity.md).
+   It versions verdict behavior, which the wire's `protocol_revision` deliberately
+   does not: a release may hold the wire grammar fixed while verdicts change, and the
+   other way around. The two axes are coordinated through that record and never
+   conflated.
 
-Integer DATA VALUES in the manifest are not version-bearing identifiers —
-they are the recorded projections of data-in-code functions, and the
-release-candidate gate asserts the projection equals the function. No other
-version token is admitted anywhere in the protocol surface.
+Integer data values in the manifest are not version-bearing identifiers. They are the
+recorded output of functions defined in code, and the release check asserts that each
+recorded value equals the function's result. No other version token is admitted
+anywhere in the protocol surface.
 
 ## Enforcement
 
-Two layers, both landed:
-
-- **Landed now.** The kimosabe durable-identifier sweep
-  (`durable-identifier-check.py`) runs on the staged index and the tracked tree.
-  This repository is configured `[durable_identifiers].versioning = "allowed"`,
-  which disables only the numbered-version checks so the permitted package-tag
-  identity passes; transient `phase`/`task`/`slice`/`sprint`/`step`/`work-order`
-  tokens remain blocked regardless of that setting.
-- **Landed with the first protocol identifiers.** The `test/architecture/`
-  identifier-naming gate re-narrows the numbered-version allowance to exactly the
-  package-tag identity — failing on every conventional token form (leading
-  `v<N>`, snake-boundary `_v<N>`, CamelCase hump `V<N>`) and on path segments,
-  everywhere except the blessed `mix.exs` source reference. Its scanner covers
-  owned paths plus module, function, macro, atom, struct-key, and test identifiers.
-  A scratch mutation that planted a version-bearing module and path made the exact
-  gate fail before the live tree was accepted.
+The identifier-naming test in `test/architecture/` allows numbered versions only for
+the package tag identity. It fails on every usual token form (a leading `v<N>`, a
+snake-case `_v<N>`, a CamelCase `V<N>`) and on path segments, everywhere except the
+`mix.exs` source reference. Its scanner covers owned paths plus module, function,
+macro, atom, struct-key and test identifiers, so adding a version-bearing module or
+path makes it fail.
 
 ## Consequences
 
-Evolution happens at the revision boundary inside the artifact, where it is
-digest-covered and negotiation-gated; the code surface stays version-free and
-rename-stable. No module, function, path, config key, test, separator, `typ`,
-or internal compatibility branch may derive its name from a release, task, or
-implementation sequence. Wire revisions remain digest-covered data. The
-architecture gate makes any regression loud.
+The protocol evolves at the revision boundary inside the artifact, where the change is
+digest-covered and both parties have to accept it. The code surface stays free of
+versions and stable under renames. No module, function, path, config key, test,
+separator, `typ` or internal compatibility branch may take its name from a release,
+a task or an implementation sequence. Wire revisions stay digest-covered data. The
+architecture test makes any regression visible at once.

@@ -1,126 +1,171 @@
 # Security model
 
-The security model is one sentence with a large mechanical surface behind it:
-**CAP verifies signed, byte-exact evidence and never authorizes anything.**
-This page is the precise boundary — what every verification proves, what it
-structurally cannot prove, and the gates that keep that boundary closed.
+CAP verifies signed, byte-exact evidence and never authorizes anything. A successful
+verification tells you what the artifacts prove. Whether that is enough to act on is
+up to your application, and this page sets out where that line falls.
 
-## The non-authorizing floor
+For the normative threat model, see the specification's
+[security considerations](../../spec/security-considerations.md) and
+[privacy considerations](../../spec/privacy-considerations.md).
 
-Every facts record — descriptor, acceptance, termination, revision, chain, and
-receipt facts — is constructed through a single shared constructor that forces
-this closed twelve-item `not_verified` floor:
+## What CAP trusts
 
-- tenancy
-- live policy
-- authority
-- effect ownership
-- execution
-- billing
-- evaluation truth
-- legal validity
-- term satisfaction
-- view completeness
-- counterparty view
-- wall clock
+CAP trusts three things:
 
-Additional omissions union on top (the revision-only receipt form adds
-`:signature`, for example); nothing can remove or shrink the floor. When you
-read a CAP facts record, the `not_verified` list is part of the answer, not a
-caveat attached to it.
+- the OTP runtime's `:crypto` module, and the OpenSSL it links, to compute SHA-256 and
+  verify Ed25519 and ML-DSA signatures correctly;
+- the bytes, limits and instant you pass to each call, as the whole input for that
+  call;
+- its own compiled tables: the signature algorithm registry, the extension registry
+  and the schemas.
 
-## What each verification proves — and never proves
+Nothing inside an artifact is trusted until CAP has verified it. A `kid`, a digest, a
+role or a URI only tells CAP where to look. CAP has no runtime dependencies besides
+OTP, reads no files, clock, network or environment while verifying, and keeps no state
+between calls.
 
-| Verification | Proves | Never proves |
+CAP does not trust any party, and it cannot tell you who a party is. A descriptor
+history starts from a genesis key. Which real counterparty that key belongs to is
+something you establish outside CAP.
+
+## The `not_verified` list
+
+Every facts record (descriptor, acceptance, termination, revision, chain, receipt and
+fork evidence) is built by one shared constructor that always adds these twelve
+entries to `not_verified`:
+
+| Entry | What stays with your application |
+|---|---|
+| `tenancy` | which account or tenant the evidence belongs to |
+| `live_policy` | whether your current policy allows what you are about to do |
+| `authority` | whether anyone was permitted to act |
+| `effect_ownership` | who owns an effect |
+| `execution` | whether an action ran |
+| `billing` | charges and payment |
+| `evaluation_truth` | whether a computation or evaluation is correct |
+| `legal_validity` | whether the agreement is legally valid |
+| `term_satisfaction` | whether the terms were met |
+| `view_completeness` | whether you hold every artifact that exists |
+| `counterparty_view` | what the other party holds |
+| `wall_clock` | what time it really is |
+
+Some results add entries. A receipt verified with only a revision for context adds
+`signature`, for example. Nothing removes one. Read `not_verified` as part of the
+answer.
+
+## What each verification proves
+
+| Verification | Proves | Does not prove |
 |---|---|---|
-| Descriptor / descriptor chain | Signed key continuity, predecessor-bound transitions, signed fork evidence | Organizational identity, legal validity, authorization, current revocation status, attestation-target ownership |
-| Acceptance | Exact signed assent claims over one revision, signer key active in the pinned descriptor | Legal validity, view completeness, current key revocation, authorization, term satisfaction |
-| Termination notice | A pinned party signed a listed reason and pure effective-time coordinate | Delivery, receipt, legal effect, current revocation, that the effective time has arrived |
-| Chain / governing revision | Structural view-relative facts; the unique governing digest at one caller-supplied instant, or `:contested`/`:none` | Global completeness, counterparty's view, any policy verdict |
-| Receipt | Signed issuing-party evidence bound to exact revision coordinates, deployment digest, grant digest, decision/outcome, recomputed governance | Live grant state, authorization, execution, effect truth, legal validity, term satisfaction, wall-clock truth |
+| Descriptor history | signed key continuity, each step bound to its predecessor, forks as signed evidence | who the party is, legal validity, permission to act, current revocation status, ownership of an attestation target |
+| Acceptance | one party's signed assent to one exact revision, with a key active in the descriptor it names | legal validity, that you hold every artifact, current revocation status, permission to act, that terms were met |
+| Termination notice | a listed party signed a listed reason and an effective instant | delivery, legal effect, current revocation status, that the instant has arrived |
+| Chain and governing revision | facts about the view you supplied; the one governing digest at an instant you choose, or `:contested`, or `:none` | that the view is complete, what the counterparty holds, any policy outcome |
+| Receipt | the issuing party's signed record, bound to exact revision coordinates, a deployment digest, a `grant` reference, a `decision` and an `outcome`, with governance computed at `occurred_at` | that the `grant` reference was live, permission to act, that the action ran, that its effect happened, legal validity, that terms were met, the real time |
 
-CAP reads no clock anywhere. "Now" is always a caller-supplied UTC instant.
+## Host checklist
+
+These are the parts of security that CAP leaves to your application. The
+[integration guide](integration.md) shows how to do each one.
+
+- **Check the runtime at boot.** Call `CharterAgreementProtocol.capabilities/0` once at
+  startup. If a row you rely on reports `verifiable: false` (ML-DSA needs OTP linked
+  against OpenSSL 3.5 or later), refuse to start, or narrow what you accept with a
+  `Capability.Profile`. On such a runtime, an ML-DSA artifact fails with
+  `:algorithm_unsupported_on_substrate` when its signature is reached. That is
+  neither `:signature_invalid` nor a pass: the checks before the signature passed,
+  but whether the signature is valid is unknown.
+- **Verify after you produce.** After `assemble_compact/2`, verify the compact through
+  CAP before you store or send it. For a receipt, use full chain context, because the
+  revision-only form does not check the signature. `charter_agreement_signer`
+  verifies each artifact it signs before returning it, and checks the signature
+  against the public key of the key it used.
+- **Pin your trust anchors.** Decide outside CAP which genesis descriptor (its
+  `party_id`) belongs to each counterparty, store it, and check that the facts you get
+  name that `party_id`. The shipped corpus and demo keys are test data. Never treat
+  them as trust anchors.
+- **Own the time source.** CAP reads no clock. Pass an instant from a clock you trust,
+  and store the instant you asked about next to the answer.
+- **Handle revocation yourself.** CAP has no revocation service. An acceptance
+  verifies against the descriptor it names, so it still verifies after the party
+  retires that key in a later descriptor. Acceptance facts carry `descriptor_position`
+  (`:head`, `:superseded` or `:contested`) so you can see where the named descriptor
+  sits in the history you hold. If freshness matters, get the counterparty's latest
+  descriptor history and apply your own policy.
+- **Set limits for your traffic.** Start from `Limits.default/0` and narrow it to the
+  sizes you expect. CAP bounds work on binaries you have already read; bounding the
+  read itself (request size, stream length) is your side.
+- **Keep every artifact you receive.** CAP sees only the view you pass in. Store
+  conflicting artifacts too: they are the evidence. Treat `:contested` as a stop, not
+  a choice to make.
+- **Log codes, not artifacts.** CAP errors are safe to log as they are. Facts print as
+  `#...<redacted>`, so log the fields you need on purpose, and keep raw artifacts out
+  of general logs.
 
 ## Key custody
 
-The production package has no signing call, private-key parameter, signer
-callback, signer module, or custody handle. The seam is:
+CAP never holds a private key. The production package has no signing call, no
+private-key parameter, no signer callback and no custody handle. The flow is:
 
-1. CAP builds a signing input — the exact RFC 7515 message bytes plus the
-   closed protected header.
-2. **You** sign those bytes with your key (`Ed25519`, or `ML-DSA-65` when
-   minting at `protocol_revision` 3), outside CAP.
-3. `assemble_compact/2` revalidates the kind/header/payload/message
-   relationship, accepts exactly one raw external signature at the registry
-   row's exact length (64 bytes for `Ed25519`; 2420/3309/4627 for the
-   ML-DSA parameterizations), and returns the compact.
-4. Hosts must post-verify the assembled compact through CAP before returning
-   it to service.
+1. CAP builds a signing input: the exact RFC 7515 message bytes and the closed
+   protected header.
+2. You sign those bytes with your key, outside CAP: `Ed25519`, or `ML-DSA-65` when
+   minting at `protocol_revision` 3.
+3. `assemble_compact/2` checks the signing input again, accepts one raw signature of
+   the exact length for its algorithm (64 bytes for `Ed25519`, 3,309 bytes for
+   `ML-DSA-65`), and returns the compact.
+4. You verify the compact through CAP before you use it.
 
-The set-aware producers additionally cold-verify your artifact set and refuse
-coordinates that would manufacture equivocation or stale ancestry. These
-guards constrain honest use relative to the supplied set — they cannot
-constrain a dishonest signer or prove any view complete. See
-[Verification semantics](verification.md).
+The acceptance and termination producers also verify the artifact set you give them
+and refuse to build a signing input that would create equivocation or stale evidence.
+They protect you from mistakes with the artifacts you hold. They cannot constrain a
+counterparty, and they cannot prove your view is complete. See
+[verification semantics](verification.md).
 
-## Cryptographic primitives and hardening
+## Cryptography
 
-- **Ed25519** (`EdDSA`/`Ed25519` rows). Before the runtime primitive is
-  invoked, CAP rejects noncanonical point encodings and all eight low-order
-  torsion encodings for both public keys and signature `R`, and rejects
-  signature scalars outside the canonical subgroup-order range — so the
-  runtime never sees degenerate inputs.
-- **Pure ML-DSA** (`ML-DSA-44/65/87` rows, from `protocol_revision` 3;
-  FIPS 204, context the empty string per RFC 9964). Lattice signatures
-  carry no torsion or point-encoding surface; the strictness rule is the
-  registry row's exact public-key and signature byte lengths, enforced
-  before cryptographic work. Verification needs an OTP runtime linked
-  against OpenSSL ≥ 3.5.
-- **Domain-separated SHA-256** (`SHA-256(domain || 0x00 || content)` over a
-  closed domain set). The same bytes hash differently per artifact surface, so
-  cross-surface digest substitution fails.
-- **Constant-time digest comparison** — equal algorithm and width, every byte
-  pair consumed through one XOR/OR accumulator, tested only after the full
-  input. No early-exit shape.
-- **SHA-256 known-answer tests** against the current NIST CAVP
-  byte-oriented vectors (empty input, `d3`, `b4190e`) under FIPS 180-4. These
-  verify the runtime primitive against published answers; they do not claim
-  CAP itself has undergone CAVP validation.
-- **Source censuses** pin CAP's domain separators and protected `typ` values
-  and prove they remain disjoint from the consumed ABP and BAP package
-  identities.
+- **Ed25519** (`EdDSA` and `Ed25519` rows). Before the runtime primitive is invoked,
+  CAP requires the exact key and signature lengths and applies the strict encoding
+  checks that core specification section 4.2 sets for public keys and signatures.
+- **Pure ML-DSA** (`ML-DSA-44`, `ML-DSA-65` and `ML-DSA-87` rows, from
+  `protocol_revision` 3; FIPS 204, with the context set to the empty string per
+  RFC 9964). The strictness rule is the registry row's exact public-key and signature
+  byte lengths, checked before any cryptographic work. Verification needs OTP linked
+  against OpenSSL 3.5 or later.
+- **Domain-separated SHA-256.** Every artifact and content digest CAP computes is
+  `SHA-256(domain || 0x00 || content)` over a closed set of domains. The same bytes
+  form a different hash input for each artifact type, so, given SHA-256's collision
+  resistance, a digest from one place cannot stand in for another. Two values are
+  plain SHA-256 by design: the corpus index SHA-256, and a receipt's BAP
+  `grant_digest`, which is BAP's `ath` in tagged form.
+- **Constant-time digest comparison.** Both digests must have the same algorithm and
+  width, and every byte pair goes through one XOR/OR accumulator that is tested only
+  after the whole input. There is no early exit.
+- **Checked against published vectors.** The test suite checks the runtime's SHA-256
+  against the NIST CAVP byte-oriented vectors. That checks the primitive. It does not
+  mean CAP has been through CAVP validation. The suite also checks that CAP's digest
+  domains and protected `typ` values do not collide with those of the published ABP
+  and BAP packages.
 
-## Value-free errors and redacted inspection
+## Errors and logs
 
-Failures return `%CharterAgreementProtocol.Error{code, subject, detail}` with
-a closed code vocabulary. Subjects contain protocol-owned names and
-non-negative indexes — **never rejected values** — and details are absent or
-protocol-owned. Verification failures are safe to log by construction.
-Facts records implement redacted inspection so logs never expose retained
-signed artifacts.
+A failure is `%CharterAgreementProtocol.Error{code, subject, detail}`. The codes are a
+closed set. A subject holds only protocol-owned names and non-negative indexes, never
+a value from the rejected input, and a detail is absent or protocol-owned. You can log
+a verification failure as it is. See [handle errors](error-codes.md) for every code.
+
+Facts records and artifact sets implement redacted inspection, so printing one shows
+`#CharterAgreementProtocol.ChainFacts<redacted>` instead of the signed artifacts it
+holds.
 
 ## Resource bounds
 
-Untrusted input is bounded before parsing: caller-supplied decode ceilings
-(bytes, depth, members, items, string sizes, artifact-set size — see
-[Getting started](getting-started.md) for defaults and greatest selectable
-values; the exact bound is accepted and bound-plus-one fails closed with
-`:limit_exceeded`). The conformance CLI additionally caps itself at 64 files
-and 32 MiB per corpus directory.
+CAP checks input bytes and artifact-set sizes before it parses anything, and nesting
+depth, member and item counts and string sizes while it parses. You choose the ceilings (bytes,
+nesting depth, members, items, string sizes, artifact-set items and bytes) within
+compiled maximums. A value exactly at a ceiling is accepted, and one above fails with
+`:limit_exceeded`. [Limits and profiles](limits-and-profiles.md) lists every default
+and maximum.
 
-## Architecture enforcement
-
-The boundary is not prose — it is gates that run in CI:
-
-- the production-runtime battery rejects filesystem, calendar, wall-clock,
-  shell/OS-escape, and dynamic-dispatch calls;
-- source gates reject authorization-decision and term-evaluation vocabulary
-  and require every explicit module to state its non-authorizing boundary;
-- every public function, macro, and delegate requires a specification;
-- every facts struct is constructed through the single omission-floor
-  constructor;
-- all Mix dependencies must be development/test-only and `runtime: false` —
-  production is OTP `:crypto` alone.
-
-See [Conformance](conformance.md) for the full gate battery and
-[Protocol foundation](../protocol.md) for the normative statements.
+The conformance CLI, the one part of the package that reads files, also caps itself
+at 64 files and 32 MiB per corpus directory.

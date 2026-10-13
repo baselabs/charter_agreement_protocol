@@ -1,148 +1,107 @@
-# Conformance
+# The conformance corpus
 
-How CAP proves — to two independent implementations, under deliberate defects,
-and against the exact bytes that would be published — that the protocol you
-read about is the protocol you run.
+The conformance corpus is a fixed set of test cases. Each case gives exact input bytes
+and the exact result CAP returns for them: the full output for a valid case, the error
+code for an invalid one. Two implementations that agree on every case agree on those
+inputs. The corpus is finite, so passing it does not prove an implementation meets
+every requirement in the [specification](../../spec/core.md); a conforming
+implementation must meet both.
 
-## The certified corpus
+The corpus ships in the Hex package at `priv/conformance`, so you can run it against
+the copy you installed. To run it or to build a second implementation against it, see
+[Implement CAP in another language](implementing.md).
 
-The shipped corpus (`priv/conformance`, included in the package archive)
-contains 100 certified cases across 14 case files, covering every compiled
-applicability surface: foundational codecs (base64url, JSON, canonicalization,
-digests), schema validation, party descriptors, descriptor chains, charter
-revisions, acceptances and equivocation, terminations, chain verification,
-governing revision, and receipts — including fork, quarantine, and profile
-cases. Completion is by obligation, not count: every required applicability
-cell has executed cases, every not-applicable cell carries a non-empty reason,
-and counts must equal observations.
+## Identities
 
-The corpus is self-digesting. Loading (`Conformance.Corpus.load/1`, pure — a
-complete `map of relative path to bytes`, no file I/O) requires canonical index
-and case bytes, a recomputed domain-separated corpus digest, exact
-declared/observed file-set equality with per-file SHA-256 hashes, exact counts,
-globally unique case IDs, and **projected outputs for valid cases** — a
-verdict-only green is refused, so a runner that says "valid" without producing
-the exact expected fact document cannot pass.
-
-## The certified identities
-
-The release-candidate ADR separates these jobs:
-
-- `corpus_digest` — the domain-separated digest *inside* the canonical corpus
-  index. Proves the index is self-consistent.
-- `index_sha256_base64url` — the raw SHA-256 of the exact canonical index
-  bytes. Pinned by the Elixir CLI, the independent TypeScript verifier, and
-  the packaged release metadata. Proves the candidate **is the reviewed
-  corpus**, not merely a newly self-consistent one.
-
-For the current candidate:
+These values identify the corpus and the specification this release ships. This table
+is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:bp_w7EUDVgwU5hNWLwUrIVeWKSas3xbaLLcN6Sn6Ev8` |
-| Index SHA-256 (base64url) | `f--8DXp39J4wJkrpkD8ZTQpHkMlduX43Xvnz0HeObeA` |
-| Compiled registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:v8L9hn9mPSIrC770EDcQwGN04wRvon1wztOVRFcNesk` |
-| Certified cases | 104 |
+| Corpus digest | `sha-256:ivfIdXDtMDpq5ElpaVgRr8gqRVXsmMMr2oeXyuH4bw4` |
+| Index SHA-256 (base64url) | `n2Se2on9kG3cdeFMiy9OW9lKalvM_02Fmdw-XbYe-A4` |
+| Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
+| Specification digest | `sha-256:04s7VyVgNPgsSaMBWhf0Stq15WOhqAqT-uHlueeu7Bw` |
+| Cases | 163, in 15 case files |
+
+What each one tells you:
+
+- **Corpus digest.** A domain-separated digest computed over the index itself, with
+  its own `corpus_digest` member left out. It binds the index bytes, including the
+  file hashes and counts the index lists. It does not check them: the loader
+  separately checks that each case file matches its listed hash and that the counts
+  add up. Anyone can build a new index and compute its digest, so this value alone
+  does not identify the released corpus.
+- **Index SHA-256.** The plain SHA-256 of the exact `index.json` bytes. This is the
+  value that identifies the released corpus. The Elixir CLI refuses any corpus whose
+  index has a different SHA-256, and so does the TypeScript verifier.
+- **Extension registry digest.** The digest of the extension registry compiled into
+  the package. The index carries it, and the loader refuses an index whose value
+  differs from the compiled registry.
+- **Specification digest.** A digest over every file under `spec/`: path, byte length
+  and SHA-256 of each. It ties a release to the exact specification text it ships.
+  The corpus does not carry it; the release metadata does.
+
+`priv/release-metadata.json` records all four, together with the default and maximum
+[limits](limits-and-profiles.md), the signature algorithm registry, and the
+verification semantics version. [Upgrade and persist verification
+identity](upgrading-verification-identity.md) explains how to store these values
+next to a verdict.
+
+## What the corpus covers
+
+Every case names a surface (the operation it runs) and a class (the kind of
+behavior it exercises). The surfaces:
+
+| Surface | What it runs |
+|---|---|
+| `base64url.decode` | The unpadded base64url decoder |
+| `json.decode` | The bounded JSON decoder and its tagged values |
+| `canonicalization.encode` | Canonical JSON encoding and the canonical-bytes check |
+| `digest.hash` | Domain-separated SHA-256 digests and digest comparison |
+| `schema.validate` | Closed schema validation, stage by stage |
+| `party_descriptor.verify` | One party descriptor |
+| `descriptor_chain.verify` | A descriptor history, including forks and superseded descriptors |
+| `charter_revision.decode` | One charter revision |
+| `acceptance.verify` | One acceptance against its revision and descriptor history |
+| `acceptance.equivocation` | Two acceptances by one signer over different revisions at one number |
+| `termination.verify` | One termination notice |
+| `chain.verify` | A whole artifact set: acceptance pairing, forks, supersession, size bounds |
+| `chain.verify_profile` | A whole artifact set under a capability profile |
+| `governing_revision` | The governing revision at given instants, including closure by termination |
+| `receipt.verify` | One receipt against a verified chain or a bare revision |
+
+The classes run from `valid` and the size bounds (`exact_bound`, `maximum_plus_one`)
+through each kind of malformed input to the set-level outcomes: `chain_fork`,
+`equivocation`, `supersession`, `terminated` and others. The index records, for every
+surface and class, either how many cases exercise that pair or why the pair does not
+apply. The package compiles its own list of the pairs that each surface must cover,
+and a corpus missing any of them does not load.
+
+Signed cases include Ed25519 and ML-DSA signatures. Several receipt and profile cases
+carry fixed vectors from the [sibling protocol](receipts.md) packages, and the
+repository's tests check CAP's digests for those vectors against the published
+packages.
 
 ## The requirements matrix
 
-Every public requirement carries a stable `CAP-<SURFACE>-<kebab-tag>`
-identifier (see the [errata policy](../errata.md)) and compiled evidence
-routing in `CharterAgreementProtocol.RequirementMap`: corpus cells,
-architecture gates, and — for the closed mutation battery — named red-capable
-source mutations. `spec/requirements.md` is generated from that map
-(`mix run scripts/render_requirements.exs`). `mix conformance.verify` rejects
-a stale render and enforces bidirectional coverage: every requirement carries
-evidence, and every corpus cell and named mutation is bound to at least one
-requirement. The generated matrix carries the exact live counts; the closed
-mutation battery is bound one-to-one to the requirements that name it.
+Each requirement in the specification carries a stable identifier of the form
+`CAP-<SURFACE>-<tag>`, for example `CAP-CHAIN-contested-refusal`. The [requirements
+matrix](../../spec/requirements.md) lists, for each identifier, the corpus cells,
+tests and named source mutations that check it. The matrix is generated from
+`CharterAgreementProtocol.RequirementMap`, and the corpus check fails if the matrix is
+stale, if a requirement has no evidence, or if a corpus cell or mutation is bound to
+no requirement.
 
-## The CLI
+## Changes to the corpus
 
-```console
-$ charter_agreement_protocol --corpus DIRECTORY
-```
+A change to any case changes the index bytes, so it changes the index SHA-256 and the
+corpus digest, and a new release records the new values here. A correction that
+changes a verdict under an already published protocol revision follows the [errata
+policy](../errata.md).
 
-Exit `0` — every certified case recomputed and agreed; the canonical JSON
-report on stdout carries per-case actual and expected documents, agreement
-counts, and all three report identities. Exit `1` — load or verification
-failure. The fourth certified identity — the specification digest — is
-pinned in the release metadata and enforced by the release-candidate gate.
-Exit `2` — usage. The CLI is the sole filesystem adapter (≤ 64 files,
-≤ 32 MiB) and refuses any corpus whose raw index identity is not the certified
-pin — including a freshly regenerated, internally consistent one.
+## Contributing
 
-## The gate battery
-
-`mix quality` runs everything below plus audits, formatting, warnings-as-errors
-compile, strict credo, the full test suite with its coverage threshold,
-dialyzer, and docs:
-
-- `mix conformance.verify` — runs the certified corpus and **regenerates the
-  core cases in a scratch directory**, requiring byte identity with the
-  certified corpus. A closed set of supplemental cross-package and profile
-  cases (frozen at their owning boundaries — the exact ABP 0.1.1 deployment
-  and BAP 0.1.2 grant vectors) stays frozen and required. The same gate
-  proves the requirements matrix is fresh and bidirectionally covering, and
-  enforces the wire grammar schemas.
-
-## Wire grammar schemas
-
-`spec/schemas/` is the single normative machine grammar for every externally
-consumed wire format: the five artifact claim sets, the extension envelope,
-the compact-JWS protected header, the tagged-digest and timestamp grammar,
-and the corpus index and canonical report documents. Every schema is JSON
-Schema 2020-12 restricted to the closed 16-keyword subset validated by the
-pinned `AgentBlueprintProtocol.Schema` — no other dialect file exists and no
-new dependency is introduced. Character-set shape, byte-exact bounds,
-cross-field rules, and conditional member presence stay codec-enforced and
-normative in the spec text; the schema layer expresses member closure,
-types, enumerations, ranges, and cardinalities (see the schema README).
-
-The gate proves both directions: every valid corpus artifact (claim sets,
-protected headers, revision texts, the shipped index, and the live canonical
-report) validates against its schema, and each shipped constraint carries a
-constructed single-defect negative observed to fail. Two completeness floors
-keep the set honest against drift — each artifact schema must declare
-exactly the member and required sets of the codec definition it serves, and
-every properties-bearing schema object must be closed. The extended
-`conformance.verify` completes in ~1.7s against a 3s budget.
-- `mix conformance.mutations` — creates isolated scratch copies and proves all
-  **25 named source defects go red**: JCS number defeat, padding acceptance,
-  separator collapse, unknown-member acceptance, chain signature skip, digest
-  equality skip, Ed25519 defeat, typ confusion, reason-code uncheck, precedence
-  collapse, facts-union suppression, fork-topology suppression, contested
-  tie-resolution, equivocation guard removal, receipt conflict silencing, and
-  more — with `corpus-expectation-flip` running last. Each run first proves
-  the unmodified baseline green.
-- `mix verifier.agreement` — the builtins-only Node ≥ 24.8 TypeScript
-  verifier independently recomputes every certified case (including Ed25519
-  and ML-DSA evidence, forks, supersession, governing views, receipt fact
-  JSON) and must produce
-  reports **byte-identical** to the Elixir runner over both the repository
-  corpus and the corpus unpacked from the Hex archive. Directional seeded
-  reds (verdict inversion, report-format drift, certified-index drift) prove
-  the comparison can fail.
-- `mix release.candidate` — verifies canonical release metadata, all three
-  certified identity pins inside the CLI and the TypeScript verifier core,
-  development/test-only dependency direction, regular-file package inputs,
-  **two independently built byte-identical archives**, exact unpacked
-  archive membership, and the repository's release pin equal to the
-  archive's content identity (the platform-independent SHA-256 over the
-  unpacked sorted path+bytes).
-
-## Cryptographic known answers
-
-The SHA-256 gate uses current NIST CAVP byte-oriented vectors (empty input,
-`d3`, `b4190e`) under FIPS 180-4. These verify the runtime primitive against
-published answers; they do not claim CAP has undergone CAVP validation.
-
-## Changing the corpus deliberately
-
-`scripts/record_conformance_index.exs` is the full-corpus index recorder after
-a deliberate case change. Any corpus, registry, report, or package-boundary
-change invalidates the recorded identities and requires re-running
-conformance, all named mutations, verifier agreement, package verification,
-review, and hosted CI. Verdict-changing corrections to a published protocol
-follow the [errata policy](../errata.md).
+Contributors who change the corpus, the registry or the specification also re-record
+these identities and rerun the full set of repository checks. The steps and the
+commands are in [CONTRIBUTING](../../CONTRIBUTING.md).

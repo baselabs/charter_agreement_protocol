@@ -2,11 +2,16 @@ defmodule CharterAgreementProtocol.Acceptance do
   @moduledoc """
   CAP never authorizes.
 
-  Closed Acceptance codec, countersignature verifier, and equivocation predicate.
+  Decode and verify Acceptances, and detect equivocation. An Acceptance is
+  one party's signed assent to one revision.
 
   Verification proves one party signed exact revision coordinates with a key
-  active in the pinned Party Descriptor. Descriptor freshness and legal effect
-  remain host policy; the view-relative descriptor position is retained.
+  active in the Party Descriptor the claims name. Whether a superseded
+  descriptor may still sign, and any legal effect, are your policy; the
+  descriptor's position is kept in the facts.
+
+  Most callers use `CharterAgreementProtocol.verify_acceptance/4` or
+  `CharterAgreementProtocol.verify_chain/5`, which delegate here.
   """
 
   alias CharterAgreementProtocol.{
@@ -105,7 +110,7 @@ defmodule CharterAgreementProtocol.Acceptance do
                 )
               ])
 
-  @doc "Verify one attached countersignature against exact caller-supplied artifacts."
+  @doc "Verify one Acceptance. See `CharterAgreementProtocol.verify_acceptance/4`."
   @spec verify(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t()) ::
           {:ok, AcceptanceFacts.t()} | {:error, Error.t()}
   @spec verify(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t(), Profile.t()) ::
@@ -189,7 +194,14 @@ defmodule CharterAgreementProtocol.Acceptance do
 
   def decode_for_signing(_compact, _limits), do: invalid_type()
 
-  @doc "Return self-contained same-signer equivocation evidence, never a winner."
+  @doc """
+  Return equivocation evidence for two Acceptances by the same signer.
+
+  The two `CharterAgreementProtocol.AcceptanceFacts` must share charter id,
+  revision number, descriptor digest and role, and accept different
+  revisions. Returns `{:ok, %CharterAgreementProtocol.AcceptanceEquivocation{}}`
+  with `winner: nil`, or `:acceptance_equivocation_invalid` otherwise.
+  """
   @spec equivocation(term(), term()) ::
           {:ok, AcceptanceEquivocation.t()} | {:error, Error.t()}
   def equivocation(%AcceptanceFacts{} = left, %AcceptanceFacts{} = right) do
@@ -218,11 +230,12 @@ defmodule CharterAgreementProtocol.Acceptance do
     do: :acceptance_content |> Digest.hash(bytes) |> Digest.to_tagged()
 
   defp do_verify(compact, supplied_revision, supplied_chain, limits, profile) do
-    with {:ok, revision} <- reverify_revision(supplied_revision, limits),
-         {:ok, chain} <- reverify_chain(supplied_chain, limits),
+    with {:ok, revision} <- reverify_revision(supplied_revision, limits, profile),
+         {:ok, chain} <- reverify_chain(supplied_chain, limits, profile),
          {:ok, acceptance} <- decode(compact, limits),
          :ok <- claims_match(acceptance, revision),
          {:ok, descriptor} <- pinned_descriptor(acceptance, revision, chain),
+         :ok <- CompactJws.admit(acceptance.envelope, profile),
          {:ok, key} <- active_key(descriptor, acceptance.envelope.kid),
          :ok <-
            CompactJws.verify_signature(
@@ -243,6 +256,7 @@ defmodule CharterAgreementProtocol.Acceptance do
     with {:ok, acceptance} <- decode(compact, limits),
          :ok <- claims_match(acceptance, revision),
          {:ok, descriptor} <- pinned_descriptor(acceptance, revision, chain),
+         :ok <- CompactJws.admit(acceptance.envelope, profile),
          {:ok, key} <- active_key(descriptor, acceptance.envelope.kid),
          :ok <-
            CompactJws.verify_signature(
@@ -315,13 +329,17 @@ defmodule CharterAgreementProtocol.Acceptance do
   defp coordinate_shape(number, previous) when number > 1 and is_binary(previous), do: :ok
   defp coordinate_shape(_number, _previous), do: acceptance_error()
 
-  defp reverify_revision(%CharterRevision{canonical_bytes: bytes}, limits),
-    do: CharterRevision.decode(bytes, limits)
+  defp reverify_revision(%CharterRevision{canonical_bytes: bytes}, limits, profile) do
+    with {:ok, revision} <- CharterRevision.decode(bytes, limits),
+         :ok <- CharterRevision.admit(revision, profile) do
+      {:ok, revision}
+    end
+  end
 
-  defp reverify_chain(%DescriptorChain{descriptors: descriptors}, limits) do
+  defp reverify_chain(%DescriptorChain{descriptors: descriptors}, limits, profile) do
     with {:ok, compacts} <- retained_compacts(descriptors),
          true <- compacts != [] do
-      DescriptorChain.verify(Enum.uniq(compacts), limits)
+      DescriptorChain.verify(Enum.uniq(compacts), limits, profile)
     else
       _failure -> chain_error()
     end

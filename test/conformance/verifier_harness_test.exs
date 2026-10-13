@@ -1,6 +1,31 @@
 defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
   use ExUnit.Case, async: true
 
+  Code.require_file("../../scripts/verifier_source.exs", __DIR__)
+
+  alias CharterAgreementProtocol.VerifierSource
+
+  # These tests run the pinned TypeScript verifier source. Build it from the
+  # local cache when it is missing or from an earlier pin, and fetch only when
+  # the cache does not hold the pinned commit.
+  setup_all do
+    try do
+      VerifierSource.current!()
+    rescue
+      RuntimeError ->
+        try do
+          VerifierSource.run(["--cached"])
+        rescue
+          RuntimeError -> VerifierSource.run([])
+        end
+    end
+
+    :ok
+  end
+
+  # The pinned TypeScript verifier source (scripts/verifier_source.exs).
+  defp verifier(file), do: Path.join(VerifierSource.path(), file)
+
   test "the Node harness independently accepts shipped bytes and rejects index corruption" do
     {version, 0} = System.cmd("node", ["--version"])
 
@@ -9,7 +34,7 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
 
     assert major >= 24
 
-    assert {output, 0} = System.cmd("node", ["verifier/check-corpus.mjs", "priv/conformance"])
+    assert {output, 0} = System.cmd("node", [verifier("check-corpus.mjs"), "priv/conformance"])
     assert String.starts_with?(output, "sha-256:")
 
     temporary = Path.join(System.tmp_dir!(), "cap-corpus-#{System.unique_integer([:positive])}")
@@ -29,22 +54,23 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
     )
 
     assert {_output, exit_status} =
-             System.cmd("node", ["verifier/check-corpus.mjs", temporary], stderr_to_stdout: true)
+             System.cmd("node", [verifier("check-corpus.mjs"), temporary], stderr_to_stdout: true)
 
     assert exit_status != 0
   end
 
   test "the harness has no third-party imports and the npm manifest stays repo-side" do
-    source = File.read!("verifier/check-corpus.mjs")
+    source = File.read!(verifier("check-corpus.mjs"))
 
     assert Regex.scan(~r/from "([^"]+)"/, source)
            |> Enum.all?(fn [_, import] -> String.starts_with?(import, "node:") end)
 
-    # The npm package manifest exists in-tree (Phase A of the npm deployment,
-    # graduated to its own repository on first publication). It must never
-    # ship inside the Hex package.
-    assert File.exists?("verifier/package.json")
-    assert "verifier" not in Mix.Project.config()[:package][:files]
+    # The npm package lives in its own repository; only its pin ships in the
+    # Hex package, never its source.
+    assert File.exists?(verifier("package.json"))
+    files = Mix.Project.config()[:package][:files]
+    assert "priv/verifier-source.json" in files
+    refute Enum.any?(files, &String.starts_with?(&1, "_build"))
   end
 
   test "the Node verifiers reject a non-regular certified path before reading it" do
@@ -82,8 +108,8 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
 
     try do
       for arguments <- [
-            ["verifier/cli.ts", "--corpus", temporary],
-            ["verifier/check-corpus.mjs", temporary]
+            [verifier("cli.ts"), "--corpus", temporary],
+            [verifier("check-corpus.mjs"), temporary]
           ] do
         task =
           Task.async(fn ->
