@@ -151,11 +151,22 @@ defmodule CharterAgreementProtocol.Signature do
     y_squared = field(y * y)
     numerator = field(y_squared - 1)
     denominator = field(@ed25519_d * y_squared + 1)
-    square = field(numerator * power(denominator, @ed25519_field_prime - 2))
-    root = power(square, div(@ed25519_field_prime + 3, 8))
-    root = if field(root * root) == square, do: root, else: field(root * @ed25519_sqrt_minus_one)
+    # RFC 8032 section 5.1.3 combines inversion and square root in one exponentiation.
+    cubed = field(denominator * denominator * denominator)
+    seventh = field(cubed * cubed * denominator)
 
-    if denominator != 0 and field(root * root) == square and not (root == 0 and sign == 1) do
+    root =
+      field(
+        numerator * cubed * power(field(numerator * seventh), div(@ed25519_field_prime - 5, 8))
+      )
+
+    root =
+      if field(denominator * root * root) == numerator,
+        do: root,
+        else: field(root * @ed25519_sqrt_minus_one)
+
+    if denominator != 0 and field(denominator * root * root) == numerator and
+         not (root == 0 and sign == 1) do
       x = if rem(root, 2) == sign, do: root, else: field(-root)
       {x8, y8, z8} = {x, y, 1} |> double_point() |> double_point() |> double_point()
       not (x8 == 0 and field(y8 - z8) == 0)
@@ -179,13 +190,8 @@ defmodule CharterAgreementProtocol.Signature do
 
   defp field(value), do: Integer.mod(value, @ed25519_field_prime)
 
-  defp power(base, exponent), do: power(base, exponent, 1)
-  defp power(_base, 0, result), do: result
-
-  defp power(base, exponent, result) do
-    next = if rem(exponent, 2) == 1, do: field(result * base), else: result
-    power(field(base * base), div(exponent, 2), next)
-  end
+  defp power(base, exponent),
+    do: :crypto.mod_pow(base, exponent, @ed25519_field_prime) |> :binary.decode_unsigned()
 
   defp invalid, do: {:error, Error.new(:signature_invalid, ["compact_jws", "signature"])}
 

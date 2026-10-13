@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.Ed25519AdmissionTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   use ExUnitProperties
 
   alias CharterAgreementProtocol, as: CAP
@@ -102,6 +102,19 @@ defmodule CharterAgreementProtocol.Ed25519AdmissionTest do
     check all(public <- binary(length: 32), max_runs: 400) do
       assert Signature.valid_key?(public, "Ed25519") == reference_admits?(public)
     end
+  end
+
+  test "key admission uses one native big integer exponentiation" do
+    {admitted, calls} =
+      CharterAgreementProtocol.CryptoTrace.count(:crypto, :mod_pow, 3, fn ->
+        Signature.valid_key?(@base, "Ed25519")
+      end)
+
+    assert admitted
+    assert length(calls) == 1
+    assert [[_base, exponent, prime]] = calls
+    assert exponent == div(@prime - 5, 8)
+    assert prime == @prime
   end
 
   test "rejects noncanonical y values and wrong lengths" do
