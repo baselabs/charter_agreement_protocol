@@ -137,9 +137,10 @@ lists every step in order. In short:
 1. Change the generator (`scripts/generate_conformance_corpus.exs`) and run
    it. Never edit case files by hand: `mix conformance.verify` regenerates
    the corpus and fails if a byte differs.
-2. Put the new index SHA-256 in the CLI (`conformance/cli.ex`) and in
-   `test/architecture/package_boundary_test.exs`.
-3. Update `RequirementMap` and render `spec/requirements.md`.
+2. Update `RequirementMap` and render `spec/requirements.md`.
+3. Run `mix run scripts/record_conformance_identity.exs`. It records the
+   CLI and package-test index SHA-256, the latest compatibility row's corpus
+   digest, and the guide's identity table from the live corpus and spec.
 4. Update the compatibility row in `release_identity.ex`. A verdict change
    raises the verification semantics version and lists the transition.
 5. Move the TypeScript pin: update the TypeScript repository's vendored

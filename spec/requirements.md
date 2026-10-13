@@ -12,7 +12,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 - Requirements: 68
 - Corpus cells: 93
-- Named mutations: 65
+- Named mutations: 67
 
 ## Requirements
 
@@ -60,13 +60,15 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Corpus: `signing.prepare:chain_invalid`, `signing.prepare:invalid_constraint`
 - Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
 - Mutation: `signing-unheld-code-collapse`
+- Mutation: `signing-termination-code-collapse`
 - Mutation: `signing-refusal-skip`
 
 ### CAP-SIGNING-set-profile
 
-- Corpus: `signing.prepare:profile_algorithm_outside`, `signing.prepare:profile_revision_outside`
+- Corpus: `signing.prepare:valid`, `signing.prepare:profile_algorithm_outside`, `signing.prepare:profile_revision_outside`
 - Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
 - Mutation: `signing-set-profile-skip`
+- Mutation: `signing-set-profile-narrow`
 
 ### CAP-SIGNING-runtime-support
 
