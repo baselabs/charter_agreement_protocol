@@ -70,6 +70,27 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
              CAP.verify_acceptance(compact, context.revision, bad, Limits.default())
   end
 
+  test "acceptance and termination use invalid_type for malformed lineage bytes", context do
+    [first] = context.descriptors.descriptors
+
+    acceptance =
+      ChainFixture.acceptance(context.set.genesis, context.set.issuer, "issuer").compact
+
+    termination =
+      ChainFixture.termination(context.set.genesis, context.set.issuer, "issuer").compact
+
+    for lineage <- [[context.set.issuer.compact, 42], [context.set.issuer.compact | :tail]],
+        {compact, verify} <- [
+          {acceptance, &CAP.verify_acceptance/4},
+          {termination, &CAP.verify_termination/4}
+        ] do
+      chain = %{context.descriptors | descriptors: [%{first | lineage: lineage}]}
+
+      assert {:error, %Error{code: :invalid_type}} =
+               verify.(compact, context.revision, chain, Limits.default())
+    end
+  end
+
   test "descriptor rejects an improper predecessor lineage", context do
     bad =
       struct(DescriptorFacts,

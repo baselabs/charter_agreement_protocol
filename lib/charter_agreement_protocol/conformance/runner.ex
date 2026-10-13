@@ -60,9 +60,8 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   def run(%Corpus{cases: cases}) do
     Enum.map(cases, fn one ->
       actual =
-        with :ok <- closed_options(one["input"]) do
-          execute(one)
-        else
+        case closed_options(one["input"]) do
+          :ok -> execute(one)
           {:error, %Error{code: code}} -> invalid(code)
         end
 
@@ -262,23 +261,30 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   end
 
   defp execute(%{"surface" => "receipt.verify", "input" => input}) do
-    with {:ok, caller_limits} <- limits(input) do
-      Receipt.verify(input["compact"], receipt_context(input), caller_limits, case_profile(input))
-      |> project_ok(fn facts ->
-        %{
-          "receipt_digest" => facts.receipt_digest,
-          "revision_number" => facts.revision_number,
-          "revision_digest" => facts.revision_digest,
-          "decision" => Atom.to_string(facts.decision),
-          "outcome" => Atom.to_string(facts.outcome),
-          "chain_conflict" => Atom.to_string(facts.chain_conflict),
-          "governing_match" => Atom.to_string(facts.governing_match),
-          "deployment_digest_matched" => facts.deployment_digest_matched,
-          "optional_extensions_retained" => facts.optional_extensions_retained
-        }
-      end)
-    else
-      {:error, %Error{code: code}} -> invalid(code)
+    case limits(input) do
+      {:ok, caller_limits} ->
+        Receipt.verify(
+          input["compact"],
+          receipt_context(input),
+          caller_limits,
+          case_profile(input)
+        )
+        |> project_ok(fn facts ->
+          %{
+            "receipt_digest" => facts.receipt_digest,
+            "revision_number" => facts.revision_number,
+            "revision_digest" => facts.revision_digest,
+            "decision" => Atom.to_string(facts.decision),
+            "outcome" => Atom.to_string(facts.outcome),
+            "chain_conflict" => Atom.to_string(facts.chain_conflict),
+            "governing_match" => Atom.to_string(facts.governing_match),
+            "deployment_digest_matched" => facts.deployment_digest_matched,
+            "optional_extensions_retained" => facts.optional_extensions_retained
+          }
+        end)
+
+      {:error, %Error{code: code}} ->
+        invalid(code)
     end
   end
 

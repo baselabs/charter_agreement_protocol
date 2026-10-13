@@ -18,8 +18,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "runner-option-members-skip",
       path: "lib/charter_agreement_protocol/conformance/runner.ex",
-      from: ":ok <- closed_options(one[\"input\"])",
-      to: ":ok <- :ok",
+      from: "case closed_options(one[\"input\"]) do",
+      to: "case :ok do",
       command: ~w(mix test test/conformance/runner_report_cli_test.exs --seed 42)
     },
     %{
