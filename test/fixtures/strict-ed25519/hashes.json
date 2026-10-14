@@ -1,0 +1,65 @@
+{
+  "files": [
+    {
+      "cases": 142,
+      "path": "cases/differential/differential-01.json",
+      "sha256": "239dc4d8bf65964bc08025a04c4255db755f1c1b0410f66783f3e3473f2f3068"
+    },
+    {
+      "cases": 141,
+      "path": "cases/differential/differential-02.json",
+      "sha256": "c499b7d2a655440dce7b2d22fe95615f8960b50d37ca0032d93601cf6070f432"
+    },
+    {
+      "cases": 141,
+      "path": "cases/differential/differential-03.json",
+      "sha256": "5f40d39495c8ba7ed05b91fba2631e601aabf40584c3348651a6d6b07125a1d9"
+    },
+    {
+      "cases": 141,
+      "path": "cases/differential/differential-04.json",
+      "sha256": "14df2ac39448ae02a8a8bd53313adc4da8fde451480674d367de17d2d3bc1ace"
+    },
+    {
+      "cases": 141,
+      "path": "cases/differential/differential-05.json",
+      "sha256": "5c1fc189d6d3940e2d7660c1b8006744c7d7ed707d40aa39f70f639d4f517d4f"
+    },
+    {
+      "cases": 141,
+      "path": "cases/differential/differential-06.json",
+      "sha256": "a605ee57b1801e286e4f062c17f150adb8958b6023150297e345e22ee314babc"
+    },
+    {
+      "cases": 141,
+      "path": "cases/differential/differential-07.json",
+      "sha256": "22cd816260937b8813b8b7389d07078e80eb8d9ea663d4244f1d3174d73ea0ca"
+    },
+    {
+      "cases": 36,
+      "path": "cases/differential/differential-08.json",
+      "sha256": "cc66a6613249b53368a82e2127c4427a01b25e80f5cbf7e4fb786d43a625b5d3"
+    },
+    {
+      "cases": 79,
+      "path": "cases/key-acceptance/acceptable-public-key.json",
+      "sha256": "03d843c64e26770145060f3f5c75f75bac36a29528f55322c534a4a122049834"
+    },
+    {
+      "cases": 90,
+      "path": "cases/primitive/key-only-forgeries.json",
+      "sha256": "6c3d80cabfb6dfce522eef4430b520cc9dc85ad34050a7b70ae11eb7bea5f3f6"
+    },
+    {
+      "cases": 95,
+      "path": "cases/primitive/verify-strict.json",
+      "sha256": "fd466d9762a099ad8139952c6293e52c640135c14b85da18106cef10b2fd4590"
+    },
+    {
+      "cases": 12,
+      "path": "cases/taming/speccheck.json",
+      "sha256": "c23dc0eb8bb5a7f359e8566fcacbf473df15cbefb1c7da739913f121cad08eff"
+    }
+  ],
+  "total_cases": 1300
+}
