@@ -13,6 +13,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ### Fixed
 
+- Corpus runners return typed errors for malformed inputs and contexts.
+- Missing corpus profile axes use the full axis; explicit null axes return
+  `invalid_profile` on every surface.
 - Ed25519 public keys are now fully decoded on admission, so two more
   small-order encodings and keys that are not curve points are rejected.
 - Malformed limits structs and improper profile algorithm lists return typed errors.

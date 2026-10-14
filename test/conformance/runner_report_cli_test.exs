@@ -70,7 +70,7 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
     cases = [
       {put_in(receipt, ["input", "limits"], %{"max_bytes" => -1}), "invalid_limits"},
       {put_in(chain, ["input", "profile"], %{"revisions" => %{"min" => "1", "max" => 3}}),
-       "invalid_type"}
+       "invalid_profile"}
     ]
 
     for {one, code} <- cases do

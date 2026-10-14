@@ -134,6 +134,15 @@ Details that matter for byte equality:
 - `limits` names some limit fields; every field it does not name takes its
   [default](limits-and-profiles.md), and an out-of-range value fails with
   `invalid_limits`. Cases without `limits` use the defaults.
+- A missing `profile` uses the full profile. Within a profile object, a missing
+  `algorithms` or `revisions` member uses the full axis. An explicit null profile
+  or axis returns `invalid_profile` on every surface. Revision bounds must be
+  integer tokens. Unknown members and other malformed profiles also return
+  `invalid_profile`.
+- A runner returns a typed result for every JSON input. A non-object `input` or
+  malformed case scaffolding returns `invalid_type`; failures while reading a
+  context retain the underlying error code. Options are checked before surface
+  inputs: limits first, then profile, then the operation's input values.
 - `digest.hash` names its domain by the names in [Digests](#digests). A `kind`/`value`
   input stands for a value that is not bytes and must fail with `invalid_type`.
 - `canonicalization.encode` tagged inputs are an object with `members` of

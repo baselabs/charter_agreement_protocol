@@ -24,8 +24,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "receipt-caller-limits-skip",
       path: "lib/charter_agreement_protocol/conformance/runner.ex",
-      from: "          caller_limits,",
-      to: "          Limits.default(),",
+      from: "            caller_limits,",
+      to: "            Limits.default(),",
       command: ~w(mix test test/conformance/runner_report_cli_test.exs --seed 42)
     },
     %{

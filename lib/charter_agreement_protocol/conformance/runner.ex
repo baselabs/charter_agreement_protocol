@@ -24,7 +24,8 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     PartyDescriptor,
     Receipt,
     Schema,
-    TerminationNotice
+    TerminationNotice,
+    Timestamp
   }
 
   @type result :: %{
@@ -60,8 +61,11 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   def run(%Corpus{cases: cases}) do
     Enum.map(cases, fn one ->
       actual =
-        case closed_options(one["input"]) do
-          :ok -> execute(one)
+        with :ok <- input_object(one["input"]),
+             {:ok, _limits} <- limits(one["input"]),
+             {:ok, profile} <- parse_profile(one["input"]) do
+          execute(one, profile)
+        else
           {:error, %Error{code: code}} -> invalid(code)
         end
 
@@ -75,65 +79,72 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
-  defp execute(%{"surface" => "base64url.decode", "input" => input}) do
+  defp execute(%{"surface" => "base64url.decode", "input" => input}, _profile) do
     input["text"]
     |> Base64Url.decode()
     |> project_ok(fn bytes -> %{"bytes_base64url" => Base64Url.encode(bytes)} end)
   end
 
-  defp execute(%{"surface" => "json.decode", "input" => input}) do
+  defp execute(%{"surface" => "json.decode", "input" => input}, _profile) do
     case limits(input) do
       {:ok, limits} ->
-        input |> json_input() |> Json.decode(limits) |> project_ok(&json_projection/1)
+        with {:ok, bytes} <- json_input(input) do
+          Json.decode(bytes, limits)
+        end
+        |> project_ok(&json_projection/1)
 
       {:error, %Error{} = error} ->
         invalid(error.code)
     end
   end
 
-  defp execute(%{"surface" => "canonicalization.encode", "input" => input}) do
+  defp execute(%{"surface" => "canonicalization.encode", "input" => input}, _profile) do
     case input do
       %{"text" => text} ->
         Canonicalization.verify(text) |> project_ok(fn _ -> %{"text" => text} end)
 
       _other ->
-        input |> canonical_input() |> Canonicalization.encode() |> project_ok(&%{"text" => &1})
+        with {:ok, value} <- canonical_input(input) do
+          Canonicalization.encode(value)
+        end
+        |> project_ok(&%{"text" => &1})
     end
   end
 
-  defp execute(%{"surface" => "digest.hash", "input" => input}) do
-    domain = digest_domain(input["domain"])
-    bytes = digest_input(input)
+  defp execute(%{"surface" => "digest.hash", "input" => input}, _profile) do
+    with {:ok, domain} <- digest_domain(input["domain"]),
+         {:ok, bytes} <- digest_input(input) do
+      case input do
+        %{"tagged" => tagged} ->
+          Digest.verify_content(domain, bytes, tagged)
 
-    case input do
-      %{"tagged" => tagged} ->
-        Digest.verify_content(domain, bytes, tagged) |> project_ok(fn :ok -> %{} end)
+        %{"bytes_base64url" => _encoded} when is_binary(bytes) ->
+          {:ok, %{"algorithm" => "sha-256"}}
 
-      %{"bytes_base64url" => _encoded} ->
-        project_ok({:ok, Digest.hash(domain, bytes)}, fn _ -> %{"algorithm" => "sha-256"} end)
-
-      _other ->
-        Digest.verify_content(
-          domain,
-          bytes,
-          "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        )
-        |> project_ok(fn :ok -> %{} end)
+        _other ->
+          Digest.verify_content(
+            domain,
+            bytes,
+            "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+          )
+      end
     end
+    |> project_ok(fn
+      :ok -> %{}
+      output -> output
+    end)
   end
 
-  defp execute(%{"surface" => "schema.validate", "input" => %{"members" => members}}) do
+  defp execute(%{"surface" => "schema.validate", "input" => %{"members" => members}}, _profile)
+       when is_map(members) do
     value = {:object, Enum.map(members, fn {name, item} -> {name, tagged(item)} end)}
     Schema.validate(foundation_schema(), value) |> project_ok(fn _ -> %{"members" => members} end)
   end
 
-  defp execute(%{"surface" => "party_descriptor.verify", "input" => input}) do
-    input["compact"]
-    |> PartyDescriptor.verify(
-      case_predecessor(input),
-      Limits.default(),
-      case_profile(input)
-    )
+  defp execute(%{"surface" => "party_descriptor.verify", "input" => input}, profile) do
+    with {:ok, predecessor} <- case_predecessor(input) do
+      PartyDescriptor.verify(input["compact"], predecessor, Limits.default(), profile)
+    end
     |> project_ok(fn facts ->
       %{
         "descriptor_digest" => facts.descriptor_digest,
@@ -143,15 +154,15 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
-  defp execute(%{"surface" => "descriptor_chain.verify", "input" => input}) do
+  defp execute(%{"surface" => "descriptor_chain.verify", "input" => input}, _profile) do
     DescriptorChain.verify(input["compacts"], Limits.default())
     |> project_ok(&descriptor_chain_projection/1)
   end
 
-  defp execute(%{"surface" => "charter_revision.decode", "input" => input}) do
+  defp execute(%{"surface" => "charter_revision.decode", "input" => input}, _profile) do
     CharterRevision.decode(input["text"], Limits.default())
     |> project_ok(fn revision ->
-      [binding] = revision.abp_bindings
+      binding = hd(revision.abp_bindings)
 
       %{
         "revision_digest" => CharterRevision.digest(revision),
@@ -167,13 +178,11 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
-  defp execute(%{"surface" => "acceptance.verify", "input" => input}) do
-    {:ok, revision} = CharterRevision.decode(input["revision_text"], Limits.default())
-    {:ok, chain} = DescriptorChain.verify(input["descriptor_compacts"], Limits.default())
-
-    input
-    |> case_profile()
-    |> then(&Acceptance.verify(input["compact"], revision, chain, Limits.default(), &1))
+  defp execute(%{"surface" => "acceptance.verify", "input" => input}, profile) do
+    with {:ok, revision} <- CharterRevision.decode(input["revision_text"], Limits.default()),
+         {:ok, chain} <- DescriptorChain.verify(input["descriptor_compacts"], Limits.default()) do
+      Acceptance.verify(input["compact"], revision, chain, Limits.default(), profile)
+    end
     |> project_ok(fn facts ->
       %{
         "acceptance_digest" => facts.acceptance_digest,
@@ -184,17 +193,11 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
-  defp execute(%{"surface" => "acceptance.equivocation", "input" => input}) do
-    {:ok, chain} = DescriptorChain.verify(input["descriptor_compacts"], Limits.default())
-
-    facts =
-      Enum.map(input["signed_revisions"], fn signed ->
-        {:ok, revision} = CharterRevision.decode(signed["revision_text"], Limits.default())
-        {:ok, one} = Acceptance.verify(signed["compact"], revision, chain, Limits.default())
-        one
-      end)
-
-    Acceptance.equivocation(Enum.at(facts, 0), Enum.at(facts, 1))
+  defp execute(%{"surface" => "acceptance.equivocation", "input" => input}, _profile) do
+    with {:ok, chain} <- DescriptorChain.verify(input["descriptor_compacts"], Limits.default()),
+         {:ok, [left, right]} <- signed_revisions(input["signed_revisions"], chain) do
+      Acceptance.equivocation(left, right)
+    end
     |> project_ok(fn evidence ->
       %{
         "kind" => Atom.to_string(evidence.kind),
@@ -205,13 +208,11 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
-  defp execute(%{"surface" => "termination.verify", "input" => input}) do
-    {:ok, revision} = CharterRevision.decode(input["revision_text"], Limits.default())
-    {:ok, chain} = DescriptorChain.verify(input["descriptor_compacts"], Limits.default())
-
-    input
-    |> case_profile()
-    |> then(&TerminationNotice.verify(input["compact"], revision, chain, Limits.default(), &1))
+  defp execute(%{"surface" => "termination.verify", "input" => input}, profile) do
+    with {:ok, revision} <- CharterRevision.decode(input["revision_text"], Limits.default()),
+         {:ok, chain} <- DescriptorChain.verify(input["descriptor_compacts"], Limits.default()) do
+      TerminationNotice.verify(input["compact"], revision, chain, Limits.default(), profile)
+    end
     |> project_ok(fn facts ->
       %{
         "termination_digest" => facts.termination_digest,
@@ -223,9 +224,9 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
-  defp execute(%{"surface" => "chain.verify_profile", "input" => input}) do
+  defp execute(%{"surface" => "chain.verify_profile", "input" => input}, profile) do
     input
-    |> verify_chain_profile()
+    |> verify_chain_profile(profile)
     |> project_ok(fn facts ->
       %{
         "charter_id" => facts.charter_id,
@@ -234,7 +235,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
-  defp execute(%{"surface" => "chain.verify", "input" => input}) do
+  defp execute(%{"surface" => "chain.verify", "input" => input}, _profile) do
     input
     |> verify_chain()
     |> project_ok(fn facts ->
@@ -247,28 +248,25 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
-  defp execute(%{"surface" => "governing_revision", "input" => input}) do
-    {:ok, facts} = verify_chain(input)
-
-    governing =
-      Enum.map(input["queries"], fn query ->
-        {:ok, at, 0} = DateTime.from_iso8601(query["at"])
-        {:ok, result} = Chain.governing_revision(facts, at)
-        if is_atom(result), do: Atom.to_string(result), else: result
-      end)
-
-    valid(%{"governing_revisions" => governing})
+  defp execute(%{"surface" => "governing_revision", "input" => input}, _profile) do
+    with {:ok, facts} <- verify_chain(input),
+         {:ok, governing} <- governing_queries(input["queries"], facts) do
+      {:ok, governing}
+    end
+    |> project_ok(&%{"governing_revisions" => &1})
   end
 
-  defp execute(%{"surface" => "receipt.verify", "input" => input}) do
+  defp execute(%{"surface" => "receipt.verify", "input" => input}, profile) do
     case limits(input) do
       {:ok, caller_limits} ->
-        Receipt.verify(
-          input["compact"],
-          receipt_context(input),
-          caller_limits,
-          case_profile(input)
-        )
+        with {:ok, context} <- receipt_context(input) do
+          Receipt.verify(
+            input["compact"],
+            context,
+            caller_limits,
+            profile
+          )
+        end
         |> project_ok(fn facts ->
           %{
             "receipt_digest" => facts.receipt_digest,
@@ -288,9 +286,9 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end
   end
 
-  defp execute(%{"surface" => "signing.prepare", "input" => input}) do
-    with {:ok, limits} <- signing_limits(input),
-         {:ok, profile} <- signing_profile(input),
+  defp execute(%{"surface" => "signing.prepare", "input" => input}, _profile) do
+    with {:ok, limits} <- limits(input),
+         {:ok, profile} <- parse_profile(input),
          {:ok, context} <- signing_context(input["context"]),
          {:ok, public_key} <- Base64Url.decode(input["public_key"]) do
       value =
@@ -315,6 +313,11 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end
   end
 
+  defp execute(_one, _profile), do: invalid(:invalid_type)
+
+  defp input_object(input) when is_map(input), do: :ok
+  defp input_object(_input), do: type_error()
+
   defp project_ok({:ok, value}, projector), do: valid(projector.(value))
   defp project_ok({:error, %Error{code: code}}, _projector), do: invalid(code)
   defp project_ok(:ok, projector), do: valid(projector.(:ok))
@@ -333,18 +336,11 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
-  defp mapped_options(_selected, kind), do: {:error, Error.new(:invalid_type, [kind])}
+  defp mapped_options(_selected, "limits"), do: {:error, Error.new(:invalid_limits, ["limits"])}
+  defp mapped_options(_selected, _kind), do: {:error, Error.new(:invalid_profile, ["profile"])}
 
   defp invalid_options("limits", options), do: Limits.new(options)
   defp invalid_options(_kind, options), do: Profile.new(options)
-
-  defp closed_options(input) do
-    with {:ok, _limits} <- mapped_options(Map.get(input, "limits", %{}), "limits"),
-         {:ok, profile} <- mapped_options(Map.get(input, "profile", %{}), "profile"),
-         {:ok, _range} <- mapped_options(Map.get(profile, :revisions, %{}), "revisions") do
-      :ok
-    end
-  end
 
   defp limits(input) do
     with {:ok, selected} <- mapped_options(Map.get(input, "limits", %{}), "limits") do
@@ -352,12 +348,13 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end
   end
 
-  defp json_input(%{"text" => text}), do: text
+  defp json_input(%{"text" => text}), do: {:ok, text}
 
   defp json_input(%{"bytes_base64url" => encoded}),
-    do: Base.url_decode64!(encoded, padding: false)
+    do: Base64Url.decode(encoded)
 
-  defp json_input(%{"kind" => "integer", "value" => value}), do: value
+  defp json_input(%{"kind" => "integer", "value" => value}), do: {:ok, value}
+  defp json_input(_input), do: type_error()
 
   defp json_projection(:null), do: %{"tag" => "null"}
   defp json_projection({:boolean, value}), do: %{"tag" => "boolean", "value" => value}
@@ -373,29 +370,46 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     %{"tag" => "object", "members" => projected}
   end
 
-  defp canonical_input(%{"tag" => "integer", "text_value" => decimal}),
-    do: {:integer, String.to_integer(decimal)}
-
-  defp canonical_input(%{"tag" => "object", "members" => members}) do
-    {:object, Enum.map(members, fn [name, value] -> {name, tagged_projection(value)} end)}
+  defp canonical_input(%{"tag" => "integer", "text_value" => decimal}) when is_binary(decimal) do
+    case Integer.parse(decimal) do
+      {integer, ""} -> {:ok, {:integer, integer}}
+      _other -> type_error()
+    end
   end
 
-  defp canonical_input(%{"tag" => "string_codepoint", "value" => hex}) do
-    {:string, <<String.to_integer(hex, 16)::utf8>>}
+  defp canonical_input(%{"tag" => "object", "members" => members}) when is_list(members) do
+    with {:ok, pairs} <- collect(members, &canonical_member/1), do: {:ok, {:object, pairs}}
   end
 
-  defp canonical_input(%{"kind" => "improper_object"}),
-    do: {:object, :improper}
+  defp canonical_input(%{"tag" => "string_codepoint", "value" => hex}) when is_binary(hex) do
+    case Integer.parse(hex, 16) do
+      {point, ""} when point in 0..0x10FFFF and point not in 0xD800..0xDFFF ->
+        {:ok, {:string, <<point::utf8>>}}
 
-  defp tagged_projection(%{"tag" => "integer", "value" => value}), do: {:integer, value}
+      _other ->
+        type_error()
+    end
+  end
 
-  defp digest_input(%{"bytes_base64url" => encoded}),
-    do: Base.url_decode64!(encoded, padding: false)
+  defp canonical_input(_input), do: type_error()
 
-  defp digest_input(%{"kind" => "integer", "value" => value}), do: value
+  defp canonical_member([name, %{"tag" => "integer", "value" => value}]) when is_binary(name),
+    do: {:ok, {name, {:integer, value}}}
 
-  defp digest_domain(nil), do: :charter_revision_content
-  defp digest_domain(domain), do: Map.fetch!(@digest_domains, domain)
+  defp canonical_member(_member), do: type_error()
+
+  defp digest_input(%{"bytes_base64url" => encoded}), do: Base64Url.decode(encoded)
+  defp digest_input(%{"kind" => "integer", "value" => value}), do: {:ok, value}
+  defp digest_input(_input), do: type_error()
+
+  defp digest_domain(nil), do: {:ok, :charter_revision_content}
+
+  defp digest_domain(domain) do
+    case Map.fetch(@digest_domains, domain) do
+      {:ok, value} -> {:ok, value}
+      :error -> type_error()
+    end
+  end
 
   defp foundation_schema do
     Schema.definition("foundation", [
@@ -408,9 +422,10 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     ])
   end
 
-  defp tagged(value) when is_boolean(value), do: {:boolean, value}
-  defp tagged(value) when is_integer(value), do: {:integer, value}
-  defp tagged(value) when is_binary(value), do: {:string, value}
+  defp tagged(value) do
+    {:ok, tagged} = Canonicalization.from_plain(value)
+    tagged
+  end
 
   defp descriptor_chain_projection(chain) do
     positions =
@@ -427,33 +442,13 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     }
   end
 
-  # A receipt case names its context as either a `chain` view or the bare
-  # `revision_text` of a revision-only context.
-  defp signing_limits(input) do
-    with {:ok, fields} <- mapped_options(Map.get(input, "limits", %{}), "limits") do
-      {:ok, struct(Limits.default(), fields)}
-    end
-  end
-
-  defp signing_profile(input) do
-    selected = input["profile"] || %{}
-    full = Profile.full()
-    range = selected["revisions"]
-
-    {:ok,
-     %Profile{
-       algorithms: Map.get(selected, "algorithms", full.algorithms),
-       revisions: if(range, do: {range["min"], range["max"]}, else: full.revisions)
-     }}
-  end
-
   defp signing_kind("party_descriptor"), do: :party_descriptor
   defp signing_kind("acceptance"), do: :acceptance
   defp signing_kind("termination"), do: :termination
   defp signing_kind("receipt"), do: :receipt
   defp signing_kind(_other), do: :unknown
 
-  defp signing_context(%{"set" => set}) do
+  defp signing_context(%{"set" => set}) when is_map(set) do
     {:ok,
      struct(CharterAgreementProtocol.ArtifactSet,
        revisions: set["revisions"],
@@ -469,6 +464,12 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     do: CharterRevision.decode(text, Limits.default())
 
   defp signing_context(%{"predecessor_compacts" => compacts}) do
+    predecessor_history(compacts)
+  end
+
+  defp signing_context(value), do: {:ok, value}
+
+  defp predecessor_history(compacts) when is_list(compacts) do
     Enum.reduce_while(compacts, {:ok, nil}, fn compact, {:ok, predecessor} ->
       case PartyDescriptor.verify(compact, predecessor, Limits.default()) do
         {:ok, facts} -> {:cont, {:ok, facts}}
@@ -477,72 +478,50 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
-  defp signing_context(value), do: {:ok, value}
+  defp predecessor_history(_compacts), do: type_error()
 
-  defp receipt_context(%{"revision_text" => text}) do
-    {:ok, revision} = CharterRevision.decode(text, Limits.default())
-    revision
-  end
+  defp receipt_context(%{"revision_text" => text}),
+    do: CharterRevision.decode(text, Limits.default())
 
-  defp receipt_context(input) do
-    {:ok, chain} = verify_chain(input["chain"])
-    chain
-  end
+  defp receipt_context(%{"chain" => chain}), do: verify_chain(chain)
+  defp receipt_context(_input), do: type_error()
 
-  # A descriptor case may name its predecessor history, genesis first; each
-  # entry verifies under the full profile against the one before it.
-  defp case_predecessor(%{"predecessor_compacts" => compacts}) do
-    Enum.reduce(compacts, nil, fn compact, previous ->
-      {:ok, facts} = PartyDescriptor.verify(compact, previous, Limits.default())
-      facts
-    end)
-  end
+  defp case_predecessor(%{"predecessor_compacts" => compacts}),
+    do: predecessor_history(compacts)
 
-  defp case_predecessor(_input), do: nil
-
-  # A certified single-artifact case carries a well-formed profile or none.
-  defp case_profile(input) do
-    {:ok, profile} = parse_profile(input)
-    profile
-  end
+  defp case_predecessor(_input), do: {:ok, nil}
 
   defp parse_profile(input) do
-    spec = input["profile"] || %{}
-
-    with {:ok, algorithms} <- profile_algorithms(spec["algorithms"]),
-         {:ok, revisions} <- profile_revisions(spec["revisions"]) do
-      Profile.new(algorithms: algorithms, revisions: revisions)
+    with {:ok, selected} <- mapped_options(Map.get(input, "profile", %{}), "profile"),
+         {:ok, revisions} <- profile_revisions(Map.get(selected, :revisions, :missing)) do
+      algorithms = Map.get(selected, :algorithms, Profile.full().algorithms)
+      profile = %Profile{algorithms: algorithms, revisions: revisions}
+      with :ok <- Profile.check(profile), do: {:ok, profile}
     end
   end
 
-  defp verify_chain_profile(input) do
-    with {:ok, profile} <- parse_profile(input) do
-      Chain.verify(
-        input["revisions"],
-        input["acceptances"],
-        input["descriptors"],
-        input["terminations"],
-        Limits.default(),
-        profile
-      )
+  defp profile_revisions(:missing), do: {:ok, Profile.full().revisions}
+
+  defp profile_revisions(range) when is_map(range) do
+    with {:ok, mapped} <- mapped_options(range, "revisions") do
+      {:ok, {Map.get(mapped, :min), Map.get(mapped, :max)}}
     end
   end
 
-  defp profile_algorithms(nil), do: {:ok, nil}
+  defp profile_revisions(_range), do: {:error, Error.new(:invalid_profile, ["profile"])}
 
-  defp profile_algorithms(names) when is_list(names), do: {:ok, names}
+  defp verify_chain_profile(input, profile) do
+    Chain.verify(
+      input["revisions"],
+      input["acceptances"],
+      input["descriptors"],
+      input["terminations"],
+      Limits.default(),
+      profile
+    )
+  end
 
-  defp profile_algorithms(_other), do: {:error, Error.new(:invalid_type, ["profile"])}
-
-  defp profile_revisions(nil), do: {:ok, nil}
-
-  defp profile_revisions(%{"min" => minimum, "max" => maximum})
-       when is_integer(minimum) and is_integer(maximum),
-       do: {:ok, {minimum, maximum}}
-
-  defp profile_revisions(_other), do: {:error, Error.new(:invalid_type, ["profile"])}
-
-  defp verify_chain(input) do
+  defp verify_chain(input) when is_map(input) do
     with {:ok, limits} <- limits(input) do
       Chain.verify(
         input["revisions"],
@@ -553,4 +532,50 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
       )
     end
   end
+
+  defp verify_chain(_input), do: type_error()
+
+  defp signed_revisions([_, _] = signed, chain) do
+    collect(signed, fn
+      %{"revision_text" => text, "compact" => compact} ->
+        with {:ok, revision} <- CharterRevision.decode(text, Limits.default()) do
+          Acceptance.verify(compact, revision, chain, Limits.default())
+        end
+
+      _other ->
+        type_error()
+    end)
+  end
+
+  defp signed_revisions(_signed, _chain), do: type_error()
+
+  defp governing_queries(queries, facts) when is_list(queries) do
+    collect(queries, fn
+      %{"at" => at} ->
+        with {:ok, timestamp} <- Timestamp.parse(at),
+             {:ok, result} <- Chain.governing_revision(facts, timestamp) do
+          {:ok, if(is_atom(result), do: Atom.to_string(result), else: result)}
+        end
+
+      _other ->
+        type_error()
+    end)
+  end
+
+  defp governing_queries(_queries, _facts), do: type_error()
+
+  defp collect(values, fun) do
+    Enum.reduce_while(values, {:ok, []}, fn value, {:ok, acc} ->
+      case fun.(value) do
+        {:ok, item} -> {:cont, {:ok, [item | acc]}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, items} -> {:ok, Enum.reverse(items)}
+      error -> error
+    end
+  end
+
+  defp type_error, do: {:error, Error.new(:invalid_type, ["input"])}
 end

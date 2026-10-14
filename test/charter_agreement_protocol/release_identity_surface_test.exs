@@ -124,10 +124,10 @@ defmodule CharterAgreementProtocol.ReleaseIdentitySurfaceTest do
       assert {:ok, %{"status" => "valid"}} = run_profile_case(body)
     end
 
-    assert {:ok, %{"status" => "invalid", "error_code" => "invalid_type"}} =
+    assert {:ok, %{"status" => "invalid", "error_code" => "invalid_profile"}} =
              run_profile_case(malformed_algorithm)
 
-    assert {:ok, %{"status" => "invalid", "error_code" => "invalid_type"}} =
+    assert {:ok, %{"status" => "invalid", "error_code" => "invalid_profile"}} =
              run_profile_case(malformed_revisions)
   end
 
