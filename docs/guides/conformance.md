@@ -24,16 +24,12 @@ is the one place in the guides where they are recorded.
 | Specification digest | `sha-256:Zl4c98_PSyXL13F60J_Vhq_shsnQhs3tkOaYqJR3JNo` |
 | Cases | 243, in 16 case files |
 
-The pinned TypeScript 0.7.0 verifier at `47ef74f` includes `signing.prepare`
-and certifies the earlier index. Its set profile check still applies the
-caller profile to the whole set, so `signing-set-profile-scope` differs.
-It admits a key with no curve point, so `signing-ed25519-no-curve-point`
-also differs: it returns `matched` where this corpus expects
-`signing_key_invalid`. These are the only case differences when a scratch
-copy of the pinned source reads the current index. Both negative-zero
-encodings are rejected, and the mixed-order descriptor and signing cases
-are admitted by both implementations.
-The agreement and release checks report the retained pin's corpus mismatch.
+The pinned TypeScript build `47ef74f` certifies an earlier index. Its case
+executor differs on four current cases: `receipt-strict-chain-limits`,
+`signing-set-profile-scope`, `signing-termination-counterparty-profile` and
+`signing-ed25519-no-curve-point`. Its harness also rejects the current
+receipt limit applicability cell. The agreement and release checks report
+this retained pin's corpus mismatch.
 
 What each one tells you:
 

@@ -8,26 +8,91 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-10-14: 0.6.0 corpus and checks
+
+Add 80 cases, for 243 total. The new case groups cover:
+
+- Signing preparation for all four artifacts under Ed25519 and ML-DSA-65;
+  exact final-size bounds; invalid algorithms, key lengths, key status,
+  bytes and membership; successor descriptors and predecessor context;
+  malformed sets and context types; retained context checks; unheld
+  successors and termination refusals; revision-only and chain receipts;
+  two-key receipt candidates; limits, profile and key check ordering;
+  artifact, revision, descriptor and set profile scope; termination
+  counterparty, party and revision profiles; strict set and receipt
+  limits; unknown limits and profile members; raised string limits.
+- Descriptor and signing key admission for both negative-zero encodings,
+  non-canonical `y`, a key with no curve point and a mixed-order key;
+  descriptor signatures with identity `R` and `R` with no curve point.
+- Termination revision-claims mismatch, strict receipt-chain limits and
+  unknown JSON limits members. Unknown option members use the constructor
+  codes `invalid_limits` and `invalid_profile`. The receipt runner applies
+  the supplied limits to its context and artifact.
+
+The new source mutations are:
+
+- `acceptance-lineage-code-revert`
+- `ed25519-canonical-y-skip`
+- `ed25519-list-only-admission`
+- `ed25519-native-power-skip`
+- `ed25519-r-check-skip`
+- `provider-known-answer-rescue-skip`
+- `provider-library-query-rescue-skip`
+- `provider-runtime-query-rescue-skip`
+- `receipt-caller-limits-skip`
+- `retained-revision-fields-skip`
+- `runner-option-member-code-revert`
+- `signing-build-default-limits`
+- `signing-context-type-skip`
+- `signing-finish-default-limits`
+- `signing-finish-profile-skip`
+- `signing-finish-verify-skip`
+- `signing-key-shape-skip`
+- `signing-limits-order-skip`
+- `signing-profile-order-skip`
+- `signing-receipt-first-key-only`
+- `signing-refusal-skip`
+- `signing-retained-envelope-guard-skip`
+- `signing-retained-lineage-guard-skip`
+- `signing-retained-list-guard-skip`
+- `signing-retained-shape-skip`
+- `signing-runtime-cache-skip`
+- `signing-runtime-support-invert`
+- `signing-set-limits-skip`
+- `signing-set-profile-narrow`
+- `signing-set-profile-skip`
+- `signing-shared-prepare-skip`
+- `signing-snapshot-match-skip`
+- `signing-strict-point-skip`
+- `signing-termination-code-collapse`
+- `signing-termination-profile-skip`
+- `signing-unheld-code-collapse`
+- `termination-context-code-revert`
+- `termination-lineage-code-revert`
+
 ## 2026-10-13: Ed25519 key admission
 
-State one Ed25519 decoding and small-order rejection rule for both the public key
-and signature `R` in
-`core.md`. Mixed-order points remain admitted. Add descriptor and signing
-cases for negative-zero encodings, a key with no curve point and a valid
-mixed-order key, plus a source mutation that restores list-only admission.
+State one Ed25519 decoding and small-order rejection rule for both the
+public key and signature `R` in `core.md`. Mixed-order points remain
+admitted. Add descriptor and signing cases for negative-zero encodings,
+non-canonical `y`, a key with no curve point and a valid mixed-order key.
+Add descriptor cases for identity `R` and `R` with no curve point. Mutations
+remove the `R` check, relax canonical `y`, restore list-only admission and
+replace native exponentiation with pure exponentiation.
 
 ## 2026-10-13: signing profile scope
 
-The retained set check uses the full profile (every registered algorithm and revision). The caller profile covers
-exactly the context and artifact that public verification covers.
+The retained set check uses the full profile (every registered algorithm
+and revision). The caller profile covers exactly the context and artifact
+that public verification covers.
 
 ## 2026-10-13: pre-sign API
 
 Add the CAP-SIGNING requirements for ordered preparation, caller limits,
 key shape and membership, shared context preparation, runtime support,
 finishing and malformed retained context handling. Add `signing.prepare`
-to the certified corpus. Malformed caller-built contexts use `invalid_type` consistently; verification
-semantics moves to 6 with recorded transitions.
+to the certified corpus. Malformed caller-built contexts use `invalid_type`
+consistently; verification semantics moves to 6 with recorded transitions.
 
 ## 2026-10-13: profile admission covers re-verified context
 

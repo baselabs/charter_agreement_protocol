@@ -43,10 +43,9 @@ evidence in hand.
   artifact type for the call, preventing one artifact type from being
   replayed as another. The `kid` is a lookup hint with no authority;
   resolution always passes through the declared key history.
-- **Non-canonical encodings.** Ed25519 non-canonical point encodings and
-  all eight low-order torsion encodings are rejected for both public
-  keys and signature `R` values before verification, closing the
-  malleability and identity-confusion classes those encodings enable.
+- **Non-canonical encodings.** The single Ed25519 point rule in
+  [core section 4](core.md#4-artifacts) applies to both
+  public keys and signature `R` before verification.
 - **Key compromise.** Compromise of an active key lets the adversary
   sign as that party from the compromise instant. The protocol's answer
   is evidence, not prevention: descriptor succession with re-verified

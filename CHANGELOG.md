@@ -13,9 +13,14 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ### Fixed
 
-- Ed25519 public keys are now fully decoded on admission, so two more small-order encodings and keys that are not curve points are rejected.
+- Ed25519 public keys are now fully decoded on admission, so two more
+  small-order encodings and keys that are not curve points are rejected.
 - Malformed limits structs and improper profile algorithm lists return typed errors.
-- Malformed retained context lists and envelope fields return typed errors.
+- Malformed retained context lists, envelope fields and nested structs
+  return typed errors.
+- The `receipt.verify` conformance runner honors a case's `limits`.
+- Unknown corpus `limits` and `profile` members use the library's
+  `invalid_limits` and `invalid_profile` codes.
 - `Capability.report/0` handles raising provider calls. Declared support and
   known-answer verification are cached once per key algorithm.
 
@@ -23,8 +28,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 - Verification semantics moves to 6. Ed25519 admission now rejects the two
   remaining small-order encodings and keys that are not curve points, using
-  the same point rule for the public key and signature `R`. Caller-built contexts with malformed
-  field types now return `invalid_type` consistently. Receipt revision numbers,
+  the same point rule for the public key and signature `R`. Caller-built
+  contexts with malformed field types now return `invalid_type` consistently.
+  Receipt revision numbers,
   chain topology and `not_verified` entries, descriptor-chain topology and
   revision `supersedes` entries are checked. Some of these contexts returned
   `ok` in 0.5.0; others raised or returned a context-specific error.
@@ -33,6 +39,12 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ### Repository-side
 
+- ML-DSA test skips depend on runtime declarations. Every Ed25519 corpus
+  case still runs when the runtime does not declare ML-DSA.
+- A test-only fixture checks 1,300 strict Ed25519 primitive cases from BAP
+  0.8.0, with byte hashes. It is excluded from the package and CAP corpus.
+- Cost checks cover a final-signature failure and require zero pure
+  exponentiations on a runtime with native modular exponentiation.
 - `mix historical.check` replays the released 0.5.0 corpus (163 cases, no
   listed transitions).
 - `mix verifier.source` checks the newest change of the TypeScript verifier
