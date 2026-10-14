@@ -350,8 +350,8 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
   @tag skip:
          not Enum.all?(
            ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-           &CharterAgreementProtocol.Capability.kat_verifies?/1
-         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
+           &CharterAgreementProtocol.Capability.declared?/1
+         ) and "requires declared ML-DSA-44, ML-DSA-65 and ML-DSA-87"
   test "all three ML-DSA parameterizations verify with their own key and signature sizes" do
     for {algorithm, crypto, key_bytes, sig_bytes} <- [
           {"ML-DSA-44", :mldsa44, 1312, 2420},
@@ -394,8 +394,8 @@ defmodule CharterAgreementProtocol.PartyDescriptorTest do
   @tag skip:
          not Enum.all?(
            ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-           &CharterAgreementProtocol.Capability.kat_verifies?/1
-         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
+           &CharterAgreementProtocol.Capability.declared?/1
+         ) and "requires declared ML-DSA-44, ML-DSA-65 and ML-DSA-87"
   test "a key whose encoding length contradicts its declared algorithm rejects" do
     {_ed_public, ed_private} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<1>>, 32))
     {ml_public, _} = :crypto.generate_key(:mldsa65, [])

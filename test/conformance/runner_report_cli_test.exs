@@ -4,26 +4,46 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
   alias CharterAgreementProtocol.Conformance.{Cli, Corpus, Report, Runner}
   alias CharterAgreementProtocol.Digest
 
-  @tag skip:
-         not Enum.all?(
-           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-           &CharterAgreementProtocol.Capability.kat_verifies?/1
-         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
-  test "the shipped corpus executes every case and emits an identity-bound report" do
-    assert {:ok, corpus} = Corpus.load(shipped_files())
-    results = Runner.run(corpus)
-    report = Report.build(corpus, results)
+  for group <- [:ed25519, :ml_dsa] do
+    @tag skip:
+           group == :ml_dsa and not CharterAgreementProtocol.Capability.declared?("ML-DSA-65") and
+             "runtime does not declare ML-DSA-65"
+    test "the #{group} corpus cases emit an identity-bound report" do
+      assert {:ok, corpus} = Corpus.load(shipped_files())
 
-    assert report.agreement
-    assert report.exit_status == 0
-    assert report.total == 243
-    assert report.agreed == 243
-    assert report.disagreed == 0
+      cases =
+        CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(
+          corpus.cases,
+          unquote(group)
+        )
 
-    assert {:ok, bytes} = Report.to_bytes(corpus, results)
-    assert bytes =~ ~s("corpus_digest":"#{corpus.identity}")
-    assert bytes =~ ~s("registry_digest":"#{corpus.index["registry_digest"]}")
-    assert bytes =~ ~s("index_sha256_base64url":"#{Report.index_identity(corpus.index_bytes)}")
+      corpus = %{corpus | cases: cases}
+      assert cases != []
+      results = Runner.run(corpus)
+      report = Report.build(corpus, results)
+
+      assert report.agreement
+      assert report.exit_status == 0
+      assert report.total == length(cases)
+      assert report.agreed == length(cases)
+      assert report.disagreed == 0
+
+      assert {:ok, bytes} = Report.to_bytes(corpus, results)
+      assert bytes =~ ~s("corpus_digest":"#{corpus.identity}")
+      assert bytes =~ ~s("registry_digest":"#{corpus.index["registry_digest"]}")
+      assert bytes =~ ~s("index_sha256_base64url":"#{Report.index_identity(corpus.index_bytes)}")
+    end
+  end
+
+  test "the algorithm groups partition all certified cases" do
+    {:ok, corpus} = Corpus.load(shipped_files())
+    ed = CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(corpus.cases, :ed25519)
+    ml = CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(corpus.cases, :ml_dsa)
+    assert length(ed) == 231
+    assert length(ml) == 12
+    assert length(ed) + length(ml) == 243
+    assert Enum.sort(ed ++ ml) == Enum.sort(corpus.cases)
+    assert Enum.all?(ml, &(&1["id"] =~ "mldsa" or &1["id"] == "signing-wrong-algorithm"))
   end
 
   test "preparation rejects malformed serialized keys, kinds and predecessor bytes" do
@@ -74,17 +94,16 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
     end
   end
 
-  @tag skip:
-         not Enum.all?(
-           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-           &CharterAgreementProtocol.Capability.kat_verifies?/1
-         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
   test "one expectation flip makes the report disagree" do
     assert {:ok, corpus} = Corpus.load(shipped_files())
 
-    [first | rest] = corpus.cases
+    cases =
+      CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(corpus.cases, :ed25519)
+
+    [first | rest] = cases
     flipped = put_in(first, ["expect", "status"], "invalid")
-    results = Runner.run(%{corpus | cases: [flipped | rest]})
+    corpus = %{corpus | cases: [flipped | rest]}
+    results = Runner.run(corpus)
     report = Report.build(corpus, results)
 
     refute report.agreement
@@ -173,8 +192,8 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
   @tag skip:
          not Enum.all?(
            ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-           &CharterAgreementProtocol.Capability.kat_verifies?/1
-         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
+           &CharterAgreementProtocol.Capability.declared?/1
+         ) and "requires declared ML-DSA-44, ML-DSA-65 and ML-DSA-87"
   test "the CLI requires an explicit corpus and verifies the certified shipped corpus" do
     assert ExUnit.CaptureIO.capture_io(:stderr, fn -> send(self(), {:exit, Cli.run([])}) end) =~
              "usage:"

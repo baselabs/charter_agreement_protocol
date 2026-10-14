@@ -36,7 +36,7 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
   end
 
   test "ml-dsa verification honors the substrate honestly: green where capable, the named diagnostic where not" do
-    if Capability.kat_verifies?("ML-DSA-65") do
+    if Capability.declared?("ML-DSA-65") do
       {public_key, private_key} = :crypto.generate_key(:mldsa65, [])
       message = "lane"
       signature = :crypto.sign(:mldsa65, :none, message, {:expandedkey, private_key})
@@ -51,7 +51,7 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
   end
 
   test "a real unsupported crypto operation is rescued by the live known-answer probe" do
-    if not Capability.kat_verifies?("ML-DSA-65") do
+    if not Capability.declared?("ML-DSA-65") do
       assert_raise ErlangError, fn ->
         :crypto.verify(:mldsa65, :none, "lane", <<0::3309*8>>, <<0::1952*8>>)
       end
@@ -61,7 +61,7 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
   end
 
   test "a raising signature operation runs a fresh known-answer verification" do
-    if not Capability.kat_verifies?("ML-DSA-65") do
+    if not Capability.declared?("ML-DSA-65") do
       {result, calls} =
         CharterAgreementProtocol.CryptoTrace.count(:verify, fn ->
           Signature.substrate_outcome("ML-DSA-65", true, fn ->
@@ -100,7 +100,7 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
     target = compact_of.("party-descriptor-genesis-valid")
     result = PartyDescriptor.verify(target, predecessor, Limits.default())
 
-    if Capability.kat_verifies?("ML-DSA-65") do
+    if Capability.declared?("ML-DSA-65") do
       assert {:error, %Error{code: :descriptor_chain_invalid}} = result
     else
       assert {:error, %Error{code: :algorithm_unsupported_on_substrate}} = result
@@ -161,7 +161,7 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
           Profile.full()
         )
 
-      if Capability.kat_verifies?("ML-DSA-65"),
+      if Capability.declared?("ML-DSA-65"),
         do: assert(match?({:ok, _}, result)),
         else: assert(match?({:error, %Error{code: :algorithm_unsupported_on_substrate}}, result))
 
@@ -189,7 +189,7 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
             Profile.full()
           )
 
-        if Capability.kat_verifies?("ML-DSA-65"),
+        if Capability.declared?("ML-DSA-65"),
           do: assert(match?({:ok, _}, result)),
           else:
             assert(match?({:error, %Error{code: :algorithm_unsupported_on_substrate}}, result))
@@ -210,7 +210,7 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
   end
 
   defp retained_chain(set) do
-    if Capability.kat_verifies?("ML-DSA-65") do
+    if Capability.declared?("ML-DSA-65") do
       {:ok, chain} =
         Chain.verify(
           set["revisions"],

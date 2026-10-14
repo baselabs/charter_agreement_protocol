@@ -25,8 +25,8 @@ defmodule CharterAgreementProtocol.SignatureTest do
     @tag skip:
            not Enum.all?(
              ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-             &CharterAgreementProtocol.Capability.kat_verifies?/1
-           ) and "requires a runtime that verifies all registered ML-DSA algorithms"
+             &CharterAgreementProtocol.Capability.declared?/1
+           ) and "requires declared ML-DSA-44, ML-DSA-65 and ML-DSA-87"
     test "a raising crypto call on a capable substrate is signature_invalid, not a crash" do
       assert {:error, %Error{code: :signature_invalid}} =
                Signature.substrate_outcome("ML-DSA-65", true, fn -> raise "provider blew up" end)
@@ -50,8 +50,8 @@ defmodule CharterAgreementProtocol.SignatureTest do
     @describetag skip:
                    not Enum.all?(
                      ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-                     &CharterAgreementProtocol.Capability.kat_verifies?/1
-                   ) and "requires a runtime that verifies all registered ML-DSA algorithms"
+                     &CharterAgreementProtocol.Capability.declared?/1
+                   ) and "requires declared ML-DSA-44, ML-DSA-65 and ML-DSA-87"
     setup do
       {public_key, private_key} = :crypto.generate_key(:mldsa65, [])
       message = "signature-test"

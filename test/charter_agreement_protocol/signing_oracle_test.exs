@@ -15,108 +15,112 @@ defmodule CharterAgreementProtocol.SigningOracleTest do
     SigningInput
   }
 
-  @tag skip:
-         not Enum.all?(
-           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-           &CharterAgreementProtocol.Capability.kat_verifies?/1
-         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
-  test "descriptor and receipt corpus inputs agree before the signature step" do
-    for {file, kind} <- [
-          {"party_descriptor-verify", :party_descriptor},
-          {"receipt-verify", :receipt}
-        ],
-        one <- :json.decode(File.read!("priv/conformance/cases/#{file}.json"))["cases"] do
-      source = one["input"]
+  for group <- [:ed25519, :ml_dsa] do
+    @tag skip:
+           group == :ml_dsa and not CharterAgreementProtocol.Capability.declared?("ML-DSA-65") and
+             "runtime does not declare ML-DSA-65"
+    test "the #{group} descriptor and receipt inputs agree before the signature step" do
+      for {file, kind} <- [
+            {"party_descriptor-verify", :party_descriptor},
+            {"receipt-verify", :receipt}
+          ],
+          one <-
+            CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(
+              :json.decode(File.read!("priv/conformance/cases/#{file}.json"))["cases"],
+              unquote(group)
+            ) do
+        source = one["input"]
 
-      with [protected, payload, _signature] <- String.split(source["compact"], "."),
-           {:ok, protected_bytes} <- Base64Url.decode(protected),
-           {:ok, header} <- JSON.decode(protected_bytes),
-           {:ok, bytes} <- Base64Url.decode(payload),
-           {:ok, claims} <- JSON.decode(bytes) do
-        {context, keys} = context_and_keys(kind, source, claims)
+        with [protected, payload, _signature] <- String.split(source["compact"], "."),
+             {:ok, protected_bytes} <- Base64Url.decode(protected),
+             {:ok, header} <- JSON.decode(protected_bytes),
+             {:ok, bytes} <- Base64Url.decode(payload),
+             {:ok, claims} <- JSON.decode(bytes) do
+          {context, keys} = context_and_keys(kind, source, claims)
 
-        alg =
-          if claims["protocol_revision"] == 3 and Enum.any?(keys, &(elem(&1, 1) == "ML-DSA-65")),
-            do: "ML-DSA-65",
-            else: "Ed25519"
+          alg =
+            if claims["protocol_revision"] == 3 and Enum.any?(keys, &(elem(&1, 1) == "ML-DSA-65")),
+              do: "ML-DSA-65",
+              else: "Ed25519"
 
-        claims = Map.put(claims, "protocol_revision", Algorithm.emissions()[alg])
+          claims = Map.put(claims, "protocol_revision", Algorithm.emissions()[alg])
 
-        input = %{"kid" => header["kid"], "claims" => claims, "algorithm" => alg}
-        profile = profile(source)
+          input = %{"kid" => header["kid"], "claims" => claims, "algorithm" => alg}
+          profile = profile(source)
 
-        source_alg = header["alg"]
+          source_alg = header["alg"]
 
-        if source_alg in Map.keys(Algorithm.emissions()) and source_alg == alg and
-             match?({:ok, _}, verify(kind, source["compact"], context, profile)) do
-          [protected, payload, encoded_signature] = String.split(source["compact"], ".")
-          {:ok, signature} = Base64Url.decode(encoded_signature)
+          if source_alg in Map.keys(Algorithm.emissions()) and source_alg == alg and
+               match?({:ok, _}, verify(kind, source["compact"], context, profile)) do
+            [protected, payload, encoded_signature] = String.split(source["compact"], ".")
+            {:ok, signature} = Base64Url.decode(encoded_signature)
 
-          for {public, algorithm, kid} <- keys,
-              algorithm == alg,
-              kid == input["kid"],
-              Signature.verify(protected <> "." <> payload, signature, public, alg) == :ok do
-            assert {:ok, _plan} =
-                     CAP.prepare_signing(
-                       kind,
-                       snapshot(input, public),
-                       context,
-                       Limits.default(),
-                       profile
-                     )
-          end
-        end
-
-        case SigningInput.build(kind, input, Limits.default()) do
-          {:error, %Error{code: :signing_input_invalid}} ->
-            assert {:error, %Error{code: :signing_input_invalid}} =
-                     CAP.prepare_signing(
-                       kind,
-                       snapshot(input, other_key(alg)),
-                       context,
-                       Limits.default(),
-                       profile
-                     )
-
-          {:ok, signing_input, _artifact} ->
-            %{signature_bytes: length} = Algorithm.row_for(alg)
-
-            compact =
-              signing_input.message <> "." <> Base64Url.encode(:binary.copy(<<0>>, length))
-
-            result = verify(kind, compact, context, profile)
-
-            eligible =
-              Enum.filter(keys, fn {key, algorithm, kid} ->
-                kid == input["kid"] and algorithm == alg and Signature.valid_key?(key, alg)
-              end)
-
-            for public <- Enum.map(eligible, &elem(&1, 0)) ++ [other_key(alg)] do
-              prepared =
-                CAP.prepare_signing(
-                  kind,
-                  snapshot(input, public),
-                  context,
-                  Limits.default(),
-                  profile
-                )
-
-              case result do
-                {:error, %Error{code: code}}
-                when code not in [:signature_invalid, :descriptor_key_invalid] ->
-                  assert {:error, %Error{code: ^code}} = prepared
-
-                _signature_step ->
-                  if kind == :receipt and is_struct(context, CharterRevision) do
-                    assert {:ok, %{key: :unnamed}} = prepared
-                  else
-                    if Enum.any?(eligible, &(elem(&1, 0) == public)),
-                      do: assert(match?({:ok, %{key: :matched}}, prepared)),
-                      else:
-                        assert(match?({:error, %Error{code: :signing_key_mismatch}}, prepared))
-                  end
-              end
+            for {public, algorithm, kid} <- keys,
+                algorithm == alg,
+                kid == input["kid"],
+                Signature.verify(protected <> "." <> payload, signature, public, alg) == :ok do
+              assert {:ok, _plan} =
+                       CAP.prepare_signing(
+                         kind,
+                         snapshot(input, public),
+                         context,
+                         Limits.default(),
+                         profile
+                       )
             end
+          end
+
+          case SigningInput.build(kind, input, Limits.default()) do
+            {:error, %Error{code: :signing_input_invalid}} ->
+              assert {:error, %Error{code: :signing_input_invalid}} =
+                       CAP.prepare_signing(
+                         kind,
+                         snapshot(input, other_key(alg)),
+                         context,
+                         Limits.default(),
+                         profile
+                       )
+
+            {:ok, signing_input, _artifact} ->
+              %{signature_bytes: length} = Algorithm.row_for(alg)
+
+              compact =
+                signing_input.message <> "." <> Base64Url.encode(:binary.copy(<<0>>, length))
+
+              result = verify(kind, compact, context, profile)
+
+              eligible =
+                Enum.filter(keys, fn {key, algorithm, kid} ->
+                  kid == input["kid"] and algorithm == alg and Signature.valid_key?(key, alg)
+                end)
+
+              for public <- Enum.map(eligible, &elem(&1, 0)) ++ [other_key(alg)] do
+                prepared =
+                  CAP.prepare_signing(
+                    kind,
+                    snapshot(input, public),
+                    context,
+                    Limits.default(),
+                    profile
+                  )
+
+                case result do
+                  {:error, %Error{code: code}}
+                  when code not in [:signature_invalid, :descriptor_key_invalid] ->
+                    assert {:error, %Error{code: ^code}} = prepared
+
+                  _signature_step ->
+                    if kind == :receipt and is_struct(context, CharterRevision) do
+                      assert {:ok, %{key: :unnamed}} = prepared
+                    else
+                      if Enum.any?(eligible, &(elem(&1, 0) == public)),
+                        do: assert(match?({:ok, %{key: :matched}}, prepared)),
+                        else:
+                          assert(match?({:error, %Error{code: :signing_key_mismatch}}, prepared))
+                    end
+                end
+              end
+          end
         end
       end
     end

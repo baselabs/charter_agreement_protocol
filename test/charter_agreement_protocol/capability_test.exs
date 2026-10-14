@@ -26,14 +26,10 @@ defmodule CharterAgreementProtocol.CapabilityTest do
              Algorithm.registry() |> Enum.map(& &1.key_algorithm) |> Enum.uniq() |> Enum.sort()
   end
 
-  @tag skip:
-         not Enum.all?(
-           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-           &CharterAgreementProtocol.Capability.kat_verifies?/1
-         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
-  test "every pinned known-answer vector verifies on this substrate" do
-    for key_algorithm <- ["Ed25519", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87"] do
-      assert Capability.kat_verifies?(key_algorithm)
+  for algorithm <- ["Ed25519", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87"] do
+    @tag skip: not Capability.declared?(algorithm) and "runtime does not declare #{algorithm}"
+    test "the pinned #{algorithm} known-answer vector verifies" do
+      assert Capability.kat_verifies?(unquote(algorithm))
     end
   end
 

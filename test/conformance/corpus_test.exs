@@ -177,11 +177,6 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     end
   end
 
-  @tag skip:
-         not Enum.all?(
-           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-           &CharterAgreementProtocol.Capability.kat_verifies?/1
-         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
   test "the shipped corpus loads through the pure map interface" do
     assert {:ok, %Corpus{cases: cases}} = Corpus.load(shipped_files())
 
@@ -197,84 +192,114 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
                one["class"] in ["signature_invalid", "chain_invalid"]
            end)
 
-    assert_verify_surface_expectations(cases)
-    assert_revision_expectations(cases)
-    assert_acceptance_expectations(cases)
-    assert_termination_expectations(cases)
-    assert_chain_expectations(cases)
-    assert_receipt_expectations(cases)
+    counts = Enum.frequencies_by(cases, & &1["surface"])
+    assert counts["party_descriptor.verify"] + counts["descriptor_chain.verify"] == 37
+    assert counts["charter_revision.decode"] == 31
+    assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 17
+    assert counts["termination.verify"] == 13
+    assert counts["chain.verify"] + counts["governing_revision"] == 15
+    assert counts["chain.verify_profile"] == 3
+    assert counts["receipt.verify"] == 21
     assert Enum.any?(cases, &(&1["surface"] == "signing.prepare"))
   end
 
-  @tag skip:
-         not Enum.all?(
-           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-           &CharterAgreementProtocol.Capability.kat_verifies?/1
-         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
-  test "signing preparation projects every new corpus case independently" do
-    %{"cases" => cases} = :json.decode(File.read!("priv/conformance/cases/signing-prepare.json"))
-    assert length(cases) >= 50
+  for group <- [:ed25519, :ml_dsa] do
+    @tag skip:
+           group == :ml_dsa and not CharterAgreementProtocol.Capability.declared?("ML-DSA-65") and
+             "runtime does not declare ML-DSA-65"
+    test "the #{group} corpus cases match independent projections" do
+      {:ok, corpus} = Corpus.load(shipped_files())
 
-    for one <- cases do
-      input = one["input"]
+      cases =
+        CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(
+          corpus.cases,
+          unquote(group)
+        )
 
-      result =
-        with {:ok, limits} <- signing_limits(input),
-             {:ok, profile} <- signing_profile(input) do
-          context = signing_context(input["context"])
+      assert cases != []
+      assert_verify_surface_expectations(cases)
+      assert_revision_expectations(cases)
+      assert_acceptance_expectations(cases)
+      assert_termination_expectations(cases)
+      assert_chain_expectations(cases)
+      assert_receipt_expectations(cases)
+    end
 
-          value =
-            input
-            |> Map.take(["kid", "claims", "algorithm"])
-            |> Map.put("public_key", Base.url_decode64!(input["public_key"], padding: false))
+    @tag skip:
+           group == :ml_dsa and not CharterAgreementProtocol.Capability.declared?("ML-DSA-65") and
+             "runtime does not declare ML-DSA-65"
+    test "the #{group} signing cases match independent projections" do
+      %{"cases" => cases} =
+        :json.decode(File.read!("priv/conformance/cases/signing-prepare.json"))
 
-          CharterAgreementProtocol.prepare_signing(
-            String.to_existing_atom(input["kind"]),
-            value,
-            context,
-            limits,
-            profile
-          )
-        end
+      assert length(cases) >= 50
 
-      output =
-        case result do
-          {:ok, plan} ->
-            if plan.signing_input.alg == "Ed25519" do
-              public = Base.url_decode64!(input["public_key"], padding: false)
+      cases =
+        CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(cases, unquote(group))
 
-              signature = signing_signature(plan, public, one["id"])
+      assert cases != []
 
-              assert {:ok, _compact} = CharterAgreementProtocol.finish_signing(plan, signature)
+      for one <- cases do
+        input = one["input"]
 
-              if plan.key == :matched do
-                assert {:error, %Error{code: :signature_invalid}} =
-                         CharterAgreementProtocol.finish_signing(plan, <<0::512>>)
+        result =
+          with {:ok, limits} <- signing_limits(input),
+               {:ok, profile} <- signing_profile(input) do
+            context = signing_context(input["context"])
+
+            value =
+              input
+              |> Map.take(["kid", "claims", "algorithm"])
+              |> Map.put("public_key", Base.url_decode64!(input["public_key"], padding: false))
+
+            CharterAgreementProtocol.prepare_signing(
+              String.to_existing_atom(input["kind"]),
+              value,
+              context,
+              limits,
+              profile
+            )
+          end
+
+        output =
+          case result do
+            {:ok, plan} ->
+              if plan.signing_input.alg == "Ed25519" do
+                public = Base.url_decode64!(input["public_key"], padding: false)
+
+                signature = signing_signature(plan, public, one["id"])
+
+                assert {:ok, _compact} = CharterAgreementProtocol.finish_signing(plan, signature)
+
+                if plan.key == :matched do
+                  assert {:error, %Error{code: :signature_invalid}} =
+                           CharterAgreementProtocol.finish_signing(plan, <<0::512>>)
+                end
+
+                {:ok, excluded} = Profile.new(algorithms: ["ML-DSA-65"])
+
+                assert {:error, %Error{code: :algorithm_outside_profile}} =
+                         CharterAgreementProtocol.finish_signing(
+                           %{plan | profile: excluded},
+                           signature
+                         )
               end
 
-              {:ok, excluded} = Profile.new(algorithms: ["ML-DSA-65"])
-
-              assert {:error, %Error{code: :algorithm_outside_profile}} =
-                       CharterAgreementProtocol.finish_signing(
-                         %{plan | profile: excluded},
-                         signature
-                       )
-            end
-
-            %{
-              "status" => "valid",
-              "output" => %{
-                "protected_segment" => plan.signing_input.protected_segment,
-                "payload_segment" => plan.signing_input.payload_segment,
-                "key" => Atom.to_string(plan.key)
+              %{
+                "status" => "valid",
+                "output" => %{
+                  "protected_segment" => plan.signing_input.protected_segment,
+                  "payload_segment" => plan.signing_input.payload_segment,
+                  "key" => Atom.to_string(plan.key)
+                }
               }
-            }
 
-          {:error, %Error{code: code}} ->
-            %{"status" => "invalid", "error_code" => Atom.to_string(code)}
-        end
+            {:error, %Error{code: code}} ->
+              %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+          end
 
-      assert output == one["expect"], one["id"]
+        assert output == one["expect"], one["id"]
+      end
     end
   end
 
@@ -375,14 +400,12 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
            )
   end
 
-  @tag skip:
-         not Enum.all?(
-           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-           &CharterAgreementProtocol.Capability.kat_verifies?/1
-         ) and "requires a runtime that verifies all registered ML-DSA algorithms"
   test "runtime preparation probes once per key algorithm" do
     alias CharterAgreementProtocol.{Capability, CryptoTrace}
-    algorithms = ["Ed25519", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]
+
+    algorithms =
+      Enum.filter(["Ed25519", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87"], &Capability.declared?/1)
+
     Enum.each(algorithms, &:persistent_term.erase({Capability, &1}))
 
     {_result, calls} =
@@ -394,7 +417,19 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       end)
 
     counts = Enum.frequencies_by(calls, &hd/1)
-    assert counts == %{eddsa: 1, mldsa44: 1, mldsa65: 1, mldsa87: 1}
+
+    assert counts ==
+             Map.new(algorithms, fn algorithm ->
+               crypto =
+                 %{
+                   "Ed25519" => :eddsa,
+                   "ML-DSA-44" => :mldsa44,
+                   "ML-DSA-65" => :mldsa65,
+                   "ML-DSA-87" => :mldsa87
+                 }[algorithm]
+
+               {crypto, 1}
+             end)
   end
 
   defp signing_limits(input) do
@@ -492,13 +527,11 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
         &(&1["surface"] in ["party_descriptor.verify", "descriptor_chain.verify"])
       )
 
-    assert length(verify_cases) == 37
     Enum.each(verify_cases, &assert_verify_case/1)
   end
 
   defp assert_revision_expectations(cases) do
     revision_cases = Enum.filter(cases, &(&1["surface"] == "charter_revision.decode"))
-    assert length(revision_cases) == 31
 
     Enum.each(revision_cases, fn one ->
       actual = CharterRevision.decode(one["input"]["text"], Limits.default())
@@ -530,7 +563,6 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_acceptance_expectations(cases) do
     acceptance_cases = Enum.filter(cases, &String.starts_with?(&1["surface"], "acceptance."))
-    assert length(acceptance_cases) == 17
     Enum.each(acceptance_cases, &assert_acceptance_case/1)
   end
 
@@ -577,7 +609,6 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_termination_expectations(cases) do
     termination_cases = Enum.filter(cases, &(&1["surface"] == "termination.verify"))
-    assert length(termination_cases) == 13
 
     Enum.each(termination_cases, fn one ->
       input = one["input"]
@@ -617,11 +648,9 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     chain_cases =
       Enum.filter(cases, &(&1["surface"] in ["chain.verify", "governing_revision"]))
 
-    assert length(chain_cases) == 15
     Enum.each(chain_cases, &assert_chain_case/1)
 
     profile_cases = Enum.filter(cases, &(&1["surface"] == "chain.verify_profile"))
-    assert length(profile_cases) == 3
     Enum.each(profile_cases, &assert_profile_case/1)
   end
 
@@ -720,7 +749,6 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_receipt_expectations(cases) do
     receipt_cases = Enum.filter(cases, &(&1["surface"] == "receipt.verify"))
-    assert length(receipt_cases) == 21
 
     Enum.each(receipt_cases, fn one ->
       input = one["input"]
