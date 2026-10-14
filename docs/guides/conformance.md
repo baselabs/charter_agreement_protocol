@@ -18,18 +18,75 @@ is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:s6oQr7zRm9quErCZw__yQPsv63fNj8CKdOk_3o3o6hM` |
-| Index SHA-256 (base64url) | `VwaA08scgt5MTLY-WrQbwCShxnvPbEmkpmd0kBUKjgw` |
+| Corpus digest | `sha-256:93jR3HOjNSIv9Pxr-LmG46z8wEEqwQQn3Puki71ioVU` |
+| Index SHA-256 (base64url) | `ZZV-fd_H2B0WuecoAiTicbF6Fx6_5k6zlqODpzEyRtw` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:Po0YxdnQioE02JC5tbC3Vr1I5wpeT9aiy0e4xTGegZM` |
-| Cases | 243, in 16 case files |
+| Specification digest | `sha-256:csFyNZAq9UTGMIVR43s9ydwm3qiRlrnE_b2xATOF9JU` |
+| Cases | 364, in 16 case files |
 
 The pinned TypeScript build `47ef74f` certifies an earlier index. Its case
-executor differs on four current cases: `receipt-strict-chain-limits`,
-`signing-set-profile-scope`, `signing-termination-counterparty-profile` and
-`signing-ed25519-no-curve-point`. Its harness also rejects the current
-receipt limit applicability cell. The agreement and release checks report
-this retained pin's corpus mismatch.
+executor differs on 54 of the current 364 cases. Its harness rejects the current
+case encoding with `case file`; the agreement and release checks also report the
+retained pin's corpus mismatch. The table compares the unchanged pinned executor
+against the exact current case inputs and expectations. The pin's JSON reader
+converts whole float tokens to integers, which accounts for the float rows.
+
+| Case | Expected | Pinned result |
+|---|---|---|
+| `acceptance-equivocation-null-profile` | `invalid_profile` | `valid` |
+| `acceptance-equivocation-null-algorithms` | `invalid_profile` | `valid` |
+| `acceptance-equivocation-null-revisions` | `invalid_profile` | `valid` |
+| `base64url-decode-null-profile` | `invalid_profile` | `valid` |
+| `base64url-decode-null-algorithms` | `invalid_profile` | `valid` |
+| `base64url-decode-null-revisions` | `invalid_profile` | `valid` |
+| `canonicalization-encode-null-profile` | `invalid_profile` | `valid` |
+| `canonicalization-encode-null-algorithms` | `invalid_profile` | `valid` |
+| `canonicalization-encode-null-revisions` | `invalid_profile` | `valid` |
+| `chain-verify-null-profile` | `invalid_profile` | `valid` |
+| `chain-verify-null-algorithms` | `invalid_profile` | `valid` |
+| `chain-verify-null-revisions` | `invalid_profile` | `valid` |
+| `chain-verify-empty-revisions-malformed-descriptor` | `compact_invalid` | `chain_invalid` |
+| `chain-verify_profile-null-profile` | `invalid_profile` | `raises` |
+| `chain-verify_profile-null-algorithms` | `invalid_profile` | `invalid_type` |
+| `chain-verify_profile-null-revisions` | `invalid_profile` | `invalid_type` |
+| `chain-verify_profile-float-revision-minimum` | `invalid_profile` | `valid` |
+| `chain-verify_profile-float-revision-maximum` | `invalid_profile` | `valid` |
+| `charter_revision-decode-null-profile` | `invalid_profile` | `valid` |
+| `charter_revision-decode-null-algorithms` | `invalid_profile` | `valid` |
+| `charter_revision-decode-null-revisions` | `invalid_profile` | `valid` |
+| `revision-no-bindings` | `valid` | `raises` |
+| `descriptor_chain-verify-null-profile` | `invalid_profile` | `valid` |
+| `descriptor_chain-verify-null-algorithms` | `invalid_profile` | `valid` |
+| `descriptor_chain-verify-null-revisions` | `invalid_profile` | `valid` |
+| `digest-hash-null-profile` | `invalid_profile` | `valid` |
+| `digest-hash-null-algorithms` | `invalid_profile` | `valid` |
+| `digest-hash-null-revisions` | `invalid_profile` | `valid` |
+| `governing_revision-null-profile` | `invalid_profile` | `valid` |
+| `governing_revision-null-algorithms` | `invalid_profile` | `valid` |
+| `governing_revision-null-revisions` | `invalid_profile` | `valid` |
+| `governing-zero-byte-limit` | `limit_exceeded` | `governing_invalid` |
+| `json-decode-null-profile` | `invalid_profile` | `valid` |
+| `json-decode-null-algorithms` | `invalid_profile` | `valid` |
+| `json-decode-null-revisions` | `invalid_profile` | `valid` |
+| `json-incomplete-before-depth` | `invalid_syntax` | `limit_exceeded` |
+| `json-input-type-with-valid-limits` | `invalid_type` | `raises` |
+| `party_descriptor-verify-float-revision-minimum` | `invalid_profile` | `valid` |
+| `party_descriptor-verify-float-revision-maximum` | `invalid_profile` | `valid` |
+| `receipt-strict-chain-limits` | `limit_exceeded` | `valid` |
+| `schema-validate-null-profile` | `invalid_profile` | `valid` |
+| `schema-validate-null-algorithms` | `invalid_profile` | `valid` |
+| `schema-validate-null-revisions` | `invalid_profile` | `valid` |
+| `signing-set-profile-scope` | `valid` | `algorithm_outside_profile` |
+| `signing-termination-counterparty-profile` | `valid` | `algorithm_outside_profile` |
+| `signing-ed25519-no-curve-point` | `signing_key_invalid` | `valid` |
+| `signing-prepare-null-profile` | `invalid_profile` | `valid` |
+| `signing-prepare-empty-revisions-malformed-descriptor` | `compact_invalid` | `chain_invalid` |
+| `signing-party_descriptor-float-protocol-revision` | `signing_input_invalid` | `valid` |
+| `signing-acceptance-float-protocol-revision` | `signing_input_invalid` | `valid` |
+| `signing-termination-float-protocol-revision` | `signing_input_invalid` | `valid` |
+| `signing-receipt-float-protocol-revision` | `signing_input_invalid` | `valid` |
+| `signing-prepare-float-revision-minimum` | `invalid_profile` | `valid` |
+| `signing-prepare-float-revision-maximum` | `invalid_profile` | `valid` |
 
 What each one tells you:
 

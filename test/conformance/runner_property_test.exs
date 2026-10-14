@@ -2,8 +2,12 @@ defmodule CharterAgreementProtocol.Conformance.RunnerPropertyTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias CharterAgreementProtocol.Conformance.{Corpus, Runner}
-  alias CharterAgreementProtocol.{Capability.Profile, Limits}
+  alias CharterAgreementProtocol.{
+    Capability.Profile,
+    Conformance.Corpus,
+    Conformance.Runner,
+    Limits
+  }
 
   @json_types [nil, false, 0, 1.0, "bad", [], %{}]
 
