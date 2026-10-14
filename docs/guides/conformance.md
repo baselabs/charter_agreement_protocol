@@ -21,7 +21,7 @@ is the one place in the guides where they are recorded.
 | Corpus digest | `sha-256:s6oQr7zRm9quErCZw__yQPsv63fNj8CKdOk_3o3o6hM` |
 | Index SHA-256 (base64url) | `VwaA08scgt5MTLY-WrQbwCShxnvPbEmkpmd0kBUKjgw` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:Zl4c98_PSyXL13F60J_Vhq_shsnQhs3tkOaYqJR3JNo` |
+| Specification digest | `sha-256:Po0YxdnQioE02JC5tbC3Vr1I5wpeT9aiy0e4xTGegZM` |
 | Cases | 243, in 16 case files |
 
 The pinned TypeScript build `47ef74f` certifies an earlier index. Its case
