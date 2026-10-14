@@ -30,9 +30,8 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   remaining small-order encodings and keys that are not curve points, using
   the same point rule for the public key and signature `R`. Caller-built
   contexts with malformed field types now return `invalid_type` consistently.
-  Receipt revision numbers,
-  chain topology and `not_verified` entries, descriptor-chain topology and
-  revision `supersedes` entries are checked. Some of these contexts returned
+  Receipt revision numbers, chain topology and `not_verified` entries,
+  descriptor-chain topology and revision `supersedes` entries are checked. Some of these contexts returned
   `ok` in 0.5.0; others raised or returned a context-specific error.
   The 0.6.0 compatibility row records these transitions. Producer bytes stay
   unchanged.
