@@ -44,7 +44,14 @@ defmodule CharterAgreementProtocol.Architecture.PortfolioIdentityCensusTest do
              MapSet.new([
                "BAP1-ARCHIVE\0EXPORT\0",
                "BAP1-CHAIN\0",
-               "BAP1-REQUEST"
+               "BAP1-CONTENT",
+               "BAP1-REQUEST",
+               "BAP2-ARCHIVE\0EXPORT\0",
+               "BAP2-CHAIN\0",
+               "BAP2-REQUEST",
+               "BAP3-ARCHIVE\0EXPORT\0",
+               "BAP3-CHAIN\0",
+               "BAP3-REQUEST"
              ])
 
     assert pairwise_disjoint?([cap, abp, bap])
@@ -59,7 +66,10 @@ defmodule CharterAgreementProtocol.Architecture.PortfolioIdentityCensusTest do
       |> matching(@protected_type)
 
     assert cap == MapSet.new(~w(cap+acceptance cap+party cap+receipt cap+termination))
-    assert MapSet.new(~w(ba+cap ba+chain-anchor ba+key-transition dpop+jwt)) == portfolio
+    assert MapSet.new(~w(
+             ba+cap ba+chain-anchor ba+content-assertion ba+key-transition
+             ba+loopback-proof ba+role-attestation dpop+jwt
+           )) == portfolio
     assert MapSet.disjoint?(cap, portfolio)
   end
 

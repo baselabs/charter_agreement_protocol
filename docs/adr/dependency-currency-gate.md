@@ -27,12 +27,13 @@ reason, and no check caught it. These failure modes shaped the check:
 
 1. **Latest first.** Everything `mix hex.outdated --all` marks "Update possible" is
    updated in the change that notices it. A dependency that is not at its latest
-   version is a deliberate pin with an inline reason in `mix.exs`. Current pins:
-   `agent_blueprint_protocol == 0.1.1` and `bounded_authority_protocol == 0.1.2`.
-   These are exact identity contracts with the sibling protocols that CAP's fixtures
-   and conformance tests are checked against. Their jumps to newer major lines
-   (0.1 to 0.7, and 0.1 to 0.4) are separate pieces of work, never part of a currency
-   update.
+   version is a deliberate pin with an inline reason in `mix.exs`. The sibling
+   protocols CAP's fixtures and conformance tests are checked against are exact
+   identity contracts: `agent_blueprint_protocol == 0.1.1` and
+   `bounded_authority_protocol == 0.8.0`. The ABP jump to a newer line (0.1 to 0.7)
+   is a separate piece of work, never part of a currency update. BAP moved from
+   0.1.2 to 0.8.0 on October 14, 2026, when 0.1.2 was retired with a security
+   advisory; the digest identity tests passed unchanged on 0.8.0.
 2. **The check.** `scripts/check_currency.exs`, run as `mix currency.check`:
    - runs in the caller's working directory and never changes directory;
    - classifies only from the rendered `mix hex.outdated --all` table, with status

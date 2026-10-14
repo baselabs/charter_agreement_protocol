@@ -41,7 +41,7 @@ of the complete BAP compact it received. CAP writes the same hash in its tagged
 form, so `grant_digest` is `"sha-256:"` followed by the `ath` value.
 
 Both spellings decode to the same 32 bytes. CAP's test suite computes `ath` with the
-published `bounded_authority_protocol` 0.1.2 package and checks it against the digest
+published `bounded_authority_protocol` 0.8.0 package and checks it against the digest
 the receipt fixtures carry. The composition is checked against BAP's own code.
 
 CAP checks that `grant_digest` is well formed and covered by the receipt's signature.

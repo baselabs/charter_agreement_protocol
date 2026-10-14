@@ -29,13 +29,13 @@ defmodule CharterAgreementProtocol.Portfolio.DigestIdentityTest do
 
     assert {:agent_blueprint_protocol, "== 0.1.1", only: [:dev, :test], runtime: false} in dependencies
 
-    assert {:bounded_authority_protocol, "== 0.1.2", only: [:dev, :test], runtime: false} in dependencies
+    assert {:bounded_authority_protocol, "== 0.8.0", only: [:dev, :test], runtime: false} in dependencies
 
     lock = File.read!("mix.lock")
     assert lock =~ ~s("agent_blueprint_protocol": {:hex, :agent_blueprint_protocol, "0.1.1")
     assert lock =~ "bd9b3b5f505489e02490fb44dbc52c74c347346519d7455eb6744a3832de318b"
-    assert lock =~ ~s("bounded_authority_protocol": {:hex, :bounded_authority_protocol, "0.1.2")
-    assert lock =~ "fc9496c8bb37f9577d13e51621174ca40a3bb8f3fa49456c8c878fe61205ba22"
+    assert lock =~ ~s("bounded_authority_protocol": {:hex, :bounded_authority_protocol, "0.8.0")
+    assert lock =~ "0f39f76c772b7308d11bb19487a353a7028b1b947f6afda94674ed708d46df1f"
   end
 
   test "CAP ABP binding fixture equals the exact published ABP deployment output" do
