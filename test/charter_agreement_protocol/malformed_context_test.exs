@@ -524,31 +524,67 @@ defmodule CharterAgreementProtocol.MalformedContextTest do
     [key | _] = descriptor.descriptor.verification_keys
     [party | _] = context.revision.parties
 
-    check all(value <- one_of([integer(), constant(nil), list_of(integer())]), max_runs: 30) do
-      variants =
-        for field <- [:role, :party_descriptor_digest] do
-          {%{context.revision | parties: [Map.put(party, field, value)]}, context.descriptors}
-        end
+    rules = context.revision.termination_rules
 
-      variants =
-        variants ++
-          for field <- [:key_id, :public_key, :algorithm, :status] do
-            changed = Map.put(key, field, value)
+    check all(number <- integer(), numbers <- list_of(integer()), bytes <- binary(), max_runs: 30) do
+      wrong = %{
+        binary: [number, nil, numbers],
+        optional_binary: [number, numbers],
+        integer: [bytes, nil, numbers],
+        binaries: [number, nil, [number]],
+        list: [number, nil],
+        enum: [number, nil, bytes],
+        struct: [number, nil, numbers]
+      }
 
-            {context.revision,
-             %{
-               context.descriptors
-               | descriptors: [
-                   %{
-                     descriptor
-                     | descriptor: %{descriptor.descriptor | verification_keys: [changed]}
-                   }
-                 ]
-             }}
-          end
+      nested = [
+        {context.revision,
+         [
+           canonical_bytes: :binary,
+           revision_number: :integer,
+           charter_id: :optional_binary,
+           prev_revision_digest: :optional_binary,
+           supersedes: :binaries,
+           parties: :list,
+           termination_rules: :struct
+         ], fn changed -> {changed, context.descriptors} end},
+        {context.descriptors, [topology: :enum, descriptors: :list, fork_evidence: :struct],
+         fn changed -> {context.revision, changed} end},
+        {party, [role: :binary, party_descriptor_digest: :binary],
+         fn changed -> {%{context.revision | parties: [changed]}, context.descriptors} end},
+        {rules, [reason_codes: :binaries],
+         fn changed -> {%{context.revision | termination_rules: changed}, context.descriptors} end},
+        {descriptor,
+         [descriptor_digest: :binary, descriptor_position: :enum, descriptor: :struct],
+         fn changed -> {context.revision, %{context.descriptors | descriptors: [changed]}} end},
+        {descriptor.descriptor, [verification_keys: :list],
+         fn changed ->
+           {context.revision,
+            %{context.descriptors | descriptors: [%{descriptor | descriptor: changed}]}}
+         end},
+        {key, [key_id: :binary, public_key: :binary, algorithm: :binary, status: :enum],
+         fn changed ->
+           {context.revision,
+            %{
+              context.descriptors
+              | descriptors: [
+                  %{
+                    descriptor
+                    | descriptor: %{descriptor.descriptor | verification_keys: [changed]}
+                  }
+                ]
+            }}
+         end}
+      ]
 
-      for {revision, descriptors} <- variants,
+      for {value, fields, rebuild} <- nested,
+          {field, type} <- fields,
+          replacement <- wrong[type],
+          # A missing fork is valid; other nested structs are required.
+          not (field == :fork_evidence and is_nil(replacement)),
           {verify, compact} <- internal_inputs(context) do
+        {revision, descriptors} = rebuild.(Map.put(value, field, replacement))
+
         assert {:error, %Error{code: :invalid_type}} =
                  verify.(compact, revision, descriptors, Limits.default())
       end
