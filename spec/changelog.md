@@ -8,6 +8,14 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-10-14: Integer claims and runner inputs
+
+State integer-token handling once under `CAP-JSON-integer-claims`, including
+nested revision bindings. The case format defines kind/value type matching,
+top-level limits and closed nested chain views. Add corpus cases for each
+integer member and runner surface, plus named mutations for
+`CAP-JSON-check-order` and `CAP-CHAIN-check-order`.
+
 ## 2026-10-14: 0.6.0 corpus and checks
 
 Add 80 cases, for 243 total. The new case groups cover:

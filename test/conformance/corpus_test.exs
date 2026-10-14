@@ -193,13 +193,13 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
            end)
 
     counts = Enum.frequencies_by(cases, & &1["surface"])
-    assert counts["party_descriptor.verify"] + counts["descriptor_chain.verify"] == 51
-    assert counts["charter_revision.decode"] == 38
-    assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 29
-    assert counts["termination.verify"] == 19
-    assert counts["chain.verify"] + counts["governing_revision"] == 31
-    assert counts["chain.verify_profile"] == 11
-    assert counts["receipt.verify"] == 30
+    assert counts["party_descriptor.verify"] + counts["descriptor_chain.verify"] == 71
+    assert counts["charter_revision.decode"] == 50
+    assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 49
+    assert counts["termination.verify"] == 29
+    assert counts["chain.verify"] + counts["governing_revision"] == 49
+    assert counts["chain.verify_profile"] == 20
+    assert counts["receipt.verify"] == 50
     assert Enum.any?(cases, &(&1["surface"] == "signing.prepare"))
   end
 
@@ -217,12 +217,12 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
         )
 
       assert cases != []
-      assert_verify_surface_expectations(cases)
-      assert_revision_expectations(cases)
-      assert_acceptance_expectations(cases)
-      assert_termination_expectations(cases)
-      assert_chain_expectations(cases)
-      assert_receipt_expectations(cases)
+      assert_verify_surface_expectations(protocol_cases(cases))
+      assert_revision_expectations(protocol_cases(cases))
+      assert_acceptance_expectations(protocol_cases(cases))
+      assert_termination_expectations(protocol_cases(cases))
+      assert_chain_expectations(protocol_cases(cases))
+      assert_receipt_expectations(protocol_cases(cases))
     end
 
     @tag skip:
@@ -235,7 +235,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       assert length(cases) >= 50
 
       cases =
-        CorpusAlgorithms.select(cases, unquote(group))
+        cases |> CorpusAlgorithms.select(unquote(group)) |> protocol_cases()
 
       assert cases != []
 
@@ -508,6 +508,12 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     |> Map.new(fn path -> {Path.relative_to(path, "priv/conformance"), File.read!(path)} end)
   end
 
+  defp protocol_cases(cases) do
+    Enum.reject(cases, fn one ->
+      Map.has_key?(one["input"], "value") or String.contains?(one["id"], "-chain-view-")
+    end)
+  end
+
   defp assert_verify_surface_expectations(cases) do
     verify_cases =
       Enum.filter(
@@ -765,7 +771,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
       actual =
         with :ok <- Profile.check(case_profile(input)),
-             {:ok, context} <- receipt_context(input) do
+             {:ok, context} <- receipt_context(input, case_limits(input)) do
           Receipt.verify(input["compact"], context, case_limits(input), case_profile(input))
         end
 
@@ -773,11 +779,20 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     end)
   end
 
-  defp receipt_context(%{"revision_text" => text}),
-    do: CharterRevision.decode(text, Limits.default())
+  defp receipt_context(%{"revision_text" => text}, limits),
+    do: CharterRevision.decode(text, limits)
 
-  defp receipt_context(%{"chain" => chain}) when is_map(chain), do: verify_chain_input(chain)
-  defp receipt_context(_input), do: {:error, Error.new(:invalid_type, ["input"])}
+  defp receipt_context(%{"chain" => chain}, limits) when is_map(chain),
+    do:
+      Chain.verify(
+        chain["revisions"],
+        chain["acceptances"],
+        chain["descriptors"],
+        chain["terminations"],
+        limits
+      )
+
+  defp receipt_context(_input, _limits), do: {:error, Error.new(:invalid_type, ["input"])}
 
   defp case_profile(input) do
     full = Profile.full()

@@ -26,6 +26,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ### Fixed
 
+- Runner kind/value types and nested chain members are checked before execution.
+- Integer claims reject float tokens before canonical encoding on signing and verify surfaces.
+- Generated retained-context tests cover every member read by internal verification.
 - Corpus runners return typed errors for malformed inputs and contexts,
   including zero limits for governing queries and receipts without a context.
 - Revision projections support an empty binding list.
