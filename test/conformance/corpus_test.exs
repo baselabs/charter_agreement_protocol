@@ -438,16 +438,14 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
     if Enum.all?(Map.keys(selected), &Map.has_key?(known, &1)) do
       fields = Map.new(selected, fn {key, value} -> {Map.fetch!(known, key), value} end)
-      limits = struct(Limits.default(), fields)
-      with :ok <- Limits.check(limits), do: {:ok, limits}
+      {:ok, struct(Limits.default(), fields)}
     else
       Limits.new(unknown: nil)
     end
   end
 
   defp signing_profile(input) do
-    profile = case_profile(input)
-    with :ok <- Profile.check(profile), do: {:ok, profile}
+    {:ok, case_profile(input)}
   end
 
   defp signing_context(%{"set" => set}) do
