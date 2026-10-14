@@ -11,7 +11,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       path: "lib/charter_agreement_protocol/signature.ex",
       from: ":crypto.mod_pow(base, exponent, @ed25519_field_prime) |> :binary.decode_unsigned()",
       to: "power_fallback(base, exponent, 1)",
-      command: ~w(mix test test/charter_agreement_protocol/ed25519_admission_test.exs --seed 42)
+      command:
+        ~w(mix test test/charter_agreement_protocol/ed25519_admission_test.exs test/charter_agreement_protocol/chain_cost_test.exs --seed 42)
     },
     %{
       name: "runner-option-member-code-revert",
@@ -176,7 +177,7 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       ], &Base.decode16!(&1, case: :mixed))
       """,
       command:
-        ~w(mix test test/charter_agreement_protocol/ed25519_admission_test.exs test/conformance/corpus_test.exs --seed 42)
+        ~w(mix test test/charter_agreement_protocol/ed25519_admission_test.exs test/charter_agreement_protocol/strict_ed25519_fixture_test.exs test/conformance/corpus_test.exs --seed 42)
     },
     %{
       name: "typ-confusion",

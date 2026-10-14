@@ -7,12 +7,14 @@ defmodule CharterAgreementProtocol.ChainCostTest do
     Capability,
     CryptoTrace,
     Digest,
+    Error,
     Internal.Retained,
     Limits,
+    Signature,
     SigningFixture
   }
 
-  test "set verification checks each descriptor signature once" do
+  test "repeated and late failing acceptance sets check each signature once with no pure exponentiation" do
     world = SigningFixture.world("Ed25519")
     Capability.kat_verifies?("Ed25519")
 
@@ -35,7 +37,7 @@ defmodule CharterAgreementProtocol.ChainCostTest do
         {compact, digest}
       end)
 
-    for count <- [2, 40] do
+    for count <- [2, 40], fail_last <- [false, true] do
       acceptances =
         for second <- 1..count do
           claims =
@@ -48,18 +50,40 @@ defmodule CharterAgreementProtocol.ChainCostTest do
           SigningFixture.compact(:acceptance, claims, world.issuer)
         end
 
-      {_result, calls} =
-        CryptoTrace.count(:verify, fn ->
-          CAP.verify_chain(
-            world.set.revisions,
-            acceptances,
-            world.set.descriptors ++ lineage,
-            [],
-            Limits.default()
-          )
-        end)
+      acceptances =
+        if fail_last do
+          List.update_at(acceptances, -1, fn compact ->
+            [header, payload, encoded] = String.split(compact, ".")
 
+            <<r::binary-size(32), first, rest::binary>> =
+              Base.url_decode64!(encoded, padding: false)
+
+            encoded = Base.url_encode64(r <> <<Bitwise.bxor(first, 1)>> <> rest, padding: false)
+            header <> "." <> payload <> "." <> encoded
+          end)
+        else
+          acceptances
+        end
+
+      operation = fn ->
+        CAP.verify_chain(
+          world.set.revisions,
+          acceptances,
+          world.set.descriptors ++ lineage,
+          [],
+          Limits.default()
+        )
+      end
+
+      {result, calls} = CryptoTrace.count(:verify, operation)
       assert length(calls) == 25 + count
+
+      if fail_last,
+        do: assert(match?({:error, %Error{code: :signature_invalid}}, result)),
+        else: assert(match?({:error, %Error{code: :chain_invalid}}, result))
+
+      {^result, pure_calls} = CryptoTrace.count(Signature, :power_fallback, 3, operation)
+      assert pure_calls == []
     end
   end
 
@@ -92,7 +116,7 @@ defmodule CharterAgreementProtocol.ChainCostTest do
     Capability.kat_verifies?("Ed25519")
     termination = SigningFixture.compact(:termination, world.claims.termination, world.issuer)
 
-    {_result, calls} =
+    {{:ok, _facts}, calls} =
       CryptoTrace.count(:verify, fn ->
         CAP.verify_chain(
           world.set.revisions,
