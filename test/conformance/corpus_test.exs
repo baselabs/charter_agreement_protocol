@@ -2,7 +2,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   use ExUnit.Case, async: false
 
   alias CharterAgreementProtocol.Conformance.Corpus
-  alias CharterAgreementProtocol.ConformanceTest.Builder
+  alias CharterAgreementProtocol.ConformanceTest.{Builder, CorpusAlgorithms}
 
   alias CharterAgreementProtocol.{
     Acceptance,
@@ -211,7 +211,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       {:ok, corpus} = Corpus.load(shipped_files())
 
       cases =
-        CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(
+        CorpusAlgorithms.select(
           corpus.cases,
           unquote(group)
         )
@@ -235,7 +235,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       assert length(cases) >= 50
 
       cases =
-        CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(cases, unquote(group))
+        CorpusAlgorithms.select(cases, unquote(group))
 
       assert cases != []
 

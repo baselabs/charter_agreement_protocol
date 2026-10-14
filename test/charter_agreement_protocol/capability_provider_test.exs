@@ -30,6 +30,7 @@ defmodule CharterAgreementProtocol.CapabilityProviderTest do
     # OTP's unchanged crypto modules run without their native library in a child VM.
     code = """
     #{inspect(System.otp_release())} = System.otp_release()
+    Application.load(:crypto)
     #{inspect(Application.spec(:crypto, :vsn))} = Application.spec(:crypto, :vsn)
     #{inspect(String.to_charlist(Path.join(isolated, "priv")))} = :code.priv_dir(:crypto)
     try do

@@ -1,6 +1,7 @@
 defmodule CharterAgreementProtocol.SigningOracleTest do
   use ExUnit.Case, async: true
   alias CharterAgreementProtocol, as: CAP
+  alias CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms
 
   alias CharterAgreementProtocol.{
     Algorithm,
@@ -25,7 +26,7 @@ defmodule CharterAgreementProtocol.SigningOracleTest do
             {"receipt-verify", :receipt}
           ],
           one <-
-            CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(
+            CorpusAlgorithms.select(
               :json.decode(File.read!("priv/conformance/cases/#{file}.json"))["cases"],
               unquote(group)
             ) do

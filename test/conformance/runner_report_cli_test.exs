@@ -2,6 +2,7 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
   use ExUnit.Case, async: false
 
   alias CharterAgreementProtocol.Conformance.{Cli, Corpus, Report, Runner}
+  alias CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms
   alias CharterAgreementProtocol.Digest
 
   for group <- [:ed25519, :ml_dsa] do
@@ -12,7 +13,7 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
       assert {:ok, corpus} = Corpus.load(shipped_files())
 
       cases =
-        CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(
+        CorpusAlgorithms.select(
           corpus.cases,
           unquote(group)
         )
@@ -37,8 +38,8 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
 
   test "the algorithm groups partition all certified cases" do
     {:ok, corpus} = Corpus.load(shipped_files())
-    ed = CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(corpus.cases, :ed25519)
-    ml = CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(corpus.cases, :ml_dsa)
+    ed = CorpusAlgorithms.select(corpus.cases, :ed25519)
+    ml = CorpusAlgorithms.select(corpus.cases, :ml_dsa)
     assert length(ed) == 231
     assert length(ml) == 12
     assert length(ed) + length(ml) == 243
@@ -98,7 +99,7 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
     assert {:ok, corpus} = Corpus.load(shipped_files())
 
     cases =
-      CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms.select(corpus.cases, :ed25519)
+      CorpusAlgorithms.select(corpus.cases, :ed25519)
 
     [first | rest] = cases
     flipped = put_in(first, ["expect", "status"], "invalid")

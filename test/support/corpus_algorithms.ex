@@ -19,12 +19,7 @@ defmodule CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms do
       [header, _payload, _signature] ->
         with {:ok, bytes} <- Base.url_decode64(header, padding: false),
              {:ok, value} <- CharterAgreementProtocol.Json.decode(bytes) do
-          {:object, members} = value
-
-          case List.keyfind(members, "alg", 0) do
-            {"alg", {:string, "ML-DSA-" <> _parameter}} -> true
-            _other -> false
-          end
+          header_ml_dsa?(value)
         else
           _other -> false
         end
@@ -35,4 +30,13 @@ defmodule CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms do
   end
 
   defp ml_dsa?(_input), do: false
+
+  defp header_ml_dsa?({:object, members}) do
+    case List.keyfind(members, "alg", 0) do
+      {"alg", {:string, "ML-DSA-" <> _parameter}} -> true
+      _other -> false
+    end
+  end
+
+  defp header_ml_dsa?(_other), do: false
 end

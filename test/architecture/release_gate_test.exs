@@ -6,7 +6,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
 
   @mutation_names ~w(
     ed25519-native-power-skip
-    runner-option-members-skip
+    runner-option-member-code-revert
     receipt-caller-limits-skip
     retained-revision-fields-skip
     signing-termination-profile-skip
