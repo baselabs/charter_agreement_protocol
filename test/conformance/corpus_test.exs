@@ -405,7 +405,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       fields = Map.new(selected, fn {key, value} -> {Map.fetch!(known, key), value} end)
       {:ok, struct(Limits.default(), fields)}
     else
-      {:error, Error.new(:invalid_type, ["limits"])}
+      Limits.new(unknown: nil)
     end
   end
 
@@ -421,7 +421,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
          revisions: if(range, do: {range["min"], range["max"]}, else: default.revisions)
        )}
     else
-      {:error, Error.new(:invalid_type, ["profile"])}
+      Profile.new(unknown: nil)
     end
   end
 

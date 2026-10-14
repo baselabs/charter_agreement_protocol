@@ -18,8 +18,8 @@ is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:mkqzfOWULYStXLwedxL5cXiFvQMAMIYDHYjcqSJnSq0` |
-| Index SHA-256 (base64url) | `fvkjFVS797aqmxs0-2XYi9aLij6ZHxBiuQb9cQyhqS0` |
+| Corpus digest | `sha-256:s6oQr7zRm9quErCZw__yQPsv63fNj8CKdOk_3o3o6hM` |
+| Index SHA-256 (base64url) | `VwaA08scgt5MTLY-WrQbwCShxnvPbEmkpmd0kBUKjgw` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
 | Specification digest | `sha-256:Zl4c98_PSyXL13F60J_Vhq_shsnQhs3tkOaYqJR3JNo` |
 | Cases | 243, in 16 case files |
@@ -82,6 +82,10 @@ behavior it exercises). The surfaces:
 | `governing_revision` | The governing revision at given instants, including closure by termination |
 | `receipt.verify` | One receipt against a verified chain or a bare revision |
 | `signing.prepare` | Pre-sign segments, descriptor key match, and typed refusals |
+
+Unknown `limits` and `profile` members return `invalid_limits` and
+`invalid_profile`, as the library constructors do. The `receipt.verify` runner
+applies the case's `limits` to its context and receipt.
 
 The classes run from `valid` and the size bounds (`exact_bound`, `maximum_plus_one`)
 through each kind of malformed input to the set-level outcomes: `chain_fork`,

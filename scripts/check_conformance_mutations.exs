@@ -14,10 +14,10 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       command: ~w(mix test test/charter_agreement_protocol/ed25519_admission_test.exs --seed 42)
     },
     %{
-      name: "runner-option-members-skip",
+      name: "runner-option-member-code-revert",
       path: "lib/charter_agreement_protocol/conformance/runner.ex",
-      from: "case closed_options(one[\"input\"]) do",
-      to: "case :ok do",
+      from: ":error -> {:halt, invalid_options(kind, [{name, value}])}",
+      to: ":error -> {:halt, {:error, Error.new(:invalid_type, [kind])}}",
       command: ~w(mix test test/conformance/runner_report_cli_test.exs --seed 42)
     },
     %{

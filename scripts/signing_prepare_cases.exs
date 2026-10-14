@@ -113,13 +113,13 @@ defmodule CharterAgreementProtocol.SigningPrepareCases do
         invalid(
           "signing-unknown-limits-member",
           Map.put(descriptor, "limits", %{"algorithms" => 1}),
-          "invalid_type",
+          "invalid_limits",
           "invalid_type"
         ),
         invalid(
           "signing-unknown-profile-member",
           Map.put(descriptor, "profile", %{"other" => true}),
-          "invalid_type",
+          "invalid_profile",
           "invalid_type"
         ),
         invalid(

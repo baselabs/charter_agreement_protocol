@@ -328,12 +328,15 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     Enum.reduce_while(selected, {:ok, %{}}, fn {name, value}, {:ok, mapped} ->
       case Map.fetch(members, name) do
         {:ok, field} -> {:cont, {:ok, Map.put(mapped, field, value)}}
-        :error -> {:halt, {:error, Error.new(:invalid_type, [kind])}}
+        :error -> {:halt, invalid_options(kind, [{name, value}])}
       end
     end)
   end
 
   defp mapped_options(_selected, kind), do: {:error, Error.new(:invalid_type, [kind])}
+
+  defp invalid_options("limits", options), do: Limits.new(options)
+  defp invalid_options(_kind, options), do: Profile.new(options)
 
   defp closed_options(input) do
     with {:ok, _limits} <- mapped_options(Map.get(input, "limits", %{}), "limits"),

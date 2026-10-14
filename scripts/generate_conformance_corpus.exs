@@ -2454,7 +2454,7 @@ review_cases = [
     "surface" => "json.decode",
     "class" => "invalid_type",
     "input" => %{"text" => "null", "limits" => %{"cap_unregistered_limit" => 1}},
-    "expect" => invalid.("invalid_type")
+    "expect" => invalid.("invalid_limits")
   },
   %{
     "id" => "receipt-strict-chain-limits",

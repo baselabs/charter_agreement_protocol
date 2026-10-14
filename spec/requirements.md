@@ -36,7 +36,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Mutation: `signing-limits-order-skip`
 - Mutation: `signing-profile-order-skip`
 - Mutation: `signing-context-type-skip`
-- Mutation: `runner-option-members-skip`
+- Mutation: `runner-option-member-code-revert`
 
 ### CAP-SIGNING-caller-limits
 

@@ -70,7 +70,7 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
         ] do
       one = put_in(original, ["input", kind], members)
       [result] = Runner.run(%{corpus | cases: [one]})
-      assert result.actual == %{"status" => "invalid", "error_code" => "invalid_type"}
+      assert result.actual == %{"status" => "invalid", "error_code" => "invalid_" <> kind}
     end
   end
 

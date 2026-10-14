@@ -29,7 +29,7 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:mutation, "signing-limits-order-skip"},
        {:mutation, "signing-profile-order-skip"},
        {:mutation, "signing-context-type-skip"},
-       {:mutation, "runner-option-members-skip"}
+       {:mutation, "runner-option-member-code-revert"}
      ]},
     {"CAP-SIGNING-caller-limits",
      [
