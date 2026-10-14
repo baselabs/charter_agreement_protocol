@@ -63,7 +63,8 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
       actual =
         with :ok <- input_object(one["input"]),
              {:ok, _limits} <- limits(one["input"]),
-             {:ok, profile} <- parse_profile(one["input"]) do
+             {:ok, profile} <- parse_profile(one["input"]),
+             :ok <- kind_value_type(one["input"]) do
           execute(one, profile)
         else
           {:error, %Error{code: code}} -> invalid(code)
@@ -251,7 +252,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   defp execute(%{"surface" => "receipt.verify", "input" => input}, profile) do
     case limits(input) do
       {:ok, caller_limits} ->
-        with {:ok, context} <- receipt_context(input) do
+        with {:ok, context} <- receipt_context(input, caller_limits) do
           Receipt.verify(
             input["compact"],
             context,
@@ -281,7 +282,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   defp execute(%{"surface" => "signing.prepare", "input" => input}, _profile) do
     with {:ok, limits} <- limits(input),
          {:ok, profile} <- parse_profile(input),
-         {:ok, context} <- signing_context(input["context"]),
+         {:ok, context} <- signing_context(input["context"], limits),
          {:ok, public_key} <- Base64Url.decode(input["public_key"]) do
       value =
         input |> Map.take(["kid", "claims", "algorithm"]) |> Map.put("public_key", public_key)
@@ -317,6 +318,24 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
       "deployment_digest" => binding.deployment_digest
     }
   end
+
+  defp kind_value_type(%{"kind" => kind, "value" => value}) do
+    matches =
+      case kind do
+        "integer" -> is_integer(value)
+        "float" -> is_float(value)
+        "string" -> is_binary(value)
+        "boolean" -> is_boolean(value)
+        "null" -> is_nil(value)
+        "array" -> is_list(value)
+        "object" -> is_map(value)
+        _other -> false
+      end
+
+    if matches, do: :ok, else: type_error()
+  end
+
+  defp kind_value_type(_input), do: :ok
 
   defp input_object(input) when is_map(input), do: :ok
   defp input_object(_input), do: type_error()
@@ -356,7 +375,9 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   defp json_input(%{"bytes_base64url" => encoded}),
     do: Base64Url.decode(encoded)
 
-  defp json_input(%{"kind" => "integer", "value" => value}), do: {:ok, value}
+  defp json_input(%{"kind" => "integer", "value" => value}) when is_integer(value),
+    do: {:ok, value}
+
   defp json_input(_input), do: type_error()
 
   defp json_projection(:null), do: %{"tag" => "null"}
@@ -402,7 +423,10 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   defp canonical_member(_member), do: type_error()
 
   defp digest_input(%{"bytes_base64url" => encoded}), do: Base64Url.decode(encoded)
-  defp digest_input(%{"kind" => "integer", "value" => value}), do: {:ok, value}
+
+  defp digest_input(%{"kind" => "integer", "value" => value}) when is_integer(value),
+    do: {:ok, value}
+
   defp digest_input(_input), do: type_error()
 
   defp digest_domain(nil), do: {:ok, :charter_revision_content}
@@ -451,7 +475,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   defp signing_kind("receipt"), do: :receipt
   defp signing_kind(_other), do: :unknown
 
-  defp signing_context(%{"set" => set}) when is_map(set) do
+  defp signing_context(%{"set" => set}, _limits) when is_map(set) do
     {:ok,
      struct(CharterAgreementProtocol.ArtifactSet,
        revisions: set["revisions"],
@@ -461,16 +485,16 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
      )}
   end
 
-  defp signing_context(%{"chain" => set}), do: verify_chain(set)
+  defp signing_context(%{"chain" => set}, limits), do: chain_view(set, limits)
 
-  defp signing_context(%{"revision_text" => text}),
+  defp signing_context(%{"revision_text" => text}, _limits),
     do: CharterRevision.decode(text, Limits.default())
 
-  defp signing_context(%{"predecessor_compacts" => compacts}) do
+  defp signing_context(%{"predecessor_compacts" => compacts}, _limits) do
     predecessor_history(compacts)
   end
 
-  defp signing_context(value), do: {:ok, value}
+  defp signing_context(value, _limits), do: {:ok, value}
 
   defp predecessor_history(compacts) when is_list(compacts) do
     Enum.reduce_while(compacts, {:ok, nil}, fn compact, {:ok, predecessor} ->
@@ -483,11 +507,26 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
 
   defp predecessor_history(_compacts), do: type_error()
 
-  defp receipt_context(%{"revision_text" => text}),
-    do: CharterRevision.decode(text, Limits.default())
+  defp receipt_context(%{"revision_text" => text}, limits),
+    do: CharterRevision.decode(text, limits)
 
-  defp receipt_context(%{"chain" => chain}), do: verify_chain(chain)
-  defp receipt_context(_input), do: type_error()
+  defp receipt_context(%{"chain" => chain}, limits), do: chain_view(chain, limits)
+  defp receipt_context(_input, _limits), do: type_error()
+
+  defp chain_view(
+         %{
+           "revisions" => revisions,
+           "acceptances" => acceptances,
+           "descriptors" => descriptors,
+           "terminations" => terminations
+         } = view,
+         limits
+       )
+       when map_size(view) == 4 do
+    Chain.verify(revisions, acceptances, descriptors, terminations, limits)
+  end
+
+  defp chain_view(_view, _limits), do: type_error()
 
   defp case_predecessor(%{"predecessor_compacts" => compacts}),
     do: predecessor_history(compacts)

@@ -130,7 +130,7 @@ string. A success is `{"status": "valid", "output": <output>}` with the output b
 | `chain.verify` | `revisions`, `acceptances`, `descriptors`, `terminations`; optional `limits` | `charter_id`, `topology`, `accepted_revision_digests`, `superseded_revision_digests` |
 | `chain.verify_profile` | the `chain.verify` lists plus `profile`: `algorithms` (a list of `alg` names) and `revisions` (an object with `min` and `max`) | `charter_id`, `topology` |
 | `governing_revision` | the `chain.verify` lists plus `queries` (each with `at`) | `governing_revisions`: per query, a revision digest, `"contested"` or `"none"` |
-| `receipt.verify` | `compact`, and as context either `chain` (a `chain.verify` input) or `revision_text` (a bare revision); optional `profile` (as in `chain.verify_profile`) | `receipt_digest`, `revision_number`, `revision_digest`, `decision`, `outcome`, `chain_conflict`, `governing_match`, `deployment_digest_matched`, `optional_extensions_retained` |
+| `receipt.verify` | `compact`, and as context either `chain` (the four artifact lists) or `revision_text` (a bare revision); optional `profile` (as in `chain.verify_profile`) | `receipt_digest`, `revision_number`, `revision_digest`, `decision`, `outcome`, `chain_conflict`, `governing_match`, `deployment_digest_matched`, `optional_extensions_retained` |
 | `signing.prepare` | `kind`, `kid`, `claims`, base64url `public_key`, optional `algorithm`, `limits` and `profile`; `context` is null or `predecessor_compacts` for a descriptor, `set` for acceptance and termination, or `chain` / `revision_text` for a receipt | `protected_segment`, `payload_segment`, `key` (`"matched"` or `"unnamed"`), or an error code |
 
 Details that matter for byte equality:
@@ -139,6 +139,9 @@ Details that matter for byte equality:
 - `limits` names some limit fields; every field it does not name takes its
   [default](limits-and-profiles.md), and an out-of-range value fails with
   `invalid_limits`. Cases without `limits` use the defaults.
+- Limits come only from the case input's top-level `limits`. A nested chain
+  view holds exactly `revisions`, `acceptances`, `descriptors` and
+  `terminations`; any other member returns `invalid_type`.
 - A missing `profile` uses the full profile. Within a profile object, a missing
   `algorithms` or `revisions` member uses the full axis. An explicit null profile
   or axis returns `invalid_profile` on every surface. Revision bounds must be
@@ -148,6 +151,8 @@ Details that matter for byte equality:
   malformed case scaffolding returns `invalid_type`; failures while reading a
   context retain the underlying error code. Options are checked before surface
   inputs: limits first, then profile, then the operation's input values.
+- A `kind`/`value` input whose JSON value type does not match `kind` returns
+  `invalid_type` on every surface.
 - `digest.hash` names its domain by the names in [Digests](#digests). A `kind`/`value`
   input stands for a value that is not bytes and must fail with `invalid_type`.
 - `canonicalization.encode` tagged inputs are an object with `members` of
