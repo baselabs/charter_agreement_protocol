@@ -5,6 +5,8 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
   alias CharterAgreementProtocol.RequirementMap
 
   @mutation_names ~w(
+    json-syntax-before-container-limits
+    chain-empty-before-set-checks
     runner-null-axis-default
     case-float-token-collapse
     ed25519-native-power-skip

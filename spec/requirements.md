@@ -10,9 +10,9 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ## Bound evidence
 
-- Requirements: 72
+- Requirements: 73
 - Corpus cells: 104
-- Named mutations: 83
+- Named mutations: 85
 
 ## Requirements
 
@@ -28,15 +28,22 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 - Gate: `CharterAgreementProtocol.Conformance.CaseJsonTest`
 - Mutation: `case-float-token-collapse`
 
+### CAP-JSON-integer-claims
+
+- Corpus: `signing.prepare:invalid_type`, `party_descriptor.verify:invalid_type`, `acceptance.verify:invalid_type`, `termination.verify:invalid_type`, `receipt.verify:invalid_type`, `charter_revision.decode:invalid_type`
+- Gate: `CharterAgreementProtocol.Conformance.CorpusTest`
+
 ### CAP-JSON-check-order
 
 - Corpus: `json.decode:invalid_type`
 - Gate: `CharterAgreementProtocol.Conformance.RunnerPropertyTest`
+- Mutation: `json-syntax-before-container-limits`
 
 ### CAP-CHAIN-check-order
 
 - Corpus: `chain.verify:invalid_type`, `signing.prepare:invalid_type`
 - Gate: `CharterAgreementProtocol.Conformance.RunnerPropertyTest`
+- Mutation: `chain-empty-before-set-checks`
 
 ### CAP-SIGNING-retained-input-totality
 

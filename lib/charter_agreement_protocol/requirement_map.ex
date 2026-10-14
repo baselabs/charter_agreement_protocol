@@ -22,15 +22,30 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:gate, CharterAgreementProtocol.Conformance.CaseJsonTest},
        {:mutation, "case-float-token-collapse"}
      ]},
+    {"CAP-JSON-integer-claims",
+     [
+       {:corpus,
+        [
+          "signing.prepare:invalid_type",
+          "party_descriptor.verify:invalid_type",
+          "acceptance.verify:invalid_type",
+          "termination.verify:invalid_type",
+          "receipt.verify:invalid_type",
+          "charter_revision.decode:invalid_type"
+        ]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest}
+     ]},
     {"CAP-JSON-check-order",
      [
        {:corpus, ["json.decode:invalid_type"]},
-       {:gate, CharterAgreementProtocol.Conformance.RunnerPropertyTest}
+       {:gate, CharterAgreementProtocol.Conformance.RunnerPropertyTest},
+       {:mutation, "json-syntax-before-container-limits"}
      ]},
     {"CAP-CHAIN-check-order",
      [
        {:corpus, ["chain.verify:invalid_type", "signing.prepare:invalid_type"]},
-       {:gate, CharterAgreementProtocol.Conformance.RunnerPropertyTest}
+       {:gate, CharterAgreementProtocol.Conformance.RunnerPropertyTest},
+       {:mutation, "chain-empty-before-set-checks"}
      ]},
     {"CAP-SIGNING-retained-input-totality",
      [

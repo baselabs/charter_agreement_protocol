@@ -7,6 +7,23 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
 
   @mutations [
     %{
+      name: "json-syntax-before-container-limits",
+      path: "lib/charter_agreement_protocol/json.ex",
+      from: "        decode_bounded(input, limits)",
+      to:
+        "        try do\n          :json.decode(input)\n          decode_bounded(input, limits)\n        rescue\n          _error -> {:error, Error.new(:invalid_syntax, [\"json\"])}\n        end",
+      command: ~w(mix test test/conformance/runner_report_cli_test.exs --seed 42)
+    },
+    %{
+      name: "chain-empty-before-set-checks",
+      path: "lib/charter_agreement_protocol/chain.ex",
+      from:
+        "         :ok <- bounded_input([revisions, acceptances, descriptors, terminations], limits),",
+      to:
+        "         :ok <- if(revisions == [], do: chain_error(), else: bounded_input([revisions, acceptances, descriptors, terminations], limits)),",
+      command: ~w(mix test test/conformance/runner_report_cli_test.exs --seed 42)
+    },
+    %{
       name: "runner-null-axis-default",
       path: "lib/charter_agreement_protocol/conformance/runner.ex",
       from: "algorithms = Map.get(selected, :algorithms, Profile.full().algorithms)",
