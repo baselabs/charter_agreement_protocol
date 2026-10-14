@@ -11,7 +11,7 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       path: "lib/charter_agreement_protocol/conformance/runner.ex",
       from: "algorithms = Map.get(selected, :algorithms, Profile.full().algorithms)",
       to: "algorithms = Map.get(selected, :algorithms) || Profile.full().algorithms",
-      command: ~w(mix test test/conformance/runner_property_test.exs --seed 42)
+      command: ~w(mix test test/conformance/runner_report_cli_test.exs --seed 42)
     },
     %{
       name: "case-float-token-collapse",
@@ -619,8 +619,10 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "corpus-expectation-flip",
       path: "priv/conformance/cases/base64url-decode.json",
-      from: "\"expect\":{\"output\":{\"bytes_base64url\":\"\"},\"status\":\"valid\"}",
-      to: "\"expect\":{\"error_code\":\"invalid_type\",\"status\":\"invalid\"}",
+      from:
+        "\"expect\":{\"output\":{\"bytes_base64url\":\"\"},\"status\":\"valid\"},\"id\":\"base64url-empty\"",
+      to:
+        "\"expect\":{\"error_code\":\"invalid_type\",\"status\":\"invalid\"},\"id\":\"base64url-empty\"",
       command: ~w(mix conformance.verify)
     }
   ]
