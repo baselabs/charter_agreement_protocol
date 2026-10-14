@@ -82,7 +82,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentitySurfaceTest do
     # run — exactly the integrity property a frozen released artifact needs.
     tampered =
       Map.update!(files, "index.json", fn bytes ->
-        String.replace(bytes, ~s("total_cases":243), ~s("total_cases":244))
+        Regex.replace(~r/"total_cases":\d+/, bytes, ~s("total_cases":0))
       end)
 
     assert {:error, %Error{code: :corpus_index_invalid}} = Corpus.load(tampered, true)
@@ -93,7 +93,9 @@ defmodule CharterAgreementProtocol.ReleaseIdentitySurfaceTest do
     weird_cell =
       Map.update!(files, "index.json", fn bytes ->
         bytes
-        |> String.replace(~s("valid":1), ~s("valid":"one"), global: false)
+        |> JSON.decode!()
+        |> put_in(["applicability", "base64url.decode", "valid"], "one")
+        |> JSON.encode!()
         |> redigest()
       end)
 

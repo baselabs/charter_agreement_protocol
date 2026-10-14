@@ -9,6 +9,29 @@ defmodule CharterAgreementProtocol.RequirementMap do
   """
 
   @entries [
+    {"CAP-CONFORMANCE-runner-inputs",
+     [
+       {:corpus,
+        Enum.map(CharterAgreementProtocol.Conformance.Corpus.surfaces(), &(&1 <> ":invalid_type"))},
+       {:gate, CharterAgreementProtocol.Conformance.RunnerPropertyTest},
+       {:mutation, "runner-null-axis-default"}
+     ]},
+    {"CAP-CONFORMANCE-number-tokens",
+     [
+       {:corpus, ["signing.prepare:invalid_type", "chain.verify_profile:invalid_type"]},
+       {:gate, CharterAgreementProtocol.Conformance.CaseJsonTest},
+       {:mutation, "case-float-token-collapse"}
+     ]},
+    {"CAP-JSON-check-order",
+     [
+       {:corpus, ["json.decode:invalid_type"]},
+       {:gate, CharterAgreementProtocol.Conformance.RunnerPropertyTest}
+     ]},
+    {"CAP-CHAIN-check-order",
+     [
+       {:corpus, ["chain.verify:invalid_type", "signing.prepare:invalid_type"]},
+       {:gate, CharterAgreementProtocol.Conformance.RunnerPropertyTest}
+     ]},
     {"CAP-SIGNING-retained-input-totality",
      [
        {:corpus, ["signing.prepare:invalid_type"]},

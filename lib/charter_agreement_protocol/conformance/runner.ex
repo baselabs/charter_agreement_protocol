@@ -119,7 +119,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
           Digest.verify_content(domain, bytes, tagged)
 
         %{"bytes_base64url" => _encoded} when is_binary(bytes) ->
-          {:ok, %{"algorithm" => "sha-256"}}
+          {:ok, Digest.hash(domain, bytes)}
 
         _other ->
           Digest.verify_content(
@@ -131,7 +131,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end
     |> project_ok(fn
       :ok -> %{}
-      output -> output
+      %Digest{} -> %{"algorithm" => "sha-256"}
     end)
   end
 
@@ -162,18 +162,11 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   defp execute(%{"surface" => "charter_revision.decode", "input" => input}, _profile) do
     CharterRevision.decode(input["text"], Limits.default())
     |> project_ok(fn revision ->
-      binding = hd(revision.abp_bindings)
-
       %{
         "revision_digest" => CharterRevision.digest(revision),
         "revision_number" => revision.revision_number,
         "precedence_declaration" => Atom.to_string(revision.precedence_declaration),
-        "abp_binding" => %{
-          "blueprint_id" => binding.blueprint_id,
-          "release_number" => binding.release_number,
-          "content_digest" => binding.content_digest,
-          "deployment_digest" => binding.deployment_digest
-        }
+        "abp_binding" => binding_projection(revision.abp_bindings)
       }
     end)
   end
@@ -249,9 +242,8 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   end
 
   defp execute(%{"surface" => "governing_revision", "input" => input}, _profile) do
-    with {:ok, facts} <- verify_chain(input),
-         {:ok, governing} <- governing_queries(input["queries"], facts) do
-      {:ok, governing}
+    with {:ok, facts} <- verify_chain(input) do
+      governing_queries(input["queries"], facts)
     end
     |> project_ok(&%{"governing_revisions" => &1})
   end
@@ -314,6 +306,17 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   end
 
   defp execute(_one, _profile), do: invalid(:invalid_type)
+
+  defp binding_projection([]), do: nil
+
+  defp binding_projection([binding | _rest]) do
+    %{
+      "blueprint_id" => binding.blueprint_id,
+      "release_number" => binding.release_number,
+      "content_digest" => binding.content_digest,
+      "deployment_digest" => binding.deployment_digest
+    }
+  end
 
   defp input_object(input) when is_map(input), do: :ok
   defp input_object(_input), do: type_error()

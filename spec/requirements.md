@@ -10,11 +10,33 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ## Bound evidence
 
-- Requirements: 68
-- Corpus cells: 94
-- Named mutations: 81
+- Requirements: 72
+- Corpus cells: 104
+- Named mutations: 83
 
 ## Requirements
+
+### CAP-CONFORMANCE-runner-inputs
+
+- Corpus: `base64url.decode:invalid_type`, `json.decode:invalid_type`, `canonicalization.encode:invalid_type`, `digest.hash:invalid_type`, `schema.validate:invalid_type`, `party_descriptor.verify:invalid_type`, `descriptor_chain.verify:invalid_type`, `charter_revision.decode:invalid_type`, `acceptance.verify:invalid_type`, `acceptance.equivocation:invalid_type`, `termination.verify:invalid_type`, `chain.verify:invalid_type`, `chain.verify_profile:invalid_type`, `governing_revision:invalid_type`, `receipt.verify:invalid_type`, `signing.prepare:invalid_type`
+- Gate: `CharterAgreementProtocol.Conformance.RunnerPropertyTest`
+- Mutation: `runner-null-axis-default`
+
+### CAP-CONFORMANCE-number-tokens
+
+- Corpus: `signing.prepare:invalid_type`, `chain.verify_profile:invalid_type`
+- Gate: `CharterAgreementProtocol.Conformance.CaseJsonTest`
+- Mutation: `case-float-token-collapse`
+
+### CAP-JSON-check-order
+
+- Corpus: `json.decode:invalid_type`
+- Gate: `CharterAgreementProtocol.Conformance.RunnerPropertyTest`
+
+### CAP-CHAIN-check-order
+
+- Corpus: `chain.verify:invalid_type`, `signing.prepare:invalid_type`
+- Gate: `CharterAgreementProtocol.Conformance.RunnerPropertyTest`
 
 ### CAP-SIGNING-retained-input-totality
 

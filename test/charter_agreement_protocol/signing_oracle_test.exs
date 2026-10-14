@@ -27,7 +27,7 @@ defmodule CharterAgreementProtocol.SigningOracleTest do
           ],
           one <-
             CorpusAlgorithms.select(
-              :json.decode(File.read!("priv/conformance/cases/#{file}.json"))["cases"],
+              JSON.decode!(File.read!("priv/conformance/cases/#{file}.json"))["cases"],
               unquote(group)
             ) do
         source = one["input"]
@@ -36,9 +36,9 @@ defmodule CharterAgreementProtocol.SigningOracleTest do
              {:ok, protected_bytes} <- Base64Url.decode(protected),
              {:ok, header} <- JSON.decode(protected_bytes),
              {:ok, bytes} <- Base64Url.decode(payload),
-             {:ok, claims} <- JSON.decode(bytes) do
-          {context, keys} = context_and_keys(kind, source, claims)
-
+             {:ok, claims} <- JSON.decode(bytes),
+             {:ok, profile} <- profile(source),
+             {:ok, {context, keys}} <- context_and_keys(kind, source, claims) do
           alg =
             if claims["protocol_revision"] == 3 and Enum.any?(keys, &(elem(&1, 1) == "ML-DSA-65")),
               do: "ML-DSA-65",
@@ -47,7 +47,6 @@ defmodule CharterAgreementProtocol.SigningOracleTest do
           claims = Map.put(claims, "protocol_revision", Algorithm.emissions()[alg])
 
           input = %{"kid" => header["kid"], "claims" => claims, "algorithm" => alg}
-          profile = profile(source)
 
           source_alg = header["alg"]
 
@@ -151,56 +150,66 @@ defmodule CharterAgreementProtocol.SigningOracleTest do
             do: {public, key["algorithm"], key["key_id"]}
       end
 
-    {context, keys}
+    {:ok, {context, keys}}
   end
 
   defp context_and_keys(:receipt, %{"revision_text" => text}, _claims) do
-    {:ok, revision} = CharterRevision.decode(text, Limits.default())
-    {revision, []}
+    with {:ok, revision} <- CharterRevision.decode(text, Limits.default()) do
+      {:ok, {revision, []}}
+    end
   end
 
-  defp context_and_keys(:receipt, %{"chain" => set}, claims) do
-    {:ok, chain} =
-      Chain.verify(
-        set["revisions"],
-        set["acceptances"],
-        set["descriptors"],
-        set["terminations"],
-        Limits.default()
-      )
+  defp context_and_keys(:receipt, %{"chain" => set}, claims) when is_map(set) do
+    with {:ok, chain} <-
+           Chain.verify(
+             set["revisions"],
+             set["acceptances"],
+             set["descriptors"],
+             set["terminations"],
+             Limits.default()
+           ) do
+      accepted = Enum.filter(chain.revision_facts, &(&1.acceptance_status == :accepted))
+      recognized = Enum.any?(accepted, &(&1.revision_digest == claims["revision_digest"]))
 
-    accepted = Enum.filter(chain.revision_facts, &(&1.acceptance_status == :accepted))
-    recognized = Enum.any?(accepted, &(&1.revision_digest == claims["revision_digest"]))
+      digests =
+        accepted
+        |> Enum.filter(&(not recognized or &1.revision_digest == claims["revision_digest"]))
+        |> Enum.flat_map(& &1.revision.parties)
+        |> Enum.filter(&(&1.role == claims["issuing_party_role"]))
+        |> Enum.map(& &1.party_descriptor_digest)
 
-    digests =
-      accepted
-      |> Enum.filter(&(not recognized or &1.revision_digest == claims["revision_digest"]))
-      |> Enum.flat_map(& &1.revision.parties)
-      |> Enum.filter(&(&1.role == claims["issuing_party_role"]))
-      |> Enum.map(& &1.party_descriptor_digest)
+      keys =
+        chain.descriptor_chains
+        |> Enum.flat_map(& &1.descriptors)
+        |> Enum.filter(&(&1.descriptor_digest in digests))
+        |> Enum.flat_map(& &1.descriptor.verification_keys)
+        |> Enum.filter(&(&1.status == :active))
+        |> Enum.map(&{&1.public_key, &1.algorithm, &1.key_id})
 
-    keys =
-      chain.descriptor_chains
-      |> Enum.flat_map(& &1.descriptors)
-      |> Enum.filter(&(&1.descriptor_digest in digests))
-      |> Enum.flat_map(& &1.descriptor.verification_keys)
-      |> Enum.filter(&(&1.status == :active))
-      |> Enum.map(&{&1.public_key, &1.algorithm, &1.key_id})
-
-    {chain, keys}
+      {:ok, {chain, keys}}
+    end
   end
+
+  defp context_and_keys(:receipt, _input, _claims),
+    do: {:error, Error.new(:invalid_type, ["context"])}
 
   defp profile(input) do
-    selected = input["profile"] || %{}
-    range = selected["revisions"]
+    full = Profile.full()
+    selected = Map.get(input, "profile", %{})
 
-    {:ok, profile} =
-      Profile.new(
-        algorithms: selected["algorithms"],
-        revisions: if(range, do: {range["min"], range["max"]}, else: nil)
-      )
+    profile =
+      if is_map(selected) do
+        range = Map.get(selected, "revisions", %{"min" => 1, "max" => 3})
 
-    profile
+        %Profile{
+          algorithms: Map.get(selected, "algorithms", full.algorithms),
+          revisions: if(is_map(range), do: {range["min"], range["max"]}, else: nil)
+        }
+      else
+        %Profile{algorithms: nil, revisions: nil}
+      end
+
+    with :ok <- Profile.check(profile), do: {:ok, profile}
   end
 
   defp other_key("Ed25519"),

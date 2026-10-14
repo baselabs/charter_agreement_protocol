@@ -10,10 +10,13 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   descriptor key before external signing and verify the finished compact.
 - `signing_key_invalid` and `signing_key_mismatch` name snapshot failures.
 - The `signing.prepare` corpus surface pins segments, key status and errors.
+- Corpus cases pin JSON check order, empty revision views and float token types.
 
 ### Fixed
 
-- Corpus runners return typed errors for malformed inputs and contexts.
+- Corpus runners return typed errors for malformed inputs and contexts,
+  including zero limits for governing queries and receipts without a context.
+- Revision projections support an empty binding list.
 - Missing corpus profile axes use the full axis; explicit null axes return
   `invalid_profile` on every surface.
 - Ed25519 public keys are now fully decoded on admission, so two more

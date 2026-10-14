@@ -3,6 +3,7 @@ defmodule CharterAgreementProtocol.ConformanceTest.Builder do
 
   alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest, ExtensionRegistry}
   alias CharterAgreementProtocol.Conformance.Corpus
+  alias CharterAgreementProtocol.Internal.CaseJson
 
   @case_format "charter-agreement-protocol-conformance-cases"
   @index_format "charter-agreement-protocol-conformance-corpus-index"
@@ -93,7 +94,7 @@ defmodule CharterAgreementProtocol.ConformanceTest.Builder do
   end
 
   defp case_bytes!(plain) do
-    {:ok, bytes} = CharterAgreementProtocol.Internal.CaseJson.encode(tagged(plain))
+    {:ok, bytes} = CaseJson.encode(tagged(plain))
     bytes
   end
 

@@ -1,5 +1,6 @@
 Code.require_file("signing_prepare_cases.exs", __DIR__)
 Code.require_file("ed25519_key_cases.exs", __DIR__)
+Code.require_file("runner_input_cases.exs", __DIR__)
 
 alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest, ExtensionRegistry}
 alias CharterAgreementProtocol.Conformance.Corpus
@@ -2493,6 +2494,8 @@ cases =
     CharterAgreementProtocol.SigningPrepareCases.cases() ++
     CharterAgreementProtocol.Ed25519KeyCases.cases()
 
+cases = cases ++ CharterAgreementProtocol.RunnerInputCases.cases(cases)
+
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 
 grouped = Enum.group_by(cases, & &1["surface"])
@@ -2501,10 +2504,12 @@ files =
   Enum.map(Corpus.surfaces(), fn surface ->
     path = "cases/" <> String.replace(surface, ".", "-") <> ".json"
     surface_cases = Map.fetch!(grouped, surface)
+
     {:ok, bytes} =
       CharterAgreementProtocol.Internal.CaseJson.encode(
         tagged.(%{"format" => case_format, "cases" => surface_cases})
       )
+
     target = Path.join(root, path)
     File.mkdir_p!(Path.dirname(target))
     File.write!(target, bytes)

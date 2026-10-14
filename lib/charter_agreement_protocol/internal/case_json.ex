@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.Internal.CaseJson do
-  @moduledoc false
+  @moduledoc "CAP never authorizes. Internal corpus case encoding preserving numeric token types."
 
   alias CharterAgreementProtocol.{Canonicalization, Error, Json}
 

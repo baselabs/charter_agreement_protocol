@@ -7,6 +7,20 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
 
   @mutations [
     %{
+      name: "runner-null-axis-default",
+      path: "lib/charter_agreement_protocol/conformance/runner.ex",
+      from: "algorithms = Map.get(selected, :algorithms, Profile.full().algorithms)",
+      to: "algorithms = Map.get(selected, :algorithms) || Profile.full().algorithms",
+      command: ~w(mix test test/conformance/runner_property_test.exs --seed 42)
+    },
+    %{
+      name: "case-float-token-collapse",
+      path: "lib/charter_agreement_protocol/conformance/corpus.ex",
+      from: "do: CaseJson.encode(value)",
+      to: "do: Canonicalization.encode(value)",
+      command: ~w(mix test test/conformance/case_json_test.exs --seed 42)
+    },
+    %{
       name: "ed25519-native-power-skip",
       path: "lib/charter_agreement_protocol/signature.ex",
       from: ":crypto.mod_pow(base, exponent, @ed25519_field_prime) |> :binary.decode_unsigned()",

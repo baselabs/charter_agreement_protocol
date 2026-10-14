@@ -3,6 +3,7 @@ defmodule CharterAgreementProtocol.Conformance.RunnerPropertyTest do
   use ExUnitProperties
 
   alias CharterAgreementProtocol.Conformance.{Corpus, Runner}
+  alias CharterAgreementProtocol.{Capability.Profile, Limits}
 
   @json_types [nil, false, 0, 1.0, "bad", [], %{}]
 
@@ -59,9 +60,12 @@ defmodule CharterAgreementProtocol.Conformance.RunnerPropertyTest do
         one,
         ["input"],
         &Map.merge(&1, %{
-          "limits" => %{"max_bytes" => 1_048_576, "max_depth" => 64},
+          "limits" =>
+            Map.new(Map.from_struct(Limits.default()), fn {key, value} ->
+              {Atom.to_string(key), value}
+            end),
           "profile" => %{
-            "algorithms" => ["EdDSA", "Ed25519"],
+            "algorithms" => Profile.full().algorithms,
             "revisions" => %{"min" => 1, "max" => 3}
           }
         })

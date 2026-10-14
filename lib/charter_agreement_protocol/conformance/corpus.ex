@@ -21,6 +21,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
 
   @index_format "charter-agreement-protocol-conformance-corpus-index"
   @case_format "charter-agreement-protocol-conformance-cases"
+  alias CharterAgreementProtocol.Internal.CaseJson
+
   @index_keys ~w(applicability corpus_digest files format registry_digest total_cases)
   @file_keys ~w(cases path sha256_base64url)
   @case_keys ~w(class expect id input surface)
@@ -77,7 +79,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
 
   @floor %{
     "base64url.decode" => %{
-      required: ~w(valid exact_bound invalid_encoding),
+      required: ~w(valid exact_bound invalid_encoding invalid_type),
       n_a: "non-base64url behavior is outside the byte decoder"
     },
     "json.decode" => %{
@@ -100,12 +102,13 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     },
     "party_descriptor.verify" => %{
       required:
-        ~w(valid signature_invalid invalid_encoding unknown_member invalid_constraint profile_narrow_valid profile_algorithm_outside profile_revision_outside),
+        ~w(valid signature_invalid invalid_encoding unknown_member invalid_constraint profile_narrow_valid profile_algorithm_outside profile_revision_outside invalid_type),
       n_a:
         "set topology and foundational codec-only behavior are outside one descriptor verification"
     },
     "descriptor_chain.verify" => %{
-      required: ~w(signature_invalid chain_invalid descriptor_superseded descriptor_fork),
+      required:
+        ~w(signature_invalid chain_invalid descriptor_superseded descriptor_fork invalid_type),
       n_a: "single-artifact and foundational codec-only behavior are outside descriptor topology"
     },
     "charter_revision.decode" => %{
@@ -115,31 +118,33 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     },
     "acceptance.verify" => %{
       required:
-        ~w(valid invalid_constraint signature_invalid unknown_member profile_narrow_valid profile_algorithm_outside profile_revision_outside),
+        ~w(valid invalid_constraint signature_invalid unknown_member profile_narrow_valid profile_algorithm_outside profile_revision_outside invalid_type),
       n_a:
         "set-level equivocation and foundational codec-only behavior are outside one acceptance"
     },
     "acceptance.equivocation" => %{
-      required: ~w(equivocation invalid_constraint),
+      required: ~w(equivocation invalid_constraint invalid_type),
       n_a:
         "single-artifact and foundational codec-only behavior are outside paired acceptance evidence"
     },
     "termination.verify" => %{
       required:
-        ~w(valid invalid_constraint signature_invalid unknown_member profile_narrow_valid profile_algorithm_outside profile_revision_outside),
+        ~w(valid invalid_constraint signature_invalid unknown_member profile_narrow_valid profile_algorithm_outside profile_revision_outside invalid_type),
       n_a:
         "governance effects and foundational codec-only behavior are outside one termination notice"
     },
     "chain.verify" => %{
-      required: ~w(valid exact_bound maximum_plus_one chain_fork supersession chain_invalid),
+      required:
+        ~w(valid exact_bound maximum_plus_one chain_fork supersession chain_invalid invalid_type),
       n_a: "single-artifact and foundational codec-only behavior are outside set verification"
     },
     "chain.verify_profile" => %{
-      required: ~w(profile_algorithm_outside profile_revision_outside profile_narrow_valid),
+      required:
+        ~w(profile_algorithm_outside profile_revision_outside profile_narrow_valid invalid_type),
       n_a: "unprofiled set verification is the chain.verify surface"
     },
     "governing_revision" => %{
-      required: ~w(precedence_selection terminated),
+      required: ~w(precedence_selection terminated invalid_type),
       n_a: "set integrity and single-artifact behavior are outside temporal precedence selection"
     },
     "signing.prepare" => %{
@@ -149,7 +154,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     },
     "receipt.verify" => %{
       required:
-        ~w(valid maximum_plus_one invalid_constraint signature_invalid unknown_member chain_fork terminated outcome_indeterminate extension_optional_roundtrip invalid_encoding extension_invalid profile_narrow_valid profile_algorithm_outside profile_revision_outside),
+        ~w(valid maximum_plus_one invalid_constraint signature_invalid unknown_member chain_fork terminated outcome_indeterminate extension_optional_roundtrip invalid_encoding extension_invalid profile_narrow_valid profile_algorithm_outside profile_revision_outside invalid_type),
       n_a: "non-receipt codec and set-construction behavior is outside receipt verification"
     }
   }
@@ -240,7 +245,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
   end
 
   defp encode_document(value, :case),
-    do: CharterAgreementProtocol.Internal.CaseJson.encode(value)
+    do: CaseJson.encode(value)
 
   defp encode_document(value, :index), do: Canonicalization.encode(value)
 

@@ -40,9 +40,9 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
     {:ok, corpus} = Corpus.load(shipped_files())
     ed = CorpusAlgorithms.select(corpus.cases, :ed25519)
     ml = CorpusAlgorithms.select(corpus.cases, :ml_dsa)
-    assert length(ed) == 231
+    assert length(ed) == 352
     assert length(ml) == 12
-    assert length(ed) + length(ml) == 243
+    assert length(ed) + length(ml) == 364
     assert Enum.sort(ed ++ ml) == Enum.sort(corpus.cases)
     assert Enum.all?(ml, &(&1["id"] =~ "mldsa" or &1["id"] == "signing-wrong-algorithm"))
   end

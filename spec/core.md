@@ -42,6 +42,15 @@ rounded [CAP-JSON-number-boundaries]. The byte ceiling boundary is exact:
 an input at the ceiling accepts, one byte above rejects
 [CAP-JSON-number-boundaries].
 
+The decoder checks limits validity before input type, then the byte ceiling,
+then parses from left to right. It reads enough syntax to begin a container
+before checking that container's depth. Thus a lone `{` returns
+`invalid_syntax` even with `max_depth: 0`; `[bad` reaches the array depth
+check first and returns `limit_exceeded` at that limit. This is a streaming
+check order, without a separate whole-document syntax pass. Invalid limits
+with a non-text input return `invalid_limits`; valid limits with a non-text
+input return `invalid_type` [CAP-JSON-check-order].
+
 ### 2.2 Canonical JSON
 
 Signing and digesting operate on canonical JSON bytes (JCS-inspired,
@@ -365,6 +374,14 @@ either ceiling verifies; one item or one byte above it rejects with
 
 ## 6. Chain verification and governing revision
 
+After validating limits, profile and list types, chain verification checks
+artifact set bounds, verifies descriptors, then reads revisions, including
+the nonempty revision check. With empty revisions, strict artifact set limits
+can therefore return `limit_exceeded`, and a malformed descriptor can return
+`compact_invalid`, before `chain_invalid`. Signing preparation uses the same
+order when verifying an artifact set context after its earlier signing input
+and key checks [CAP-CHAIN-check-order].
+
 A set of revisions, acceptances, and descriptors whose acceptances pair
 exactly and whose topology is linear verifies as a valid chain
 [CAP-CHAIN-valid-topology]. A charter's parties MUST be distinct parties: a
@@ -406,6 +423,13 @@ executed cases: a runner MUST NOT report agreement for a case whose
 projected output document differs from the certified expectation, and a
 corpus whose declared expectations diverge from recomputed results fails
 verification [CAP-CONFORMANCE-expectations-bound].
+
+A corpus runner MUST return a typed outcome for every JSON input, including
+malformed options and contexts [CAP-CONFORMANCE-runner-inputs]. A missing profile axis means the full axis;
+an explicit null profile or axis is `invalid_profile`. It checks limits
+before profile and profile before operation inputs. Case file readers MUST retain the distinction
+between integer tokens and tokens with a fraction or exponent, including
+whole-number floats such as `2.0` [CAP-CONFORMANCE-number-tokens].
 
 ## 9. Security and privacy posture
 

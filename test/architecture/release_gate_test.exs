@@ -5,6 +5,8 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
   alias CharterAgreementProtocol.RequirementMap
 
   @mutation_names ~w(
+    runner-null-axis-default
+    case-float-token-collapse
     ed25519-native-power-skip
     runner-option-member-code-revert
     receipt-caller-limits-skip
@@ -166,7 +168,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     assert MapSet.to_list(MapSet.difference(observed_cells, covered_cells)) == []
 
     declared_gate_modules =
-      "test/architecture/*.exs"
+      "test/**/*.exs"
       |> Path.wildcard()
       |> Enum.flat_map(fn path ->
         ~r/defmodule ([A-Za-z0-9_.]+) do/

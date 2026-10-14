@@ -193,13 +193,13 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
            end)
 
     counts = Enum.frequencies_by(cases, & &1["surface"])
-    assert counts["party_descriptor.verify"] + counts["descriptor_chain.verify"] == 37
-    assert counts["charter_revision.decode"] == 31
-    assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 17
-    assert counts["termination.verify"] == 13
-    assert counts["chain.verify"] + counts["governing_revision"] == 15
-    assert counts["chain.verify_profile"] == 3
-    assert counts["receipt.verify"] == 21
+    assert counts["party_descriptor.verify"] + counts["descriptor_chain.verify"] == 51
+    assert counts["charter_revision.decode"] == 38
+    assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 29
+    assert counts["termination.verify"] == 19
+    assert counts["chain.verify"] + counts["governing_revision"] == 31
+    assert counts["chain.verify_profile"] == 11
+    assert counts["receipt.verify"] == 30
     assert Enum.any?(cases, &(&1["surface"] == "signing.prepare"))
   end
 
@@ -230,7 +230,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
              "runtime does not declare ML-DSA-65"
     test "the #{group} signing cases match independent projections" do
       %{"cases" => cases} =
-        :json.decode(File.read!("priv/conformance/cases/signing-prepare.json"))
+        JSON.decode!(File.read!("priv/conformance/cases/signing-prepare.json"))
 
       assert length(cases) >= 50
 
@@ -322,7 +322,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   test "termination context lookup names a missing held descriptor" do
-    %{"cases" => cases} = :json.decode(File.read!("priv/conformance/cases/signing-prepare.json"))
+    %{"cases" => cases} = JSON.decode!(File.read!("priv/conformance/cases/signing-prepare.json"))
     input = Enum.find(cases, &(&1["id"] == "signing-ed25519-termination"))["input"]
     set = input["context"]["set"]
     {:ok, facts} = verify_chain_input(set)
@@ -342,7 +342,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   test "malformed retained fields reject through the corpus contexts" do
-    %{"cases" => cases} = :json.decode(File.read!("priv/conformance/cases/signing-prepare.json"))
+    %{"cases" => cases} = JSON.decode!(File.read!("priv/conformance/cases/signing-prepare.json"))
     input = Enum.find(cases, &(&1["id"] == "signing-ed25519-receipt"))["input"]
     chain = signing_context(input["context"])
     [first | rest] = chain.acceptance_facts
@@ -438,26 +438,16 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
     if Enum.all?(Map.keys(selected), &Map.has_key?(known, &1)) do
       fields = Map.new(selected, fn {key, value} -> {Map.fetch!(known, key), value} end)
-      {:ok, struct(Limits.default(), fields)}
+      limits = struct(Limits.default(), fields)
+      with :ok <- Limits.check(limits), do: {:ok, limits}
     else
       Limits.new(unknown: nil)
     end
   end
 
   defp signing_profile(input) do
-    spec = input["profile"] || %{}
-    range = spec["revisions"]
-    default = Profile.full()
-
-    if Enum.all?(Map.keys(spec), &(&1 in ["algorithms", "revisions"])) do
-      {:ok,
-       struct(Profile,
-         algorithms: Map.get(spec, "algorithms", default.algorithms),
-         revisions: if(range, do: {range["min"], range["max"]}, else: default.revisions)
-       )}
-    else
-      Profile.new(unknown: nil)
-    end
+    profile = case_profile(input)
+    with :ok <- Profile.check(profile), do: {:ok, profile}
   end
 
   defp signing_context(%{"set" => set}) do
@@ -534,13 +524,17 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     revision_cases = Enum.filter(cases, &(&1["surface"] == "charter_revision.decode"))
 
     Enum.each(revision_cases, fn one ->
-      actual = CharterRevision.decode(one["input"]["text"], Limits.default())
+      actual =
+        with :ok <- Profile.check(case_profile(one["input"])) do
+          CharterRevision.decode(one["input"]["text"], Limits.default())
+        end
+
       assert projected_revision_result(actual) == one["expect"]
     end)
   end
 
   defp projected_revision_result({:ok, revision}) do
-    [binding] = revision.abp_bindings
+    binding = List.first(revision.abp_bindings)
 
     %{
       "status" => "valid",
@@ -548,12 +542,16 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
         "revision_digest" => CharterRevision.digest(revision),
         "revision_number" => revision.revision_number,
         "precedence_declaration" => Atom.to_string(revision.precedence_declaration),
-        "abp_binding" => %{
-          "blueprint_id" => binding.blueprint_id,
-          "release_number" => binding.release_number,
-          "content_digest" => binding.content_digest,
-          "deployment_digest" => binding.deployment_digest
-        }
+        "abp_binding" =>
+          if(binding,
+            do:
+              Map.take(
+                Map.from_struct(binding),
+                [:blueprint_id, :release_number, :content_digest, :deployment_digest]
+              )
+              |> Map.new(fn {key, value} -> {Atom.to_string(key), value} end),
+            else: nil
+          )
       }
     }
   end
@@ -588,7 +586,11 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
         facts
       end)
 
-    actual = Acceptance.equivocation(Enum.at(facts, 0), Enum.at(facts, 1))
+    actual =
+      with :ok <- Profile.check(case_profile(input)) do
+        Acceptance.equivocation(Enum.at(facts, 0), Enum.at(facts, 1))
+      end
+
     assert projected_equivocation_result(actual) == one["expect"]
   end
 
@@ -657,12 +659,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   defp assert_profile_case(one) do
     input = one["input"]
 
-    assert {:ok, profile} =
-             Profile.new(
-               algorithms: input["profile"]["algorithms"],
-               revisions:
-                 {input["profile"]["revisions"]["min"], input["profile"]["revisions"]["max"]}
-             )
+    profile = case_profile(input)
 
     actual =
       Chain.verify(
@@ -698,17 +695,31 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp assert_chain_case(%{"surface" => "governing_revision"} = one) do
     input = one["input"]
-    {:ok, facts} = verify_chain_input(input)
 
-    governing =
-      Enum.map(input["queries"], fn query ->
-        {:ok, at, 0} = DateTime.from_iso8601(query["at"])
-        {:ok, result} = Chain.governing_revision(facts, at)
-        if is_atom(result), do: Atom.to_string(result), else: result
-      end)
+    actual =
+      with {:ok, facts} <- verify_chain_input(input) do
+        governing =
+          Enum.map(input["queries"], &governing_query(&1, facts))
 
-    assert %{"status" => "valid", "output" => %{"governing_revisions" => governing}} ==
-             one["expect"]
+        {:ok, governing}
+      end
+
+    projected =
+      case actual do
+        {:ok, governing} ->
+          %{"status" => "valid", "output" => %{"governing_revisions" => governing}}
+
+        {:error, %Error{code: code}} ->
+          %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+      end
+
+    assert projected == one["expect"]
+  end
+
+  defp governing_query(query, facts) do
+    {:ok, at, 0} = DateTime.from_iso8601(query["at"])
+    {:ok, result} = Chain.governing_revision(facts, at)
+    if is_atom(result), do: Atom.to_string(result), else: result
   end
 
   defp verify_chain_input(input) do
@@ -717,7 +728,8 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       input["acceptances"],
       input["descriptors"],
       input["terminations"],
-      case_limits(input)
+      case_limits(input),
+      case_profile(input)
     )
   end
 
@@ -753,42 +765,39 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     Enum.each(receipt_cases, fn one ->
       input = one["input"]
 
-      {:ok, caller_limits} = signing_limits(input)
-
       actual =
-        Receipt.verify(
-          input["compact"],
-          receipt_context(input),
-          caller_limits,
-          case_profile(input)
-        )
+        with :ok <- Profile.check(case_profile(input)),
+             {:ok, context} <- receipt_context(input) do
+          Receipt.verify(input["compact"], context, case_limits(input), case_profile(input))
+        end
 
       assert projected_receipt_result(actual) == one["expect"]
     end)
   end
 
-  defp receipt_context(%{"revision_text" => text}) do
-    {:ok, revision} = CharterRevision.decode(text, Limits.default())
-    revision
+  defp receipt_context(%{"revision_text" => text}),
+    do: CharterRevision.decode(text, Limits.default())
+
+  defp receipt_context(%{"chain" => chain}) when is_map(chain), do: verify_chain_input(chain)
+  defp receipt_context(_input), do: {:error, Error.new(:invalid_type, ["input"])}
+
+  defp case_profile(input) do
+    full = Profile.full()
+    spec = Map.get(input, "profile", %{})
+
+    if is_map(spec) and Enum.all?(Map.keys(spec), &(&1 in ["algorithms", "revisions"])) do
+      range =
+        Map.get(spec, "revisions", %{
+          "min" => elem(full.revisions, 0),
+          "max" => elem(full.revisions, 1)
+        })
+
+      revisions = if is_map(range), do: {range["min"], range["max"]}, else: nil
+      %Profile{algorithms: Map.get(spec, "algorithms", full.algorithms), revisions: revisions}
+    else
+      %Profile{algorithms: nil, revisions: nil}
+    end
   end
-
-  defp receipt_context(input) do
-    {:ok, chain} = verify_chain_input(input["chain"])
-    chain
-  end
-
-  defp case_profile(%{"profile" => spec}) do
-    revisions =
-      case spec["revisions"] do
-        %{"min" => minimum, "max" => maximum} -> {minimum, maximum}
-        nil -> nil
-      end
-
-    {:ok, profile} = Profile.new(algorithms: spec["algorithms"], revisions: revisions)
-    profile
-  end
-
-  defp case_profile(_input), do: Profile.full()
 
   defp projected_receipt_result({:ok, facts}) do
     %{
@@ -841,7 +850,12 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   defp assert_verify_case(%{"surface" => "descriptor_chain.verify"} = one) do
-    actual = DescriptorChain.verify(one["input"]["compacts"], Limits.default())
+    actual =
+      DescriptorChain.verify(
+        one["input"]["compacts"],
+        Limits.default(),
+        case_profile(one["input"])
+      )
 
     assert projected_chain_result(actual, one["expect"]) == one["expect"]
   end
