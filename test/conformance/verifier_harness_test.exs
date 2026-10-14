@@ -26,7 +26,7 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
   # The pinned TypeScript verifier source (scripts/verifier_source.exs).
   defp verifier(file), do: Path.join(VerifierSource.path(), file)
 
-  test "the pinned Node harness checks CAP bytes and rejects its older case encoding" do
+  test "the pinned Node harness accepts CAP's shipped bytes and rejects index corruption" do
     {version, 0} = System.cmd("node", ["--version"])
 
     major =
@@ -35,11 +35,12 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
     assert major >= 24
 
     corpus = Path.expand("priv/conformance")
-    # This pin predates case files that preserve whole float tokens.
-    assert {output, 1} =
+
+    assert {output, 0} =
              System.cmd("node", [verifier("check-corpus.mjs"), corpus], stderr_to_stdout: true)
 
-    assert String.trim(output) == "case file"
+    index = corpus |> Path.join("index.json") |> File.read!() |> :json.decode()
+    assert String.trim(output) == index["corpus_digest"]
 
     temporary = Path.join(System.tmp_dir!(), "cap-corpus-#{System.unique_integer([:positive])}")
     File.mkdir_p!(temporary)
