@@ -304,6 +304,72 @@ with `"algorithm" => "ML-DSA-65"`), pass `algorithm: "ML-DSA-65"` to each signer
 call, and set `"protocol_revision" => 3` in the descriptor and acceptance
 claims.
 
+## Sign with your own code
+
+The signer is one way to sign. To sign with your own code, for example inside an HSM
+client, ask CAP for a plan first. `prepare_signing/5` checks the claims, the context,
+your limits and profile, and that the public key is one your own descriptor names,
+all before a signature exists. Sign the plan's message, then `finish_signing/2`
+assembles the compact and verifies it:
+
+```elixir
+alias CharterAgreementProtocol.Capability.Profile
+
+{DemoKey, issuer_ref} = issuer
+{:ok, {kid, public_key}} = DemoKey.key_identity(issuer_ref)
+claims = acceptance_claims.("issuer", issuer_digest)
+
+{:ok, plan} =
+  CAP.prepare_signing(
+    :acceptance,
+    %{"kid" => kid, "claims" => claims, "public_key" => public_key},
+    view,
+    limits,
+    Profile.full()
+  )
+
+{:ok, signature} = DemoKey.sign(plan.signing_input.message, issuer_ref)
+{:ok, compact} = CAP.finish_signing(plan, signature)
+
+compact == issuer_acceptance
+```
+
+```text
+true
+```
+
+Ed25519 signing is deterministic, so this is the same acceptance the signer made. A key
+that your descriptor does not name is refused before anything is signed:
+
+```elixir
+{DemoKey, acceptor_ref} = acceptor
+{:ok, {_kid, other_public_key}} = DemoKey.key_identity(acceptor_ref)
+
+{:error, error} =
+  CAP.prepare_signing(
+    :acceptance,
+    %{"kid" => kid, "claims" => claims, "public_key" => other_public_key},
+    view,
+    limits,
+    Profile.full()
+  )
+
+error.code
+```
+
+```text
+:signing_key_mismatch
+```
+
+The context depends on the kind: an `ArtifactSet` from `build_set/4` for an acceptance
+or a termination, `nil` or the predecessor's facts for a descriptor, and `ChainFacts`
+or a `CharterRevision` for a receipt. Limits cover every byte CAP reads, including
+the whole set. Your profile covers the revision, your own descriptor history and the
+new artifact; the rest of the set is checked under the full profile. Keep the plan as
+returned and pass it to `finish_signing/2` unchanged.
+The older `*_signing_input` functions and `assemble_compact/2` still work, under
+default limits and without the key check.
+
 ## Next
 
 - [Integrate CAP into an application](integration.md): what to call at boot,
@@ -314,33 +380,3 @@ claims.
 - The signer's [documentation](https://hexdocs.pm/charter_agreement_signer)
   covers `sign_termination/4` and `sign_receipt/4`, and its recipes show HSM
   and KMS key handles.
-
-## Check before external signing
-
-Pass the holder's snapshot public key as raw bytes. CAP derives and keeps
-its verification context in the returned plan. Acceptance and termination
-use an `ArtifactSet`; a descriptor uses nil or predecessor facts; a receipt
-uses `ChainFacts` or a `CharterRevision`. A bare revision returns
-`key: :unnamed` because it names no descriptor key.
-
-```elixir
-{:ok, plan} = CharterAgreementProtocol.prepare_signing(
-  :acceptance,
-  %{"kid" => snapshot.kid, "claims" => claims, "public_key" => snapshot.public_key},
-  held_set,
-  limits,
-  profile
-)
-{:ok, signature} = sign_bytes.(plan.signing_input.message)
-{:ok, compact} = CharterAgreementProtocol.finish_signing(plan, signature)
-```
-
-Keep the plan as returned. `finish_signing/2` assembles under its limits
-and runs public verification with its context and profile. Limits apply
-to every byte CAP reads in the whole retained set. `Profile.full()` applies
-to the set check for producer refusals. The caller profile applies to the
-revision, signing party's descriptor history and artifact for acceptance
-and termination, the whole retained set for a receipt, and the predecessor
-history and artifact for a descriptor. The old signing-input functions
-and `assemble_compact/2` continue to use default limits; use this flow for
-the key check and explicit limits.
