@@ -64,6 +64,13 @@ and inputs of the wrong type, so that two implementations producing the
 same decoded value also produce identical bytes
 [CAP-CANONICALIZATION-noncanonical-rejected].
 
+Every claims member typed as an integer by its schema requires an integer
+token. A float token, including a whole-number token such as `1.0`, returns
+`signing_input_invalid` during signing construction and the schema's
+`invalid_type` code during verification or revision decoding, before
+canonical spelling is checked. This includes nested integer members
+[CAP-JSON-integer-claims].
+
 ### 2.3 base64url
 
 Base64url encodings MUST be unpadded: a decoder MUST reject input

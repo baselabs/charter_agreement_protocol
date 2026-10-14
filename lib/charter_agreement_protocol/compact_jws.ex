@@ -140,7 +140,7 @@ defmodule CharterAgreementProtocol.CompactJws do
              {:ok, signature_raw} <- decode_signature_segment(signature_segment),
              {:ok, protected} <- canonical_value(protected_bytes, limits, :protected),
              {:ok, {alg, kid}} <- protected_header(protected, expected_typ),
-             {:ok, payload} <- canonical_value(payload_bytes, limits, :payload),
+             {:ok, payload} <- canonical_value(payload_bytes, limits, :payload, expected_typ),
              :ok <- bind_algorithm(alg, payload),
              {:ok, signature} <- bounded_signature(signature_raw, alg) do
           {:ok,
@@ -187,12 +187,14 @@ defmodule CharterAgreementProtocol.CompactJws do
     end
   end
 
-  defp canonical_value(bytes, limits, kind) do
+  defp canonical_value(bytes, limits, kind, claims_kind \\ nil) do
     with {:ok, value} <- Json.decode(bytes, limits),
+         :ok <- CharterAgreementProtocol.Internal.IntegerClaims.check(claims_kind, value),
          {:ok, canonical} <- Canonicalization.encode(value),
          true <- canonical == bytes do
       {:ok, value}
     else
+      {:error, %Error{code: :invalid_type}} = error -> error
       _failure -> canonical_error(kind)
     end
   end

@@ -46,6 +46,7 @@ defmodule CharterAgreementProtocol.SigningInput do
     CharterRevision,
     Error,
     Limits,
+    Internal.IntegerClaims,
     PartyDescriptor,
     Receipt,
     TerminationNotice
@@ -159,6 +160,7 @@ defmodule CharterAgreementProtocol.SigningInput do
       when map_size(input) == 3 and is_map(claims) and is_binary(kid) and is_binary(alg) do
     with {:ok, revision} <- emission_revision(alg),
          {:ok, claims_value} <- Canonicalization.from_plain(claims),
+         :ok <- IntegerClaims.check(kind, claims_value),
          true <- claims_revision(claims_value, revision),
          {:ok, payload_bytes} <- Canonicalization.encode(claims_value),
          {:ok, protected_bytes} <- protected(kind, kid, alg),

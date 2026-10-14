@@ -26,6 +26,23 @@ defmodule CharterAgreementProtocol.CharterRevisionTest do
     assert next.prev_revision_digest == genesis.digest
   end
 
+  test "revision encoding rejects float tokens in every integer member" do
+    claims = CharterRevisionFixture.genesis().claims
+
+    variants = [
+      Map.update!(claims, "protocol_revision", &(&1 / 1)),
+      Map.update!(claims, "revision_number", &(&1 / 1)),
+      Map.update!(claims, "abp_bindings", fn bindings ->
+        Enum.map(bindings, &Map.update!(&1, "release_number", fn number -> number / 1 end))
+      end)
+    ]
+
+    for changed <- variants do
+      assert {:error, %Error{code: :invalid_type}} =
+               CharterAgreementProtocol.CharterRevision.encode(changed)
+    end
+  end
+
   test "legal text content digest is over raw bytes under its own domain" do
     fixture = CharterRevisionFixture.genesis()
 
