@@ -46,8 +46,12 @@ priv/conformance/
     ...one file per surface...
 ```
 
-Every file is canonical JSON (see [Canonical JSON](#canonical-json) below) with no
-trailing newline. A loader reads the whole directory: any file the index does not
+The index is canonical JSON (see [Canonical JSON](#canonical-json) below). Case
+files use the same encoding except that a float whose canonical spelling has no
+fraction or exponent carries `.0`, for example `2.0`. This preserves numeric token
+types in inputs. Readers must retain those types, including inside `claims` and
+profile revision bounds; converting `2.0` to an integer changes the input. No file
+has a trailing newline. A loader reads the whole directory: any file the index does not
 list, including a hidden file, makes the corpus invalid.
 
 `index.json` has exactly these members:
@@ -93,7 +97,8 @@ Load in this order, and refuse the corpus at the first failure:
 4. Refuse an index with `total_cases` of 0.
 5. Check that the directory holds exactly `index.json` plus the listed files, and that
    each file's SHA-256 matches its entry.
-6. Decode each case file, check it is canonical, and check its shape.
+6. Decode each case file, check its encoding with float tokens retained, and check
+   its shape.
 7. Check each file's case count and the total.
 8. Check every case's shape, its surface and class names, and that ids are unique.
 9. Check the applicability table: for each surface and class, a count must equal the

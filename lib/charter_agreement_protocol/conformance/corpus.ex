@@ -232,12 +232,17 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
 
   defp decode_canonical(bytes, kind) do
     with {:ok, value} <- Json.decode(bytes, case_limits(kind)),
-         {:ok, ^bytes} <- Canonicalization.encode(value) do
+         {:ok, ^bytes} <- encode_document(value, kind) do
       {:ok, plain(value)}
     else
       _failure -> if(kind == :index, do: index_error(), else: case_error())
     end
   end
+
+  defp encode_document(value, :case),
+    do: CharterAgreementProtocol.Internal.CaseJson.encode(value)
+
+  defp encode_document(value, :index), do: Canonicalization.encode(value)
 
   defp case_limits(:case) do
     {:ok, limits} =

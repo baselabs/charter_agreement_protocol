@@ -2501,7 +2501,10 @@ files =
   Enum.map(Corpus.surfaces(), fn surface ->
     path = "cases/" <> String.replace(surface, ".", "-") <> ".json"
     surface_cases = Map.fetch!(grouped, surface)
-    bytes = canonical.(%{"format" => case_format, "cases" => surface_cases})
+    {:ok, bytes} =
+      CharterAgreementProtocol.Internal.CaseJson.encode(
+        tagged.(%{"format" => case_format, "cases" => surface_cases})
+      )
     target = Path.join(root, path)
     File.mkdir_p!(Path.dirname(target))
     File.write!(target, bytes)

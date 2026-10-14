@@ -26,7 +26,7 @@ defmodule CharterAgreementProtocol.ConformanceTest.Builder do
   end
 
   def build(cases \\ minimal_cases()) do
-    case_bytes = canonical!(%{"format" => @case_format, "cases" => cases})
+    case_bytes = case_bytes!(%{"format" => @case_format, "cases" => cases})
     path = "cases/foundation.json"
 
     index = %{
@@ -58,7 +58,7 @@ defmodule CharterAgreementProtocol.ConformanceTest.Builder do
     path = "cases/foundation.json"
     case_file = map |> Map.fetch!(path) |> decode!()
     case_file = Map.update!(case_file, "cases", update)
-    case_bytes = canonical!(case_file)
+    case_bytes = case_bytes!(case_file)
 
     map
     |> Map.put(path, case_bytes)
@@ -76,7 +76,7 @@ defmodule CharterAgreementProtocol.ConformanceTest.Builder do
 
   def replace_case_file(map, case_file) do
     path = "cases/foundation.json"
-    bytes = canonical!(case_file)
+    bytes = case_bytes!(case_file)
 
     map
     |> Map.put(path, bytes)
@@ -90,6 +90,11 @@ defmodule CharterAgreementProtocol.ConformanceTest.Builder do
   def decode!(bytes) do
     {:ok, value} = CharterAgreementProtocol.Json.decode(bytes)
     plain(value)
+  end
+
+  defp case_bytes!(plain) do
+    {:ok, bytes} = CharterAgreementProtocol.Internal.CaseJson.encode(tagged(plain))
+    bytes
   end
 
   def canonical!(plain) do
