@@ -71,11 +71,13 @@ what the facts mean.
 ## Produce artifacts
 
 CAP builds the exact bytes to sign and checks the result. Signing happens outside CAP,
-with your keys. The companion package
-[`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer) does the
-signing for you: it takes your key handle, refuses to sign an acceptance or termination
-that conflicts with the artifacts you give it, and verifies its own output before
-returning it.
+with your keys. With your own signing code, call `prepare_signing/5` first: before a
+signature exists, it checks the claims, the context, your limits and profile, and that
+your key is one your own descriptor names. Sign `plan.signing_input.message`, then
+`finish_signing/2` assembles the compact and verifies it. The companion package
+[`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer) does all of
+this for you: it takes your key handle, refuses before the key is used when the artifact
+would not verify, and returns only artifacts that verify.
 [Produce and verify with the signer](docs/guides/produce-and-verify.md) shows the whole
 flow.
 

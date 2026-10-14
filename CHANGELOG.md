@@ -2,7 +2,7 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
-## [Unreleased]
+## [0.6.0] — 2026-10-14
 
 ### Security
 

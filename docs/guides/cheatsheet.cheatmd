@@ -83,6 +83,25 @@ signature = your_signer.(input.message)
 `protocol_revision` 2) or `"ML-DSA-65"` (`protocol_revision` 3). The signature is
 64 bytes for Ed25519 and 3309 for ML-DSA-65.
 
+### Check before signing
+
+```elixir
+alias CharterAgreementProtocol.Capability.Profile
+
+input = %{"kid" => kid, "claims" => claims, "public_key" => public_key}
+
+{:ok, plan} =
+  CAP.prepare_signing(:acceptance, input, set, Limits.default(), Profile.full())
+
+signature = your_signer.(plan.signing_input.message)
+{:ok, compact} = CAP.finish_signing(plan, signature)
+```
+
+Kinds: `:party_descriptor` (context `nil` or predecessor facts), `:acceptance` and
+`:termination` (an `ArtifactSet`), `:receipt` (`ChainFacts` or a bare revision). A
+refusal arrives before any signature exists: `:signing_key_mismatch` when the key is
+not the holder's, or the code verification would return.
+
 ### Set-aware producers
 
 ```elixir
