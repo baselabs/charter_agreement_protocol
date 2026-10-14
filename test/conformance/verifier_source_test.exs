@@ -122,15 +122,25 @@ defmodule CharterAgreementProtocol.Conformance.VerifierSourceTest do
       stderr_to_stdout: true,
       env: [
         {"ERL_FLAGS", "+S 2"},
-        {"GIT_CONFIG_COUNT", "1"},
+        {"GIT_CONFIG_COUNT", "3"},
         {"GIT_CONFIG_KEY_0", "url.file://#{source}.insteadOf"},
-        {"GIT_CONFIG_VALUE_0", "https://cap-verifier.test/repo.git"}
+        {"GIT_CONFIG_VALUE_0", "https://cap-verifier.test/repo.git"},
+        {"GIT_CONFIG_KEY_1", "maintenance.auto"},
+        {"GIT_CONFIG_VALUE_1", "false"},
+        {"GIT_CONFIG_KEY_2", "gc.auto"},
+        {"GIT_CONFIG_VALUE_2", "0"}
       ]
     )
   end
 
+  # Throwaway repositories must not start git's detached background maintenance
+  # (from git 2.54): it keeps writing into .git and races File.rm_rf!/1 in on_exit.
+  @no_maintenance ["-c", "maintenance.auto=false", "-c", "gc.auto=0"]
+
   defp git!(directory, args) do
-    {output, status} = System.cmd("git", args, cd: directory, stderr_to_stdout: true)
+    {output, status} =
+      System.cmd("git", @no_maintenance ++ args, cd: directory, stderr_to_stdout: true)
+
     assert status == 0, output
     output
   end

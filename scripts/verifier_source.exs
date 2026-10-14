@@ -22,6 +22,9 @@ defmodule CharterAgreementProtocol.VerifierSource do
   @cache "_build/verifier-source.git"
   @target "_build/verifier-source"
   @sibling "../charter_agreement_protocol_typescript"
+  # Fetches into the cache must not start git's detached background maintenance
+  # (from git 2.54), which keeps writing into the cache after the command returns.
+  @no_maintenance ["-c", "maintenance.auto=false", "-c", "gc.auto=0"]
 
   @doc "The materialized source directory, relative to the repository root."
   def path, do: @target
@@ -102,15 +105,16 @@ defmodule CharterAgreementProtocol.VerifierSource do
     if File.dir?(Path.join(sibling, ".git")) do
       System.cmd(
         "git",
-        [
-          "--git-dir",
-          cache,
-          "fetch",
-          "--quiet",
-          "--no-tags",
-          sibling,
-          "+refs/heads/*:refs/sibling/*"
-        ],
+        @no_maintenance ++
+          [
+            "--git-dir",
+            cache,
+            "fetch",
+            "--quiet",
+            "--no-tags",
+            sibling,
+            "+refs/heads/*:refs/sibling/*"
+          ],
         stderr_to_stdout: true
       )
     end
@@ -269,7 +273,7 @@ defmodule CharterAgreementProtocol.VerifierSource do
   end
 
   defp git!(cache, args) do
-    case System.cmd("git", ["--git-dir", cache | args], stderr_to_stdout: true) do
+    case System.cmd("git", @no_maintenance ++ ["--git-dir", cache | args], stderr_to_stdout: true) do
       {_out, 0} -> :ok
       {out, status} -> raise("verifier source: git #{hd(args)} failed (#{status})\n#{out}")
     end
