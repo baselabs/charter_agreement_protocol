@@ -29,10 +29,18 @@ defmodule CharterAgreementProtocol.CapabilityProviderTest do
 
     # OTP's unchanged crypto modules run without their native library in a child VM.
     code = """
+    #{inspect(System.otp_release())} = System.otp_release()
+    #{inspect(Application.spec(:crypto, :vsn))} = Application.spec(:crypto, :vsn)
     #{inspect(String.to_charlist(Path.join(isolated, "priv")))} = :code.priv_dir(:crypto)
     try do
       :crypto.supports()
       raise "the isolated crypto application unexpectedly loaded its native library"
+    rescue
+      UndefinedFunctionError -> :ok
+    end
+    try do
+      :crypto.mod_pow(2, 3, 5)
+      raise "the isolated modular exponentiation unexpectedly loaded its native library"
     rescue
       UndefinedFunctionError -> :ok
     end

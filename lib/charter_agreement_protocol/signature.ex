@@ -193,8 +193,11 @@ defmodule CharterAgreementProtocol.Signature do
   defp power(base, exponent) do
     :crypto.mod_pow(base, exponent, @ed25519_field_prime) |> :binary.decode_unsigned()
   rescue
-    # Point admission remains deterministic when the native library cannot load.
-    _error in [ErlangError, UndefinedFunctionError] -> power_fallback(base, exponent, 1)
+    # The provider test constructs an unloaded crypto module, which raises
+    # UndefinedFunctionError. The fixed positive modulus and exponent and
+    # reduced nonnegative base are valid native inputs. Errors from a loaded
+    # provider, including resource failures, propagate rather than use this path.
+    UndefinedFunctionError -> power_fallback(base, exponent, 1)
   end
 
   defp power_fallback(_base, 0, result), do: result
