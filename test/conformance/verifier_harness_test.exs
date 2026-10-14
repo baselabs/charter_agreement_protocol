@@ -26,7 +26,7 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
   # The pinned TypeScript verifier source (scripts/verifier_source.exs).
   defp verifier(file), do: Path.join(VerifierSource.path(), file)
 
-  test "the Node harness checks its pinned corpus and rejects index corruption" do
+  test "the pinned Node harness checks CAP bytes and reports its older applicability table" do
     {version, 0} = System.cmd("node", ["--version"])
 
     major =
@@ -34,9 +34,13 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
 
     assert major >= 24
 
-    corpus = verifier("conformance")
-    assert {output, 0} = System.cmd("node", [verifier("check-corpus.mjs"), corpus])
-    assert String.starts_with?(output, "sha-256:")
+    corpus = Path.expand("priv/conformance")
+    # This pin predates CAP's receipt maximum_plus_one cell. Its refusal
+    # is checked against CAP's current bytes.
+    assert {output, 1} =
+             System.cmd("node", [verifier("check-corpus.mjs"), corpus], stderr_to_stdout: true)
+
+    assert String.trim(output) == "not-applicable cell"
 
     temporary = Path.join(System.tmp_dir!(), "cap-corpus-#{System.unique_integer([:positive])}")
     File.mkdir_p!(temporary)
@@ -54,10 +58,10 @@ defmodule CharterAgreementProtocol.Conformance.VerifierHarnessTest do
       File.read!(Path.join(temporary, "index.json")) <> " "
     )
 
-    assert {_output, exit_status} =
+    assert {output, 1} =
              System.cmd("node", [verifier("check-corpus.mjs"), temporary], stderr_to_stdout: true)
 
-    assert exit_status != 0
+    assert String.trim(output) == "non-canonical index"
   end
 
   test "the harness has no third-party imports and the npm manifest stays repo-side" do
