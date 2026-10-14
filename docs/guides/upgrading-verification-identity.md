@@ -181,21 +181,48 @@ change in your application.
 - **`priv/verifier-source.json` ships.** It names the TypeScript verifier
   repository and commit this release was checked against.
 
+### From 0.5.0 to 0.6.0
+
+- **Change the requirement.** `~> 0.5.0` does not accept 0.6.0. Use
+  `~> 0.6.0` (see below).
+- **Ed25519 keys are fully decoded, so the semantics version moves to 6.**
+  Every Ed25519 public key and signature `R` must be a canonical encoding of
+  a curve point that is not of small order. Two key encodings that 0.3.0
+  through 0.5.0 accepted now fail with `:signature_invalid` (see the
+  [errata](../errata.md)), as do keys and `R` values that are not curve
+  points. Verify stored descriptors and the artifacts checked against them
+  again with 0.6.0, and store the new identity.
+- **Caller-built context is checked field by field.** A revision, descriptor
+  history or chain view you build yourself, instead of taking it from a
+  verify call, now fails with `:invalid_type` when a field has the wrong
+  type. In 0.5.0 some of these returned `ok`, and others raised or returned a
+  context-specific code such as `:receipt_invalid`. Contexts returned by CAP's
+  own verify calls are unaffected.
+- **A pre-sign check for holders.** `prepare_signing/5` checks the claims,
+  the context, the profile, the limits and the holder's own descriptor key
+  before a signature exists, and `finish_signing/2` assembles the compact and
+  verifies it. `charter_agreement_signer` 0.5.0 signs through them.
+- **The corpus grows.** `corpus_digest` changes, and `compatibility/0` has a
+  new 0.6.0 row listing every verdict change. `spec_digest` changes too;
+  record it, as the 0.5.0 notes say.
+- **`priv/verifier-source.json`** names the TypeScript verifier 0.7.0 commit
+  this release was checked against.
+
 ## Choose the dependency requirement
 
 ```elixir
-{:charter_agreement_protocol, "~> 0.5.0"}
+{:charter_agreement_protocol, "~> 0.6.0"}
 ```
 
-Before 1.0, `~> 0.5.0` accepts 0.5.0 and any later 0.5.x, and refuses 0.6.0.
-A requirement for an older minor line does not move by itself: `~> 0.4.0`
-never resolves to 0.5.0.
+Before 1.0, `~> 0.6.0` accepts 0.6.0 and any later 0.6.x, and refuses 0.7.0.
+A requirement for an older minor line does not move by itself: `~> 0.5.0`
+never resolves to 0.6.0.
 
 Your `mix.lock` fixes the exact version until you run `mix deps.update`. If
 your application checks the package version at run time and refuses any
 other, a lock update fails at that check until you change the expected
 value. Compare the verification identity above instead, and record the
-version. If you need the exact package bytes, pin `== 0.5.0` and keep the
+version. If you need the exact package bytes, pin `== 0.6.0` and keep the
 checksum from `mix.lock`.
 
 ## Runtimes that cannot verify ML-DSA

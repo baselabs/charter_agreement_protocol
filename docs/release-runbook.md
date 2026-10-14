@@ -182,8 +182,8 @@ bare `mix run -e` would drop it. Record the Hex checksum next to the tag.
 When the matching `charter_agreement_signer` release is on Hex, run
 [Produce and verify with the signer](guides/produce-and-verify.md) and both
 notebooks in a clean project with the exact dependency lines they show
-(`~> 0.5.0` for both packages). The docs tests run the notebooks against this
-tree with any published signer at 0.4.1 or later, and they do not run the
+(`~> 0.6.0` for this package and `~> 0.5.0` for the signer). The docs tests run
+the notebooks against this tree with any published signer at 0.4.1 or later, and they do not run the
 signer tutorial, so this step is what checks the published install lines.
 
 In the next change, add the new tag and its case count to the frozen-corpus

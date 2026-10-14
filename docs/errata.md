@@ -10,6 +10,25 @@ verdict change, with its direction (for example green to red), and
 [upgrade guide](guides/upgrading-verification-identity.md) explains how to
 read it.
 
+## 0.6.0
+
+- **Two Ed25519 public key encodings.** Releases 0.3.0 through 0.5.0
+  accepted the public keys
+  `0100000000000000000000000000000000000000000000000000000000000080` and
+  `ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` (x = 0
+  with the sign bit set). Under either key, a signature that anyone can
+  compute without a private key verifies, so a descriptor carrying such a key,
+  and every acceptance, termination notice and receipt checked against it,
+  could verify without proving that one holder signed it. 0.1.0 and 0.2.x
+  rejected both. 0.6.0 decodes each Ed25519 public key and signature `R` as
+  a curve point and rejects a value that is not canonical, is not a curve
+  point, or has small order (the rule is in the specification's Ed25519
+  section). A rejected key fails with `:signature_invalid`, and
+  `prepare_signing/5` returns `:signing_key_invalid`. The 0.6.0
+  compatibility row lists it as a green-to-red transition, and the
+  verification semantics version moves from 5 to 6. No `protocol_revision`
+  changes.
+
 ## 0.5.0
 
 - **One party in both roles.** Releases 0.1.0 through 0.4.1 verified a

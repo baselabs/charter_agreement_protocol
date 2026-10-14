@@ -4,6 +4,18 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+### Security
+
+- **Two Ed25519 public key encodings were accepted.** Releases 0.3.0 through
+  0.5.0 accepted the keys `0100000000000000000000000000000000000000000000000000000000000080`
+  and `ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` (x = 0
+  with the sign bit set). Under either key, a signature computed without a
+  private key verifies. 0.6.0 decodes every Ed25519 public key and signature
+  `R` as a curve point and rejects a value that is not canonical, is not a
+  curve point, or has small order. Releases 0.1.0 and 0.2.x rejected both
+  encodings. See the errata and the upgrade guide for how to check stored
+  results.
+
 ### Added
 
 - `prepare_signing/5`, `finish_signing/2` and `SigningPlan` check the holder's
