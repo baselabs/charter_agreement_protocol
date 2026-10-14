@@ -16,6 +16,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
     Error,
     Extension,
     ExtensionRegistry,
+    Internal.IntegerClaims,
     Json,
     Limits,
     Schema,
@@ -316,7 +317,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
   @spec encode(term()) :: {:ok, binary()} | {:error, Error.t()}
   def encode(claims) when is_map(claims) do
     with {:ok, value} <- Canonicalization.from_plain(claims),
-         :ok <- CharterAgreementProtocol.Internal.IntegerClaims.check(:charter_revision, value),
+         :ok <- IntegerClaims.check(:charter_revision, value),
          {:ok, bytes} <- Canonicalization.encode(value),
          {:ok, _revision} <- decode(bytes, Limits.default()),
          do: {:ok, bytes}
@@ -343,7 +344,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
 
   defp decode_canonical(bytes, limits) do
     with {:ok, value} <- Json.decode(bytes, limits),
-         :ok <- CharterAgreementProtocol.Internal.IntegerClaims.check(:charter_revision, value),
+         :ok <- IntegerClaims.check(:charter_revision, value),
          {:ok, canonical} <- Canonicalization.encode(value),
          :ok <- exact_bytes(bytes, canonical),
          {:ok, validated} <- Schema.validate(@definition, value) do

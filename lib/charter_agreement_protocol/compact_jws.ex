@@ -15,6 +15,7 @@ defmodule CharterAgreementProtocol.CompactJws do
     Canonicalization,
     Capability.Profile,
     Error,
+    Internal.IntegerClaims,
     Json,
     Limits,
     Signature
@@ -189,7 +190,7 @@ defmodule CharterAgreementProtocol.CompactJws do
 
   defp canonical_value(bytes, limits, kind, claims_kind \\ nil) do
     with {:ok, value} <- Json.decode(bytes, limits),
-         :ok <- CharterAgreementProtocol.Internal.IntegerClaims.check(claims_kind, value),
+         :ok <- IntegerClaims.check(claims_kind, value),
          {:ok, canonical} <- Canonicalization.encode(value),
          true <- canonical == bytes do
       {:ok, value}

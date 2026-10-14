@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.Internal.IntegerClaims do
-  @moduledoc false
+  @moduledoc "CAP never authorizes. Integer token checks before claims encoding."
 
   alias CharterAgreementProtocol.Error
 

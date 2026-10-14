@@ -45,8 +45,8 @@ defmodule CharterAgreementProtocol.SigningInput do
     Chain,
     CharterRevision,
     Error,
-    Limits,
     Internal.IntegerClaims,
+    Limits,
     PartyDescriptor,
     Receipt,
     TerminationNotice

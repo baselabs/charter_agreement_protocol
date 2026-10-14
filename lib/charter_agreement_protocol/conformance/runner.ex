@@ -320,22 +320,19 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   end
 
   defp kind_value_type(%{"kind" => kind, "value" => value}) do
-    matches =
-      case kind do
-        "integer" -> is_integer(value)
-        "float" -> is_float(value)
-        "string" -> is_binary(value)
-        "boolean" -> is_boolean(value)
-        "null" -> is_nil(value)
-        "array" -> is_list(value)
-        "object" -> is_map(value)
-        _other -> false
-      end
-
-    if matches, do: :ok, else: type_error()
+    if kind_matches?(kind, value), do: :ok, else: type_error()
   end
 
   defp kind_value_type(_input), do: :ok
+
+  defp kind_matches?("integer", value), do: is_integer(value)
+  defp kind_matches?("float", value), do: is_float(value)
+  defp kind_matches?("string", value), do: is_binary(value)
+  defp kind_matches?("boolean", value), do: is_boolean(value)
+  defp kind_matches?("null", value), do: is_nil(value)
+  defp kind_matches?("array", value), do: is_list(value)
+  defp kind_matches?("object", value), do: is_map(value)
+  defp kind_matches?(_kind, _value), do: false
 
   defp input_object(input) when is_map(input), do: :ok
   defp input_object(_input), do: type_error()
