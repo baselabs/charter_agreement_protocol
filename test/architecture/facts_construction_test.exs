@@ -81,6 +81,10 @@ defmodule CharterAgreementProtocol.Architecture.FactsConstructionTest do
     unsigned =
       "Facts.build(CharterAgreementProtocol.RevisionFacts, %{\n  revision_digest: digest\n})"
 
+    assert build_blocks(unsigned, "Facts.build(CharterAgreementProtocol.RevisionFacts,") == [
+             "  revision_digest: digest"
+           ]
+
     assert missing_members("  revision_digest: digest", false) == ["protocol_revision:"]
   end
 

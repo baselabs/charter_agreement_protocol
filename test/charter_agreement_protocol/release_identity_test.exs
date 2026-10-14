@@ -5,8 +5,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
   alias CharterAgreementProtocol.{Algorithm, ReleaseIdentity}
 
   test "the manifest schema version is a positive integer" do
-    assert is_integer(ReleaseIdentity.manifest_version()) and
-             ReleaseIdentity.manifest_version() >= 1
+    assert ReleaseIdentity.manifest_version() in 1..1_000_000
   end
 
   test "the semantics identity is at least the latest family in the mapping" do

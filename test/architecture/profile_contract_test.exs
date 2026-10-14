@@ -2,8 +2,6 @@ defmodule CharterAgreementProtocol.Architecture.ProfileContractTest do
   @moduledoc false
   use ExUnit.Case, async: true
 
-  alias CharterAgreementProtocol.Capability.Profile
-
   test "the profile surface is threaded, not pre-passed: every verify seam takes a profile" do
     for {path, anchors} <- [
           {"lib/charter_agreement_protocol/compact_jws.ex",

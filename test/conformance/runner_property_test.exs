@@ -27,6 +27,14 @@ defmodule CharterAgreementProtocol.Conformance.RunnerPropertyTest do
     end
   end
 
+  test "a string code point that is not hexadecimal is a type error" do
+    one = Enum.find(cases(), &(&1["id"] == "canonical-noncharacter"))
+
+    for value <- ["zz", "", "12 ", "-41"] do
+      assert_code(put_in(one, ["input", "value"], value), "invalid_type")
+    end
+  end
+
   test "profile errors, zero governing limits and absent receipt contexts return typed errors" do
     cases = cases()
 

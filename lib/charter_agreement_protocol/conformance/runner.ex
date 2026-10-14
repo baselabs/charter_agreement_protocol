@@ -87,16 +87,13 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   end
 
   defp execute(%{"surface" => "json.decode", "input" => input}, _profile) do
-    case limits(input) do
-      {:ok, limits} ->
-        with {:ok, bytes} <- json_input(input) do
-          Json.decode(bytes, limits)
-        end
-        |> project_ok(&json_projection/1)
+    # run/1 has already accepted the case's limits.
+    {:ok, limits} = limits(input)
 
-      {:error, %Error{} = error} ->
-        invalid(error.code)
+    with {:ok, bytes} <- json_input(input) do
+      Json.decode(bytes, limits)
     end
+    |> project_ok(&json_projection/1)
   end
 
   defp execute(%{"surface" => "canonicalization.encode", "input" => input}, _profile) do
@@ -250,33 +247,30 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   end
 
   defp execute(%{"surface" => "receipt.verify", "input" => input}, profile) do
-    case limits(input) do
-      {:ok, caller_limits} ->
-        with {:ok, context} <- receipt_context(input, caller_limits) do
-          Receipt.verify(
-            input["compact"],
-            context,
-            caller_limits,
-            profile
-          )
-        end
-        |> project_ok(fn facts ->
-          %{
-            "receipt_digest" => facts.receipt_digest,
-            "revision_number" => facts.revision_number,
-            "revision_digest" => facts.revision_digest,
-            "decision" => Atom.to_string(facts.decision),
-            "outcome" => Atom.to_string(facts.outcome),
-            "chain_conflict" => Atom.to_string(facts.chain_conflict),
-            "governing_match" => Atom.to_string(facts.governing_match),
-            "deployment_digest_matched" => facts.deployment_digest_matched,
-            "optional_extensions_retained" => facts.optional_extensions_retained
-          }
-        end)
+    # run/1 has already accepted the case's limits.
+    {:ok, caller_limits} = limits(input)
 
-      {:error, %Error{code: code}} ->
-        invalid(code)
+    with {:ok, context} <- receipt_context(input, caller_limits) do
+      Receipt.verify(
+        input["compact"],
+        context,
+        caller_limits,
+        profile
+      )
     end
+    |> project_ok(fn facts ->
+      %{
+        "receipt_digest" => facts.receipt_digest,
+        "revision_number" => facts.revision_number,
+        "revision_digest" => facts.revision_digest,
+        "decision" => Atom.to_string(facts.decision),
+        "outcome" => Atom.to_string(facts.outcome),
+        "chain_conflict" => Atom.to_string(facts.chain_conflict),
+        "governing_match" => Atom.to_string(facts.governing_match),
+        "deployment_digest_matched" => facts.deployment_digest_matched,
+        "optional_extensions_retained" => facts.optional_extensions_retained
+      }
+    end)
   end
 
   defp execute(%{"surface" => "signing.prepare", "input" => input}, _profile) do
@@ -560,19 +554,18 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     )
   end
 
-  defp verify_chain(input) when is_map(input) do
-    with {:ok, limits} <- limits(input) do
-      Chain.verify(
-        input["revisions"],
-        input["acceptances"],
-        input["descriptors"],
-        input["terminations"],
-        limits
-      )
-    end
-  end
+  # run/1 has already accepted the case input as an object with valid limits.
+  defp verify_chain(input) do
+    {:ok, limits} = limits(input)
 
-  defp verify_chain(_input), do: type_error()
+    Chain.verify(
+      input["revisions"],
+      input["acceptances"],
+      input["descriptors"],
+      input["terminations"],
+      limits
+    )
+  end
 
   defp signed_revisions([_, _] = signed, chain) do
     collect(signed, fn

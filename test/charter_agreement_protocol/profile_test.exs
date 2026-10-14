@@ -18,6 +18,15 @@ defmodule CharterAgreementProtocol.ProfileTest do
     assert profile == Profile.full()
   end
 
+  test "new reads a nil axis as the full axis" do
+    full = Profile.full()
+
+    assert {:ok, %Profile{algorithms: algorithms}} = Profile.new(algorithms: nil)
+    assert algorithms == full.algorithms
+    assert {:ok, %Profile{revisions: revisions}} = Profile.new(revisions: nil)
+    assert revisions == full.revisions
+  end
+
   test "new narrows the algorithm axis to registry names" do
     assert {:ok, %Profile{algorithms: ["Ed25519"]}} = Profile.new(algorithms: ["Ed25519"])
   end
