@@ -656,8 +656,32 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
   ]
 
   def run do
-    Enum.each(@mutations, &run_mutation/1)
+    # Baselines run in the repository itself, so one at a time and first; every mutation then
+    # runs in its own scratch copy, side by side, one per scheduler.
+    @mutations
+    |> Enum.uniq_by(& &1.command)
+    |> Enum.each(&baseline_green!(&1.command))
+
+    parallel(@mutations, &run_mutation/1)
     IO.puts("conformance mutation gate: ok mutations=#{length(@mutations)}")
+  end
+
+  defp parallel(items, fun) do
+    items
+    |> Task.async_stream(fun,
+      max_concurrency: System.schedulers_online(),
+      ordered: false,
+      timeout: :infinity
+    )
+    |> Stream.run()
+  end
+
+  # Each run's own temporary directory, beside its scratch copy: tests that use fixed names
+  # under System.tmp_dir!/0 would otherwise collide when one test file runs in two copies at once.
+  defp private_tmp!(scratch) do
+    path = scratch <> ".tmp"
+    File.mkdir_p!(path)
+    path
   end
 
   defp run_mutation(mutation) do
@@ -675,20 +699,21 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
         System.cmd(hd(mutation.command), tl(mutation.command),
           cd: scratch,
           stderr_to_stdout: true,
-          env: [{"MIX_ENV", "test"}]
+          env: [{"MIX_ENV", "test"}, {"TMPDIR", private_tmp!(scratch)}]
         )
 
       if status == 0, do: raise("mutation survived: #{mutation.name}\n#{output}")
       IO.puts("mutation caught: #{mutation.name}")
     after
       File.rm_rf!(scratch)
+      File.rm_rf!(scratch <> ".tmp")
     end
   end
 
   defp baseline_green!(command) do
     key = {:baseline_green, command}
 
-    if Process.get(key) != :ok do
+    if :persistent_term.get(key, nil) != :ok do
       {output, status} =
         System.cmd(hd(command), tl(command),
           cd: @root,
@@ -697,7 +722,7 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
         )
 
       if status != 0, do: raise("baseline not green: #{Enum.join(command, " ")}\n#{output}")
-      Process.put(key, :ok)
+      :persistent_term.put(key, :ok)
     end
   end
 
@@ -706,7 +731,7 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       System.cmd(hd(command), tl(command),
         cd: scratch,
         stderr_to_stdout: true,
-        env: [{"MIX_ENV", "test"}]
+        env: [{"MIX_ENV", "test"}, {"TMPDIR", private_tmp!(scratch)}]
       )
 
     if status != 0,

@@ -23,7 +23,7 @@ defmodule CharterAgreementProtocol.SeededMutation do
     path =
       Path.join(
         System.tmp_dir!(),
-        "cap-#{label}-#{System.unique_integer([:positive, :monotonic])}"
+        "cap-#{label}-#{System.pid()}-#{System.unique_integer([:positive, :monotonic])}"
       )
 
     File.mkdir_p!(path)
