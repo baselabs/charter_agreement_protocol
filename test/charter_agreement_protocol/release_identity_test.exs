@@ -76,7 +76,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
   test "the latest corpus row records malformed context transitions" do
     [latest | _] = Enum.reverse(ReleaseIdentity.compatibility())
     assert latest.verification_semantics == ReleaseIdentity.verification_semantics()
-    assert latest.package_versions == ["0.6.0"]
+    assert latest.package_versions == ["0.6.0", "1.0.0"]
     assert Enum.any?(latest.transitions, &(&1.direction == :green_to_red))
     assert Enum.any?(latest.transitions, &(&1.direction == :crash_to_typed))
   end

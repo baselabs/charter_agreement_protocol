@@ -151,7 +151,9 @@ defmodule CharterAgreementProtocol.DifferentialGate do
 
   defp run_typescript(directory, input_path) do
     {output, status} =
-      System.cmd("node", ["--experimental-strip-types", "--no-warnings", "diff.mjs", input_path],
+      System.cmd(
+        VerifierSource.node!(),
+        ["--experimental-strip-types", "--no-warnings", "diff.mjs", input_path],
         cd: directory,
         stderr_to_stdout: true
       )

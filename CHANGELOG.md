@@ -2,6 +2,18 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
+## [1.0.0] — 2026-11-09
+
+- Stabilizes the public Elixir API and shipped conformance contract for the
+  TypeScript implementation. Protocol revisions 1–3, verification semantics 6,
+  registry and certified corpus identities stay unchanged from 0.6.0.
+- Plain JSON conversion rejects improper lists, including nested claims, with
+  `invalid_type` instead of raising, including revision encoding. Signing
+  preparation returns its existing `signing_input_invalid` error before
+  custody; accepted bytes and verification verdicts are unchanged.
+- The matching signer release is 1.0.0. Package archives remain release
+  candidates until the maintainer authorizes publication.
+
 ## [0.6.0] — 2026-10-14
 
 ### Security

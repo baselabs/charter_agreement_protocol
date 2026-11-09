@@ -71,19 +71,7 @@ defmodule CharterAgreementProtocol.Canonicalization do
     end
   end
 
-  defp tag(value) when is_list(value) do
-    value
-    |> Enum.reduce_while({:ok, []}, fn item, {:ok, items} ->
-      case tag(item) do
-        {:ok, tagged} -> {:cont, {:ok, [tagged | items]}}
-        :error -> {:halt, :error}
-      end
-    end)
-    |> case do
-      {:ok, items} -> {:ok, {:array, Enum.reverse(items)}}
-      :error -> :error
-    end
-  end
+  defp tag(value) when is_list(value), do: tag_items(value, [])
 
   defp tag(value) when is_binary(value), do: {:ok, {:string, value}}
   defp tag(value) when is_integer(value), do: {:ok, {:integer, value}}
@@ -91,6 +79,17 @@ defmodule CharterAgreementProtocol.Canonicalization do
   defp tag(value) when is_boolean(value), do: {:ok, {:boolean, value}}
   defp tag(nil), do: {:ok, :null}
   defp tag(_value), do: :error
+
+  defp tag_items([], items), do: {:ok, {:array, Enum.reverse(items)}}
+
+  defp tag_items([item | rest], items) do
+    case tag(item) do
+      {:ok, tagged} -> tag_items(rest, [tagged | items])
+      :error -> :error
+    end
+  end
+
+  defp tag_items(_improper, _items), do: :error
 
   @doc "Verify that received JSON bytes are already canonical."
   @spec verify(term()) :: {:ok, Json.value()} | {:error, Error.t()}

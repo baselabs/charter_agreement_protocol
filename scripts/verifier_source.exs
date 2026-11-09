@@ -26,6 +26,22 @@ defmodule CharterAgreementProtocol.VerifierSource do
   # (from git 2.54), which keeps writing into the cache after the command returns.
   @no_maintenance ["-c", "maintenance.auto=false", "-c", "gc.auto=0"]
 
+  @doc "Resolve the selected Node runtime before a gate changes child directories."
+  def node! do
+    {output, 0} =
+      System.cmd("node", [
+        "-p",
+        "JSON.stringify({path: process.execPath, version: process.versions.node})"
+      ])
+
+    %{"path" => path, "version" => version} = :json.decode(output)
+
+    unless Version.match?(version, ">= 24.8.0"),
+      do: raise("Node >= 24.8 is required; found #{version}")
+
+    path
+  end
+
   @doc "The materialized source directory, relative to the repository root."
   def path, do: @target
 

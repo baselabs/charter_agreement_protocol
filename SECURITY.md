@@ -4,8 +4,9 @@
 
 | Version | Security fixes |
 | --- | --- |
-| 0.6.x | yes, once released |
-| 0.5.x and earlier | no; upgrade to 0.6.x once released |
+| 1.0.x | supported upon publication |
+| 0.6.x | supported until 1.0.0 is published |
+| 0.5.x and earlier | no; upgrade to 0.6.x or 1.0.x |
 
 0.5.0 fixes two verification defects. In 0.1.0 through 0.4.1, a charter in
 which one party held both roles could verify. In 0.4.0 and 0.4.1, a narrowed

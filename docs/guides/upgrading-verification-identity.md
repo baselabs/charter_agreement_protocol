@@ -102,7 +102,7 @@ carries the same rows in its `compatibility` member.
 | 3 | 0.3.0, 0.3.1, 0.3.2 | ML-DSA-44, ML-DSA-65 and ML-DSA-87 are accepted at revision 3; seven timestamp members must be 1 to 64 bytes, so longer spellings fail; `max_artifact_set_bytes` (64 MiB by default) bounds a chain view, so larger views fail with `:limit_exceeded`; improper lists return a typed error instead of raising |
 | 4 | 0.4.0, 0.4.1 | a Party Descriptor's `effective_from` must be 1 to 64 bytes, like the other timestamps |
 | 5 | 0.5.0 | a charter's parties must be distinct: a revision that names one descriptor for two roles fails with `:revision_invalid`, and a chain view whose revision parties resolve to one party's descriptor history, or that holds a history no revision names, fails with `:chain_invalid` |
-| 6 | 0.6.0 | Ed25519 admission rejects two more small-order encodings and keys that are not curve points, applying one point rule to the public key and signature `R`; malformed caller-built context field types return `invalid_type` consistently; some revision numbers, topology values and list members returned `ok` in 0.5.0, while other malformed context fields raised or returned a context-specific error |
+| 6 | 0.6.0, 1.0.0 | Ed25519 admission rejects two more small-order encodings and keys that are not curve points, applying one point rule to the public key and signature `R`; malformed caller-built context field types return `invalid_type` consistently; some revision numbers, topology values and list members returned `ok` in 0.5.0, while other malformed context fields raised or returned a context-specific error |
 
 Releases before 0.4.0 shipped no manifest. Their rows are CAP's
 classification of those releases, published afterward; their packages are
@@ -208,22 +208,28 @@ change in your application.
 - **`priv/verifier-source.json`** names the TypeScript verifier 0.7.0 commit
   this release was checked against.
 
+## From 0.6.0 to 1.0.0
+
+Use `~> 1.0.0` for CAP and the companion signer. Verification semantics stays
+6, and the certified corpus and registry stay byte-identical. Existing
+artifacts need no migration. Improper lists passed to plain JSON conversion,
+revision encoding or signing preparation now return `invalid_type` instead
+of raising. The release metadata records 1.0.0 with the existing corpus row.
+
 ## Choose the dependency requirement
 
 ```elixir
-{:charter_agreement_protocol, "~> 0.6.0"}
+{:charter_agreement_protocol, "~> 1.0.0"}
 ```
 
-Before 1.0, `~> 0.6.0` accepts 0.6.0 and any later 0.6.x, and refuses 0.7.0.
-A requirement for an older minor line does not move by itself: `~> 0.5.0`
-never resolves to 0.6.0.
+The 1.x public Elixir API follows Semantic Versioning. `~> 1.0.0` accepts
+1.0.x patch releases; `~> 1.0` also accepts later 1.x minor releases.
+Verification behavior has its own identity: record the semantics version,
+corpus, registry and specification digests whenever updating the lock.
+A package major version does not change an artifact's `protocol_revision`.
 
-Your `mix.lock` fixes the exact version until you run `mix deps.update`. If
-your application checks the package version at run time and refuses any
-other, a lock update fails at that check until you change the expected
-value. Compare the verification identity above instead, and record the
-version. If you need the exact package bytes, pin `== 0.6.0` and keep the
-checksum from `mix.lock`.
+Your `mix.lock` fixes the exact version until `mix deps.update`. If exact
+package bytes matter, use `== 1.0.0` and retain the Hex checksum from the lock.
 
 ## Runtimes that cannot verify ML-DSA
 

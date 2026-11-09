@@ -8,7 +8,15 @@ defmodule CharterAgreementProtocol.PlainEncodingTest do
   use ExUnitProperties
 
   alias CharterAgreementProtocol, as: CAP
-  alias CharterAgreementProtocol.{Canonicalization, CharterRevisionFixture, Error, Json, Limits}
+
+  alias CharterAgreementProtocol.{
+    Canonicalization,
+    Capability.Profile,
+    CharterRevisionFixture,
+    Error,
+    Json,
+    Limits
+  }
 
   @safe_integer 9_007_199_254_740_991
 
@@ -57,7 +65,15 @@ defmodule CharterAgreementProtocol.PlainEncodingTest do
   end
 
   test "terms with no JSON meaning are typed errors, never raised" do
-    for term <- [%{atom_key: 1}, {:tuple}, :atom, [1, self()], %{"k" => make_ref()}] do
+    for term <- [
+          %{atom_key: 1},
+          {:tuple},
+          :atom,
+          [1, self()],
+          [1 | :tail],
+          %{"nested" => [1 | :tail]},
+          %{"k" => make_ref()}
+        ] do
       assert {:error, %Error{code: :invalid_type}} = Canonicalization.from_plain(term)
       assert {:error, %Error{code: :invalid_type}} = Canonicalization.encode_plain(term)
     end
@@ -91,5 +107,21 @@ defmodule CharterAgreementProtocol.PlainEncodingTest do
   test "a claims value that is not plain JSON is a typed error" do
     assert {:error, %Error{code: :invalid_type}} = CAP.encode_charter_revision(%{key: "atom"})
     assert {:error, %Error{code: :invalid_type}} = CAP.encode_charter_revision("not a map")
+
+    assert {:error, %Error{code: :invalid_type}} =
+             CAP.encode_charter_revision(%{"nested" => [1 | :tail]})
+
+    assert {:error, %Error{code: :signing_input_invalid}} =
+             CAP.prepare_signing(
+               :party_descriptor,
+               %{
+                 "kid" => "key",
+                 "public_key" => <<0::256>>,
+                 "claims" => %{"nested" => [1 | :tail]}
+               },
+               nil,
+               Limits.default(),
+               Profile.full()
+             )
   end
 end

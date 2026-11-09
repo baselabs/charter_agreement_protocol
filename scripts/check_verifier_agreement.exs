@@ -31,7 +31,7 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
   def run do
     VerifierSource.current!()
     verify_vendored_corpus_snapshot()
-    node = find_node!()
+    node = VerifierSource.node!()
     build_escript!()
 
     try do
@@ -150,14 +150,6 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
     after
       File.rm_rf!(directory)
     end
-  end
-
-  defp find_node! do
-    path = System.find_executable("node") || raise("Node >= 24 is required")
-    {"v" <> version, 0} = System.cmd(path, ["--version"])
-    major = version |> String.split(".") |> hd() |> String.to_integer()
-    if major < 24, do: raise("Node >= 24 is required; found #{major}")
-    path
   end
 
   # The pinned TypeScript repository's vendored corpus must be byte-identical
