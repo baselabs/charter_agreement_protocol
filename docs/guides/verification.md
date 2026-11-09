@@ -21,8 +21,8 @@ order, and then your limits:
 `build_set/4`, which you use before producing an acceptance or a termination, takes the
 same lists in a different order: revisions, acceptances, terminations, descriptors.
 
-CAP decodes and verifies every artifact on every call. Nothing is cached between
-calls. A member that points from one artifact to another (a digest, a role, a key id)
+CAP decodes and verifies every artifact on every call; artifact verdicts are not
+cached. Runtime capability probes and their known-answer results are cached per VM. A member that points from one artifact to another (a digest, a role, a key id)
 only tells CAP where to look. CAP still verifies the artifact it points at.
 
 ## Artifact-set bounds

@@ -21,8 +21,8 @@ CAP trusts three things:
 
 Nothing inside an artifact is trusted until CAP has verified it. A `kid`, a digest, a
 role or a URI only tells CAP where to look. CAP has no runtime dependencies besides
-OTP, reads no files, clock, network or environment while verifying, and keeps no state
-between calls.
+OTP and reads no files, clock, network or environment while verifying. Runtime
+capability probes are cached per VM; artifact bytes and verification verdicts are not.
 
 CAP does not trust any party, and it cannot tell you who a party is. A descriptor
 history starts from a genesis key. Which real counterparty that key belongs to is

@@ -10,9 +10,9 @@ later, can verify and get the same answer from.
 
 - **Which revision is in force right now?** Agreements change. Both parties need the
   same answer for the same instant, computed from evidence each can check.
-- **Did both parties accept this exact revision?** An acceptance signs the revision's
-  exact bytes, with a key the other side can trace to the signer's published key
-  history.
+- **Did both parties accept this exact revision?** An acceptance signs claims naming the exact revision's digest
+  and coordinates, with a key the other side can trace to the signer's published
+  key history.
 - **What if a party signs two different revisions at the same number?** CAP keeps both
   as evidence and, for an instant at which both compete, reports the charter as
   contested. It never picks a winner. A new revision that both parties accept, and
@@ -47,7 +47,7 @@ flowchart LR
   (by their descriptor digests), the digest of the legal text, whether the legal text
   or machine-readable terms govern, when it takes effect, and the reasons either party
   may terminate. Revisions are unsigned. Assent comes from acceptances.
-- An **acceptance** is one party's signature over one exact revision. A revision
+- An **acceptance** is one party's signed assent naming one exact revision by digest. A revision
   counts as accepted when every party has accepted it.
 - A **termination notice** is one party's signed notice that the charter ends at a
   stated instant, for a reason the revision lists.

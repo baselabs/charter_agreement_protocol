@@ -21,7 +21,7 @@ is the one place in the guides where they are recorded.
 | Corpus digest | `sha-256:ZpJFSZnj2-4PGcOdggkwK62YFtCRmQfr_7kKnuwtKL0` |
 | Index SHA-256 (base64url) | `xiyty9a_VZTgiIYIKqGZQIAhJB-OQZRIcOX_zyNV-VQ` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:IJl_oM2je7lE-ZgmScD8_zH_Vn7qrVG8WMXxxsKdIk8` |
+| Specification digest | `sha-256:cfemklbEJO-YV3wRotDb80xBLtsRcrr0-zcHczOxX6E` |
 | Cases | 541, in 16 case files |
 
 The pinned TypeScript verifier 0.7.0 (commit

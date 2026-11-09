@@ -20,8 +20,8 @@ You need:
   only when its libcrypto is 3.5 or later, and the conformance corpus
   contains ML-DSA cases. With an older OpenSSL, the ML-DSA cases fail.
 - **Node 24.8 or newer**, for the checks that run the TypeScript verifier.
-  `mix verifier.agreement` checks only for major version 24, so check the
-  minor yourself.
+  The verifier-source gate enforces Node >= 24.8.0 and resolves the actual
+  executable behind version-manager shims.
 - **git with full history and tags.** `mix historical.check` reads the
   corpora of earlier releases from their tags, so a shallow clone fails.
 - **Network access** the first time you run the tests: they fetch the
@@ -61,7 +61,8 @@ $ mix test        # the test suite; builds the TypeScript verifier source if nee
 $ mix quality     # everything CI runs, in CI's order
 ```
 
-`mix quality` runs these steps in order and stops at the first failure.
+`mix quality` runs these steps in order and returns a failing status if a check
+fails. Mix may defer a test failure until the alias finishes; inspect the full output.
 `test/architecture/release_gate_test.exs` asserts this exact list, so a
 change to the alias in `mix.exs` changes that test too.
 
@@ -90,7 +91,7 @@ copy of the TypeScript source and require the comparison to fail, so a
 comparison that can never fail is caught.
 
 CI runs `mix quality` on Linux with two toolchains: Elixir 1.20.3 on OTP
-29.0.3 with Node 24, and Elixir 1.19.5 on OTP 28.5 with Node 24.8. CI skips
+29.0.3 with Node 24, and Elixir 1.19.5 on OTP 28.5.0.3 with Node 24.8. CI skips
 pushes that change only Markdown files or `docs/`, so run `mix quality`
 locally before pushing a documentation change.
 
@@ -146,8 +147,8 @@ lists every step in order. In short:
 5. Move the TypeScript pin: update the TypeScript repository's vendored
    corpus and the two identity constants in its `core.ts`, push to its
    `main`, set the new commit in `priv/verifier-source.json`, run
-   `mix verifier.source`, and update the `certified-index-drift` entry in
-   `scripts/check_verifier_agreement.exs`.
+   `mix verifier.source`. The agreement gate derives its certified-index drift
+   mutation from the live pin; no digest literal needs updating in that script.
 6. Update the identity table in
    [docs/guides/conformance.md](docs/guides/conformance.md).
 7. Last, run `mix run --no-start scripts/record_release_metadata.exs`. It

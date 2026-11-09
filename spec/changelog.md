@@ -8,6 +8,12 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-11-09 — editorial clarification for package 1.0.0
+
+Clarify redacted display versus retained artifact fields, receipt-only-context
+signature omissions, and when resource ceilings are checked. Correct an
+evolution prose typo. No wire, corpus or verification-semantics change.
+
 ## 2026-10-14: Integer claims and runner inputs
 
 State integer-token handling once under `CAP-JSON-integer-claims`, including

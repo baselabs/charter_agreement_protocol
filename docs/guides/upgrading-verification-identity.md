@@ -4,7 +4,7 @@ If you store charter artifacts and verify them again later, you need to know
 whether a newer CAP release would reach the same results. CAP publishes that
 as data. This page says what to store, what to compare when you verify again,
 how releases map to verification semantics, and what to change for each
-upgrade from 0.3.x to 0.5.0.
+upgrade from 0.3.x through 1.0.0.
 
 ## What to store next to the artifacts
 
@@ -213,8 +213,8 @@ change in your application.
 Use `~> 1.0.0` for CAP and the companion signer. Verification semantics stays
 6, and the certified corpus and registry stay byte-identical. Existing
 artifacts need no migration. Improper lists passed to plain JSON conversion,
-revision encoding or signing preparation now return `invalid_type` instead
-of raising. The release metadata records 1.0.0 with the existing corpus row.
+or revision encoding now return `invalid_type` instead of raising. Signing
+preparation returns its existing `signing_input_invalid` boundary code. The release metadata records 1.0.0 with the existing corpus row.
 
 ## Choose the dependency requirement
 

@@ -65,6 +65,9 @@ alias CharterAgreementProtocol, as: CAP
 
 issuer = DemoKey.handle("issuer-key-1", :binary.copy(<<1>>, 32))
 acceptor = DemoKey.handle("acceptor-key-1", :binary.copy(<<2>>, 32))
+
+# Show public identifiers, never the demo handle containing private bytes.
+[elem(issuer, 1).kid, elem(acceptor, 1).kid]
 ```
 
 ## Publish a descriptor for each party

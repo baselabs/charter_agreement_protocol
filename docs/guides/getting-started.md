@@ -188,8 +188,8 @@ facts.not_verified
  :counterparty_view, :wall_clock]
 ```
 
-CAP proves who signed what. It does not decide whether your application should
-act on it. Each atom names a question your application answers, if it cares
+CAP proves a signature against a descriptor key, not the real-world identity of
+its holder. Your application decides whether to act on that evidence. Each atom names a question your application answers, if it cares
 about it. [Security model](security-model.md) walks through the list.
 
 ## Ask which revision governs

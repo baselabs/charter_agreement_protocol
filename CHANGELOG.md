@@ -11,8 +11,10 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   `invalid_type` instead of raising, including revision encoding. Signing
   preparation returns its existing `signing_input_invalid` error before
   custody; accepted bytes and verification verdicts are unchanged.
-- The matching signer release is 1.0.0. Package archives remain release
-  candidates until the maintainer authorizes publication.
+- Refreshes the complete documentation set, corpus counts, resource-limit and
+  signature descriptions, and matched 1.0 examples. Both tutorials and both
+  Livebooks execute in the documentation tests; no older signer fallback is used.
+- The matching signer release is 1.0.0.
 
 ## [0.6.0] — 2026-10-14
 

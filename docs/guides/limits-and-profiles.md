@@ -55,8 +55,10 @@ value, a field name it does not know, or a field given twice. Zero is a valid va
 Pass the struct `Limits.new/1` returned. A struct you build by hand with an
 out-of-range value fails at the call with `:invalid_limits`.
 
-The functions that build signing inputs and `assemble_compact/2` always check against
-`Limits.default()`, so an artifact you produce must fit the default limits.
+The legacy `*_signing_input` helpers and `assemble_compact/2` use
+`Limits.default/0`. For caller-supplied limits, use `prepare_signing/5` and
+`finish_signing/2`: the plan retains those limits through context verification,
+preparation and final assembly. The companion signer uses this plan API.
 
 ## Capability profiles
 

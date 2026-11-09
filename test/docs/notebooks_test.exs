@@ -8,7 +8,9 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
   separate `elixir` process, carrying variables and aliases from cell to cell the way
   Livebook does, and prints each cell's result for the assertions below.
 
-  Network: the notebooks install `charter_agreement_signer` from Hex. When neither the
+  Network: the notebooks install the matching 1.0 signer from Hex.
+  `CAP_DOCS_SIGNER_PATH` may select real matching source during coordinated release
+  preparation; the evaluated application version must still be 1.0.0. When neither the
   `Mix.install` cache nor the local Hex package cache holds it, the first run needs network
   access; later runs reuse the cache. Offline, `mix test --exclude notebooks` skips this
   file.
@@ -44,16 +46,11 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
   end)
   """
 
-  @tag skip:
-         not Enum.all?(
-           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-           &CharterAgreementProtocol.Capability.declared?/1
-         ) and "requires declared ML-DSA-44, ML-DSA-65 and ML-DSA-87"
   test "charter-tour runs from top to bottom" do
     output = run_notebook!("charter-tour.livemd")
 
     assert output =~ ~s(name: "ML-DSA-65")
-    refute output =~ "verifiable: false"
+    assert output =~ ~r/name: "Ed25519"[^}]*verifiable: true/
     assert output =~ ~s(["issuer-key", "acceptor-key"])
     assert output =~ "topology: :linear"
     assert output =~ "chain_topology: :linear"
@@ -68,11 +65,6 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
     assert String.replace(output, ~r/\s+/, " ") =~ inspect(floor)
   end
 
-  @tag skip:
-         not Enum.all?(
-           ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"],
-           &CharterAgreementProtocol.Capability.declared?/1
-         ) and "requires declared ML-DSA-44, ML-DSA-65 and ML-DSA-87"
   test "fork-repair runs from top to bottom" do
     output = run_notebook!("fork-repair.livemd")
 
@@ -122,18 +114,73 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
     File.mkdir_p!(work)
     on_exit(fn -> File.rm_rf!(work) end)
 
-    # The signer from Hex resolves its own requirement on this package; the
-    # path dependency above overrides it, so the newest published signer runs
-    # against this tree whether or not its matching release exists yet.
-    setup =
-      setup
-      |> String.replace(@hex_dependency, local)
-      |> String.replace(
-        ~r/\{:charter_agreement_signer, "[^"]*"\}/,
-        ~s({:charter_agreement_signer, ">= 0.4.1"})
-      )
+    setup = String.replace(setup, @hex_dependency, local)
+    run_cells!(name, [matching_signer(setup) | rest], work)
+  end
 
-    [setup | rest]
+  test "the getting-started tutorial executes its shipped corpus and promised answers" do
+    output = run_guide!("getting-started.md", false)
+    assert output =~ "chain_topology: :linear"
+    assert output =~ ~s({"acceptor", "acceptor-key", "EdDSA", 1})
+    assert output =~ "sha-256:j9vaSLLwxMwF1zzLniUdZwUUAB6aTGEvwMRzP526s3o"
+    assert output =~ "{:ok, :none}"
+    assert output =~ "code: :chain_invalid"
+  end
+
+  test "the producer tutorial executes with the matching signer and exact published digests" do
+    output = run_guide!("produce-and-verify.md", true)
+    assert output =~ "sha-256:UmFN7RFO8DhZfE-Px9DTAagN-PYLNjIUkIxuyAhjLL4"
+    assert output =~ "sha-256:406Y70xTrD7R5amwdDU2C_GZUeVsmjS4xRd40TZAHXE"
+    assert output =~ "sha-256:uVgklHrU2JxmE-Mx8dOrmr1Wk8A2PmM-SxoPSbKMYSc"
+    assert output =~ "{:error, {:refused, :signing_refused}}"
+    assert output =~ ~s({"issuer", "issuer-key-1", "Ed25519", 2})
+    assert output =~ "\ntrue\n"
+    assert output =~ ":signing_key_mismatch"
+  end
+
+  defp run_guide!(name, signer?) do
+    source = File.read!(Path.join(@root, "docs/guides/#{name}"))
+    [install | rest] = cells(source)
+    assert install =~ @hex_dependency
+    if signer?, do: assert(install =~ ~s({:charter_agreement_signer, "~> 1.0.0"}))
+
+    dependencies = ~s({:charter_agreement_protocol, path: #{inspect(@root)}, override: true})
+    signer = if signer?, do: ~s(, {:charter_agreement_signer, "~> 1.0.0"}), else: ""
+    setup = matching_signer("Mix.install([" <> dependencies <> signer <> "])")
+    work = Path.join(System.tmp_dir!(), "cap-guide-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(work)
+    on_exit(fn -> File.rm_rf!(work) end)
+    run_cells!(name, [setup | rest], work)
+  end
+
+  defp matching_signer(setup) do
+    dependency = ~s({:charter_agreement_signer, "~> 1.0.0"})
+
+    setup =
+      case System.get_env("CAP_DOCS_SIGNER_PATH") do
+        nil ->
+          setup
+
+        path ->
+          String.replace(
+            setup,
+            dependency,
+            ~s({:charter_agreement_signer, path: #{inspect(Path.expand(path))}})
+          )
+      end
+
+    setup <>
+      ~S"""
+
+      for app <- [:charter_agreement_protocol, :charter_agreement_signer],
+          version = Application.spec(app, :vsn), version != nil do
+        unless to_string(version) == "1.0.0", do: raise("documentation dependency version drift")
+      end
+      """
+  end
+
+  defp run_cells!(name, blocks, work) do
+    blocks
     |> Enum.with_index(1)
     |> Enum.each(fn {cell, index} ->
       File.write!(Path.join(work, "cell_#{String.pad_leading("#{index}", 3, "0")}.exs"), cell)

@@ -30,7 +30,7 @@ Module-Lattice Digital Signature Standard (NIST FIPS 204, final August
 `ML-DSA-87` (parameterizations of FIPS 204 with public keys of 1312,
 1952, and 2592 bytes and signatures of 2420, 3309, and 4627 bytes;
 pure ML-DSA only — the pre-hashed HashML-DSA variants are out of scope
-of that registration, and the `ctx` parameter is the empty string). A
+of that registration, and the `ctx` parameter is the empty string). The
 registry rows carry those identifiers and exact byte bounds; the
 descriptor key grammar's `algorithm` enumeration is widened to the four
 key algorithms, gated on the descriptor's revision

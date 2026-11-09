@@ -35,9 +35,10 @@ evidence in hand.
   under a registered algorithm (Ed25519, or ML-DSA-44, ML-DSA-65 or
   ML-DSA-87 from `protocol_revision` 3; core section 4.1) over the exact
   RFC 7515 signing-input bytes, under a key resolved from the declared
-  descriptor history. Verification paths never skip or
-  short-circuit the cryptographic check, and digest comparison is
-  constant-time.
+  descriptor history. Full-context verification checks the signature; a
+  receipt checked against only an unsigned revision explicitly reports
+  `signature` in `not_verified` because it has no descriptor key. Digest
+  comparison is constant-time.
 - **Key-confusion and typ confusion.** The protected header is closed to
   `alg`, `kid`, and `typ`; the `typ` value must match the expected
   artifact type for the call, preventing one artifact type from being
@@ -79,7 +80,7 @@ values rather than trusted.
 
 Unknown critical extension namespaces fail closed. Unknown optional
 namespaces are retained byte-exactly and quarantined — never interpreted,
-never entering a facts record — so a malicious optional body cannot
+never entering typed extension facts — so a malicious optional body cannot
 affect verification outcomes. Registered critical bodies validate against
 the exact schema digest compiled into the registry (see
 `registry-policy.md`).
@@ -87,8 +88,9 @@ the exact schema digest compiled into the registry (see
 ## Resource-exhaustion posture
 
 Every decoder and verifier operates under caller-supplied ceilings
-(bytes, nesting, item counts, string lengths); an input above a ceiling
-is rejected before parsing begins. Inputs arrive as already-materialized
+(bytes, nesting, item counts, string lengths). The byte ceiling is checked
+before parsing; structural ceilings are enforced during bounded parsing and
+validation. Inputs arrive as already-materialized
 binaries — CAP never reads streams and never grows a buffer, so the byte
 ceiling bounds parse work; bounding transport and materialization is the
 caller's side of the boundary. There is no runtime schema-intake

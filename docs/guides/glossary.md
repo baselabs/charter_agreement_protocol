@@ -1,7 +1,8 @@
 # Glossary
 
-**Acceptance.** One party's signature over the exact bytes of one charter revision
-(`cap+acceptance`). A revision counts as accepted when every party it lists has an
+**Acceptance.** One party's signed claims naming the digest and coordinates of one
+exact charter revision (`cap+acceptance`). The signature covers the JWS signing
+input, not the revision bytes directly. A revision counts as accepted when every party it lists has an
 acceptance.
 
 **Artifact.** One of the five things CAP verifies: party descriptor, charter revision,
@@ -36,9 +37,10 @@ breaks the tie.
 **Descriptor history.** A party's descriptors in order. Each one after the first is
 signed by an active key from the one before it.
 
-**Digest.** A domain-separated SHA-256 hash, written `sha-256:` followed by base64url.
-The domain is part of the hashed input, so a revision and an acceptance never hash the
-same bytes, and by SHA-256's collision resistance their digests do not match.
+**Digest.** A SHA-256 hash written `sha-256:` followed by 43 unpadded base64url
+characters. CAP artifact digests include a domain separator in the hashed input.
+External bindings follow their own digest rules; for example, a BAP grant digest
+is the raw SHA-256 of the grant bytes. See [implementing CAP](implementing.md).
 
 **Equivocation.** One party signing two different revisions at the same revision
 number. CAP keeps both signatures as evidence and names no winner.
@@ -93,8 +95,9 @@ and deployment it was taken under.
 one revision are unique.
 
 **Signing input.** The exact bytes CAP asks you to sign for an artifact, returned by
-the `*_signing_input` functions. You sign them outside CAP and pass the signature to
-`assemble_compact/2`.
+`prepare_signing/5` (or the legacy `*_signing_input` helpers). Sign outside CAP,
+then call `finish_signing/2` with the retained plan and raw signature. The legacy
+`assemble_compact/2` path requires a separate public verification call.
 
 **Supersession.** A later revision that lists earlier accepted revisions in
 `supersedes`. Once it is accepted, the superseded revisions stay in the history but no

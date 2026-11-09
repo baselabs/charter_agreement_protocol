@@ -66,10 +66,8 @@ the last one hashes every shipped file, so it has to see the final bytes.
       must be on the TypeScript repository's `main` as fetched from GitHub,
       and it must descend from the current pin.
    3. Run `mix verifier.source` to rebuild `_build/verifier-source/`.
-   4. Update the `certified-index-drift` entry in
-      `scripts/check_verifier_agreement.exs`. Its `from` line quotes the
-      `CERTIFIED_INDEX_SHA256_BASE64URL` line of `core.ts`, so it must quote
-      the new value or the check stops.
+   4. Run `mix verifier.agreement`. Its certified-index drift mutation derives
+      the original digest from the live pin and must fail against the altered copy.
 
 6. **Documentation identity table.** `scripts/check_release_candidate.exs`
    requires the index SHA-256, corpus digest, registry digest and
@@ -182,9 +180,12 @@ bare `mix run -e` would drop it. Record the Hex checksum next to the tag.
 When the matching `charter_agreement_signer` release is on Hex, run
 [Produce and verify with the signer](guides/produce-and-verify.md) and both
 notebooks in a clean project with the exact dependency lines they show
-(`~> 1.0.0` for both packages). The docs tests run
-the notebooks against this tree with any published signer at 0.4.1 or later, and they do not run the
-signer tutorial, so this step is what checks the published install lines.
+(`~> 1.0.0` for both packages). The docs tests execute both tutorials and both
+notebooks against this checkout and the matching signer release. During coordinated
+preparation, `CAP_DOCS_SIGNER_PATH` may select the real matching signer source; it
+never falls back to an older release. CAS also executes its quickstart and third
+Livebook. Repeat with a fresh `MIX_INSTALL_DIR` and no source overrides after
+publication to check the original Hex install lines.
 
 In the next change, add the new tag and its case count to the frozen-corpus
 lists in `scripts/check_historical_differential.exs`, so later releases are

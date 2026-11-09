@@ -21,7 +21,8 @@ version = Regex.escape(Mix.Project.config()[:version])
 
 pattern =
   Regex.compile!(
-    "(package_versions: \\[\\\"#{version}\\\"\\],\\s+verification_semantics: \\d+,\\s+census_digest: \\\")[^\\\"]+"
+    ~S|(package_versions: \[[^\]]*"VERSION"[^\]]*\],\s+verification_semantics: \d+,\s+census_digest: ")[^"]+|
+    |> String.replace("VERSION", version)
   )
 
 replace.("lib/charter_agreement_protocol/release_identity.ex", pattern, index["corpus_digest"])

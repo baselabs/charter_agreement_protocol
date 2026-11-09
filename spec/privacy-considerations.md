@@ -48,8 +48,9 @@ registry schema is bound.
 ## Processing rules for implementers
 
 - **Facts records are the safe surface.** Verification results are
-  redacted structural facts; retained signed artifacts are not exposed
-  through them. Hosts should log facts, not raw artifacts.
+  structural facts with redacted default display. Some facts retain raw signed
+  bytes and nested claims for later verification; direct field access or custom
+  serialization can disclose them. Log only deliberately selected safe fields.
 - **Failures are value-free.** Error codes never echo rejected input, so
   verification failures are safe to log without scrubbing. Hosts must
   not wrap verification with logging that re-introduces the rejected
