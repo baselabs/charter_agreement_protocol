@@ -57,7 +57,21 @@ jobs:
       - name: Install locked dependencies
         run: mix deps.get --check-locked
 
-      - name: Refuse an existing registry version or tag
+      - name: Build documentation
+        run: mix docs --warnings-as-errors
+
+      - name: Materialize the pinned verifier
+        run: mix verifier.source
+
+      - name: Inspect package contents and reproducibility
+        run: mix release.candidate
+
+      - name: Build the package
+        run: mix hex.build
+
+      - name: Refuse existing releases and publish the package and documentation
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
         run: |
           version=$(sed -n 's/^  @version "\([^"]*\)"$/\1/p' mix.exs)
           test -n "$version"
@@ -77,20 +91,4 @@ jobs:
             echo "::error::This release version is already tagged"
             exit 1
           fi
-
-      - name: Build documentation
-        run: mix docs --warnings-as-errors
-
-      - name: Materialize the pinned verifier
-        run: mix verifier.source
-
-      - name: Inspect package contents and reproducibility
-        run: mix release.candidate
-
-      - name: Build the package
-        run: mix hex.build
-
-      - name: Publish the package and documentation
-        env:
-          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
-        run: mix hex.publish --yes
+          mix hex.publish --yes
