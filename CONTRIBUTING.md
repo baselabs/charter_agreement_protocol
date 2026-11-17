@@ -6,6 +6,14 @@ to set up, what `mix quality` checks, how the pinned TypeScript verifier
 works, how to change the corpus or the specification, and what every change
 needs before it lands.
 
+Commands below that compile or test run on the build box, never on a workstation.
+From the repository root, first check
+`python3 ~/Developer/kimosabe/bin/kimosabe-remote where`, then route each Mix task
+with `python3 ~/Developer/kimosabe/bin/kimosabe-remote run -- kimosabe-box-mix <task>`.
+Public repositories without a build-box checkout run their checks in qualification CI.
+Land through `kimosabe-land`; the [release runbook](https://github.com/baselabs/charter_agreement_protocol/blob/main/docs/release-runbook.md) describes
+the maintainers' release process for publication and tags.
+
 ## Setup
 
 You need:
@@ -90,10 +98,12 @@ change to the alias in `mix.exs` changes that test too.
 copy of the TypeScript source and require the comparison to fail, so a
 comparison that can never fail is caught.
 
-CI runs `mix quality` on Linux with two toolchains: Elixir 1.20.3 on OTP
-29.0.3 with Node 24, and Elixir 1.19.5 on OTP 28.5.0.3 with Node 24.8. CI skips
-pushes that change only Markdown files or `docs/`, so run `mix quality`
-locally before pushing a documentation change.
+CI runs `mix quality` on Linux with two exact toolchains: the primary lane
+reads `.tool-versions` (Elixir 1.20.3, OTP 29.0.3 and Node 24.21.0), and the
+compatibility lane pins Elixir 1.19.5, OTP 28.5.0.3 and Node 24.8.0. Every
+runtime install refuses version drift. Qualification starts only on `kci/**`
+pushes, including documentation changes. `qualified` requires every job to
+succeed before `kimosabe-land` advances the default branch.
 
 ## The pinned TypeScript verifier
 
@@ -145,8 +155,9 @@ lists every step in order. In short:
 4. Update the compatibility row in `release_identity.ex`. A verdict change
    raises the verification semantics version and lists the transition.
 5. Move the TypeScript pin: update the TypeScript repository's vendored
-   corpus and the two identity constants in its `core.ts`, push to its
-   `main`, set the new commit in `priv/verifier-source.json`, run
+   corpus and the two identity constants in its `core.ts`, land it with
+   `kimosabe-land` through the maintainers' release process, set the new commit
+   in `priv/verifier-source.json`, run
    `mix verifier.source`. The agreement gate derives its certified-index drift
    mutation from the live pin; no digest literal needs updating in that script.
 6. Update the identity table in
@@ -251,7 +262,8 @@ before running the full check or committing.
 
 ## Commits and pull requests
 
-Changes land on `main`; open a pull request against it. Stage explicit
+Changes land on `main` through `kimosabe-land` after qualification; open a pull
+request against `main` for review. Stage explicit
 paths (not `git add .` or `-A`), and say what changed and why in the commit
 body. `mix quality` passes on the exact tree you push.
 

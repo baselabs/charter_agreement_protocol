@@ -1,8 +1,12 @@
 # Release runbook
 
-The steps for cutting a CAP release, in order. Building an archive publishes
-nothing. Publishing is a separate manual step the maintainer runs for one
-named version.
+The maintainers' release process separates qualification from publication.
+Covering tests and all commands below that compile or test run on the build box,
+never on a workstation. For a Mix task, run from the repository root with
+`python3 ~/Developer/kimosabe/bin/kimosabe-remote run -- kimosabe-box-mix <task>`
+after `python3 ~/Developer/kimosabe/bin/kimosabe-remote where` succeeds. Public
+repositories without a build-box checkout are checked in qualification CI at landing.
+Building an archive publishes nothing.
 
 The design behind these checks is in the
 [release design record](adr/conformance-release-candidate.md).
@@ -61,7 +65,8 @@ the last one hashes every shipped file, so it has to see the final bytes.
       copy `priv/conformance/` into its `conformance/` directory byte for
       byte, set `CERTIFIED_INDEX_SHA256_BASE64URL` and
       `CERTIFIED_REGISTRY_DIGEST` in `core.ts`, make the verifier agree on
-      every case, and push to its `main` branch on GitHub.
+      every case, and land it with `kimosabe-land` through the maintainers'
+      release process.
    2. Here, set `commit` in `priv/verifier-source.json` to that commit. It
       must be on the TypeScript repository's `main` as fetched from GitHub,
       and it must descend from the current pin.
@@ -123,18 +128,14 @@ operating systems, so the pin covers content instead. `mix
 release.candidate` builds the archive twice, requires the two builds to match
 byte for byte, and requires the content to match the pin.
 
-## 2. Run the full check
+## 2. Qualify the commit
 
-```console
-$ mix quality
-```
-
-Run it on the exact tree you will tag, with network access: `verifier.source` fetches
-the pinned commit from GitHub, and the audits and `currency.check` query
-hex.pm. Every step is listed
-and explained in [CONTRIBUTING](../CONTRIBUTING.md). CI skips pushes that
-change only Markdown or `docs/`, so for such a push the local run is the only
-run. Pull requests and manual runs are not filtered and run CI as usual.
+Run the covering tests on the build box. Landing is
+`kimosabe-land --repo . --sha <full commit>`, which starts the complete quality
+battery on `kci/**` and moves the default branch only after `qualified` succeeds.
+Every job listed in [CONTRIBUTING](../CONTRIBUTING.md) must succeed. Qualification
+runs only on `kci/**` pushes, including documentation changes; default-branch
+pushes, tags, pull requests and dispatches do not start another qualification.
 
 ## 3. Records
 
@@ -145,25 +146,34 @@ run. Pull requests and manual runs are not filtered and run CI as usual.
   on the wire names its `protocol_revision` (see `spec/evolution.md`).
 - `docs/errata.md` gets an entry if the release corrects a published verdict.
 
-## 4. Tag and build
+## 4. Land the version commit
 
-```console
-$ git tag vX.Y.Z
-$ mix hex.build
-```
+Stamp the changelog with the version and release date in the version commit,
+and land the exact qualified tree with `kimosabe-land`. Send one message through
+the maintainers' release process with the repository, full commit, version,
+what goes out, and the green `qualified` run. This completes release preparation.
 
-The docs' `source_ref` is `vX.Y.Z`, so source links on HexDocs resolve once
-the tag is pushed. `mix release.candidate` prints the content pin and the
-local archive's byte digest. Record the archive byte digest from the release
-machine with the release; it is informational, because the pin CI checks is
-the content pin.
+`mix release.candidate` builds and inspects the archive and prints its content
+pin and archive digest. The docs' `source_ref` is `v<version>`; source links
+resolve when the published commit is tagged after registry readback.
 
-## 5. Publish
+## 5. Publication
 
-The maintainer runs `mix hex.publish` by hand, for this one version. It is
-never put in an alias or a script: `mix release.candidate`
-and `test/architecture/package_boundary_test.exs` fail if `mix.exs` mentions
-it.
+Infra owns the `publish` environment and its `HEX_API_KEY`. Infra obtains release
+authorization and dispatches `.github/workflows/publish.yml` on the default branch.
+The workflow admits only the declared owners, refuses a version already published
+or tagged, installs the exact runtime and locked dependencies without a dependency
+cache, builds the docs, and checks package contents and reproducibility before
+publishing to public Hex.
+
+Infra reads the registry publication and documentation back, then creates and pushes
+`v<version>` on that exact published commit. The workflow never pushes a tag.
+Release preparation does not hold a registry key, publish from a workstation,
+dispatch publication or push tags. Never move a published tag or overwrite a release.
+Publishing remains outside Mix aliases and project callbacks.
+
+The static hub is a separate publication: infra dispatches `pages.yml` on the
+default branch to stage and deploy the committed site.
 
 ## 6. After publishing
 

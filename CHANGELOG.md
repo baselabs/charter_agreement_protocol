@@ -2,6 +2,12 @@
 
 All notable public changes to `charter_agreement_protocol` are documented here.
 
+## [Unreleased]
+
+- Qualify landing candidates once through `qualified`, enforce exact CI runtimes
+  and locked dependency fetching, and separate authorized registry publication
+  from the maintainers' release preparation.
+
 ## [1.0.0] — 2026-11-09
 
 - Stabilizes the public Elixir API and shipped conformance contract for the

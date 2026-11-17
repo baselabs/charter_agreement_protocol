@@ -36,8 +36,9 @@ those cases together with the regenerated core.
 The package contents are an explicit allowlist in `mix.exs`. It includes the protocol
 code, the corpus, the release metadata and the normative documents. It excludes
 tests, scripts, internal project records and the independent verifier. Building or
-unpacking the archive checks the candidate's shape. Only a separate, deliberate
-`mix hex.publish` publishes it.
+unpacking the archive checks the candidate's shape. Publication belongs to the
+maintainers' release process: infra dispatches `publish.yml` from the qualified
+default-branch commit, reads the registry back, then tags the published commit.
 
 ## Consequences
 
