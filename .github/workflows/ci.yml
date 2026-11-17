@@ -1,12 +1,8 @@
 name: CI
 
 on:
-  pull_request:
   push:
-    branches:
-      - main
-      - "kci/**"
-  workflow_dispatch:
+    branches: ['kci/**']
 
 permissions:
   contents: read
@@ -17,11 +13,27 @@ concurrency:
 
 jobs:
   workflow-syntax:
+    timeout-minutes: 1 # Run 44109165258: slowest green 28s; doubled, rounded up.
     name: Workflow syntax
     runs-on: ubuntu-24.04
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read Go pin
+        id: tools
+        run: echo "go=$(awk '$1 == "golang" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version: ${{ steps.tools.outputs.go }}
+          cache: false
+
+      - name: Refuse Go runtime drift
+        run: test "$(go env GOVERSION)" = "go$(awk '$1 == "golang" {print $2}' .tool-versions)"
 
       # actionlint pinned to its release commit for v1.7.12, verified first-hand
       # against the rhysd/actionlint tags API. `go run` fetches the module by
@@ -30,13 +42,28 @@ jobs:
         run: go run github.com/rhysd/actionlint/cmd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca
 
   secret-scan:
+    timeout-minutes: 2 # Run 42637256629: slowest green 50s; doubled, rounded up.
     name: Secret scan
     runs-on: ubuntu-24.04
     steps:
       - name: Check out source (full history)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
+
+      - name: Read Go pin
+        id: tools
+        run: echo "go=$(awk '$1 == "golang" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version: ${{ steps.tools.outputs.go }}
+          cache: false
+
+      - name: Refuse Go runtime drift
+        run: test "$(go env GOVERSION)" = "go$(awk '$1 == "golang" {print $2}' .tool-versions)"
 
       # gitleaks pinned to its release commit for v8.30.1, verified first-hand
       # against the gitleaks/gitleaks tags API. `go run` fetches the module by
@@ -46,6 +73,7 @@ jobs:
         run: go run github.com/zricethezav/gitleaks/v8@83d9cd684c87d95d656c1458ef04895a7f1cbd8e git --config .gitleaks.toml --redact --no-banner
 
   quality:
+    timeout-minutes: 37 # Run 38519279880: slowest green 18m26s; doubled, rounded up.
     name: Complete quality gate
     # The revision-3 corpus needs a linked OpenSSL >= 3.5: FIPS 204 (ML-DSA)
     # reached OpenSSL in 3.5.0, bob's OTP builds dynamically link the distro
@@ -60,12 +88,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: pinned, elixir: "1.20.3", otp: "29.0.3", node: "24" }
+          - { name: pinned, elixir: "1.20.3", otp: "29.0.3", node: "24.21.0" }
           # Floor lane mirrors the signer sibling's (charter_agreement_signer):
           # Elixir 1.19.5 on the 28.x major, ubuntu-26.04 for OpenSSL 3.5. The
           # supported-OTP set is {28, 29} — 28 carries this lane, 29 the pinned
           # lane (config/config.exs lockstep rule).
-          - { name: floor, elixir: "1.19.5", otp: "28.5.0.3", node: "24.8" }
+          - { name: floor, elixir: "1.19.5", otp: "28.5.0.3", node: "24.8.0" }
     steps:
       # Full history: the standing historical differential gate reads the
       # frozen certified corpora by tag (git show v0.1.0:priv/conformance/...),
@@ -73,21 +101,44 @@ jobs:
       - name: Check out source (full history)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Set up Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: ${{ matrix.node }}
+          node-version-file: .tool-versions
+          node-version: ${{ matrix.name != 'pinned' && matrix.node || '' }}
+          package-manager-cache: false
+
+      - name: Refuse Node runtime drift
+        env:
+          EXPECTED_NODE: ${{ matrix.name != 'pinned' && matrix.node || '' }}
+        run: |
+          expected_node="${EXPECTED_NODE:-$(awk '$1 == "nodejs" {print $2}' .tool-versions)}"
+          test "$(node --version)" = "v$expected_node"
 
       - name: Set up BEAM
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
-          elixir-version: ${{ matrix.elixir }}
-          otp-version: ${{ matrix.otp }}
+          version-file: ${{ matrix.name == 'pinned' && '.tool-versions' || '' }}
+          version-type: strict
+          elixir-version: ${{ matrix.name != 'pinned' && matrix.elixir || '' }}
+          otp-version: ${{ matrix.name != 'pinned' && matrix.otp || '' }}
+
+      - name: Refuse BEAM runtime drift
+        env:
+          EXPECTED_ELIXIR: ${{ matrix.name != 'pinned' && matrix.elixir || '' }}
+          EXPECTED_OTP: ${{ matrix.name != 'pinned' && matrix.otp || '' }}
+        run: |
+          expected_elixir="${EXPECTED_ELIXIR:-$(awk '$1 == "elixir" {print $2}' .tool-versions)}"
+          expected_otp="${EXPECTED_OTP:-$(awk '$1 == "erlang" {print $2}' .tool-versions)}"
+          actual_otp=$(erl -noshell -eval 'Major = erlang:system_info(otp_release), {ok, Bytes} = file:read_file(filename:join([code:root_dir(), "releases", Major, "OTP_VERSION"])), io:put_chars(string:trim(binary_to_list(Bytes))), halt().')
+          test "$actual_otp" = "$expected_otp"
+          test "$(elixir --short-version)" = "${expected_elixir%-otp-*}"
 
       - name: Install dependencies
-        run: mix deps.get
+        run: mix deps.get --check-locked
 
       # The currency gate also runs inside `mix quality` below; this explicit
       # step names resolvable drift as its own CI failure so a stale lock is
@@ -108,20 +159,35 @@ jobs:
   # deliberately always green; it is the evidence-model home for substrate-
   # only requirements (docs/guides/error-codes.md).
   capability-limited:
+    timeout-minutes: 4 # Run 42637256629: slowest green 1m40s; doubled, rounded up.
     name: Capability-limited substrate
     runs-on: ubuntu-24.04
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up BEAM
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
           elixir-version: "1.20.3"
           otp-version: "28.5.0.3"
+          version-type: strict
+
+      - name: Refuse BEAM runtime drift
+        env:
+          EXPECTED_ELIXIR: "1.20.3"
+          EXPECTED_OTP: "28.5.0.3"
+        run: |
+          expected_elixir="${EXPECTED_ELIXIR:-$(awk '$1 == "elixir" {print $2}' .tool-versions)}"
+          expected_otp="${EXPECTED_OTP:-$(awk '$1 == "erlang" {print $2}' .tool-versions)}"
+          actual_otp=$(erl -noshell -eval 'Major = erlang:system_info(otp_release), {ok, Bytes} = file:read_file(filename:join([code:root_dir(), "releases", Major, "OTP_VERSION"])), io:put_chars(string:trim(binary_to_list(Bytes))), halt().')
+          test "$actual_otp" = "$expected_otp"
+          test "$(elixir --short-version)" = "${expected_elixir%-otp-*}"
 
       - name: Install dependencies
-        run: mix deps.get
+        run: mix deps.get --check-locked
 
       - name: Report runtime capabilities
         run: |
@@ -144,3 +210,22 @@ jobs:
 
       - name: Capability-limited assertions
         run: mix test test/charter_agreement_protocol/capability_lane_test.exs test/charter_agreement_protocol/capability_provider_test.exs
+
+  qualified:
+    if: always()
+    needs: [workflow-syntax, secret-scan, quality, capability-limited]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1 # No green run yet; bounded control job.
+    steps:
+      - name: Require every qualification job to succeed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, sys
+          results = json.loads(os.environ['NEEDS'])
+          failed = [name for name, job in results.items() if job['result'] != 'success']
+          if failed:
+              print('Qualification refused: ' + ', '.join(failed))
+          sys.exit(bool(failed) or not results)
+          PYTHON
