@@ -16,7 +16,7 @@ jobs:
   build:
     name: Stage the hub
     runs-on: ubuntu-24.04
-    timeout-minutes: 2 # Run 36038997231: slowest green 43s; doubled, rounded up.
+    timeout-minutes: 5 # Run 36038997231: slowest green 43s; under 2.5 minutes, so the 5-minute floor.
     steps:
       - name: Refuse refs outside the default branch
         env:
@@ -35,7 +35,7 @@ jobs:
 
   deploy:
     name: Deploy to GitHub Pages
-    timeout-minutes: 4 # Run 42637256660: slowest green 1m45s; doubled, rounded up.
+    timeout-minutes: 5 # Run 42637256660: slowest green 1m45s; under 2.5 minutes, so the 5-minute floor.
     needs: build
     runs-on: ubuntu-24.04
     permissions:

@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   workflow-syntax:
-    timeout-minutes: 1 # Run 44109165258: slowest green 28s; doubled, rounded up.
+    timeout-minutes: 5 # Run 44109165258: slowest green 28s; under 2.5 minutes, so the 5-minute floor.
     name: Workflow syntax
     runs-on: ubuntu-24.04
     steps:
@@ -42,7 +42,7 @@ jobs:
         run: go run github.com/rhysd/actionlint/cmd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca
 
   secret-scan:
-    timeout-minutes: 2 # Run 42637256629: slowest green 50s; doubled, rounded up.
+    timeout-minutes: 5 # Run 42637256629: slowest green 50s; under 2.5 minutes, so the 5-minute floor.
     name: Secret scan
     runs-on: ubuntu-24.04
     steps:
@@ -159,7 +159,7 @@ jobs:
   # deliberately always green; it is the evidence-model home for substrate-
   # only requirements (docs/guides/error-codes.md).
   capability-limited:
-    timeout-minutes: 4 # Run 42637256629: slowest green 1m40s; doubled, rounded up.
+    timeout-minutes: 5 # Run 42637256629: slowest green 1m40s; under 2.5 minutes, so the 5-minute floor.
     name: Capability-limited substrate
     runs-on: ubuntu-24.04
     steps:
@@ -215,7 +215,7 @@ jobs:
     if: always()
     needs: [workflow-syntax, secret-scan, quality, capability-limited]
     runs-on: ubuntu-24.04
-    timeout-minutes: 1 # No green run yet; bounded control job.
+    timeout-minutes: 5 # No green run yet; the 5-minute floor for short jobs until the landing run is recorded.
     steps:
       - name: Require every qualification job to succeed
         env:
