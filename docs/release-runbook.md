@@ -161,16 +161,34 @@ resolve when the published commit is tagged after registry readback.
 
 Infra owns the `publish` environment and its `HEX_API_KEY`. Infra obtains release
 authorization and dispatches `.github/workflows/publish.yml` on the default branch.
-The workflow admits only the declared owners, refuses a version already published
-or tagged, installs the exact runtime and locked dependencies without a dependency
-cache, builds the docs, and checks package contents and reproducibility before
-publishing to public Hex.
+The workflow admits only the declared owners, refuses an existing version tag,
+installs the exact runtime and locked dependencies without a dependency cache,
+builds the docs, and checks package contents and reproducibility. It builds the
+package archive and reproducible docs archive once into `release-assets/`, records
+`SHA256SUMS`, and exports them as the `release-assets` artifact before any upload.
 
-Infra reads the registry publication and documentation back, then creates and pushes
-`v<version>` on that exact published commit. The workflow never pushes a tag.
-Release preparation does not hold a registry key, publish from a workstation,
-dispatch publication or push tags. Never move a published tag or overwrite a release.
-Publishing remains outside Mix aliases and project callbacks.
+The registry check uses an isolated read login for an organization and anonymous
+reads for public Hex. A package name the registry lacks is refused: a first
+publication is the owner's decision. A retired version or differing served package
+or docs bytes is refused. The keyed step only uploads the two verified archives,
+package first, using `mix run --no-mix-exs` from `release-assets/`, where there is
+no `mix.exs` and no project is loaded. It uploads only what the registry is missing
+and never replaces a version. No project code runs with the publication key.
+
+A release or its docs may be held for approval. After the owner approves, dispatch
+`publish.yml` again on the same commit. The workflow checks the rebuilt bytes
+against the served bytes and uploads only what is missing. The run succeeds only
+when read-back serves both matching archives. Never change the commit to recover
+a held release.
+
+After read-back, infra creates and pushes `v<version>` on the published commit,
+compares the package archive in `release-assets` with the registry's bytes, and
+creates the GitHub release `v<version>` from those assets. Consumers download the
+archives and `SHA256SUMS` from that GitHub release and compare the checksums with
+the registry's package checksum. The workflow never creates a release or pushes a
+tag. Release preparation does not hold a registry key, publish from a workstation,
+dispatch publication or push tags. Never move a published tag or overwrite a
+release. Publishing remains outside Mix aliases and project callbacks.
 
 The static hub is a separate publication: infra dispatches `pages.yml` on the
 default branch to stage and deploy the committed site.

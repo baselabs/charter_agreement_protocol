@@ -38,7 +38,15 @@ code, the corpus, the release metadata and the normative documents. It excludes
 tests, scripts, internal project records and the independent verifier. Building or
 unpacking the archive checks the candidate's shape. Publication belongs to the
 maintainers' release process: infra dispatches `publish.yml` from the qualified
-default-branch commit, reads the registry back, then tags the published commit.
+default-branch commit. The keyed step only uploads the two verified archives with
+no project loaded. Read-back must serve matching package and docs bytes before
+infra tags the commit and creates the GitHub release `v<version>` from the
+`release-assets` artifact. Consumers verify the GitHub release's assets.
+
+A name the registry lacks is refused; a first publication is the owner's decision.
+For a held release, the owner approves and infra dispatches again on the same
+commit. The workflow uploads only what is missing and refuses differing served
+bytes or a retired version. It never replaces a package.
 
 ## Consequences
 
