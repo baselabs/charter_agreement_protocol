@@ -39,7 +39,7 @@ tests, scripts, internal project records and the independent verifier. Building 
 unpacking the archive checks the candidate's shape. Publication belongs to the
 maintainers' release process: infra dispatches `publish.yml` from the qualified
 default-branch commit. The keyed step only uploads the two verified archives with
-no project loaded. Read-back must serve matching package and docs bytes before
+no project loaded. Read-back must serve matching package bytes and its docs before
 infra tags the commit and creates the GitHub release `v<version>` from the
 `release-assets` artifact. Consumers verify the GitHub release's assets.
 

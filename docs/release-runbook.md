@@ -164,22 +164,25 @@ authorization and dispatches `.github/workflows/publish.yml` on the default bran
 The workflow admits only the declared owners, refuses an existing version tag,
 installs the exact runtime and locked dependencies without a dependency cache,
 builds the docs, and checks package contents and reproducibility. It builds the
-package archive and reproducible docs archive once into `release-assets/`, records
+package archive and the docs archive once into `release-assets/`, records
 `SHA256SUMS`, and exports them as the `release-assets` artifact before any upload.
 
 The registry check uses an isolated read login for an organization and anonymous
 reads for public Hex. A package name the registry lacks is refused: a first
 publication is the owner's decision. A retired version or differing served package
-or docs bytes is refused. The keyed step only uploads the two verified archives,
-package first, using `mix run --no-mix-exs` from `release-assets/`, where there is
-no `mix.exs` and no project is loaded. It uploads only what the registry is missing
-and never replaces a version. No project code runs with the publication key.
+bytes is refused. The package is the release; docs are a rendering of it, and an
+ExDoc build is not byte-stable, so docs bytes are never compared: docs the registry
+already serves for this version are kept. The keyed step only uploads the two
+verified archives, package first, using `mix run --no-mix-exs` from
+`release-assets/`, where there is no `mix.exs` and no project is loaded. It uploads
+only what the registry is missing and never replaces a version. No project code
+runs with the publication key.
 
 A release or its docs may be held for approval. After the owner approves, dispatch
-`publish.yml` again on the same commit. The workflow checks the rebuilt bytes
-against the served bytes and uploads only what is missing. The run succeeds only
-when read-back serves both matching archives. Never change the commit to recover
-a held release.
+`publish.yml` again on the same commit. The workflow checks the rebuilt package
+against the served package and uploads only what is missing. The run succeeds only
+when read-back serves the matching package and its docs. Never change the commit
+to recover a held release.
 
 After read-back, infra creates and pushes `v<version>` on the published commit,
 compares the package archive in `release-assets` with the registry's bytes, and
