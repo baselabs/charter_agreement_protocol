@@ -164,8 +164,9 @@ authorization and dispatches `.github/workflows/publish.yml` on the default bran
 The workflow admits only the declared owners, refuses an existing version tag,
 installs the exact runtime and locked dependencies without a dependency cache,
 builds the docs, and checks package contents and reproducibility. It builds the
-package archive and the docs archive once into `release-assets/`, records
-`SHA256SUMS`, and exports them as the `release-assets` artifact before any upload.
+package archive and the docs archive once into `release-assets/`. After the docs
+build and before packing, it writes root `release.json` with exactly `package`,
+`version` and `commit`; the commit is the run's `GITHUB_SHA`.
 
 The registry check uses an isolated read login for an organization and anonymous
 reads for public Hex. A package name the registry lacks is refused: a first
@@ -181,12 +182,20 @@ runs with the publication key.
 A release or its docs may be held for approval. After the owner approves, dispatch
 `publish.yml` again on the same commit. The workflow checks the rebuilt package
 against the served package and uploads only what is missing. The run succeeds only
-when read-back serves the matching package and its docs. Never change the commit
-to recover a held release.
+when read-back serves the matching package and a readable docs archive containing
+root `index.html` and `release.json`. The record must name this package and version
+and a commit equal to the dispatched commit or an ancestor in the repository's
+history. That is the published commit; missing or invalid provenance is refused.
+`release.json` is the uploader's record, not an attestation or protection against
+a forged claim.
 
-After read-back, infra creates and pushes `v<version>` on the published commit,
-compares the package archive in `release-assets` with the registry's bytes, and
-creates the GitHub release `v<version>` from those assets. Consumers download the
+Read-back replaces the built docs archive in `release-assets` with the served
+archive. The workflow then records `SHA256SUMS` and exports the `release-assets`
+artifact, so its docs are exactly the bytes downloaded and inspected from Hex.
+After read-back, infra creates and pushes `v<version>` on the published commit
+named by the served docs' `release.json`, compares the package archive in
+`release-assets` with the registry's bytes, and creates the GitHub release
+`v<version>` from those assets. Consumers download the
 archives and `SHA256SUMS` from that GitHub release and compare the checksums with
 the registry's package checksum. The workflow never creates a release or pushes a
 tag. Release preparation does not hold a registry key, publish from a workstation,

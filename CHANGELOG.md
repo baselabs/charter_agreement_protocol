@@ -4,6 +4,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+- Require served docs provenance in `release.json`, name its commit as the published
+  commit, and export the served docs archive after read-back.
+
 - Qualify landing candidates once through `qualified`, enforce exact CI runtimes
   and locked dependency fetching, and separate authorized registry publication
   from the maintainers' release preparation.
