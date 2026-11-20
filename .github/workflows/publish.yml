@@ -6,6 +6,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: publish
   cancel-in-progress: false
@@ -16,9 +20,6 @@ jobs:
     environment: publish
     runs-on: ubuntu-26.04
     timeout-minutes: 90 # no green run yet
-    defaults:
-      run:
-        shell: bash
     steps:
       - name: Refuse refs outside the default branch
         env:
@@ -38,7 +39,10 @@ jobs:
           package-manager-cache: false
 
       - name: Refuse Node runtime drift
-        run: test "$(node --version)" = "v$(awk '$1 == "nodejs" {print $2}' .tool-versions)"
+        run: |
+          expected_node=$(awk '$1 == "nodejs" {print $2}' .tool-versions)
+          actual_node=$(node --version)
+          test "$actual_node" = "v$expected_node"
 
       - name: Set up BEAM
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
@@ -53,7 +57,8 @@ jobs:
           expected_otp=$(awk '$1 == "erlang" {print $2}' .tool-versions)
           actual_otp=$(erl -noshell -eval 'Major = erlang:system_info(otp_release), {ok, Bytes} = file:read_file(filename:join([code:root_dir(), "releases", Major, "OTP_VERSION"])), io:put_chars(string:trim(binary_to_list(Bytes))), halt().')
           test "$actual_otp" = "$expected_otp"
-          test "$(elixir --short-version)" = "${expected_elixir%-otp-*}"
+          actual_elixir=$(elixir --short-version)
+          test "$actual_elixir" = "${expected_elixir%-otp-*}"
 
       - name: Install pinned Hex
         run: mix local.hex 2.7.0 --force

@@ -246,7 +246,14 @@ defmodule CharterAgreementProtocol.VerifierSource do
   end
 
   defp tar_commit_id(archive) do
-    System.cmd("sh", ["-c", "git get-tar-commit-id < \"$1\"", "sh", archive])
+    System.cmd("bash", [
+      "-euo",
+      "pipefail",
+      "-c",
+      "git get-tar-commit-id < \"$1\"",
+      "bash",
+      archive
+    ])
   end
 
   defp blobs_match!(cache, commit, staging) do

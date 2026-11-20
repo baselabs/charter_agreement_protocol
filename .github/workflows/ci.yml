@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -24,7 +28,10 @@ jobs:
 
       - name: Read Go pin
         id: tools
-        run: echo "go=$(awk '$1 == "golang" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+        run: |
+          go_version=$(awk '$1 == "golang" {print $2}' .tool-versions)
+          test -n "$go_version"
+          echo "go=$go_version" >> "$GITHUB_OUTPUT"
 
       - name: Set up Go
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
@@ -33,7 +40,10 @@ jobs:
           cache: false
 
       - name: Refuse Go runtime drift
-        run: test "$(go env GOVERSION)" = "go$(awk '$1 == "golang" {print $2}' .tool-versions)"
+        run: |
+          expected_go=$(awk '$1 == "golang" {print $2}' .tool-versions)
+          actual_go=$(go env GOVERSION)
+          test "$actual_go" = "go$expected_go"
 
       # actionlint pinned to its release commit for v1.7.12, verified first-hand
       # against the rhysd/actionlint tags API. `go run` fetches the module by
@@ -54,7 +64,10 @@ jobs:
 
       - name: Read Go pin
         id: tools
-        run: echo "go=$(awk '$1 == "golang" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+        run: |
+          go_version=$(awk '$1 == "golang" {print $2}' .tool-versions)
+          test -n "$go_version"
+          echo "go=$go_version" >> "$GITHUB_OUTPUT"
 
       - name: Set up Go
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
@@ -63,7 +76,10 @@ jobs:
           cache: false
 
       - name: Refuse Go runtime drift
-        run: test "$(go env GOVERSION)" = "go$(awk '$1 == "golang" {print $2}' .tool-versions)"
+        run: |
+          expected_go=$(awk '$1 == "golang" {print $2}' .tool-versions)
+          actual_go=$(go env GOVERSION)
+          test "$actual_go" = "go$expected_go"
 
       # gitleaks pinned to its release commit for v8.30.1, verified first-hand
       # against the gitleaks/gitleaks tags API. `go run` fetches the module by
@@ -116,7 +132,8 @@ jobs:
           EXPECTED_NODE: ${{ matrix.name != 'pinned' && matrix.node || '' }}
         run: |
           expected_node="${EXPECTED_NODE:-$(awk '$1 == "nodejs" {print $2}' .tool-versions)}"
-          test "$(node --version)" = "v$expected_node"
+          actual_node=$(node --version)
+          test "$actual_node" = "v$expected_node"
 
       - name: Set up BEAM
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
@@ -135,7 +152,8 @@ jobs:
           expected_otp="${EXPECTED_OTP:-$(awk '$1 == "erlang" {print $2}' .tool-versions)}"
           actual_otp=$(erl -noshell -eval 'Major = erlang:system_info(otp_release), {ok, Bytes} = file:read_file(filename:join([code:root_dir(), "releases", Major, "OTP_VERSION"])), io:put_chars(string:trim(binary_to_list(Bytes))), halt().')
           test "$actual_otp" = "$expected_otp"
-          test "$(elixir --short-version)" = "${expected_elixir%-otp-*}"
+          actual_elixir=$(elixir --short-version)
+          test "$actual_elixir" = "${expected_elixir%-otp-*}"
 
       - name: Install dependencies
         run: mix deps.get --check-locked
@@ -184,7 +202,8 @@ jobs:
           expected_otp="${EXPECTED_OTP:-$(awk '$1 == "erlang" {print $2}' .tool-versions)}"
           actual_otp=$(erl -noshell -eval 'Major = erlang:system_info(otp_release), {ok, Bytes} = file:read_file(filename:join([code:root_dir(), "releases", Major, "OTP_VERSION"])), io:put_chars(string:trim(binary_to_list(Bytes))), halt().')
           test "$actual_otp" = "$expected_otp"
-          test "$(elixir --short-version)" = "${expected_elixir%-otp-*}"
+          actual_elixir=$(elixir --short-version)
+          test "$actual_elixir" = "${expected_elixir%-otp-*}"
 
       - name: Install dependencies
         run: mix deps.get --check-locked
