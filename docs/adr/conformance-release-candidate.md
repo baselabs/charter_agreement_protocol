@@ -37,20 +37,20 @@ The package contents are an explicit allowlist in `mix.exs`. It includes the pro
 code, the corpus, the release metadata and the normative documents. It excludes
 tests, scripts, internal project records and the independent verifier. Building or
 unpacking the archive checks the candidate's shape. Publication belongs to the
-maintainers' release process: infra dispatches `publish.yml` from the qualified
+maintainers' release process: the release operator dispatches `publish.yml` from the qualified
 default-branch commit. The keyed step only uploads the two verified archives with
 no project loaded. After the docs build and before packing, root `release.json`
 records exactly `package`, `version` and the run's `GITHUB_SHA` as `commit`.
 Read-back must serve matching package bytes and a readable docs archive with root
 `index.html` and `release.json` naming this package and version. The record's commit
 must be the dispatched commit or an ancestor of it; that is the published commit
-infra tags as `v<version>`. `release.json` is the uploader's record, not an
+the release operator tags as `v<version>`. `release.json` is the uploader's record, not an
 attestation or protection against forgery. Read-back replaces the built docs with
-the served docs in `release-assets` before checksums and artifact upload. Infra
+the served docs in `release-assets` before checksums and artifact upload. The release operator
 creates the GitHub release from those assets; consumers verify its files.
 
 A name the registry lacks is refused; a first publication is the owner's decision.
-For a held release, the owner approves and infra dispatches again on the same
+For a held release, the owner approves and the release operator dispatches again on the same
 commit. The workflow uploads only what is missing and refuses differing served
 bytes or a retired version. It never replaces a package or served docs.
 

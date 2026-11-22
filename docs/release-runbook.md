@@ -2,9 +2,7 @@
 
 The maintainers' release process separates qualification from publication.
 Covering tests and all commands below that compile or test run on the build box,
-never on a workstation. For a Mix task, run from the repository root with
-`python3 ~/Developer/kimosabe/bin/kimosabe-remote run -- kimosabe-box-mix <task>`
-after `python3 ~/Developer/kimosabe/bin/kimosabe-remote where` succeeds. Public
+never on a workstation, routed there by the maintainers' remote-run tooling. Public
 repositories without a build-box checkout are checked in qualification CI at landing.
 Building an archive publishes nothing.
 
@@ -65,8 +63,8 @@ the last one hashes every shipped file, so it has to see the final bytes.
       copy `priv/conformance/` into its `conformance/` directory byte for
       byte, set `CERTIFIED_INDEX_SHA256_BASE64URL` and
       `CERTIFIED_REGISTRY_DIGEST` in `core.ts`, make the verifier agree on
-      every case, and land it with `kimosabe-land` through the maintainers'
-      release process.
+      every case, and land it through the maintainers' landing tool and the
+      maintainers' release process.
    2. Here, set `commit` in `priv/verifier-source.json` to that commit. It
       must be on the TypeScript repository's `main` as fetched from GitHub,
       and it must descend from the current pin.
@@ -130,8 +128,8 @@ byte for byte, and requires the content to match the pin.
 
 ## 2. Qualify the commit
 
-Run the covering tests on the build box. Landing is
-`kimosabe-land --repo . --sha <full commit>`, which starts the complete quality
+Run the covering tests on the build box. Landing goes
+through the maintainers' landing tool with the full commit, which starts the complete quality
 battery on `kci/**` and moves the default branch only after `qualified` succeeds.
 Every job listed in [CONTRIBUTING](../CONTRIBUTING.md) must succeed. Qualification
 runs only on `kci/**` pushes, including documentation changes; default-branch
@@ -149,7 +147,7 @@ pushes, tags, pull requests and dispatches do not start another qualification.
 ## 4. Land the version commit
 
 Stamp the changelog with the version and release date in the version commit,
-and land the exact qualified tree with `kimosabe-land`. Send one message through
+and land the exact qualified tree through the maintainers' landing tool. Send one message through
 the maintainers' release process with the repository, full commit, version,
 what goes out, and the green `qualified` run. This completes release preparation.
 
@@ -159,7 +157,7 @@ resolve when the published commit is tagged after registry readback.
 
 ## 5. Publication
 
-Infra owns the `publish` environment and its `HEX_API_KEY`. Infra obtains release
+The release operator owns the `publish` environment and its `HEX_API_KEY`. The release operator obtains release
 authorization and dispatches `.github/workflows/publish.yml` on the default branch.
 The workflow admits only the declared owners, refuses an existing version tag,
 installs the exact runtime and locked dependencies without a dependency cache,
@@ -192,7 +190,7 @@ a forged claim.
 Read-back replaces the built docs archive in `release-assets` with the served
 archive. The workflow then records `SHA256SUMS` and exports the `release-assets`
 artifact, so its docs are exactly the bytes downloaded and inspected from Hex.
-After read-back, infra creates and pushes `v<version>` on the published commit
+After read-back, the release operator creates and pushes `v<version>` on the published commit
 named by the served docs' `release.json`, compares the package archive in
 `release-assets` with the registry's bytes, and creates the GitHub release
 `v<version>` from those assets. Consumers download the
@@ -202,7 +200,7 @@ tag. Release preparation does not hold a registry key, publish from a workstatio
 dispatch publication or push tags. Never move a published tag or overwrite a
 release. Publishing remains outside Mix aliases and project callbacks.
 
-The static hub is a separate publication: infra dispatches `pages.yml` on the
+The static hub is a separate publication: the release operator dispatches `pages.yml` on the
 default branch to stage and deploy the committed site.
 
 ## 6. After publishing

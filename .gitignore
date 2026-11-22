@@ -20,7 +20,6 @@
 /.serena/
 /graphify-out/
 /.claude/
-/.kimosabe/
 /.mcp.json
 .env
 .env.*

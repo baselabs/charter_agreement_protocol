@@ -16,7 +16,7 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
   @metadata "priv/release-metadata.json"
   @index "priv/conformance/index.json"
   @spec_root "spec"
-  @forbidden_prefixes [".env", ".kimosabe", "scripts/", "test/", "verifier/"]
+  @forbidden_prefixes ["scripts/", "test/", "verifier/"]
 
   def run do
     VerifierSource.current!()
@@ -259,8 +259,15 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
     unless Path.join(@root, "priv/verifier-source.json") in inputs,
       do: raise("the verifier source pin is not a package input")
 
+    # Only tracked source ships: credentials, build output and local tool
+    # state are never tracked, so none of them can become a package input.
+    tracked = tracked_files()
+
     Enum.each(inputs, fn path ->
       relative = Path.relative_to(path, @root)
+
+      unless MapSet.member?(tracked, relative),
+        do: raise("untracked package input: #{relative}")
 
       if Enum.any?(@forbidden_prefixes, &String.starts_with?(relative, &1)),
         do: raise("forbidden package input: #{relative}")
@@ -270,6 +277,13 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
         other -> raise("non-regular package input #{relative}: #{other}")
       end
     end)
+  end
+
+  defp tracked_files do
+    case System.cmd("git", ["ls-files", "-z"], cd: @root, stderr_to_stdout: true) do
+      {output, 0} -> output |> String.split(<<0>>, trim: true) |> MapSet.new()
+      {output, status} -> raise("git ls-files exited #{status}: #{output}")
+    end
   end
 
   defp build_archive!(path) do
