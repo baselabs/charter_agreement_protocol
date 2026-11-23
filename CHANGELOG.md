@@ -4,6 +4,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+- Read CI runtime defaults and compatibility lanes only through the shared
+  toolchain reader, with exact installed-version checks.
+
 - Require served docs provenance in `release.json`, name its commit as the published
   commit, and export the served docs archive after read-back.
 
