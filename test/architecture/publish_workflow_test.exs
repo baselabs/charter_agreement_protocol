@@ -149,7 +149,12 @@ defmodule PublishWorkflowTest do
     package = "charter_agreement_protocol"
     package_archive = package <> ~S(-${VERSION}.tar)
     archive = ~s("release-assets/#{package_archive}")
-    assert changelog =~ archive
+    archive_argument = Regex.escape("release-assets/#{package_archive}")
+
+    invocation =
+      ~r/python3[ \t]+-I[ \t]+-[ \t]+"(?:\.\/|\$GITHUB_WORKSPACE\/)?#{archive_argument}"[ \t]+[^\n]*<</
+
+    assert length(Regex.scan(invocation, workflow)) == 1
 
     export_version = ~S(echo "VERSION=$version" >> "$GITHUB_ENV")
     assert [version_step] = Enum.filter(steps, &String.contains?(&1, export_version))
