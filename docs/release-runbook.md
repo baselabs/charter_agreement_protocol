@@ -173,9 +173,12 @@ bytes is refused. The package is the release; docs are a rendering of it, and an
 ExDoc build is not byte-stable, so docs bytes are never compared: docs the registry
 already serves for this version are kept. The keyed step only uploads the two
 verified archives, package first, using `mix run --no-mix-exs` from
-`release-assets/`, where there is no `mix.exs` and no project is loaded. It uploads
-only what the registry is missing and never replaces a version. No project code
-runs with the publication key.
+`release-assets/`, where there is no `mix.exs` and no project is loaded. The uploader
+re-reads the served state immediately before each docs POST. For a staged
+package, it first checks the stage checksum and then confirms the release is
+still unpublished. A second publisher or an approval between the final read and
+the POST is the residual race, controlled by custody of the publication key. No
+project code runs with the publication key.
 
 A release or its docs may be held for approval. After the owner approves, dispatch
 `publish.yml` again on the same commit. The workflow checks the rebuilt package
