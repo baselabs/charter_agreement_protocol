@@ -33,7 +33,9 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
     limited? = not Capability.kat_verifies?("ML-DSA-65")
 
     for {one, result} <- Enum.zip(corpus.cases, Runner.run(corpus)) do
-      expected = if limited?, do: Map.get(one, "expect_limited", one["expect"]), else: one["expect"]
+      expected =
+        if limited?, do: Map.get(one, "expect_limited", one["expect"]), else: one["expect"]
+
       assert result.actual == expected, result.id
     end
   end

@@ -9,6 +9,56 @@ defmodule CharterAgreementProtocol.RequirementMap do
   """
 
   @entries [
+    {"CAP-CHAIN-repair-acceptance",
+     [
+       {:corpus, ["governing_revision:precedence_selection"]},
+       {:gate, CharterAgreementProtocol.Conformance.RunnerReportCliTest}
+     ]},
+    {"CAP-CHAIN-termination-time-precision",
+     [
+       {:corpus, ["governing_revision:terminated", "receipt.verify:terminated"]},
+       {:gate, CharterAgreementProtocol.Conformance.RunnerReportCliTest}
+     ]},
+    {"CAP-CHAIN-termination-equal-instants",
+     [
+       {:corpus, ["governing_revision:terminated"]},
+       {:gate, CharterAgreementProtocol.Conformance.RunnerReportCliTest}
+     ]},
+    {"CAP-CONFORMANCE-source-identity",
+     [
+       {:corpus, ["receipt.verify:valid"]},
+       {:gate, CharterAgreementProtocol.Conformance.RunnerReportCliTest}
+     ]},
+    {"CAP-CONFORMANCE-full-corpus",
+     [
+       {:corpus, ["governing_revision:precedence_selection"]},
+       {:gate, CharterAgreementProtocol.Conformance.RunnerReportCliTest}
+     ]},
+    {"CAP-CONFORMANCE-limited-corpus",
+     [
+       {:corpus, ["party_descriptor.verify:valid", "signing.prepare:valid"]},
+       {:gate, CharterAgreementProtocol.CapabilityLaneTest}
+     ]},
+    {"CAP-SIGNING-declared-key-preparation",
+     [
+       {:corpus, ["signing.prepare:valid"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest}
+     ]},
+    {"CAP-SIGNING-declared-key-refusal",
+     [
+       {:corpus, ["signing.prepare:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest}
+     ]},
+    {"CAP-SIGNING-declared-key-snapshot",
+     [
+       {:corpus, ["signing.prepare:valid", "signing.prepare:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest}
+     ]},
+    {"CAP-RECEIPT-partial-view",
+     [
+       {:corpus, ["receipt.verify:valid", "receipt.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Conformance.RunnerReportCliTest}
+     ]},
     {"CAP-CONFORMANCE-runner-inputs",
      [
        {:corpus,

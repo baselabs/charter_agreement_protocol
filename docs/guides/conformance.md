@@ -26,7 +26,7 @@ is the one place in the guides where they are recorded.
 | Corpus digest | `sha-256:SotPOwrvIWssswNuoV1L_Eql_IJohQFX1-0ICNkCXmI` |
 | Index SHA-256 (base64url) | `4ygWJ7RKHHLFtOxbx8F5RqLH47b4acS70QD8XQi8FY4` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:Px81vuBEqTF94EHyT3k0XhX_DyS9u0eBo1sSMGchbGo` |
+| Specification digest | `sha-256:QOAg_nMQxQCEAnHSwvupvlE5lalC893OglZKYZA3vvg` |
 | Cases | 553, in 16 case files |
 
 The [TypeScript source pin](../../priv/verifier-source.json) selects the

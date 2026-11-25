@@ -1,8 +1,10 @@
+Code.require_file("../../scripts/release_compatibility.exs", __DIR__)
+
 defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
   use ExUnit.Case, async: true
 
   alias CharterAgreementProtocol.Conformance.Corpus
-  alias CharterAgreementProtocol.RequirementMap
+  alias CharterAgreementProtocol.{ReleaseCompatibility, ReleaseIdentity, RequirementMap}
 
   @mutation_names ~w(
     json-syntax-before-container-limits
@@ -114,6 +116,39 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
 
   test "the quality alias carries the complete release gate in order" do
     assert Mix.Project.config()[:aliases][:quality] == @minimum_quality_steps
+  end
+
+  test "a released compatibility row retains the census from its tagged index" do
+    version = "1.0.0"
+    row = Enum.find(ReleaseIdentity.compatibility(), &(version in &1.package_versions))
+    live =
+      "priv/conformance/index.json"
+      |> File.read!()
+      |> :json.decode()
+      |> Map.fetch!("corpus_digest")
+
+    refute row.census_digest == live
+    root = File.cwd!()
+
+    assert :ok =
+             ReleaseCompatibility.verify!(row, version, row.verification_semantics, live, root)
+
+    assert_raise RuntimeError, ~r/compatibility census for 1\.0\.0/, fn ->
+      stale = %{row | census_digest: "different"}
+      ReleaseCompatibility.verify!(stale, version, row.verification_semantics, live, root)
+    end
+  end
+
+  test "a new package version requires the live corpus census" do
+    version = "99.0.0"
+    row = %{verification_semantics: 6, census_digest: "live"}
+    root = File.cwd!()
+
+    assert :ok = ReleaseCompatibility.verify!(row, version, 6, "live", root)
+
+    assert_raise RuntimeError, ~r/compatibility census for 99\.0\.0/, fn ->
+      ReleaseCompatibility.verify!(row, version, 6, "different", root)
+    end
   end
 
   test "every public requirement has corpus and gate evidence" do

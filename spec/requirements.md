@@ -10,11 +10,61 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ## Bound evidence
 
-- Requirements: 73
+- Requirements: 83
 - Corpus cells: 104
 - Named mutations: 85
 
 ## Requirements
+
+### CAP-CHAIN-repair-acceptance
+
+- Corpus: `governing_revision:precedence_selection`
+- Gate: `CharterAgreementProtocol.Conformance.RunnerReportCliTest`
+
+### CAP-CHAIN-termination-time-precision
+
+- Corpus: `governing_revision:terminated`, `receipt.verify:terminated`
+- Gate: `CharterAgreementProtocol.Conformance.RunnerReportCliTest`
+
+### CAP-CHAIN-termination-equal-instants
+
+- Corpus: `governing_revision:terminated`
+- Gate: `CharterAgreementProtocol.Conformance.RunnerReportCliTest`
+
+### CAP-CONFORMANCE-source-identity
+
+- Corpus: `receipt.verify:valid`
+- Gate: `CharterAgreementProtocol.Conformance.RunnerReportCliTest`
+
+### CAP-CONFORMANCE-full-corpus
+
+- Corpus: `governing_revision:precedence_selection`
+- Gate: `CharterAgreementProtocol.Conformance.RunnerReportCliTest`
+
+### CAP-CONFORMANCE-limited-corpus
+
+- Corpus: `party_descriptor.verify:valid`, `signing.prepare:valid`
+- Gate: `CharterAgreementProtocol.CapabilityLaneTest`
+
+### CAP-SIGNING-declared-key-preparation
+
+- Corpus: `signing.prepare:valid`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+
+### CAP-SIGNING-declared-key-refusal
+
+- Corpus: `signing.prepare:invalid_constraint`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+
+### CAP-SIGNING-declared-key-snapshot
+
+- Corpus: `signing.prepare:valid`, `signing.prepare:invalid_constraint`
+- Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+
+### CAP-RECEIPT-partial-view
+
+- Corpus: `receipt.verify:valid`, `receipt.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.Conformance.RunnerReportCliTest`
 
 ### CAP-CONFORMANCE-runner-inputs
 

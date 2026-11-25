@@ -1,3 +1,4 @@
+Code.require_file("release_compatibility.exs", __DIR__)
 Code.require_file("verifier_source.exs", __DIR__)
 
 defmodule CharterAgreementProtocol.ReleaseCandidateGate do
@@ -5,6 +6,7 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
     Algorithm,
     Canonicalization,
     Digest,
+    ReleaseCompatibility,
     ReleaseIdentity,
     SpecificationIdentity,
     VerifierSource
@@ -110,8 +112,13 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
     if current_row == nil,
       do: raise("the current package version has no compatibility row")
 
-    if current_row.verification_semantics != ReleaseIdentity.verification_semantics(),
-      do: raise("current compatibility row does not match the verification semantics")
+    ReleaseCompatibility.verify!(
+      current_row,
+      Mix.Project.config()[:version],
+      ReleaseIdentity.verification_semantics(),
+      index["corpus_digest"],
+      @root
+    )
 
     pins = [
       {"lib/charter_agreement_protocol/conformance/cli.ex", index_identity},

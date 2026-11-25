@@ -45,7 +45,9 @@ the last one hashes every shipped file, so it has to see the final bytes.
    rewrite `spec/requirements.md`.
 
 4. **Compatibility row.** The live corpus digest is recorded in release
-   metadata during development. Preserve released compatibility rows.
+   metadata during development. Qualification compares a released version's
+   compatibility row against the corpus at its release tag. For a version
+   without a release tag, qualification checks its row against the live corpus.
    For a new package version, update
    `lib/charter_agreement_protocol/release_identity.ex` so the row for the
    new version carries the live corpus digest as `census_digest`.

@@ -327,11 +327,14 @@ from retained bytes, so supplied descriptive scalars do not replace the
 verified values.
 
 A companion signer accepting a caller-declared public key identity MUST
-run CAP preparation for that identity before invoking any handle callback.
+run CAP preparation for that identity before invoking any handle callback
+[CAP-SIGNING-declared-key-preparation].
 If preparation returns `signing_key_mismatch`, the signer MUST return a
-refusal with that code and zero identity or signing calls. Once preparation
+refusal with that code and zero identity or signing calls
+[CAP-SIGNING-declared-key-refusal]. Once preparation
 succeeds, the signer MUST take one atomic handle identity snapshot and
-refuse with the same code if it differs from the prepared identity. A
+refuse with the same code if it differs from the prepared identity
+[CAP-SIGNING-declared-key-snapshot]. A
 signature returned by custody still requires independent verification
 against the prepared key [CAP-SIGNING-shared-preparation].
 
@@ -364,8 +367,8 @@ named as quarantined [CAP-RECEIPT-extension-roundtrip].
 
 A chain-view receipt whose named revision is absent or lacks verified
 acceptances from all parties MUST NOT report a governing match or a matched
-deployment. If the signature and charter and role claims can be verified
-from the accepted revisions that are present, the receipt remains valid as
+deployment [CAP-RECEIPT-partial-view]. If the signature and charter and role claims
+can be verified from the accepted revisions present, the receipt remains valid as
 signed evidence. It reports `governing_match: mismatch` for a unique
 different governing revision or none, and `undetermined` in a contested
 view. It reports `chain_conflict: fork_evidenced` when the receipt's
@@ -425,23 +428,26 @@ MUST return `contested`; a verifier MUST NOT resolve a tie by digest
 ordering, freshness, or any other silent tie-break
 [CAP-CHAIN-contested-refusal]. A supersession repair MUST be applied: a
 later revision that supersedes contested siblings restores a unique
-governing digest while history is retained. A repair carrying only a
-subset of the required party acceptances leaves the siblings contested
+governing digest while history is retained
+[CAP-CHAIN-supersession-applied]. A repair carrying only a
+subset of the required party acceptances MUST leave the siblings contested
 once both siblings are effective
-[CAP-CHAIN-supersession-applied]. Where a unique governing revision
+[CAP-CHAIN-repair-acceptance]. Where a unique governing revision
 exists, the revision with the highest precedence among eligible accepted
 revisions MUST govern [CAP-CHAIN-highest-precedence], with eligibility
 inclusive of the instant boundary. A verified termination notice that names
 the revision governing at its `effective_at` MUST close the charter from
 that instant: the governing computation at or after it returns `none`, and
-a receipt for an effect at or after it does not match a governing revision.
-Compare UTC instants at their full represented precision. At equal instants,
-first select the revision eligible at that instant without applying any
-termination, then compare it to the notice's named revision. A notice
+a receipt for an effect at or after it does not match a governing revision
+[CAP-CHAIN-termination-closes].
+Comparisons MUST use UTC instants at their full represented precision
+[CAP-CHAIN-termination-time-precision]. At equal instants, the verifier
+MUST select the revision eligible at that instant before applying any
+termination, then compare it to the notice's named revision
+[CAP-CHAIN-termination-equal-instants]. A notice
 naming a predecessor that has just lost precedence does not close the
 charter. A notice naming the new governing revision closes it from that
-instant, including queries and receipts at the same instant
-[CAP-CHAIN-termination-closes].
+instant, including queries and receipts at the same instant.
 
 ## 7. Facts and error surface
 
@@ -468,10 +474,13 @@ between integer tokens and tokens with a fraction or exponent, including
 whole-number floats such as `2.0` [CAP-CONFORMANCE-number-tokens].
 
 The Elixir repository owns the canonical corpus. Consumers MUST pin an exact
-source commit and the SHA-256 of the raw index bytes, and check every case
-file against its digest in that index. Full-capability implementations MUST
-execute every row against `expect`. A substrate without ML-DSA verification
-MUST execute the same rows and use `expect_limited` where it is present.
+source commit and the SHA-256 of the raw index bytes, check every case file
+against its index digest, and compare the vendored bytes with the blobs at
+that commit [CAP-CONFORMANCE-source-identity]. Full-capability
+implementations MUST execute every row against `expect`
+[CAP-CONFORMANCE-full-corpus]. A substrate without ML-DSA verification
+MUST execute the same rows and use `expect_limited` where it is present
+[CAP-CONFORMANCE-limited-corpus].
 A capability diagnostic is distinct from a signature verdict.
 
 ## 9. Security and privacy posture
