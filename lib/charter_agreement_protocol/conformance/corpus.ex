@@ -36,6 +36,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
     "schema.validate",
     "party_descriptor.verify",
     "descriptor_chain.verify",
+    "descriptor_publication.verify",
     "charter_revision.decode",
     "acceptance.verify",
     "acceptance.equivocation",
@@ -111,6 +112,14 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       required:
         ~w(signature_invalid chain_invalid descriptor_superseded descriptor_fork invalid_type),
       n_a: "single-artifact and foundational codec-only behavior are outside descriptor topology"
+    },
+    "descriptor_publication.verify" => %{
+      required:
+        ~w(
+          valid invalid_type invalid_constraint unknown_member non_canonical_bytes
+          maximum_plus_one signature_invalid profile_revision_outside profile_algorithm_outside
+        ),
+      n_a: "outside unsigned descriptor publication verification"
     },
     "charter_revision.decode" => %{
       required:

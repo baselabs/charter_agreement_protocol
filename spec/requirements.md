@@ -10,11 +10,116 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ## Bound evidence
 
-- Requirements: 83
-- Corpus cells: 104
-- Named mutations: 85
+- Requirements: 102
+- Corpus cells: 113
+- Named mutations: 95
 
 ## Requirements
+
+### CAP-DESCRIPTOR-commitment-member
+
+- Corpus: `party_descriptor.verify:unknown_member`, `party_descriptor.verify:valid`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+
+### CAP-DESCRIPTOR-commitment-emission
+
+- Corpus: `signing.prepare:valid`, `signing.prepare:invalid_constraint`
+- Gate: `CharterAgreementProtocol.Conformance.CorpusTest`
+
+### CAP-DESCRIPTOR-key-thumbprint
+
+- Corpus: `descriptor_publication.verify:valid`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+- Mutation: `next-key-algorithm-omitted`
+- Mutation: `next-key-id-included`
+
+### CAP-DESCRIPTOR-distinct-key-material
+
+- Corpus: `party_descriptor.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+
+### CAP-DESCRIPTOR-complete-key-set
+
+- Corpus: `descriptor_publication.verify:valid`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+- Mutation: `next-key-prefix-dropped`
+- Mutation: `next-key-retired-included`
+
+### CAP-DESCRIPTOR-opening-revision
+
+- Corpus: `party_descriptor.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+- Mutation: `next-key-downgrade-accepted`
+
+### CAP-DESCRIPTOR-complete-key-opening
+
+- Corpus: `party_descriptor.verify:invalid_constraint`, `descriptor_chain.verify:chain_invalid`, `descriptor_chain.verify:descriptor_fork`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+- Mutation: `next-key-opening-skip`
+
+### CAP-PUBLICATION-closed-document
+
+- Corpus: `descriptor_publication.verify:invalid_type`, `descriptor_publication.verify:unknown_member`, `descriptor_publication.verify:non_canonical_bytes`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+
+### CAP-PUBLICATION-coordinate-grammar
+
+- Corpus: `descriptor_publication.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+
+### CAP-PUBLICATION-bounded-history
+
+- Corpus: `descriptor_publication.verify:maximum_plus_one`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+
+### CAP-PUBLICATION-content-digest
+
+- Corpus: `descriptor_publication.verify:valid`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+
+### CAP-PUBLICATION-history-order
+
+- Corpus: `descriptor_publication.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+
+### CAP-PUBLICATION-verify-history
+
+- Corpus: `descriptor_publication.verify:signature_invalid`, `descriptor_publication.verify:profile_revision_outside`, `descriptor_publication.verify:profile_algorithm_outside`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+- Mutation: `publication-history-profile-skip`
+
+### CAP-PUBLICATION-profile-revision
+
+- Corpus: `descriptor_publication.verify:profile_revision_outside`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+
+### CAP-PUBLICATION-party-binding
+
+- Corpus: `descriptor_publication.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+
+### CAP-PUBLICATION-linear-history
+
+- Corpus: `descriptor_publication.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+- Mutation: `publication-selects-fork`
+
+### CAP-PUBLICATION-next-head
+
+- Corpus: `descriptor_publication.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+
+### CAP-PUBLICATION-direct-pair
+
+- Corpus: `descriptor_publication.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+- Mutation: `publication-link-skip`
+
+### CAP-PUBLICATION-effective-order
+
+- Corpus: `descriptor_publication.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.DescriptorPublicationTest`
+- Mutation: `publication-effective-order-skip`
 
 ### CAP-CHAIN-repair-acceptance
 

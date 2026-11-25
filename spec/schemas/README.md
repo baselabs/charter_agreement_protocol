@@ -14,7 +14,7 @@ dialect file exists; there is no CDDL companion.
 The schemas cover the five artifact claim sets (party descriptor, charter
 revision, acceptance, termination notice, receipt), the extension envelope,
 the compact-JWS protected header, the tagged-digest and timestamp grammar,
-and the two externally consumed conformance wire documents (the corpus index
+the unsigned descriptor publication, and the two conformance wire documents (the corpus index
 and the canonical report).
 
 ## What the schema layer expresses — and what it deliberately does not
@@ -32,7 +32,8 @@ cardinalities. The following are enforced by the codec and the normative text
 - Byte-exact string bounds where bytes and codepoints diverge (namespace
   bodies, hint URIs).
 - Cross-field rules: conditional member presence (successor-only members),
-  timestamp ordering, decision/outcome pairing, and genesis shape.
+  timestamp ordering, decision/outcome pairing, and genesis shape. Only
+  revision 8 admits the descriptor commitment member.
 - Extension namespace cardinality and the critical/optional exclusivity
   invariant (the dialect has no `maxProperties`).
 

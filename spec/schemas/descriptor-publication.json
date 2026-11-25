@@ -1,0 +1,26 @@
+{
+  "$defs": {
+    "digest": {"type": "string", "minLength": 51, "maxLength": 51}
+  },
+  "type": "object",
+  "required": [
+    "protocol_revision",
+    "party_id",
+    "current_descriptor_digest",
+    "next_descriptor_digest",
+    "descriptors"
+  ],
+  "properties": {
+    "protocol_revision": {"const": 8},
+    "party_id": {"$ref": "#/$defs/digest"},
+    "current_descriptor_digest": {"$ref": "#/$defs/digest"},
+    "next_descriptor_digest": {"$ref": "#/$defs/digest"},
+    "descriptors": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4096,
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": false
+}

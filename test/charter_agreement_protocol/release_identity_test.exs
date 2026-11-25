@@ -73,11 +73,13 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
     |> Enum.each(fn {prior, later} -> assert MapSet.subset?(prior, later) end)
   end
 
-  test "the latest corpus row records malformed context transitions" do
-    [latest | _] = Enum.reverse(ReleaseIdentity.compatibility())
+  test "the current row records descriptor admission and preserves prior transitions" do
+    [latest, prior | _] = Enum.reverse(ReleaseIdentity.compatibility())
     assert latest.verification_semantics == ReleaseIdentity.verification_semantics()
-    assert latest.package_versions == ["0.6.0", "1.0.0"]
-    assert Enum.any?(latest.transitions, &(&1.direction == :green_to_red))
-    assert Enum.any?(latest.transitions, &(&1.direction == :crash_to_typed))
+    assert latest.package_versions == ["1.0.0"]
+    assert latest.protocol_revisions == [1, 2, 3, 8]
+    assert Enum.any?(latest.transitions, &(&1.class == :admission))
+    assert Enum.any?(prior.transitions, &(&1.direction == :green_to_red))
+    assert Enum.any?(prior.transitions, &(&1.direction == :crash_to_typed))
   end
 end

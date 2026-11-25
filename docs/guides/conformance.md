@@ -26,11 +26,11 @@ is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:XqGDtUk7QIIJO_tgaoe3g74i2vSTBujREFIQpSta5F8` |
-| Index SHA-256 (base64url) | `WbBb7BEOGDGOUmKQ7oo64tXFFj6vWMSIWd1lAaTx9J8` |
+| Corpus digest | `sha-256:DyEJlctii8DvvikKaHWnE1Jvg4-EdroMHoEw_jvXFs0` |
+| Index SHA-256 (base64url) | `A_LEDCADvWgWJpxItQvIvFg0463hsL_5LsKn9rB8VQY` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:QOAg_nMQxQCEAnHSwvupvlE5lalC893OglZKYZA3vvg` |
-| Cases | 553, in 16 case files |
+| Specification digest | `sha-256:7oPGw9oD8aILnqJaI0IQuYwrokkSluyNVxf6p-BsKY8` |
+| Cases | 587, in 17 case files |
 
 The [TypeScript source pin](../../priv/verifier-source.json) selects the
 verifier that CI runs against every case.
@@ -73,6 +73,7 @@ behavior it exercises). The surfaces:
 | `schema.validate` | Closed schema validation, stage by stage |
 | `party_descriptor.verify` | One party descriptor |
 | `descriptor_chain.verify` | A descriptor history, including forks and superseded descriptors |
+| `descriptor_publication.verify` | A current/next document and its complete signed history |
 | `charter_revision.decode` | One charter revision |
 | `acceptance.verify` | One acceptance against its revision and descriptor history |
 | `acceptance.equivocation` | Two acceptances by one signer over different revisions at one number |

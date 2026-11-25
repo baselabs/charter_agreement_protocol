@@ -9,6 +9,13 @@ CAP verifies evidence. It never decides anything for you. Every verification res
 says what was proven and lists, by name, what it does not prove (who may act, whether
 terms were met, legal validity, and so on). Your application makes those calls.
 
+## Descriptor rotation
+
+Use `descriptor_next_key_commitment/2` to commit to a successor’s active keys.
+Sign the revision-8 successor with an active predecessor key and pass the signed
+history to `encode_descriptor_publication/2` and `verify_descriptor_publication/3`.
+The returned facts identify the named pair and the verified opening status.
+
 ## When to use it
 
 Use CAP when two parties need agreement evidence they can exchange as files or
@@ -127,7 +134,7 @@ capability-limited expectations for Node and browser verification.
 
 ## Status
 
-Version 1.0.0. Protocol revisions 1, 2 and 3 verify. See the [changelog](CHANGELOG.md)
+Version 1.0.0. The source candidate also verifies revision-8 party descriptors and publications. See the [changelog](CHANGELOG.md)
 for what changed, and [upgrading](docs/guides/upgrading-verification-identity.md) before
 moving between versions.
 

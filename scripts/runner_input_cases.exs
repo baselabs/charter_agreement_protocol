@@ -8,7 +8,7 @@ defmodule CharterAgreementProtocol.RunnerInputCases do
   end
 
   defp profile_cases(cases) do
-    for surface <- Corpus.surfaces(),
+    for surface <- Corpus.surfaces() -- ["descriptor_publication.verify"],
         {suffix, profile, code} <- [
           {"null-profile", nil, "invalid_profile"},
           {"null-algorithms", %{"algorithms" => nil}, "invalid_profile"},
@@ -234,7 +234,7 @@ defmodule CharterAgreementProtocol.RunnerInputCases do
   end
 
   defp kind_cases(cases) do
-    for surface <- Corpus.surfaces(),
+    for surface <- Corpus.surfaces() -- ["descriptor_publication.verify"],
         {kind, value} <- [
           {"integer", "[1]"},
           {"integer", "{}"},

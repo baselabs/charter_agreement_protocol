@@ -115,7 +115,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
       ]
     },
     %{
-      package_versions: ["0.6.0", "1.0.0"],
+      package_versions: ["0.6.0"],
       verification_semantics: 6,
       census_digest: "sha-256:ZpJFSZnj2-4PGcOdggkwK62YFtCRmQfr_7kKnuwtKL0",
       protocol_revisions: [1, 2, 3],
@@ -163,11 +163,26 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "Wrong context terms and malformed caller-built context field types use invalid_type consistently where receipt_invalid or descriptor_chain_invalid previously named an unusable context"
         }
       ]
+    },
+    %{
+      package_versions: ["1.0.0"],
+      verification_semantics: 7,
+      census_digest: "sha-256:ZpJFSZnj2-4PGcOdggkwK62YFtCRmQfr_7kKnuwtKL0",
+      protocol_revisions: [1, 2, 3, 8],
+      transitions: [
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          description:
+            "Revision 8 admits descriptor key commitments, requires complete active-key " <>
+              "openings, and admits unsigned current and next descriptor publication"
+        }
+      ]
     }
   ]
 
   @manifest_version 1
-  @verification_semantics 6
+  @verification_semantics 7
 
   @typedoc "One verdict change between releases."
   @type transition :: %{

@@ -111,6 +111,8 @@ Signed artifacts are attached compact JWS strings.
 |---|---|---|---|
 | `:descriptor_invalid` | the descriptor's claims are inconsistent | a public key of the wrong length, an ML-DSA key in a revision-1 or revision-2 descriptor, duplicate key ids, no active key, a genesis with `party_id` or a successor without it | reject the input |
 | `:descriptor_key_invalid` | the signing `kid` is not an active key where it must be | a genesis signed by a key it does not list, or a successor signed by a key that is not active in its predecessor | reject the input |
+| `:descriptor_commitment_mismatch` | a successor did not open the predecessor's key commitment | a missing, extra or different active key, or a legacy successor | check the complete promised set |
+| `:descriptor_publication_invalid` | a publication failed its canonical shape or history rules | a wrong current name, a fork, or an equal effective instant | check the publication and its history |
 | `:descriptor_chain_invalid` | a descriptor history does not link up | no genesis or two, the same descriptor twice, a successor whose number, predecessor digest or `party_id` does not follow, or predecessor facts that do not verify again | reject the input; if you passed the predecessor facts, pass the ones `verify_descriptor` returned |
 
 ## Charter chain and governing revision
@@ -233,8 +235,10 @@ library's own tests through the public API (`test-exercised`).
 | `:corpus_index_invalid` | test-exercised | fires while a corpus loads |
 | `:cross_field_invalid` | corpus-exercised | a corpus case expects this code |
 | `:descriptor_chain_invalid` | corpus-exercised | a corpus case expects this code |
+| `:descriptor_commitment_mismatch` | corpus-exercised | a corpus case expects this code |
 | `:descriptor_invalid` | corpus-exercised | a corpus case expects this code |
 | `:descriptor_key_invalid` | corpus-exercised | a corpus case expects this code |
+| `:descriptor_publication_invalid` | corpus-exercised | a corpus case expects this code |
 | `:digest_algorithm_unsupported` | corpus-exercised | a corpus case expects this code |
 | `:digest_encoding_invalid` | corpus-exercised | a corpus case expects this code |
 | `:digest_mismatch` | corpus-exercised | a corpus case expects this code |

@@ -39,7 +39,8 @@ defmodule CharterAgreementProtocol.Error do
   - Envelopes and signatures: `:compact_invalid`,
     `:protected_header_invalid`, `:signature_invalid`.
   - Artifacts: `:descriptor_invalid`, `:descriptor_key_invalid`,
-    `:descriptor_chain_invalid`, `:revision_invalid`, `:acceptance_invalid`,
+    `:descriptor_chain_invalid`, `:descriptor_commitment_mismatch`,
+    `:descriptor_publication_invalid`, `:revision_invalid`, `:acceptance_invalid`,
     `:acceptance_claims_mismatch`, `:acceptance_equivocation_invalid`,
     `:termination_invalid`, `:termination_claims_mismatch`,
     `:chain_invalid`, `:governing_invalid`, `:receipt_invalid`,
@@ -113,6 +114,8 @@ defmodule CharterAgreementProtocol.Error do
     :descriptor_invalid,
     :descriptor_key_invalid,
     :descriptor_chain_invalid,
+    :descriptor_commitment_mismatch,
+    :descriptor_publication_invalid,
     :revision_invalid,
     :acceptance_invalid,
     :acceptance_claims_mismatch,
@@ -180,6 +183,8 @@ defmodule CharterAgreementProtocol.Error do
           | :descriptor_invalid
           | :descriptor_key_invalid
           | :descriptor_chain_invalid
+          | :descriptor_commitment_mismatch
+          | :descriptor_publication_invalid
           | :revision_invalid
           | :acceptance_invalid
           | :acceptance_claims_mismatch

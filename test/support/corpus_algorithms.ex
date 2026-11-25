@@ -14,6 +14,15 @@ defmodule CharterAgreementProtocol.ConformanceTest.CorpusAlgorithms do
   defp ml_dsa?(input) when is_list(input), do: Enum.any?(input, &ml_dsa?/1)
   defp ml_dsa?("ML-DSA-" <> _parameter), do: true
 
+  defp ml_dsa?("{" <> _rest = input) do
+    case :json.decode(input) do
+      %{"descriptors" => compacts} when is_list(compacts) -> Enum.any?(compacts, &ml_dsa?/1)
+      _other -> false
+    end
+  rescue
+    _error -> false
+  end
+
   defp ml_dsa?(input) when is_binary(input) do
     case String.split(input, ".") do
       [header, _payload, _signature] ->

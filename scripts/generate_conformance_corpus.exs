@@ -2542,6 +2542,20 @@ cases =
     end
   end) ++ Enum.map(shared_lifecycle_ids, &Map.fetch!(shared_lifecycle_cases, &1))
 
+# Keep the signed descriptor histories in the certified files, including
+# the ML-DSA signatures when regeneration runs on a limited substrate.
+publication_cases =
+  root
+  |> Path.join("cases/*descriptor*-verify.json")
+  |> Path.wildcard()
+  |> Kernel.++([Path.join(root, "cases/signing-prepare.json")])
+  |> Enum.flat_map(fn path ->
+    %{"cases" => retained} = path |> File.read!() |> :json.decode()
+    Enum.filter(retained, &String.starts_with?(&1["id"], "descriptor-publication-"))
+  end)
+
+cases = cases ++ publication_cases
+
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 
 grouped = Enum.group_by(cases, & &1["surface"])

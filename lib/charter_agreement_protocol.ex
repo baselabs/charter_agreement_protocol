@@ -76,6 +76,7 @@ defmodule CharterAgreementProtocol do
 
   The claims' `protocol_revision` must match the algorithm you sign with: 2
   for `"Ed25519"` (the default) and 3 for `"ML-DSA-65"`.
+  Party descriptors can also use revision 8 with either emission algorithm.
 
   ## Limits, profiles and errors
 
@@ -102,6 +103,8 @@ defmodule CharterAgreementProtocol do
     CharterRevision,
     DescriptorChain,
     DescriptorFacts,
+    DescriptorPublication,
+    DescriptorPublicationFacts,
     Limits,
     PartyDescriptor,
     Receipt,
@@ -219,6 +222,37 @@ defmodule CharterAgreementProtocol do
   defdelegate verify_descriptor(compact, predecessor, limits, profile),
     to: PartyDescriptor,
     as: :verify
+
+  @doc "Identify the algorithm and public bytes of a descriptor verification key."
+  @spec signer_thumbprint(term()) ::
+          {:ok, binary()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate signer_thumbprint(key), to: PartyDescriptor
+
+  @doc "Compute a commitment over the complete active successor key set."
+  @spec descriptor_next_key_commitment(term(), Limits.t()) ::
+          {:ok, binary()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate descriptor_next_key_commitment(keys, limits),
+    to: PartyDescriptor,
+    as: :next_key_commitment
+
+  @doc "Encode a publication's unsigned canonical distribution document."
+  @spec encode_descriptor_publication(term(), Limits.t()) ::
+          {:ok, binary()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate encode_descriptor_publication(claims, limits),
+    to: DescriptorPublication,
+    as: :encode
+
+  @doc "Verify a publication from genesis through its named current and next descriptors."
+  @spec verify_descriptor_publication(term(), Limits.t()) ::
+          {:ok, DescriptorPublicationFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  @spec verify_descriptor_publication(term(), Limits.t(), Profile.t()) ::
+          {:ok, DescriptorPublicationFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  def verify_descriptor_publication(bytes, limits, profile \\ Profile.full()),
+    do: DescriptorPublication.verify(bytes, limits, profile)
+
+  @doc "Hash publication bytes using the publication content domain."
+  @spec descriptor_publication_digest(binary()) :: binary()
+  defdelegate descriptor_publication_digest(bytes), to: DescriptorPublication, as: :digest
 
   @doc """
   Verify every descriptor you hold for one party, in any order.

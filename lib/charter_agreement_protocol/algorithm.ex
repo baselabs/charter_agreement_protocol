@@ -92,7 +92,7 @@ defmodule CharterAgreementProtocol.Algorithm do
     }
   ]
 
-  @accepted_protocol_revisions [1, 2, 3]
+  @accepted_protocol_revisions [1, 2, 3, 8]
   @emissions %{"Ed25519" => 2, "ML-DSA-65" => 3}
 
   @typedoc "One registry row."

@@ -183,6 +183,7 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
     "compact-jws-protected-header",
     "corpus-index",
     "corpus-report",
+    "descriptor-publication",
     "extension-envelope",
     "party-descriptor-claims",
     "receipt-claims",
@@ -393,6 +394,7 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
       {"compact-jws-protected-header", compact_protected(descriptor)},
       {"tagged-digest", member!(compact_payload(receipt), "revision_digest")},
       {"timestamp", member!(compact_payload(receipt), "recorded_at")},
+      {"descriptor-publication", case_revision_text("descriptor_publication-verify.json", 0)},
       {"corpus-index", corpus_file!("index.json")},
       {"corpus-report", report_document()}
     ]
@@ -433,6 +435,32 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
           {schema_for(schemas, "corpus-index"), corpus_file!("index.json")},
           {schema_for(schemas, "corpus-report"), report_document()}
         ]
+
+    publication_schema = schema_for(schemas, "descriptor-publication")
+    {:object, members} = corpus_file!("cases/descriptor_publication-verify.json")
+    {:array, publications} = member!({:object, members}, "cases")
+
+    publications =
+      for one <- publications, valid_case?(one) do
+        {:string, text} = member!(input_of(one), "text")
+        document = decode!(text)
+        {:array, compacts} = member!(document, "descriptors")
+
+        embedded =
+          for wire <- collect_wire_values({:array, compacts}) do
+            case wire do
+              {:header, value} ->
+                {header, value}
+
+              {:claims, typ, value} ->
+                {schema_for(schemas, Map.fetch!(@claims_schema, typ)), value}
+            end
+          end
+
+        [{publication_schema, document} | embedded]
+      end
+
+    pairs = pairs ++ List.flatten(publications)
 
     Enum.each(pairs, fn {parsed, instance} ->
       assert_valid("corpus artifact", "positive", parsed, instance)

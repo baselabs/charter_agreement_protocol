@@ -11,6 +11,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   alias CharterAgreementProtocol.{
     Algorithm,
     Base64Url,
+    Canonicalization,
     Capability.Profile,
     CompactJws,
     DescriptorFacts,
@@ -19,6 +20,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     Extension,
     Facts,
     Internal.Retained,
+    Json,
     Limits,
     Schema,
     Timestamp
@@ -62,6 +64,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     :party_id,
     :descriptor_number,
     :prev_descriptor_digest,
+    :next_key_commitment,
     :verification_keys,
     :attestation_hints,
     :extensions,
@@ -71,10 +74,11 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   ]
 
   @type t :: %__MODULE__{
-          protocol_revision: 1 | 2 | 3,
+          protocol_revision: 1 | 2 | 3 | 8,
           party_id: nil | binary(),
           descriptor_number: pos_integer(),
           prev_descriptor_digest: nil | binary(),
+          next_key_commitment: nil | binary(),
           verification_keys: [VerificationKey.t()],
           attestation_hints: [AttestationHint.t()],
           extensions: CharterAgreementProtocol.Json.value(),
@@ -137,7 +141,8 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
                 Schema.field("protocol_revision",
                   required?: true,
                   types: [:integer],
-                  constraint: {:integer_range, 1, 3}
+                  constraint:
+                    {:one_of, [{:integer, 1}, {:integer, 2}, {:integer, 3}, {:integer, 8}]}
                 ),
                 Schema.field("party_id",
                   types: [:string],
@@ -149,6 +154,10 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
                   constraint: {:integer_range, 1, 9_007_199_254_740_991}
                 ),
                 Schema.field("prev_descriptor_digest",
+                  types: [:string],
+                  constraint: {:matches, ~r/\Asha-256:[A-Za-z0-9_-]{43}\z/}
+                ),
+                Schema.field("next_key_commitment",
                   types: [:string],
                   constraint: {:matches, ~r/\Asha-256:[A-Za-z0-9_-]{43}\z/}
                 ),
@@ -172,16 +181,85 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
                 )
               ])
 
+  @legacy_definition %{
+    @definition
+    | fields: Enum.reject(@definition.fields, &(&1.name == "next_key_commitment"))
+  }
+
+  @key_set_definition Schema.definition("descriptor_keys", [
+                        Enum.find(@definition.fields, &(&1.name == "verification_keys"))
+                      ])
+
+  @doc "Return the algorithm-and-public-key thumbprint of a verification key."
+  @spec signer_thumbprint(term()) :: {:ok, binary()} | {:error, Error.t()}
+  def signer_thumbprint(key) do
+    with {:ok, value} <- Canonicalization.from_plain(key_declaration(key)),
+         {:ok, value} <- Schema.validate(@key_definition, value),
+         {:ok, [key]} <- verification_keys({:array, [value]}, 8) do
+      {:ok, key_thumbprint(key)}
+    end
+  end
+
+  @doc "Commit to the complete, distinct active key set under caller limits."
+  @spec next_key_commitment(term(), Limits.t()) :: {:ok, binary()} | {:error, Error.t()}
+  def next_key_commitment(keys, %Limits{} = limits) do
+    cond do
+      not Limits.valid?(limits) -> invalid_limits()
+      not is_list(keys) -> {:error, Error.new(:invalid_type, ["verification_keys"])}
+      true -> commit_key_declarations(keys, limits)
+    end
+  end
+
+  def next_key_commitment(_keys, _limits),
+    do: {:error, Error.new(:invalid_type, ["limits"])}
+
+  defp commit_key_declarations(keys, limits) do
+    with {:ok, declarations} <- key_declarations(keys, []),
+         {:ok, bytes} <-
+           Canonicalization.encode_plain(%{"verification_keys" => declarations}),
+         {:ok, value} <- Json.decode(bytes, limits),
+         {:ok, {:object, [{"verification_keys", values}]}} <-
+           Schema.validate(@key_set_definition, value),
+         {:ok, keys} <- verification_keys(values, 8),
+         :ok <- unique_active_keys(keys),
+         :ok <- unique_key_material(keys, 8) do
+      {:ok, keys |> commitment_digest() |> Digest.to_tagged()}
+    end
+  end
+
+  defp key_declarations([], acc), do: {:ok, Enum.reverse(acc)}
+
+  defp key_declarations([key | rest], acc) when length(acc) < 32,
+    do: key_declarations(rest, [key_declaration(key) | acc])
+
+  defp key_declarations(_keys, _acc), do: descriptor_error()
+
+  defp key_declaration(%VerificationKey{public_key: key, status: status} = record)
+       when is_binary(key) and status in [:active, :retired] do
+    %{
+      "algorithm" => record.algorithm,
+      "key_id" => record.key_id,
+      "public_key" => Base64Url.encode(key),
+      "status" => Atom.to_string(status)
+    }
+  end
+
+  defp key_declaration(value), do: value
+
   @doc "Decode and structurally validate one canonical descriptor envelope."
   @spec decode(term(), Limits.t()) :: {:ok, t()} | {:error, Error.t()}
   def decode(compact, %Limits{} = limits) do
     with {:ok, envelope} <- CompactJws.parse(compact, "cap+party", limits),
-         {:ok, payload} <- Schema.validate(@definition, envelope.payload) do
+         revision = CompactJws.protocol_revision(envelope),
+         {:ok, payload} <- Schema.validate(definition(revision), envelope.payload) do
       extract(payload, envelope)
     end
   end
 
   def decode(_compact, _limits), do: {:error, Error.new(:invalid_type, ["limits"])}
+
+  defp definition(8), do: @definition
+  defp definition(_legacy), do: @legacy_definition
 
   @doc "Return the descriptor's domain-separated content digest."
   @spec digest(t()) :: binary()
@@ -256,8 +334,10 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
     with {:ok, party_id} <- optional_digest(values, "party_id"),
          {:ok, previous} <- optional_digest(values, "prev_descriptor_digest"),
+         {:ok, promise} <- optional_digest(values, "next_key_commitment"),
          {:ok, keys} <- verification_keys(values["verification_keys"], protocol_revision),
          :ok <- unique_active_keys(keys),
+         :ok <- unique_key_material(keys, protocol_revision),
          {:ok, hints} <- attestation_hints(values["attestation_hints"]),
          {:ok, extension_outcome} <-
            Extension.validate(values["extensions"], :party_descriptor),
@@ -269,6 +349,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
          party_id: party_id,
          descriptor_number: descriptor_number,
          prev_descriptor_digest: previous,
+         next_key_commitment: promise,
          verification_keys: keys,
          attestation_hints: hints,
          extensions: values["extensions"],
@@ -341,6 +422,46 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
       else: descriptor_error()
   end
 
+  defp unique_key_material(keys, 8) do
+    thumbprints = active_thumbprints(keys)
+    if thumbprints == Enum.uniq(thumbprints), do: :ok, else: descriptor_error()
+  end
+
+  defp unique_key_material(_keys, _legacy), do: :ok
+
+  defp active_thumbprints(keys) do
+    for %VerificationKey{status: :active} = key <- keys, do: key_thumbprint(key)
+  end
+
+  defp key_thumbprint(key) do
+    {:ok, bytes} =
+      Canonicalization.encode_plain(%{
+        "algorithm" => key.algorithm,
+        "public_key" => Base64Url.encode(key.public_key)
+      })
+
+    :signer_key |> Digest.hash(bytes) |> Digest.to_tagged()
+  end
+
+  defp commitment_digest(keys) do
+    {:ok, bytes} = keys |> active_thumbprints() |> Enum.sort() |> Canonicalization.encode_plain()
+    Digest.hash(:descriptor_next_keys, bytes)
+  end
+
+  defp open_commitment(_descriptor, nil), do: :ok
+
+  defp open_commitment(descriptor, promise) do
+    with 8 <- descriptor.protocol_revision,
+         {:ok, expected} <- Digest.from_tagged(promise),
+         true <- Digest.equal?(expected, commitment_digest(descriptor.verification_keys)) do
+      :ok
+    else
+      _failure ->
+        {:error,
+         Error.new(:descriptor_commitment_mismatch, ["party_descriptor", "verification_keys"])}
+    end
+  end
+
   defp attestation_hints({:array, values}) do
     {:ok,
      Enum.map(values, fn {:object, members} ->
@@ -407,6 +528,55 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
       false -> chain_error()
     end
   end
+
+  @doc false
+  @spec verify_publication_history([binary()], Limits.t(), Profile.t()) ::
+          {:ok, [DescriptorFacts.t()]} | {:error, Error.t()}
+  def verify_publication_history(compacts, limits, profile) do
+    with {:ok, reversed} <- decode_chain_entries(compacts, limits),
+         entries = Enum.reverse(reversed),
+         true <- publication_history_shape?(entries) do
+      entries
+      |> Enum.reduce_while({:ok, %{}, []}, fn entry, {:ok, index, verified} ->
+        previous = Map.get(index, entry.descriptor.prev_descriptor_digest)
+
+        case verify_decoded(entry.descriptor, entry.compact, previous, profile) do
+          {:ok, facts} ->
+            {:cont, {:ok, Map.put(index, entry.digest, facts), [facts | verified]}}
+
+          error ->
+            {:halt, error}
+        end
+      end)
+      |> publication_history_result()
+    else
+      false -> {:error, Error.new(:descriptor_publication_invalid, ["descriptor_publication"])}
+      error -> error
+    end
+  end
+
+  defp publication_history_shape?([]), do: false
+
+  defp publication_history_shape?([root | rest] = entries) do
+    by_digest = Map.new(entries, &{&1.digest, &1.descriptor})
+
+    root.descriptor.descriptor_number == 1 and
+      map_size(by_digest) == length(entries) and
+      entries == Enum.sort_by(entries, &{&1.descriptor.descriptor_number, &1.digest}) and
+      Enum.all?(rest, fn %{descriptor: descriptor} ->
+        case Map.fetch(by_digest, descriptor.prev_descriptor_digest) do
+          {:ok, previous} ->
+            descriptor.descriptor_number == previous.descriptor_number + 1 and
+              descriptor.party_id == root.digest
+
+          :error ->
+            false
+        end
+      end)
+  end
+
+  defp publication_history_result({:ok, _index, verified}), do: {:ok, Enum.reverse(verified)}
+  defp publication_history_result(error), do: error
 
   defp decode_chain_entries(compacts, limits) do
     Enum.reduce_while(compacts, {:ok, []}, fn compact, {:ok, entries} ->
@@ -648,7 +818,8 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     if descriptor.descriptor_number == expected_number and
          descriptor.prev_descriptor_digest == predecessor.descriptor_digest and
          descriptor.party_id == predecessor.party_id do
-      with :ok <- CompactJws.admit(descriptor.envelope, profile) do
+      with :ok <- CompactJws.admit(descriptor.envelope, profile),
+           :ok <- open_commitment(descriptor, predecessor.descriptor.next_key_commitment) do
         {:ok, predecessor.party_id,
          active_keys(predecessor.descriptor.verification_keys, descriptor.envelope.kid),
          [compact | predecessor.lineage]}

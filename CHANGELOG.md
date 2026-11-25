@@ -4,6 +4,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+- Admit revision-8 successor key commitments and verify unsigned current/next
+  descriptor publications against their complete signed history.
+
 - Record limited-substrate outcomes for receipt preparation when an ML-DSA
   chain blocks verification before malformed claims are checked.
 

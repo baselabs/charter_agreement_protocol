@@ -193,7 +193,8 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
            end)
 
     counts = Enum.frequencies_by(cases, & &1["surface"])
-    assert counts["party_descriptor.verify"] + counts["descriptor_chain.verify"] == 71
+    assert counts["party_descriptor.verify"] + counts["descriptor_chain.verify"] == 81
+    assert counts["descriptor_publication.verify"] == 22
     assert counts["charter_revision.decode"] == 50
     assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 49
     assert counts["termination.verify"] == 29

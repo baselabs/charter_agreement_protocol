@@ -7,6 +7,91 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
 
   @mutations [
     %{
+      name: "next-key-opening-skip",
+      path: "lib/charter_agreement_protocol/party_descriptor.ex",
+      from: "true <- Digest.equal?(expected, commitment_digest(descriptor.verification_keys))",
+      to:
+        "true <- is_boolean(Digest.equal?(expected, " <>
+          "commitment_digest(descriptor.verification_keys)))",
+      command:
+        ~w(mix test test/charter_agreement_protocol/descriptor_publication_test.exs --seed 42)
+    },
+    %{
+      name: "next-key-prefix-dropped",
+      path: "lib/charter_agreement_protocol/party_descriptor.ex",
+      from: "    Digest.hash(:descriptor_next_keys, bytes)",
+      to: "    Digest.of(bytes)",
+      command:
+        ~w(mix test test/charter_agreement_protocol/descriptor_publication_test.exs --seed 42)
+    },
+    %{
+      name: "next-key-algorithm-omitted",
+      path: "lib/charter_agreement_protocol/party_descriptor.ex",
+      from: "        \"algorithm\" => key.algorithm,\n",
+      to: "",
+      command:
+        ~w(mix test test/charter_agreement_protocol/descriptor_publication_test.exs --seed 42)
+    },
+    %{
+      name: "next-key-id-included",
+      path: "lib/charter_agreement_protocol/party_descriptor.ex",
+      from: "        \"algorithm\" => key.algorithm,",
+      to: "        \"algorithm\" => key.algorithm,\n        \"key_id\" => key.key_id,",
+      command:
+        ~w(mix test test/charter_agreement_protocol/descriptor_publication_test.exs --seed 42)
+    },
+    %{
+      name: "next-key-retired-included",
+      path: "lib/charter_agreement_protocol/party_descriptor.ex",
+      from: "for %VerificationKey{status: :active} = key <- keys",
+      to: "for %VerificationKey{} = key <- keys",
+      command:
+        ~w(mix test test/charter_agreement_protocol/descriptor_publication_test.exs --seed 42)
+    },
+    %{
+      name: "next-key-downgrade-accepted",
+      path: "lib/charter_agreement_protocol/party_descriptor.ex",
+      from: "    with 8 <- descriptor.protocol_revision,",
+      to: "    with true <- descriptor.protocol_revision in [1, 2, 3, 8],",
+      command:
+        ~w(mix test test/charter_agreement_protocol/descriptor_publication_test.exs --seed 42)
+    },
+    %{
+      name: "publication-link-skip",
+      path: "lib/charter_agreement_protocol/descriptor_publication.ex",
+      from: "next.prev_descriptor_digest == current.descriptor_digest",
+      to: "next.prev_descriptor_digest != nil",
+      command:
+        ~w(mix test test/charter_agreement_protocol/descriptor_publication_test.exs --seed 42)
+    },
+    %{
+      name: "publication-selects-fork",
+      path: "lib/charter_agreement_protocol/descriptor_publication.ex",
+      from: "true <- linear?(history),",
+      to: "true <- is_boolean(linear?(history)),",
+      command:
+        ~w(mix test test/charter_agreement_protocol/descriptor_publication_test.exs --seed 42)
+    },
+    %{
+      name: "publication-history-profile-skip",
+      path: "lib/charter_agreement_protocol/descriptor_publication.ex",
+      from:
+        "PartyDescriptor.verify_publication_history(document[\"descriptors\"], limits, profile)",
+      to:
+        "PartyDescriptor.verify_publication_history(" <>
+          "document[\"descriptors\"], limits, Profile.full())",
+      command:
+        ~w(mix test test/charter_agreement_protocol/descriptor_publication_test.exs --seed 42)
+    },
+    %{
+      name: "publication-effective-order-skip",
+      path: "lib/charter_agreement_protocol/descriptor_publication.ex",
+      from: ":lt <-\n           Timestamp.compare",
+      to: "comparison when comparison in [:lt, :eq] <-\n           Timestamp.compare",
+      command:
+        ~w(mix test test/charter_agreement_protocol/descriptor_publication_test.exs --seed 42)
+    },
+    %{
       name: "json-syntax-before-container-limits",
       path: "lib/charter_agreement_protocol/json.ex",
       from: "        decode_bounded(input, limits)",

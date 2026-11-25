@@ -96,9 +96,7 @@
  ],
  "properties": {
   "protocol_revision": {
-   "type": "integer",
-   "minimum": 1,
-   "maximum": 3
+   "enum": [1, 2, 3, 8]
   },
   "party_id": {
    "$ref": "#/$defs/tagged_digest"
@@ -109,6 +107,9 @@
    "maximum": 9007199254740991
   },
   "prev_descriptor_digest": {
+   "$ref": "#/$defs/tagged_digest"
+  },
+  "next_key_commitment": {
    "$ref": "#/$defs/tagged_digest"
   },
   "verification_keys": {

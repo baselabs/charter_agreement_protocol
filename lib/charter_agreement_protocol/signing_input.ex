@@ -6,7 +6,8 @@ defmodule CharterAgreementProtocol.SigningInput do
   Callers pass `%{"kid" => kid, "claims" => claims}` with an optional
   `"algorithm"` member: `"Ed25519"` (the default) or `"ML-DSA-65"`. The
   claims' `protocol_revision` must equal that algorithm's emission revision:
-  2 for `"Ed25519"` and 3 for `"ML-DSA-65"`. This module builds the closed
+  2 for `"Ed25519"` and 3 for `"ML-DSA-65"`. Party descriptors can also
+  use revision 8 with either emission algorithm. This module builds the closed
   protected header, canonicalizes the claims, checks them with the same
   decoder verification uses, and returns the exact RFC 7515 signing bytes in
   `message`.
@@ -161,7 +162,7 @@ defmodule CharterAgreementProtocol.SigningInput do
     with {:ok, revision} <- emission_revision(alg),
          {:ok, claims_value} <- Canonicalization.from_plain(claims),
          :ok <- IntegerClaims.check(kind, claims_value),
-         true <- claims_revision(claims_value, revision),
+         true <- claims_revision(kind, claims_value, revision),
          {:ok, payload_bytes} <- Canonicalization.encode(claims_value),
          {:ok, protected_bytes} <- protected(kind, kid, alg),
          signing_input <- frame(kind, alg, protected_bytes, payload_bytes),
@@ -182,9 +183,8 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   def build(_kind, _input, _limits), do: invalid()
 
-  # The closed mint set: each emission alg names mints at exactly its emission
-  # revision, and the claims must already carry that revision — the
-  # provisional decode below re-enforces the full binding rule by construction.
+  # The declared emission names stay closed. The provisional decode enforces
+  # the artifact-specific revision and protected header binding.
   defp emission_revision(alg) do
     case Map.fetch(Algorithm.emissions(), alg) do
       {:ok, revision} -> {:ok, revision}
@@ -192,8 +192,9 @@ defmodule CharterAgreementProtocol.SigningInput do
     end
   end
 
-  defp claims_revision({:object, members}, revision) do
+  defp claims_revision(kind, {:object, members}, revision) do
     case List.keyfind(members, "protocol_revision", 0) do
+      {"protocol_revision", {:integer, 8}} when kind == :party_descriptor -> true
       {"protocol_revision", {:integer, ^revision}} -> true
       _other -> false
     end

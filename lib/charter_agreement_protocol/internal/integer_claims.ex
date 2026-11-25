@@ -4,6 +4,7 @@ defmodule CharterAgreementProtocol.Internal.IntegerClaims do
   alias CharterAgreementProtocol.Error
 
   @fields %{
+    descriptor_publication: ~w(protocol_revision),
     party_descriptor: ~w(protocol_revision descriptor_number),
     acceptance: ~w(protocol_revision revision_number),
     termination: ~w(protocol_revision),

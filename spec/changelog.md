@@ -8,6 +8,12 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-11-25 — descriptor key commitments and publication
+
+Revision 8 binds a successor's complete active key set and defines a bounded,
+unsigned publication of the current and next descriptors. The current source
+candidate records verification semantics 7.
+
 ## 2026-11-09 — editorial clarification for package 1.0.0
 
 Clarify redacted display versus retained artifact fields, receipt-only-context

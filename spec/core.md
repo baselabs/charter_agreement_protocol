@@ -121,8 +121,8 @@ this document's artifact sections.
 ## 4. Artifacts
 
 Four artifacts are attached compact JWS [RFC7515] whose signatures verify
-under the algorithm their registry row names; the charter revision is
-canonical unsigned JSON. A verifier MUST verify each attached signature
+under the algorithm their registry row names. The charter revision and
+descriptor publication use canonical unsigned JSON. A verifier MUST verify each attached signature
 over the exact compact signing-input bytes with the resolved public key
 under the row's key algorithm — Ed25519 [RFC8032] or pure ML-DSA
 (FIPS 204, context the empty string) [RFC9964]; a signature that does not
@@ -141,9 +141,10 @@ matches the sign bit to obtain `P = (x, y)`. A verifier MUST reject when
 [CAP-SIGNATURE-ed25519-verification].
 
 Every attached artifact carries
-`protocol_revision`; revisions 1, 2, and 3 are defined (revision 1 closed
+`protocol_revision`; revisions 1, 2, 3, and 8 are defined (revision 1 closed
 the `alg` name set to `EdDSA`; revision 2 admits the fully-specified
-`Ed25519` name; revision 3 admits the ML-DSA names), and a decoder
+`Ed25519` name; revision 3 admits the ML-DSA names; revision 8 adds
+key commitments and publication for party descriptors), and a decoder
 encountering an unknown revision MUST fail closed
 [CAP-REVISION-fail-closed].
 
@@ -161,7 +162,7 @@ key of its own parameterization whose public-key and signature byte
 lengths are the registry row's exact values; a name below its row's
 minimum revision MUST be rejected — no honest producer could have minted
 the pair [CAP-ALG-registry-binding] [CAP-ALG-mldsa-registry-rows].
-Producers MUST mint exactly (`Ed25519`, `protocol_revision` 2) or
+Outside revision-8 party descriptors, producers MUST mint exactly (`Ed25519`, `protocol_revision` 2) or
 (`ML-DSA-65`, `protocol_revision` 3); accepting `EdDSA`
 at revisions 2 and 3 keeps artifacts from producers that adopt a revision
 before renaming their emission verifiable [CAP-ALG-registry-binding].
@@ -218,6 +219,71 @@ registry data [CAP-SIGNATURE-mldsa-lengths]. A descriptor at a
 `protocol_revision` below 3 that declares an ML-DSA verification key MUST
 be rejected — the key grammar is gated on the descriptor's revision
 exactly as the `alg` name is [CAP-PARTY-DESCRIPTOR-key-grammar-gate].
+
+#### 4.2.1 Successor key commitments
+
+A party descriptor MAY include `next_key_commitment` at revision 8
+[CAP-DESCRIPTOR-commitment-member]. At revisions 1 through 3 the decoder
+MUST reject that member [CAP-DESCRIPTOR-commitment-member]. Producers of
+revision-8 descriptors MUST emit `Ed25519` or `ML-DSA-65`
+[CAP-DESCRIPTOR-commitment-emission].
+
+A key thumbprint MUST hash a canonical object containing exactly `algorithm`
+and `public_key` under the `signer_key` digest domain
+[CAP-DESCRIPTOR-key-thumbprint]. The separator is
+`charter-agreement-protocol/signer-key` followed by NUL. The `public_key`
+is the key's canonical base64url encoding. Renaming a key leaves its
+thumbprint unchanged.
+
+At revision 8 active key thumbprints MUST be distinct
+[CAP-DESCRIPTOR-distinct-key-material]. A commitment MUST hash the canonical
+array of every active tagged thumbprint, sorted bytewise, under the
+`descriptor_next_keys` digest domain [CAP-DESCRIPTOR-complete-key-set].
+The separator is `charter-agreement-protocol/descriptor-next-keys`
+followed by NUL. Retired keys remain subject to key grammar and are
+excluded from this array.
+
+After predecessor binding and profile admission, a successor of a committed
+descriptor MUST carry revision 8 [CAP-DESCRIPTOR-opening-revision].
+The verifier MUST compare the commitment to the successor's complete active
+key set in constant time [CAP-DESCRIPTOR-complete-key-opening]. A failed
+opening returns `descriptor_commitment_mismatch` in standalone verification
+and `descriptor_chain_invalid` in a descriptor chain. The successor can
+omit its own commitment. Valid competing openings remain fork evidence.
+
+#### 4.2.2 Descriptor publication
+
+An unsigned publication MUST be canonical JSON with exactly
+`protocol_revision` equal to 8, `party_id`, `current_descriptor_digest`,
+`next_descriptor_digest`, and `descriptors`
+[CAP-PUBLICATION-closed-document]. The three digests MUST use canonical
+tagged SHA-256 encoding [CAP-PUBLICATION-coordinate-grammar]. The
+`descriptors` array MUST carry 2 to 4096 compact strings and satisfy
+the caller's JSON and artifact-set ceilings [CAP-PUBLICATION-bounded-history].
+The publication digest MUST hash the canonical publication bytes under
+`descriptor_publication_content` [CAP-PUBLICATION-content-digest].
+The separator is `charter-agreement-protocol/descriptor-publication-content`
+followed by NUL.
+
+The publication MUST supply the unique descriptors in a complete history
+from genesis, sorted by descriptor number then digest
+[CAP-PUBLICATION-history-order]. Every embedded descriptor and link MUST
+verify under the caller's profile and limits [CAP-PUBLICATION-verify-history].
+The document itself MUST satisfy the revision axis of the profile
+[CAP-PUBLICATION-profile-revision]. The named party MUST match the genesis
+digest of the history [CAP-PUBLICATION-party-binding]. The history MUST be
+linear [CAP-PUBLICATION-linear-history]. The named next MUST be its sole head
+[CAP-PUBLICATION-next-head]. The named current MUST be the direct predecessor
+of next [CAP-PUBLICATION-direct-pair]. The parsed effective instant of next
+MUST be strictly later than current's [CAP-PUBLICATION-effective-order].
+
+Shape, canonical encoding, and publication relationship failures return
+`descriptor_publication_invalid`. Embedded commitment, signature, profile
+and substrate errors retain their codes. Publication facts retain the
+canonical bytes, verified pair, coordinates, effective instants, and
+whether the current descriptor's commitment opened or was absent. The
+publication describes the supplied history. Hosts can combine multiple
+publications to check for signed forks.
 
 ### 4.3 Charter Revision (unsigned canonical JSON)
 

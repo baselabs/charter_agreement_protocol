@@ -20,6 +20,9 @@ defmodule CharterAgreementProtocol.Digest do
   @tags %{sha256: "sha-256"}
   @sizes %{sha256: 32}
   @separators %{
+    signer_key: "charter-agreement-protocol/signer-key",
+    descriptor_next_keys: "charter-agreement-protocol/descriptor-next-keys",
+    descriptor_publication_content: "charter-agreement-protocol/descriptor-publication-content",
     party_descriptor_content: "charter-agreement-protocol/party-descriptor-content",
     charter_revision_content: "charter-agreement-protocol/charter-revision-content",
     acceptance_content: "charter-agreement-protocol/acceptance-content",

@@ -12,7 +12,7 @@ defmodule CharterAgreementProtocol.Conformance.Cli do
 
   alias CharterAgreementProtocol.Conformance.{Corpus, Report, Runner}
 
-  @certified_index_sha256_base64url "WbBb7BEOGDGOUmKQ7oo64tXFFj6vWMSIWd1lAaTx9J8"
+  @certified_index_sha256_base64url "A_LEDCADvWgWJpxItQvIvFg0463hsL_5LsKn9rB8VQY"
   @maximum_files 64
   @maximum_bytes 33_554_432
 

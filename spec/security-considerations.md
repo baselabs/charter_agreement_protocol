@@ -108,3 +108,8 @@ clock and performs no I/O.
 - Hosts that assemble compacts from externally produced signatures must
   post-verify the assembled artifact through CAP before use.
 - The demo fixtures and corpus vectors are never trust anchors.
+
+A successor opens its predecessor's promise with all active keys, including any
+retained overlap keys. A predecessor can sign multiple valid openings. Hosts can
+check the union of observed publications for forks. A publication attests only to
+the signatures and relationships in its supplied view.

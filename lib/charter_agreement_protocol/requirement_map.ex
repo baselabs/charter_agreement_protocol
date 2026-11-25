@@ -9,6 +9,126 @@ defmodule CharterAgreementProtocol.RequirementMap do
   """
 
   @entries [
+    {"CAP-DESCRIPTOR-commitment-member",
+     [
+       {:corpus, ["party_descriptor.verify:unknown_member", "party_descriptor.verify:valid"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest}
+     ]},
+    {"CAP-DESCRIPTOR-commitment-emission",
+     [
+       {:corpus, ["signing.prepare:valid", "signing.prepare:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest}
+     ]},
+    {"CAP-DESCRIPTOR-key-thumbprint",
+     [
+       {:corpus, ["descriptor_publication.verify:valid"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest},
+       {:mutation, "next-key-algorithm-omitted"},
+       {:mutation, "next-key-id-included"}
+     ]},
+    {"CAP-DESCRIPTOR-distinct-key-material",
+     [
+       {:corpus, ["party_descriptor.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest}
+     ]},
+    {"CAP-DESCRIPTOR-complete-key-set",
+     [
+       {:corpus, ["descriptor_publication.verify:valid"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest},
+       {:mutation, "next-key-prefix-dropped"},
+       {:mutation, "next-key-retired-included"}
+     ]},
+    {"CAP-DESCRIPTOR-opening-revision",
+     [
+       {:corpus, ["party_descriptor.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest},
+       {:mutation, "next-key-downgrade-accepted"}
+     ]},
+    {"CAP-DESCRIPTOR-complete-key-opening",
+     [
+       {:corpus,
+        [
+          "party_descriptor.verify:invalid_constraint",
+          "descriptor_chain.verify:chain_invalid",
+          "descriptor_chain.verify:descriptor_fork"
+        ]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest},
+       {:mutation, "next-key-opening-skip"}
+     ]},
+    {"CAP-PUBLICATION-closed-document",
+     [
+       {:corpus,
+        [
+          "descriptor_publication.verify:invalid_type",
+          "descriptor_publication.verify:unknown_member",
+          "descriptor_publication.verify:non_canonical_bytes"
+        ]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest}
+     ]},
+    {"CAP-PUBLICATION-coordinate-grammar",
+     [
+       {:corpus, ["descriptor_publication.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest}
+     ]},
+    {"CAP-PUBLICATION-bounded-history",
+     [
+       {:corpus, ["descriptor_publication.verify:maximum_plus_one"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest}
+     ]},
+    {"CAP-PUBLICATION-content-digest",
+     [
+       {:corpus, ["descriptor_publication.verify:valid"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest}
+     ]},
+    {"CAP-PUBLICATION-history-order",
+     [
+       {:corpus, ["descriptor_publication.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest}
+     ]},
+    {"CAP-PUBLICATION-verify-history",
+     [
+       {:corpus,
+        [
+          "descriptor_publication.verify:signature_invalid",
+          "descriptor_publication.verify:profile_revision_outside",
+          "descriptor_publication.verify:profile_algorithm_outside"
+        ]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest},
+       {:mutation, "publication-history-profile-skip"}
+     ]},
+    {"CAP-PUBLICATION-profile-revision",
+     [
+       {:corpus, ["descriptor_publication.verify:profile_revision_outside"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest}
+     ]},
+    {"CAP-PUBLICATION-party-binding",
+     [
+       {:corpus, ["descriptor_publication.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest}
+     ]},
+    {"CAP-PUBLICATION-linear-history",
+     [
+       {:corpus, ["descriptor_publication.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest},
+       {:mutation, "publication-selects-fork"}
+     ]},
+    {"CAP-PUBLICATION-next-head",
+     [
+       {:corpus, ["descriptor_publication.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest}
+     ]},
+    {"CAP-PUBLICATION-direct-pair",
+     [
+       {:corpus, ["descriptor_publication.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest},
+       {:mutation, "publication-link-skip"}
+     ]},
+    {"CAP-PUBLICATION-effective-order",
+     [
+       {:corpus, ["descriptor_publication.verify:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.DescriptorPublicationTest},
+       {:mutation, "publication-effective-order-skip"}
+     ]},
     {"CAP-CHAIN-repair-acceptance",
      [
        {:corpus, ["governing_revision:precedence_selection"]},

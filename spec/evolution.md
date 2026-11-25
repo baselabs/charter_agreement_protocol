@@ -86,3 +86,7 @@ window. CAP's descriptor histories are structured so a future
 keytrans-conformant log can be adopted as a distribution layer without
 changing artifact grammar. No action is taken until those drafts reach
 RFC.
+
+Revision 8 admits descriptor commitments and unsigned descriptor publications. The
+existing descriptor digests and the revisions accepted by other artifact grammars
+are unchanged. Revisions 4 through 7 remain unassigned here.

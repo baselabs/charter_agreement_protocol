@@ -17,6 +17,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     Chain,
     CharterRevision,
     DescriptorChain,
+    DescriptorPublication,
     Digest,
     Error,
     Json,
@@ -37,6 +38,9 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
         }
 
   @digest_domains %{
+    "signer_key" => :signer_key,
+    "descriptor_next_keys" => :descriptor_next_keys,
+    "descriptor_publication_content" => :descriptor_publication_content,
     "party_descriptor_content" => :party_descriptor_content,
     "charter_revision_content" => :charter_revision_content,
     "acceptance_content" => :acceptance_content,
@@ -155,6 +159,22 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   defp execute(%{"surface" => "descriptor_chain.verify", "input" => input}, _profile) do
     DescriptorChain.verify(input["compacts"], Limits.default())
     |> project_ok(&descriptor_chain_projection/1)
+  end
+
+  defp execute(%{"surface" => "descriptor_publication.verify", "input" => input}, profile) do
+    {:ok, limits} = limits(input)
+
+    input["text"]
+    |> DescriptorPublication.verify(limits, profile)
+    |> project_ok(fn facts ->
+      %{
+        "publication_digest" => facts.publication_digest,
+        "party_id" => facts.party_id,
+        "current_descriptor_digest" => facts.current_descriptor_digest,
+        "next_descriptor_digest" => facts.next_descriptor_digest,
+        "commitment_status" => Atom.to_string(facts.commitment_status)
+      }
+    end)
   end
 
   defp execute(%{"surface" => "charter_revision.decode", "input" => input}, _profile) do

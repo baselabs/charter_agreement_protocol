@@ -7,6 +7,16 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
   alias CharterAgreementProtocol.{ReleaseCompatibility, ReleaseIdentity, RequirementMap}
 
   @mutation_names ~w(
+    next-key-opening-skip
+    next-key-prefix-dropped
+    next-key-algorithm-omitted
+    next-key-id-included
+    next-key-retired-included
+    next-key-downgrade-accepted
+    publication-link-skip
+    publication-selects-fork
+    publication-history-profile-skip
+    publication-effective-order-skip
     json-syntax-before-container-limits
     chain-empty-before-set-checks
     runner-null-axis-default

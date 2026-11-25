@@ -180,3 +180,19 @@ Verification returns facts, not the artifacts themselves: redacted records of wh
 checked. Every facts record carries a `not_verified` list naming what CAP did not
 check, such as legal validity and the wall clock. Facts print redacted, so they are
 safe to log. [Verification semantics](verification.md) describes each facts record.
+
+
+## Current and next descriptors
+
+A revision-8 descriptor can commit to every active key in its successor.
+Compute the commitment with `descriptor_next_key_commitment/2`, include it
+as `next_key_commitment` in the current descriptor, and sign the successor
+with a key active in the current descriptor. Include any overlap keys that
+will remain active in the successor. Key ids can change at the opening.
+
+Give `encode_descriptor_publication/2` the party id, the current and next
+descriptor digests, and the complete compact history in ascending order.
+`verify_descriptor_publication/3` checks every signature and link under
+caller limits and profile. It returns the named pair, their effective
+instants, and the commitment status. The publication describes the history
+it carries. Collect and check observed histories to detect signed forks.

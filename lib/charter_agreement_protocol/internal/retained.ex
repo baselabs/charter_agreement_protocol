@@ -84,7 +84,8 @@ defmodule CharterAgreementProtocol.Internal.Retained do
   defp descriptor_facts_shape?(_other), do: false
 
   defp descriptor_shape?(%PartyDescriptor{verification_keys: keys} = descriptor) do
-    complete?(descriptor, PartyDescriptor) and list?(keys) and Enum.all?(keys, &key_shape?/1)
+    complete?(descriptor, PartyDescriptor) and list?(keys) and Enum.all?(keys, &key_shape?/1) and
+      (is_nil(descriptor.next_key_commitment) or is_binary(descriptor.next_key_commitment))
   end
 
   defp descriptor_shape?(_other), do: false

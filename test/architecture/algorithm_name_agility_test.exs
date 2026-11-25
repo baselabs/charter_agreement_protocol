@@ -59,7 +59,7 @@ defmodule CharterAgreementProtocol.Architecture.AlgorithmNameAgilityTest do
              }
            ]
 
-    assert CAP.Algorithm.accepted_protocol_revisions() == [1, 2, 3]
+    assert CAP.Algorithm.accepted_protocol_revisions() == [1, 2, 3, 8]
     assert CAP.Algorithm.emissions() == %{"Ed25519" => 2, "ML-DSA-65" => 3}
     assert CAP.Algorithm.default_emission_name() == "Ed25519"
   end
