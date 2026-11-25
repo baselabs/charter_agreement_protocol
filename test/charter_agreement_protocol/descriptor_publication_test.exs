@@ -140,6 +140,40 @@ defmodule CharterAgreementProtocol.DescriptorPublicationTest do
              CAP.PartyDescriptor.verify_publication_history([], limits, profile)
   end
 
+  test "publication coordinates must be tagged digest strings" do
+    limits = Limits.default()
+    document = "opened" |> publication_text() |> JSON.decode!()
+    expected = Error.new(:descriptor_publication_invalid, ["descriptor_publication"])
+
+    for {member, value} <- [
+          {"party_id", 1},
+          {"current_descriptor_digest", []},
+          {"next_descriptor_digest", %{}}
+        ] do
+      malformed = Map.put(document, member, value)
+
+      assert {:error, ^expected} = CAP.encode_descriptor_publication(malformed, limits)
+    end
+  end
+
+  test "publication history rejects a signed successor whose predecessor is missing" do
+    limits = Limits.default()
+    document = "legacy-history" |> publication_text() |> JSON.decode!()
+    %{"descriptors" => [genesis, _intermediate, successor]} = document
+    incomplete = %{document | "descriptors" => [genesis, successor]}
+    expected = Error.new(:descriptor_publication_invalid, ["descriptor_publication"])
+
+    assert {:ok, text} = CAP.encode_descriptor_publication(incomplete, limits)
+    assert {:error, ^expected} = CAP.verify_descriptor_publication(text, limits)
+  end
+
+  test "publication history returns the signature error from a rejected successor" do
+    text = publication_text("corrupt-signature")
+    expected = Error.new(:signature_invalid, ["compact_jws", "signature"])
+
+    assert {:error, ^expected} = CAP.verify_descriptor_publication(text, Limits.default())
+  end
+
   test "key commitment options and cardinality fail with typed errors" do
     limits = Limits.default()
 
