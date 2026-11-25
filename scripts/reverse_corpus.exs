@@ -45,6 +45,12 @@ defmodule CharterAgreementProtocol.ReverseCorpus do
     Map.merge(corpus_outcomes, public_outcomes)
   end
 
+  # Both runtimes use the same projections. Carry them across the process
+  # boundary without converting native terms to JSON.
+  def write_outcomes!(path, outcomes), do: File.write!(path, :erlang.term_to_binary(outcomes))
+
+  def read_outcomes!(path), do: path |> File.read!() |> :erlang.binary_to_term([:safe])
+
   def observation(operation, value), do: %{"operation" => operation, "value" => value}
 
   # The published corpus interface lacks exactly these two known entry shapes.

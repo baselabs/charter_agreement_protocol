@@ -1,6 +1,8 @@
 defmodule CharterAgreementProtocol.ReleaseCompatibility do
   @moduledoc false
 
+  alias CharterAgreementProtocol.Canonicalization
+
   @baselines ~w(hex:1.0.0 npm:1.0.0)
   @entry_points ~w(corpus_runner public_api)
   @non_errors ~w(valid raised unsupported)
@@ -57,6 +59,39 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
     else
       plain
     end
+  end
+
+  def verify_npm_witnesses!(row, pinned_metadata) do
+    {%{"package_version" => version, "compatibility" => rows}, :metadata, rest} =
+      :json.decode(pinned_metadata, :metadata, %{null: nil})
+
+    if String.trim(rest) != "", do: raise("pinned verifier source metadata has trailing data")
+
+    # Select the same row as the TypeScript reverse gate at the pinned source.
+    pinned = Enum.find(rows, &(version in &1["package_versions"]))
+    [current] = manifest([row])
+
+    unless npm_witnesses!(current) == npm_witnesses!(pinned) do
+      raise "npm compatibility witnesses differ from the pinned TypeScript verifier source"
+    end
+
+    :ok
+  end
+
+  defp npm_witnesses!(%{"transitions" => transitions}) do
+    witnesses = Enum.flat_map(transitions, &npm_transition/1)
+    {:ok, bytes} = Canonicalization.encode_plain(witnesses)
+    bytes
+  end
+
+  defp npm_transition(transition) do
+    witnesses = Enum.filter(Map.get(transition, "witnesses", []), &npm_witness?/1)
+
+    if witnesses == [], do: [], else: [Map.put(transition, "witnesses", witnesses)]
+  end
+
+  defp npm_witness?(%{"baselines" => baselines}) do
+    Enum.any?(baselines, &String.starts_with?(&1, "npm:"))
   end
 
   def verify_corpus_witnesses!(row, cases) do

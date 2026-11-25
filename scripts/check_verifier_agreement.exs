@@ -1,13 +1,21 @@
+Code.require_file("release_compatibility.exs", __DIR__)
 Code.require_file("seeded_mutation.exs", __DIR__)
 Code.require_file("verifier_source.exs", __DIR__)
 
 defmodule CharterAgreementProtocol.VerifierAgreementGate do
-  alias CharterAgreementProtocol.{SeededMutation, VerifierSource}
+  alias CharterAgreementProtocol.{
+    ReleaseCompatibility,
+    ReleaseIdentity,
+    SeededMutation,
+    VerifierSource
+  }
 
   @root Path.expand("..", __DIR__)
   @corpus "priv/conformance"
   @verifier VerifierSource.path()
   @escript "charter_agreement_protocol"
+  @cap_repository "https://github.com/baselabs/charter_agreement_protocol.git"
+  @metadata "priv/release-metadata.json"
 
   @seeded_reds [
     %{
@@ -31,6 +39,7 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
   def run do
     VerifierSource.current!()
     verify_vendored_corpus_snapshot()
+    verify_npm_witnesses!()
     node = VerifierSource.node!()
     build_escript!()
 
@@ -59,6 +68,50 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
       IO.puts("verifier agreement: byte-identical repository and archive reports")
     after
       File.rm(Path.join(@root, @escript))
+    end
+  end
+
+  defp verify_npm_witnesses! do
+    reference = File.read!(Path.join([@root, @verifier, "reference.json"]))
+
+    %{
+      "package" => "charter_agreement_protocol",
+      "corpus_path" => @corpus,
+      "corpus_source" => %{"commit" => commit}
+    } = :json.decode(reference)
+
+    unless commit =~ ~r/\A[0-9a-f]{40}\z/, do: raise("invalid pinned CAP corpus commit")
+
+    version = Mix.Project.config()[:version]
+    current = Enum.find(ReleaseIdentity.compatibility(), &(version in &1.package_versions))
+    ReleaseCompatibility.verify_npm_witnesses!(current, pinned_metadata!(commit))
+  end
+
+  defp pinned_metadata!(commit) do
+    blob = "#{commit}:#{@metadata}"
+
+    case System.cmd("git", ["cat-file", "blob", blob], cd: @root, stderr_to_stdout: true) do
+      {bytes, 0} -> bytes
+      {_missing, _status} -> fetch_pinned_metadata!(commit, blob)
+    end
+  end
+
+  # A CAP source commit used by the pinned verifier can be absent from the
+  # qualification checkout. Resolve it by its exact ID in an isolated store.
+  defp fetch_pinned_metadata!(commit, blob) do
+    scratch = SeededMutation.temporary!("verifier-metadata")
+
+    try do
+      {_output, 0} = System.cmd("git", ["init", "--quiet", "--bare"], cd: scratch)
+      args = ["fetch", "--quiet", "--no-tags", "--depth=1", @cap_repository, commit]
+      {_output, 0} = System.cmd("git", args, cd: scratch, stderr_to_stdout: true)
+
+      {bytes, 0} =
+        System.cmd("git", ["cat-file", "blob", blob], cd: scratch, stderr_to_stdout: true)
+
+      bytes
+    after
+      File.rm_rf!(scratch)
     end
   end
 

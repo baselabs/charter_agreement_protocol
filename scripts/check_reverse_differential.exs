@@ -70,7 +70,7 @@ defmodule CharterAgreementProtocol.ReverseDifferentialGate do
       mix!(scratch, ["deps.get", "--only", "prod"])
       verify_lock!(scratch, outer_checksum)
       mix!(scratch, ["run", "--no-start", "run.exs"])
-      scratch |> Path.join("outcomes.json") |> File.read!() |> :json.decode()
+      scratch |> Path.join("outcomes.etf") |> ReverseCorpus.read_outcomes!()
     after
       File.rm_rf!(scratch)
     end
@@ -139,7 +139,7 @@ defmodule CharterAgreementProtocol.ReverseDifferentialGate do
     observed = ReverseCorpus.published!(frozen, cases)
     outcomes = ReverseCorpus.with_public_probes(observed, ReverseBoundary.outcomes(cases))
 
-    File.write!("outcomes.json", :json.encode(outcomes))
+    ReverseCorpus.write_outcomes!("outcomes.etf", outcomes)
     """
   end
 end

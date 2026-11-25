@@ -103,7 +103,7 @@ carries the same rows in its `compatibility` member.
 | 4 | 0.4.0, 0.4.1 | a Party Descriptor's `effective_from` must be 1 to 64 bytes, like the other timestamps |
 | 5 | 0.5.0 | a charter's parties must be distinct: a revision that names one descriptor for two roles fails with `:revision_invalid`, and a chain view whose revision parties resolve to one party's descriptor history, or that holds a history no revision names, fails with `:chain_invalid` |
 | 6 | 0.6.0, 1.0.0 | Ed25519 admission rejects two more small-order encodings and keys that are not curve points, applying one point rule to the public key and signature `R`; malformed caller-built context field types return `invalid_type` consistently; some revision numbers, topology values and list members returned `ok` in 0.5.0, while other malformed context fields raised or returned a context-specific error |
-| 7 | 1.1.0 | The source candidate admits revision-8 descriptor commitments and current/next publications. |
+| 7 | 1.1.0 | Admits revision-8 descriptor commitments and current/next publications, party quorums, and declared assignments. Every non-genesis charter revision requires an accepted predecessor. A signed legacy successor of an unsigned genesis can lose governing status. |
 
 Releases before 0.4.0 shipped no manifest. Their rows are CAP's
 classification of those releases, published afterward; their packages are
@@ -216,6 +216,23 @@ Use `~> 1.0.0` for CAP and the companion signer. Verification semantics stays
 artifacts need no migration. Improper lists passed to plain JSON conversion,
 or revision encoding now return `invalid_type` instead of raising. Signing
 preparation returns its existing `signing_input_invalid` boundary code. The release metadata records 1.0.0 with the existing corpus row.
+
+## From 1.0.0 to 1.1.0
+
+- **Re-verify stored charter views.** A charter successor is eligible only if its
+  immediate predecessor has been accepted, including for legacy revisions. A signed
+  legacy successor of an unsigned genesis remains proposed. A query that used to
+  return that successor returns `:none` when no other revision governs.
+- **Verify revision-8 charters and assignments.** Revision 8 supports party
+  quorums for acceptance and termination. Every party must assent to a new
+  revision that assigns a party position. With a verified chain, receipt keys
+  resolve against the issuing role's owner at the receipt's occurrence instant.
+- **Verify descriptor commitments and publications.** Revision 8 supports
+  committed successor key sets and current/next publications checked against the
+  signed descriptor history.
+- **Record the new verification identity.** Semantics moves to 7. The 1.1.0
+  compatibility row lists typed errors and changed successful outputs alongside
+  verdict changes.
 
 ## Choose the dependency requirement
 

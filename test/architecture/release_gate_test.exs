@@ -1,10 +1,18 @@
 Code.require_file("../../scripts/release_compatibility.exs", __DIR__)
+Code.require_file("../../scripts/reverse_corpus.exs", __DIR__)
+Code.require_file("../../scripts/seeded_mutation.exs", __DIR__)
 
 defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
   use ExUnit.Case, async: true
 
   alias CharterAgreementProtocol.Conformance.Corpus
-  alias CharterAgreementProtocol.{ReleaseCompatibility, ReleaseIdentity, RequirementMap}
+  alias CharterAgreementProtocol.{
+    ReleaseCompatibility,
+    ReleaseIdentity,
+    RequirementMap,
+    ReverseCorpus,
+    SeededMutation
+  }
 
   @mutation_names ~w(
     next-key-opening-skip
@@ -282,6 +290,59 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     assert_raise RuntimeError, ~r/outcome drift.*legacy-unsigned-predecessor/, fn ->
       changed = %{key => observation(transition.operation, success(%{}))}
       ReleaseCompatibility.verify_reverse!(row, "hex:1.0.0", before, changed)
+    end
+  end
+
+  test "reverse differential preserves nil in unchanged corpus outputs" do
+    corpus = ReverseCorpus.load!("priv/conformance")
+    ids = ["revision-no-bindings", "acceptance-same-signer-equivocation"]
+    cases = Enum.filter(corpus.cases, &(&1["id"] in ids))
+    checked = ReverseCorpus.checked!(%{corpus | cases: cases})
+
+    assert %{"value" => %{"output" => %{"abp_binding" => nil}}} =
+             checked["corpus_runner/revision-no-bindings"]
+
+    assert %{"value" => %{"output" => %{"winner" => nil}}} =
+             checked["corpus_runner/acceptance-same-signer-equivocation"]
+
+    scratch = SeededMutation.temporary!("reverse-outcomes")
+    path = Path.join(scratch, "outcomes.etf")
+
+    try do
+      ReverseCorpus.write_outcomes!(path, checked)
+      published = ReverseCorpus.read_outcomes!(path)
+
+      assert ReleaseCompatibility.verify_reverse!(
+               %{transitions: []},
+               "hex:1.0.0",
+               published,
+               checked
+             ) == 0
+
+      native = %{1 => {~U[2026-09-01 00:00:00Z], :none}, <<255>> => <<0, 255>>}
+      ReverseCorpus.write_outcomes!(path, native)
+      assert ReverseCorpus.read_outcomes!(path) === native
+    after
+      File.rm_rf!(scratch)
+    end
+  end
+
+  test "qualification rejects npm-only witness drift from the pinned row" do
+    row = List.last(ReleaseIdentity.compatibility())
+    pinned = File.read!("priv/release-metadata.json")
+    assert :ok = ReleaseCompatibility.verify_npm_witnesses!(row, pinned)
+
+    index =
+      Enum.find_index(row.transitions, fn transition ->
+        transition.operation == "assemble_compact" and transition.direction == :red_to_red
+      end)
+
+    path = [:transitions, Access.at(index), :witnesses, Access.at(0), :from]
+    assert get_in(row, path) == "algorithm_unsupported"
+    drifted = put_in(row, path, "invalid_type")
+
+    assert_raise RuntimeError, ~r/npm compatibility witnesses differ/, fn ->
+      ReleaseCompatibility.verify_npm_witnesses!(drifted, pinned)
     end
   end
 

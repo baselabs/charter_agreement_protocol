@@ -1,6 +1,6 @@
 # Charter Agreement Protocol
 
-CAP is a format and a verifier for agreements between two independent parties.
+CAP is a format and a verifier for agreements between independent parties.
 Each party signs exact bytes, and anyone holding those bytes can check later, with
 no server and no shared account, what was agreed, which revision was in force at a
 given moment, and which agreement a signed action was taken under.
@@ -134,7 +134,10 @@ capability-limited expectations for Node and browser verification.
 
 ## Status
 
-The 1.1.0 candidate verifies revision-8 party descriptors and publications.
+The 1.1.0 candidate verifies revision-8 descriptor commitments and publications,
+quorums for acceptance and termination, and declared party assignments. Every
+charter successor needs an accepted predecessor. On replay, a signed legacy
+successor of an unsigned genesis can lose governing status.
 The installation example targets the published 1.0.0 series. See the [changelog](CHANGELOG.md)
 for what changed, and [upgrading](docs/guides/upgrading-verification-identity.md) before
 moving between versions.

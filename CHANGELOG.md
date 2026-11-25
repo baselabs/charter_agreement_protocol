@@ -8,6 +8,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   acceptances and descriptor histories. Resolve receipt signing keys by
   the issuing role's owner at the occurrence instant.
 
+- Require an accepted predecessor for every charter successor. A signed legacy
+  successor of an unsigned genesis remains proposed and cannot govern.
+
 - Verify descriptor histories in ascending party ID order. Record the
   resulting error-code changes in the 1.1.0 compatibility row.
 
