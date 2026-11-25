@@ -2670,6 +2670,66 @@ quorum_ids = ~w(
   signing-legacy-successor-without-accepted-parent
   signing-termination-without-accepted-predecessor
   signing-legacy-supersession-target-still-proposed
+  charter-revision-acceptance-quorum-integral-float
+  charter-revision-acceptance-quorum-fractional-threshold
+  charter-revision-termination-quorum-integral-float
+  charter-revision-termination-quorum-fractional-threshold
+  charter-revision-assignment-quorum-integral-float
+  charter-revision-assignment-quorum-fractional-threshold
+  quorum-acceptance-envelope-signature-length
+  quorum-acceptance-envelope-claims-type
+  quorum-acceptance-envelope-claims-required
+  quorum-acceptance-envelope-claims-unknown
+  quorum-acceptance-envelope-claims-constraint
+  quorum-acceptance-envelope-claims-timestamp
+  quorum-acceptance-envelope-claims-coordinates
+  quorum-acceptance-envelope-signature-validity
+  quorum-acceptance-envelope-unresolved-key
+  quorum-acceptance-envelope-payload-syntax
+  quorum-acceptance-envelope-payload-bytes
+  quorum-acceptance-envelope-protected-type
+  quorum-termination-envelope-signature-length
+  quorum-termination-envelope-claims-type
+  quorum-termination-envelope-claims-required
+  quorum-termination-envelope-claims-unknown
+  quorum-termination-envelope-claims-constraint
+  quorum-termination-envelope-claims-timestamp
+  quorum-termination-envelope-claims-coordinates
+  quorum-termination-envelope-signature-validity
+  quorum-termination-envelope-unresolved-key
+  quorum-termination-envelope-payload-syntax
+  quorum-termination-envelope-payload-bytes
+  quorum-termination-envelope-protected-type
+  chain-expanded-histories-before-acceptance-claims-type
+  chain-expanded-histories-before-acceptance-claims-required
+  chain-expanded-histories-before-acceptance-claims-unknown
+  chain-expanded-histories-before-acceptance-claims-constraint
+  chain-expanded-histories-before-acceptance-claims-timestamp
+  chain-expanded-histories-before-acceptance-claims-coordinates
+  chain-expanded-histories-before-termination-signature-length
+  chain-expanded-histories-before-termination-claims-type
+  chain-expanded-histories-before-termination-claims-required
+  chain-expanded-histories-before-termination-claims-unknown
+  chain-expanded-histories-before-termination-claims-constraint
+  chain-expanded-histories-before-termination-claims-timestamp
+  chain-expanded-histories-before-termination-claims-coordinates
+  chain-legacy-duplicate-before-signature-validity
+  chain-legacy-duplicate-before-signature-length
+  chain-legacy-duplicate-before-signature-encoding
+  chain-legacy-duplicate-before-protected-type
+  chain-legacy-duplicate-before-payload-syntax
+  chain-legacy-duplicate-before-payload-bytes
+  chain-legacy-duplicate-before-claims-type
+  chain-legacy-duplicate-before-claims-required
+  chain-legacy-duplicate-before-claims-unknown
+  chain-legacy-duplicate-before-claims-constraint
+  chain-legacy-duplicate-before-claims-timestamp
+  chain-legacy-duplicate-before-claims-coordinates
+  chain-legacy-duplicate-before-claims-binding
+  chain-legacy-duplicate-before-key-resolution
+  chain-legacy-duplicate-before-compact-limit
+  chain-legacy-duplicate-before-algorithm-profile
+  chain-legacy-duplicate-before-revision-profile
 )
 
 cases =

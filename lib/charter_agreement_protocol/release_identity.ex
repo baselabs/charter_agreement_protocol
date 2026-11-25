@@ -167,7 +167,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     %{
       package_versions: ["1.1.0"],
       verification_semantics: 7,
-      census_digest: "sha-256:W_Mefd6sxz-3YTVAe47dRX_jUAKL3I6SjnUqAQCiNEo",
+      census_digest: "sha-256:NBhh3sS6mPIeMhRVAOrcbNJRc3QxmSnxgpvhf4-aHQg",
       protocol_revisions: [1, 2, 3, 8],
       transitions: [
         %{
@@ -233,8 +233,10 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "With three or more histories and a valid revision-8 charter, invalid votes can " <>
               "reach envelope, binding and signature checks. The chain-expanded-histories " <>
               "vote cases return compact_invalid, protected_header_invalid, " <>
-              "acceptance_claims_mismatch, termination_claims_mismatch or signature_invalid " <>
-              "instead of chain_invalid."
+              "acceptance_claims_mismatch, termination_claims_mismatch, signature_invalid, " <>
+              "invalid_type, missing_required, unknown_member, constraint_violation, " <>
+              "timestamp_invalid, acceptance_invalid or termination_invalid instead of " <>
+              "chain_invalid."
         },
         %{
           class: :admission,
@@ -254,6 +256,37 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               "codes instead of protected_header_invalid. An ordinary signing operation " <>
               "with a replacement marker returns signing_refused instead of " <>
               "signing_input_invalid."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "The revision-8 integer-token check covers acceptance, termination and " <>
+              "assignment thresholds before canonical encoding or schema validation. " <>
+              "The charter-revision quorum threshold cases return invalid_type instead of " <>
+              "non_canonical_bytes, unknown_member or missing_required. A replacement object " <>
+              "in place of the records array returns missing_required " <>
+              "instead of unknown_member " <>
+              "in charter-revision-replacement-container-missing-required."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "With a legacy charter context, revision-8 acceptance and termination " <>
+              "envelopes can reach signature length and claims validation. The quorum " <>
+              "envelope cases return signature_invalid, invalid_type, missing_required, " <>
+              "unknown_member, constraint_violation, timestamp_invalid, acceptance_invalid " <>
+              "or termination_invalid instead of protected_header_invalid."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "Standalone revision-8 vote verification reaches key resolution and signature " <>
+              "verification. The quorum envelope cases for unresolved keys and invalid " <>
+              "signatures return acceptance_invalid, termination_invalid or signature_invalid " <>
+              "instead of unknown_member."
         },
         %{
           class: :error_code_change,
@@ -293,8 +326,11 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           direction: :red_to_red,
           description:
             "The TypeScript verifier checks the acceptance list before duplicate coordinates, " <>
-              "returning compact_invalid instead of chain_invalid when a malformed compact " <>
-              "follows a duplicate acceptance in chain-malformed-vote-before-legacy-duplicate."
+              "so a later acceptance can return compact_invalid, protected_header_invalid, " <>
+              "non_canonical_bytes, signature_invalid, invalid_type, missing_required, " <>
+              "unknown_member, constraint_violation, timestamp_invalid, acceptance_invalid, " <>
+              "acceptance_claims_mismatch, limit_exceeded, algorithm_outside_profile or " <>
+              "revision_outside_profile instead of chain_invalid. See the duplicate-vote cases."
         },
         %{
           class: :error_code_change,
@@ -304,6 +340,13 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               "invalid_type instead of chain_invalid. Set-aware builders return " <>
               "signing_input_invalid instead of invalid_type when malformed claims " <>
               "are paired with an invalid list inside a set."
+        },
+        %{
+          class: :typed_error,
+          direction: :crash_to_typed,
+          description:
+            "Incomplete caller-built UTC datetimes and retained signing, key and digest " <>
+              "inputs return typed failures through the Elixir public APIs."
         }
       ]
     }

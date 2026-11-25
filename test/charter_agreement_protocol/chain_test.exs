@@ -568,6 +568,38 @@ defmodule CharterAgreementProtocol.ChainTest do
              Chain.governing_revision(facts, non_utc)
   end
 
+  test "the governing facade rejects incomplete and invalid UTC datetimes" do
+    setup = ChainFixture.base()
+    acceptances = ChainFixture.dual_acceptances(setup.genesis, setup)
+
+    assert {:ok, facts} =
+             CharterAgreementProtocol.verify_chain(
+               [setup.genesis.bytes],
+               Enum.map(acceptances, & &1.compact),
+               ChainFixture.descriptors(setup),
+               [],
+               Limits.default()
+             )
+
+    at = ~U[2026-09-01 00:00:00Z]
+    [revision] = facts.revision_facts
+    incomplete_revision = Map.delete(revision.revision, :canonical_bytes)
+
+    assert {:error, %Error{code: :invalid_type}} =
+             CharterAgreementProtocol.revision_digest(incomplete_revision)
+
+    for invalid <- [
+          Map.delete(at, :year),
+          Map.delete(at, :calendar),
+          %{at | day: 99},
+          %{at | second: 99},
+          %{at | calendar: nil}
+        ] do
+      assert {:error, %Error{code: :governing_invalid}} =
+               CharterAgreementProtocol.governing_revision(facts, invalid)
+    end
+  end
+
   defp assert_chain_error(revisions, acceptances, descriptors, terminations) do
     assert {:error, %Error{code: :chain_invalid}} =
              Chain.verify(revisions, acceptances, descriptors, terminations, Limits.default())

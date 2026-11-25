@@ -44,6 +44,7 @@ defmodule CharterAgreementProtocol.SigningInput do
     ArtifactSet,
     Base64Url,
     Canonicalization,
+    Capability.Profile,
     Chain,
     CharterRevision,
     Error,
@@ -132,8 +133,9 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   @doc false
   @spec assemble_under(term(), term(), Limits.t()) :: {:ok, binary()} | {:error, Error.t()}
-  def assemble_under(%__MODULE__{} = input, signature, limits) when is_binary(signature) do
-    with %{signature_bytes: length} <- Algorithm.row_for(input.alg),
+  def assemble_under(%__MODULE__{alg: alg} = input, signature, limits)
+      when is_binary(signature) do
+    with %{signature_bytes: length} <- Algorithm.row_for(alg),
          :ok <- exact_signature_length(signature, length),
          true <- valid_fields?(input),
          compact <- input.message <> "." <> Base64Url.encode(signature),
@@ -259,12 +261,17 @@ defmodule CharterAgreementProtocol.SigningInput do
     }
   end
 
-  defp valid_fields?(%__MODULE__{} = input) do
-    input.kind in Map.keys(@types) and is_binary(input.protected_segment) and
-      input.protected_segment != "" and is_binary(input.payload_segment) and
-      input.payload_segment != "" and is_binary(input.message) and
-      input.message == input.protected_segment <> "." <> input.payload_segment
+  defp valid_fields?(%__MODULE__{
+         kind: kind,
+         protected_segment: protected,
+         payload_segment: payload,
+         message: message
+       }) do
+    kind in Map.keys(@types) and is_binary(protected) and protected != "" and
+      is_binary(payload) and payload != "" and message == protected <> "." <> payload
   end
+
+  defp valid_fields?(_input), do: false
 
   defp decode_kind(:party_descriptor, compact, limits),
     do: PartyDescriptor.decode(compact, limits)
@@ -281,15 +288,7 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   defp decode_kind(:receipt, compact, limits), do: Receipt.decode_for_signing(compact, limits)
 
-  defp verify_set(set) do
-    Chain.verify(
-      set.revisions,
-      set.acceptances,
-      set.descriptors,
-      set.terminations,
-      Limits.default()
-    )
-  end
+  defp verify_set(set), do: Chain.verify_set(set, Limits.default(), Profile.full())
 
   @doc false
   @spec refusal_check(

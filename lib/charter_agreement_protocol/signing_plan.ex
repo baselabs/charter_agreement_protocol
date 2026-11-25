@@ -124,15 +124,7 @@ defmodule CharterAgreementProtocol.SigningPlan do
   end
 
   defp derive(kind, artifact, set, limits, _profile) when kind in [:acceptance, :termination] do
-    with {:ok, chain} <-
-           Chain.verify(
-             set.revisions,
-             set.acceptances,
-             set.descriptors,
-             set.terminations,
-             limits,
-             Profile.full()
-           ),
+    with {:ok, chain} <- Chain.verify_set(set, limits, Profile.full()),
          {:ok, revision} <- SigningInput.refusal_check(kind, artifact, chain) do
       Chain.signing_context(kind, artifact, chain, revision)
     end

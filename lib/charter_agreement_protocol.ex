@@ -102,10 +102,12 @@ defmodule CharterAgreementProtocol do
     Chain,
     ChainFacts,
     CharterRevision,
+    CompactJws,
     DescriptorChain,
     DescriptorFacts,
     DescriptorPublication,
     DescriptorPublicationFacts,
+    Error,
     Limits,
     PartyDescriptor,
     Receipt,
@@ -162,8 +164,14 @@ defmodule CharterAgreementProtocol do
       iex> CharterAgreementProtocol.descriptor_digest(descriptor)
       "sha-256:1ynn3VZQs_pAZVjrnDn-DzEUMc8gJV0FMFV3SFONZIU"
   """
-  @spec descriptor_digest(PartyDescriptor.t()) :: binary()
-  defdelegate descriptor_digest(descriptor), to: PartyDescriptor, as: :digest
+  @spec descriptor_digest(term()) :: binary() | {:error, Error.t()}
+  def descriptor_digest(
+        %PartyDescriptor{envelope: %CompactJws{payload_bytes: bytes}} = descriptor
+      )
+      when is_binary(bytes),
+      do: PartyDescriptor.digest(descriptor)
+
+  def descriptor_digest(_descriptor), do: {:error, Error.new(:invalid_type, ["party_descriptor"])}
 
   @doc """
   Verify one Party Descriptor's signature, at genesis or after a predecessor.
@@ -386,8 +394,11 @@ defmodule CharterAgreementProtocol do
       iex> CharterAgreementProtocol.revision_digest(revision)
       "sha-256:j9vaSLLwxMwF1zzLniUdZwUUAB6aTGEvwMRzP526s3o"
   """
-  @spec revision_digest(CharterRevision.t()) :: binary()
-  defdelegate revision_digest(revision), to: CharterRevision, as: :digest
+  @spec revision_digest(term()) :: binary() | {:error, Error.t()}
+  def revision_digest(%CharterRevision{canonical_bytes: bytes} = revision) when is_binary(bytes),
+    do: CharterRevision.digest(revision)
+
+  def revision_digest(_revision), do: {:error, Error.new(:invalid_type, ["charter_revision"])}
 
   @doc """
   Verify one Acceptance against a revision and the signer's descriptor chain.
@@ -1041,8 +1052,8 @@ defmodule CharterAgreementProtocol do
     before `at`. Closure requires a qualifying notice for the then-governing
     legacy revision or a met termination quorum for that revision in revision 8.
 
-  A `DateTime` in another time zone returns `:governing_invalid`. Any other
-  type returns `:invalid_type`.
+  A malformed `DateTime` or one in another time zone returns
+  `:governing_invalid`. Unsupported types return `:invalid_type`.
 
   ## Examples
 

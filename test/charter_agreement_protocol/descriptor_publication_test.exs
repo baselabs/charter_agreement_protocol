@@ -83,6 +83,15 @@ defmodule CharterAgreementProtocol.DescriptorPublicationTest do
 
     assert {:ok, thumbprint} = CAP.signer_thumbprint(first)
 
+    incomplete = Map.delete(first, :algorithm)
+    assert {:error, %Error{code: :invalid_type}} = CAP.signer_thumbprint(incomplete)
+
+    assert {:error, %Error{code: :invalid_type}} =
+             CAP.descriptor_next_key_commitment([incomplete], limits)
+
+    assert {:error, %Error{code: :invalid_type}} =
+             CAP.descriptor_digest(Map.delete(current, :envelope))
+
     assert {:ok, ^thumbprint} =
              CAP.signer_thumbprint(%{first | key_id: retired.key_id, status: :retired})
 

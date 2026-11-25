@@ -660,8 +660,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "signing-set-profile-narrow",
       path: "lib/charter_agreement_protocol/signing_plan.ex",
-      from: "             Profile.full()\n           ),",
-      to: "             _profile\n           ),",
+      from: "Chain.verify_set(set, limits, Profile.full()),",
+      to: "Chain.verify_set(set, limits, _profile),",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
@@ -674,10 +674,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "signing-set-limits-skip",
       path: "lib/charter_agreement_protocol/signing_plan.ex",
-      from:
-        "           Chain.verify(\n             set.revisions,\n             set.acceptances,\n             set.descriptors,\n             set.terminations,\n             limits,\n             Profile.full()\n           ),\n",
-      to:
-        "           Chain.verify(\n             set.revisions,\n             set.acceptances,\n             set.descriptors,\n             set.terminations,\n             Limits.default(),\n             Profile.full()\n           ),\n",
+      from: "Chain.verify_set(set, limits, Profile.full()),",
+      to: "Chain.verify_set(set, Limits.default(), Profile.full()),",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{

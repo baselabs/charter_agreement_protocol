@@ -230,7 +230,8 @@ defmodule CharterAgreementProtocol.Acceptance do
   @spec equivocation(term(), term()) ::
           {:ok, AcceptanceEquivocation.t()} | {:error, Error.t()}
   def equivocation(%AcceptanceFacts{} = left, %AcceptanceFacts{} = right) do
-    if same_equivocator?(left, right) and left.revision_digest != right.revision_digest do
+    if equivocation_coordinates?(left) and equivocation_coordinates?(right) and
+         same_equivocator?(left, right) and left.revision_digest != right.revision_digest do
       {:ok,
        %AcceptanceEquivocation{
          kind: :acceptance_equivocation,
@@ -248,6 +249,20 @@ defmodule CharterAgreementProtocol.Acceptance do
   end
 
   def equivocation(_left, _right), do: equivocation_error()
+
+  defp equivocation_coordinates?(%AcceptanceFacts{
+         charter_id: charter,
+         revision_number: number,
+         party_descriptor_digest: descriptor,
+         party_role: role,
+         revision_digest: revision,
+         acceptance_digest: acceptance
+       }) do
+    is_binary(charter) and is_integer(number) and is_binary(descriptor) and is_binary(role) and
+      is_binary(revision) and is_binary(acceptance)
+  end
+
+  defp equivocation_coordinates?(_facts), do: false
 
   @doc "Return an Acceptance's domain-separated content digest."
   @spec digest(t()) :: binary()

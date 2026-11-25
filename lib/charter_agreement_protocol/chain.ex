@@ -9,8 +9,11 @@ defmodule CharterAgreementProtocol.Chain do
   UTC instant; it never reads a clock and never tie-breaks a contested view.
   """
 
+  alias Calendar.UTCOnlyTimeZoneDatabase
+
   alias CharterAgreementProtocol.{
     Acceptance,
+    ArtifactSet,
     Capability.Profile,
     ChainFacts,
     CharterRevision,
@@ -100,6 +103,22 @@ defmodule CharterAgreementProtocol.Chain do
   end
 
   def verify(_revisions, _acceptances, _descriptors, _terminations, _limits), do: invalid_type()
+
+  @doc false
+  @spec verify_set(term(), Limits.t(), Profile.t()) :: {:ok, ChainFacts.t()} | {:error, Error.t()}
+  def verify_set(
+        %ArtifactSet{
+          revisions: revisions,
+          acceptances: acceptances,
+          descriptors: descriptors,
+          terminations: terminations
+        },
+        limits,
+        profile
+      ),
+      do: verify(revisions, acceptances, descriptors, terminations, limits, profile)
+
+  def verify_set(_set, _limits, _profile), do: invalid_type()
 
   @doc "Compute the unique governing revision in this verified view at one UTC instant."
   @spec governing_revision(term(), term()) ::
@@ -811,8 +830,33 @@ defmodule CharterAgreementProtocol.Chain do
     if MapSet.member?(transfers, digest) and not terminated?(facts, at), do: digest
   end
 
-  defp timestamp(%DateTime{time_zone: "Etc/UTC", utc_offset: 0, std_offset: 0} = datetime) do
-    datetime |> DateTime.to_iso8601() |> Timestamp.parse()
+  defp timestamp(%DateTime{
+         time_zone: "Etc/UTC",
+         utc_offset: 0,
+         std_offset: 0,
+         zone_abbr: abbreviation,
+         calendar: calendar,
+         year: year,
+         month: month,
+         day: day,
+         hour: hour,
+         minute: minute,
+         second: second,
+         microsecond: {microsecond, precision}
+       })
+       when is_binary(abbreviation) and is_atom(calendar) and is_integer(year) and
+              is_integer(month) and is_integer(day) and is_integer(hour) and
+              is_integer(minute) and is_integer(second) and is_integer(microsecond) and
+              precision in 0..6 do
+    with {:ok, date} <- Date.new(year, month, day, calendar),
+         {:ok, time} <- Time.new(hour, minute, second, {microsecond, precision}, calendar),
+         {:ok, datetime} <- DateTime.new(date, time, "Etc/UTC", UTCOnlyTimeZoneDatabase) do
+      datetime |> DateTime.to_iso8601() |> Timestamp.parse()
+    else
+      _invalid -> governing_error()
+    end
+  rescue
+    _error -> governing_error()
   end
 
   defp timestamp(_datetime), do: governing_error()

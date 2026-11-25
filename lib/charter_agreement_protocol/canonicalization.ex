@@ -53,7 +53,7 @@ defmodule CharterAgreementProtocol.Canonicalization do
     end
   end
 
-  defp tag(value) when is_map(value) do
+  defp tag(value) when is_map(value) and not is_struct(value) do
     value
     |> Enum.reduce_while({:ok, []}, fn
       {name, item}, {:ok, members} when is_binary(name) ->

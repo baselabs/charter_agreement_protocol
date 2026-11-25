@@ -266,6 +266,11 @@ defmodule CharterAgreementProtocol.AcceptanceTest do
 
     assert {:error, %Error{code: :acceptance_equivocation_invalid}} =
              Acceptance.equivocation(:not_facts, Enum.at(facts, 0))
+
+    [left, right] = facts
+
+    assert {:error, %Error{code: :acceptance_equivocation_invalid}} =
+             Acceptance.equivocation(left, Map.delete(right, :acceptance_digest))
   end
 
   defp setup_acceptance(options \\ []) do

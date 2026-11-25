@@ -26,11 +26,11 @@ is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:W_Mefd6sxz-3YTVAe47dRX_jUAKL3I6SjnUqAQCiNEo` |
-| Index SHA-256 (base64url) | `Ggt_areMitPAlEnp36YW1BB-eIf2WiGcwiBhLsnsytY` |
+| Corpus digest | `sha-256:NBhh3sS6mPIeMhRVAOrcbNJRc3QxmSnxgpvhf4-aHQg` |
+| Index SHA-256 (base64url) | `EIax4Ke24qt7ujEbFadp6_lFlidTfkyj-vp_y_3eh-w` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:J8G53iEefjDITMQRpwfuN3CciU62BbLom7qqOKund5E` |
-| Cases | 713, in 17 case files |
+| Specification digest | `sha-256:NyFIlXE_m1sbgqHYQ9_rPLDfxVD7JosrDGLDkPij3lg` |
+| Cases | 773, in 17 case files |
 
 The [TypeScript source pin](../../priv/verifier-source.json) selects the
 verifier that CI runs against every case.

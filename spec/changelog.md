@@ -30,6 +30,10 @@ release.
 - Set verification processes three or more histories before checking revision
   decoding, profile admission and vote validity. Shared cases record the
   typed errors that replace the earlier history count rejection.
+- Shared cases pin integer-token precedence for quorum thresholds and the
+  signature length, claims, and signature verification errors reached by
+  revision-8 votes. Legacy duplicate-vote cases pin the later artifact's
+  error across framing, claims, signature verification, profile, and limits.
 
 ## 2026-11-25 — descriptor key commitments and publication
 

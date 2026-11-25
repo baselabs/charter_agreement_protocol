@@ -7,6 +7,7 @@ defmodule CharterAgreementProtocol.SigningInputTest do
     ArtifactSet,
     Base64Url,
     Canonicalization,
+    Capability.Profile,
     ChainFixture,
     DescriptorFixture,
     Error,
@@ -96,6 +97,43 @@ defmodule CharterAgreementProtocol.SigningInputTest do
 
   test "acceptance and termination seams compose with verification",
     do: acceptance_and_termination()
+
+  test "signing entry points reject incomplete retained structs" do
+    setup = ChainFixture.base()
+    {:ok, set} = raw_set(setup, [setup.genesis], [], [])
+    incomplete = Map.delete(set, :terminations)
+
+    input =
+      envelope(setup.issuer.kid, AcceptanceFixture.claims(setup.genesis, setup.issuer, "issuer"))
+
+    assert {:error, %Error{code: :invalid_type}} =
+             CharterAgreementProtocol.acceptance_signing_input(input, incomplete)
+
+    [key] = setup.issuer.claims["verification_keys"]
+    assert {:ok, public_key} = Base64Url.decode(key["public_key"])
+    checked = Map.put(input, "public_key", public_key)
+
+    assert {:error, %Error{code: :invalid_type}} =
+             CharterAgreementProtocol.prepare_signing(
+               :acceptance,
+               checked,
+               incomplete,
+               Limits.default(),
+               Profile.full()
+             )
+
+    assert {:ok, framed} = CharterAgreementProtocol.acceptance_signing_input(input, set)
+
+    for field <- [:alg, :kind, :protected_segment, :payload_segment, :message] do
+      assert {:error, %Error{code: :signing_input_invalid}} =
+               CharterAgreementProtocol.assemble_compact(Map.delete(framed, field), <<0::512>>)
+    end
+
+    claims_with_struct = put_in(input, ["claims", "extra"], ~U[2026-09-01 00:00:00Z])
+
+    assert {:error, %Error{code: :signing_input_invalid}} =
+             CharterAgreementProtocol.acceptance_signing_input(claims_with_struct, set)
+  end
 
   test "claims-truth refuses acceptance coordinates unequal to the retained revision" do
     setup = ChainFixture.base()

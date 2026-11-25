@@ -234,11 +234,16 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
   defp key_declarations(_keys, _acc), do: descriptor_error()
 
-  defp key_declaration(%VerificationKey{public_key: key, status: status} = record)
+  defp key_declaration(%VerificationKey{
+         algorithm: algorithm,
+         key_id: id,
+         public_key: key,
+         status: status
+       })
        when is_binary(key) and status in [:active, :retired] do
     %{
-      "algorithm" => record.algorithm,
-      "key_id" => record.key_id,
+      "algorithm" => algorithm,
+      "key_id" => id,
       "public_key" => Base64Url.encode(key),
       "status" => Atom.to_string(status)
     }
