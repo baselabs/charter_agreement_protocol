@@ -30,7 +30,8 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   ## Fields
 
-  - `kind`: `:party_descriptor`, `:acceptance`, `:termination` or `:receipt`.
+  - `kind`: `:party_descriptor`, `:acceptance`, `:party_replacement`,
+    `:termination` or `:receipt`.
   - `alg`: the JWS `alg` in the protected header.
   - `protected_segment` and `payload_segment`: the base64url header and
     claims segments.
@@ -59,7 +60,7 @@ defmodule CharterAgreementProtocol.SigningInput do
   defstruct @enforce_keys
 
   @typedoc "The artifact kind a signing input is for."
-  @type kind :: :party_descriptor | :acceptance | :termination | :receipt
+  @type kind :: :party_descriptor | :acceptance | :party_replacement | :termination | :receipt
   @typedoc "The exact bytes to sign for one artifact. See the module doc for each field."
   @type t :: %__MODULE__{
           kind: kind(),
@@ -72,6 +73,7 @@ defmodule CharterAgreementProtocol.SigningInput do
   @types %{
     party_descriptor: "cap+party",
     acceptance: "cap+acceptance",
+    party_replacement: "cap+acceptance",
     termination: "cap+termination",
     receipt: "cap+receipt"
   }
@@ -159,7 +161,7 @@ defmodule CharterAgreementProtocol.SigningInput do
   end
 
   @doc false
-  @spec build(kind() | :party_replacement, term(), Limits.t()) ::
+  @spec build(kind(), term(), Limits.t()) ::
           {:ok, t(), struct()} | {:error, Error.t()}
   def build(kind, %{"claims" => claims, "kid" => kid} = input, limits)
       when map_size(input) == 2 and is_map(claims) and is_binary(kid) do
@@ -168,15 +170,16 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   def build(operation, %{"claims" => claims, "kid" => kid, "algorithm" => alg} = input, limits)
       when map_size(input) == 3 and is_map(claims) and is_binary(kid) and is_binary(alg) do
-    kind = if operation == :party_replacement, do: :acceptance, else: operation
+    kind = artifact_kind(operation)
 
-    with {:ok, revision} <- emission_revision(alg),
+    with :ok <- replacement_intent(operation, Map.has_key?(claims, "replacement_role")),
+         {:ok, revision} <- emission_revision(alg),
          {:ok, claims_value} <- Canonicalization.from_plain(claims),
          :ok <- IntegerClaims.check(kind, claims_value),
          true <- claims_revision(kind, claims_value, revision),
          {:ok, payload_bytes} <- Canonicalization.encode(claims_value),
-         {:ok, protected_bytes} <- protected(kind, kid, alg),
-         signing_input <- frame(kind, alg, protected_bytes, payload_bytes),
+         {:ok, protected_bytes} <- protected(operation, kid, alg),
+         signing_input <- frame(operation, alg, protected_bytes, payload_bytes),
          true <- valid_fields?(signing_input),
          %{signature_bytes: signature_bytes} <- Algorithm.row_for(alg),
          signature_segment_length <- Kernel.trunc(Float.ceil(signature_bytes * 4 / 3)),
@@ -185,20 +188,24 @@ defmodule CharterAgreementProtocol.SigningInput do
              limits.max_bytes,
          provisional <-
            signing_input.message <> "." <> Base64Url.encode(<<0::size(signature_bytes)-unit(8)>>),
-         {:ok, artifact} <- decode_kind(kind, provisional, limits) do
-      with :ok <- assignment_marker(operation, artifact), do: {:ok, signing_input, artifact}
+         {:ok, artifact} <- decode_kind(operation, provisional, limits) do
+      {:ok, signing_input, artifact}
     else
+      {:error, %Error{code: :signing_refused}} = error -> error
       _failure -> invalid()
     end
   end
 
   def build(_kind, _input, _limits), do: invalid()
 
-  defp assignment_marker(operation, %Acceptance{replacement_role: marker}) do
-    if (operation == :party_replacement) == is_binary(marker), do: :ok, else: refused()
-  end
+  @doc false
+  @spec artifact_kind(kind()) :: kind()
+  def artifact_kind(:party_replacement), do: :acceptance
+  def artifact_kind(kind), do: kind
 
-  defp assignment_marker(_operation, _artifact), do: :ok
+  defp replacement_intent(:party_replacement, false), do: refused()
+  defp replacement_intent(:acceptance, true), do: refused()
+  defp replacement_intent(_operation, _marked?), do: :ok
 
   # The declared emission names stay closed. The provisional decode enforces
   # the artifact-specific revision and protected header binding.
@@ -263,8 +270,12 @@ defmodule CharterAgreementProtocol.SigningInput do
   defp decode_kind(:party_descriptor, compact, limits),
     do: PartyDescriptor.decode(compact, limits)
 
-  defp decode_kind(:acceptance, compact, limits),
-    do: Acceptance.decode_for_signing(compact, limits)
+  defp decode_kind(kind, compact, limits) when kind in [:acceptance, :party_replacement] do
+    with {:ok, artifact} <- Acceptance.decode_for_signing(compact, limits),
+         :ok <- replacement_intent(kind, artifact.replacement_role != nil) do
+      {:ok, artifact}
+    end
+  end
 
   defp decode_kind(:termination, compact, limits),
     do: TerminationNotice.decode_for_signing(compact, limits)
@@ -303,28 +314,40 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   defp acceptance_revision(acceptance, chain) do
     case Chain.signing_revision(:acceptance, acceptance, chain) do
-      {:ok, revision} ->
-        charter_id = revision.charter_id || CharterRevision.digest(revision)
+      {:ok, revision} -> check_acceptance_revision(acceptance, revision, chain)
+      _missing -> refused()
+    end
+  end
 
-        previous = Map.get(Chain.revision_index(chain), revision.prev_revision_digest)
+  defp check_acceptance_revision(acceptance, revision, chain) do
+    party_matches? = Quorum.accepts_binding?(acceptance, revision)
 
-        eligible =
-          revision.revision_number == 1 or
-            (revision.prev_revision_digest in chain.accepted_revision_digests and
-               Enum.all?(revision.supersedes, &(&1 in chain.accepted_revision_digests)))
+    cond do
+      acceptance.replacement_role != nil and not party_matches? ->
+        {:error, Error.new(:acceptance_claims_mismatch, ["acceptance", "claims"])}
 
-        if (acceptance.protocol_revision == 8) == (revision.protocol_revision == 8) and
-             acceptance.charter_id == charter_id and
-             acceptance.revision_number == revision.revision_number and
-             acceptance.prev_revision_digest == revision.prev_revision_digest and
-             Quorum.accepts_binding?(acceptance, revision) and eligible and
-             Quorum.eligible?(acceptance, revision, previous),
-           do: {:ok, revision},
-           else: refused()
+      party_matches? and acceptance_eligible?(acceptance, revision, chain) ->
+        {:ok, revision}
 
-      _missing ->
+      true ->
         refused()
     end
+  end
+
+  defp acceptance_eligible?(acceptance, revision, chain) do
+    charter_id = revision.charter_id || CharterRevision.digest(revision)
+    previous = Map.get(Chain.revision_index(chain), revision.prev_revision_digest)
+
+    eligible =
+      revision.revision_number == 1 or
+        (revision.prev_revision_digest in chain.accepted_revision_digests and
+           Enum.all?(revision.supersedes, &(&1 in chain.accepted_revision_digests)))
+
+    (acceptance.protocol_revision == 8) == (revision.protocol_revision == 8) and
+      acceptance.charter_id == charter_id and
+      acceptance.revision_number == revision.revision_number and
+      acceptance.prev_revision_digest == revision.prev_revision_digest and eligible and
+      Quorum.eligible?(acceptance, revision, previous)
   end
 
   defp termination_revision(termination, chain) do

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CAP: the Charter Agreement Protocol</title>
-<meta name="description" content="Signed, byte-exact evidence of what two parties agreed, including in agent commerce. CAP verifies and never authorizes. One protocol with independent Elixir and TypeScript verifiers checked against a shared conformance corpus.">
+<meta name="description" content="Signed, byte-exact evidence of what charter parties agreed, including in agent commerce. CAP verifies and never authorizes. One protocol with independent Elixir and TypeScript verifiers checked against a shared conformance corpus.">
 <link rel="stylesheet" href="./styles.css?v=2">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%230f172a'/%3E%3Ctext x='24' y='32' font-family='Arial,sans-serif' font-size='19' font-weight='800' text-anchor='middle' fill='%23a78bfa'%3E[CAP]%3C/text%3E%3C/svg%3E">
 </head>
@@ -44,7 +44,7 @@
     <p class="lede">CAP is an open format and verification protocol for agreements between two
     parties. Its artifacts are byte-exact: the terms are unsigned canonical JSON, and the other four
     artifacts are signed compact JWS. From them anyone can check <strong>what the
-    two parties agreed, which revision governed a given instant, and whether a signed action named
+    charter parties agreed, which revision governed a given instant, and whether a signed action named
     the revision that governed when it happened</strong>, with no central service and without CAP making the call for you.
     <strong>CAP verifies. It never authorizes.</strong></p>
     <div class="hero-actions">
@@ -72,9 +72,9 @@
     <thead><tr><th>Artifact</th><th>Form</th><th>Carries</th></tr></thead>
     <tbody>
       <tr><td><strong>Party Descriptor</strong></td><td>signed JWS (<code>cap+party</code>)</td><td>a party’s key history (Ed25519 keys, and ML-DSA keys from protocol revision 3); each change is signed by the previous active key, and a branch in the history is kept as fork evidence</td></tr>
-      <tr><td><strong>Charter Revision</strong></td><td>unsigned canonical JSON</td><td>the proposed terms, which become agreed when both parties accept them: the two parties and their roles, the legal-text digest, precedence, the effective window, the termination reasons and exact ABP deployment bindings</td></tr>
-      <tr><td><strong>Acceptance</strong></td><td>signed JWS (<code>cap+acceptance</code>)</td><td>one party’s signed assent to the exact revision bytes; a revision is accepted when both parties have signed one</td></tr>
-      <tr><td><strong>Termination Notice</strong></td><td>signed JWS (<code>cap+termination</code>)</td><td>a signed notice that closes the charter from its effective instant, when it names the revision governing at that instant</td></tr>
+      <tr><td><strong>Charter Revision</strong></td><td>unsigned canonical JSON</td><td>the parties and their roles, the legal-text digest, precedence, the effective window, the termination reasons and exact ABP deployment bindings; revision 8 also carries quorum rules and any declared party assignments</td></tr>
+      <tr><td><strong>Acceptance</strong></td><td>signed JWS (<code>cap+acceptance</code>)</td><td>one party’s signed assent to the exact revision bytes; legacy revisions require both parties, and revision 8 uses quorum rules and any required assignment assent</td></tr>
+      <tr><td><strong>Termination Notice</strong></td><td>signed JWS (<code>cap+termination</code>)</td><td>a signed notice naming a governing revision and an effective instant; one notice can close a legacy charter, while revision 8 requires a termination quorum</td></tr>
       <tr><td><strong>Receipt</strong></td><td>signed JWS (<code>cap+receipt</code>)</td><td>the issuing party’s signed claim about one action, bound to exact revision coordinates, the deployment digest and a <code>grant</code> reference (a <code>bap</code> reference carries its digest; a <code>host</code> reference may omit it)</td></tr>
     </tbody>
   </table>
@@ -91,7 +91,7 @@
       <h3><svg class="ic"><use href="#i-check"/></svg> Use CAP for</h3>
       <ul>
         <li>agreement evidence that two independent parties exchange as bytes and either can re-verify</li>
-        <li>agent commerce, where one or both parties are software agents</li>
+        <li>agent commerce, where one or more parties are software agents</li>
         <li>supplier terms, with proof of which revision governed an action</li>
         <li>key-history continuity, including post-quantum key rotation</li>
         <li>action receipts that anyone can re-verify offline</li>
@@ -125,12 +125,12 @@
       <h3>Contested views stay contested.</h3>
       <p class="pain">A tool that quietly picks one of two signed branches hides the dispute it found.</p>
       <p class="answer"><svg class="ic"><use href="#i-check"/></svg> When one signer signs two branches, CAP <strong>keeps both
-      as signed evidence and picks no winner</strong>. A new revision accepted by both parties repairs the fork when it descends from or supersedes every competing branch.</p>
+      as signed evidence and picks no winner</strong>. An accepted revision repairs the fork when it descends from or supersedes every competing branch.</p>
     </article>
     <article class="whycard">
       <h3>Two implementations, no shared code.</h3>
       <p class="pain">One implementation checking itself says little about the specification.</p>
-      <p class="answer"><svg class="ic"><use href="#i-check"/></svg> A <strong>656-case conformance corpus</strong> runs through the Elixir
+      <p class="answer"><svg class="ic"><use href="#i-check"/></svg> A <strong>662-case conformance corpus</strong> runs through the Elixir
       verifier and an independent, builtins-only TypeScript verifier. A CAP release requires <strong>byte-identical reports</strong> from both.</p>
     </article>
   </div>

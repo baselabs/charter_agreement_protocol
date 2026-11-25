@@ -1,6 +1,6 @@
 defmodule CharterAgreementProtocol do
   @moduledoc """
-  Verify charter agreements between two parties. CAP never authorizes.
+  Verify charter agreements between parties. CAP never authorizes.
 
   A charter is a set of artifacts: Party Descriptors (each party's signed key
   record), Charter Revisions (the unsigned terms), Acceptances (one party's
@@ -552,8 +552,9 @@ defmodule CharterAgreementProtocol do
     the receipt's revision with the one governing at its `occurred_at`.
   - With a decoded `CharterAgreementProtocol.CharterRevision` alone, CAP
     checks the claims against that revision but cannot find the signer's
-    key. The facts then add `:signature` to `not_verified`, set
-    `signing_key_id` to `nil`, and report `governing_match: :undetermined`.
+    key. The facts add `:signature` to `not_verified`, and also add
+    `:ownership` for a bare revision-8 charter. They report
+    `signing_key_id: nil` and `governing_match: :undetermined`.
 
   Returns `{:ok, %CharterAgreementProtocol.ReceiptFacts{}}`.
 
@@ -938,8 +939,10 @@ defmodule CharterAgreementProtocol do
 
   The set must hold at least one revision, exactly one genesis revision
   (`revision_number` 1), and every revision for the same charter. The
-  descriptors must cover exactly two parties. Every Acceptance and
-  termination notice must name a revision and a descriptor in the set.
+  descriptors must cover exactly two party histories in a legacy-only set.
+  Every revision-8 party binding must resolve to a distinct supplied
+  history. Every Acceptance and termination notice must name a revision
+  and a descriptor in the set.
   Before any decoding, each list must fit `max_artifact_set_items` and the
   total bytes must fit `max_artifact_set_bytes`.
 
@@ -1072,8 +1075,9 @@ defmodule CharterAgreementProtocol do
   snapshot membership, runtime support. Limits bound the whole set read.
   Set verification uses `Profile.full()`. The caller profile applies to the
   same revision, descriptor history and artifact as public verification.
-  A bare revision receipt
-  returns `key: :unnamed`; every other successful plan has `key: :matched`.
+  A receipt against a bare legacy revision returns `key: :unnamed`.
+  A receipt against a bare revision-8 charter returns `:signing_refused`.
+  Every other successful plan has `key: :matched`.
 
   Sign the returned `signing_input.message`, then call `finish_signing/2`.
   CAP holds only public verification material and never signs.
@@ -1101,7 +1105,7 @@ defmodule CharterAgreementProtocol do
       true
   """
   @spec prepare_signing(
-          CharterAgreementProtocol.SigningInput.kind() | :party_replacement,
+          CharterAgreementProtocol.SigningInput.kind(),
           term(),
           term(),
           Limits.t(),

@@ -2613,6 +2613,12 @@ quorum_ids = ~w(
   legacy-incomplete-child-keeps-unsigned-target
   legacy-signed-child-supersedes-signed-target
   charter-revision-replacement-container-missing-required
+  receipt-bare-revision-eight-descriptive
+  receipt-matches-accepted-quorum
+  signing-receipt-bare-revision-eight-refused
+  signing-receipt-revision-eight-chain
+  signing-assignment-wrong-assignor-binding
+  signing-assignment-empty-claims
 )
 
 cases =

@@ -205,6 +205,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 - Corpus: `receipt.verify:valid`, `receipt.verify:invalid_constraint`
 - Gate: `CharterAgreementProtocol.Conformance.RunnerReportCliTest`
+- Gate: `CharterAgreementProtocol.Conformance.CorpusTest`
 
 ### CAP-CONFORMANCE-runner-inputs
 
@@ -278,6 +279,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 - Corpus: `signing.prepare:valid`, `signing.prepare:invalid_constraint`
 - Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+- Gate: `CharterAgreementProtocol.Conformance.CorpusTest`
 - Mutation: `signing-snapshot-match-skip`
 - Mutation: `signing-receipt-first-key-only`
 

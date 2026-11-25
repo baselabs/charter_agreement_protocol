@@ -348,13 +348,16 @@ Ed25519, the strict point predicate shared with signature verification;
 failure uses `signing_key_invalid` [CAP-SIGNING-key-shape].
 
 The snapshot's kid, public bytes and artifact key algorithm MUST match an
-active resolved candidate, or preparation returns `signing_key_mismatch`
-[CAP-SIGNING-snapshot-membership].
-Every resolved receipt candidate remains eligible, including two same-kid
-keys. Only a bare-revision receipt skips membership and reports `unnamed`;
-other successful plans report `matched` [CAP-SIGNING-snapshot-membership].
-The candidates stay internal and describe the holder's own descriptor key
-check.
+active eligible candidate, or the membership check returns
+`signing_key_mismatch` [CAP-SIGNING-snapshot-membership]. Multiple eligible
+receipt candidates may share a key id. A former holder's descriptor key may
+resolve from the claimed revision while the issuing role's current owner
+makes it ineligible. If all resolved receipt keys are ineligible on that
+basis, preparation returns `receipt_claims_mismatch` before membership
+[CAP-SIGNING-snapshot-membership]. A receipt against a bare legacy revision
+skips membership and reports `unnamed`. A bare revision-8 charter MUST
+return `signing_refused` during preparation [CAP-SIGNING-snapshot-membership].
+Other successful plans report `matched`.
 
 Acceptance and termination preparation MUST verify the retained set, apply
 the existing R1-R3 producer refusals, and derive the claimed revision and
@@ -434,9 +437,9 @@ to an observed fact [CAP-RECEIPT-outcome-indeterminate]. Unknown optional
 extension bodies MUST be retained byte-exactly through verification and
 named as quarantined [CAP-RECEIPT-extension-roundtrip].
 
-A chain-view receipt whose named revision is absent or lacks verified
-acceptances from all parties MUST NOT report a governing match or a matched
-deployment [CAP-RECEIPT-partial-view]. If the signature and charter and role claims
+A chain-view receipt whose named revision is absent or whose revision
+facts have an `acceptance_status` other than `accepted` MUST NOT report a
+governing match or a matched deployment [CAP-RECEIPT-partial-view]. If the signature and charter and role claims
 can be verified from the accepted revisions present, the receipt remains valid as
 signed evidence. It reports `governing_match: mismatch` for a unique
 different governing revision or none, and `undetermined` in a contested
@@ -445,6 +448,10 @@ revision number is at or below the highest accepted revision in the view.
 An acceptance naming a missing revision invalidates the supplied view
 with `chain_invalid` before receipt verification
 [CAP-RECEIPT-conflict-visible].
+
+Verification against a bare revision-8 charter is descriptive. The
+receipt facts MUST include both `signature` and `ownership` in
+`not_verified` [CAP-RECEIPT-partial-view].
 
 ### 4.7 Extension envelope
 

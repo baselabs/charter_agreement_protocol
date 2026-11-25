@@ -48,7 +48,8 @@ defmodule CharterAgreementProtocol.ReceiptFacts do
     `:live_policy`, `:authority`, `:effect_ownership`, `:execution`,
     `:billing`, `:evaluation_truth`, `:legal_validity`, `:term_satisfaction`,
     `:view_completeness`, `:counterparty_view` and `:wall_clock`), plus
-    `:signature` when verified against a single revision.
+    `:signature` when verified against a single revision and `:ownership`
+    for a bare revision-8 charter.
 
   Digests are `"sha-256:<base64url>"` strings.
 

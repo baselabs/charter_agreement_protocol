@@ -56,7 +56,7 @@ defmodule CharterAgreementProtocol.SigningPlan do
     with :ok <- options(limits, profile),
          :ok <- context_type(kind, context),
          {:ok, signing_input, artifact, public_key} <- build(kind, input, limits),
-         kind = signing_input.kind,
+         kind = SigningInput.artifact_kind(signing_input.kind),
          :ok <- key_shape(public_key, signing_input.alg),
          {:ok, verify_with} <- derive(kind, artifact, context, limits, profile),
          {:ok, provisional} <-
@@ -178,8 +178,9 @@ defmodule CharterAgreementProtocol.SigningPlan do
   defp verify(:receipt, compact, context, limits, profile),
     do: CAP.verify_receipt(compact, context, limits, profile)
 
-  defp verify(:acceptance, compact, {revision, chain}, limits, profile),
-    do: CAP.verify_acceptance(compact, revision, chain, limits, profile)
+  defp verify(kind, compact, {revision, chain}, limits, profile)
+       when kind in [:acceptance, :party_replacement],
+       do: CAP.verify_acceptance(compact, revision, chain, limits, profile)
 
   defp verify(:termination, compact, {revision, chain}, limits, profile),
     do: CAP.verify_termination(compact, revision, chain, limits, profile)

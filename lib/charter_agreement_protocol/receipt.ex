@@ -7,7 +7,8 @@ defmodule CharterAgreementProtocol.Receipt do
   Chain context re-verifies the retained artifact set, verifies the issuing
   party signature, and compares the claimed revision with governance at the
   caller-authored receipt instant. Revision-only context cannot resolve a
-  charter key or governance view; its facts add `:signature` to `not_verified`
+  charter key or governance view. Its facts add `:signature` to `not_verified`
+  and also add `:ownership` for a bare revision-8 charter
   and report governance as undetermined.
 
   Only bilaterally accepted revision facts contribute role-to-descriptor
@@ -253,10 +254,17 @@ defmodule CharterAgreementProtocol.Receipt do
           {:ok, map()} | {:error, Error.t()}
   def prepare(compact, context, limits, profile) do
     with {:ok, prepared} <- prepare_receipt(compact, context, limits, profile) do
-      if prepared.keys not in [:unnamed, []] and prepared.holder_keys == [],
-        do: claims_error(),
-        else: {:ok, %{prepared | keys: prepared.holder_keys}}
+      prepare_context(prepared)
     end
+  end
+
+  defp prepare_context(%{context: {:revision, %CharterRevision{protocol_revision: 8}}}),
+    do: {:error, Error.new(:signing_refused, ["signing_input", "context"])}
+
+  defp prepare_context(prepared) do
+    if prepared.keys not in [:unnamed, []] and prepared.holder_keys == [],
+      do: claims_error(),
+      else: {:ok, %{prepared | keys: prepared.holder_keys}}
   end
 
   defp prepare_receipt(compact, context, limits, profile) do
@@ -683,7 +691,13 @@ defmodule CharterAgreementProtocol.Receipt do
   end
 
   defp facts(receipt, projection, verified_context) do
-    additions = if match?({:revision, _revision}, verified_context), do: [:signature], else: []
+    additions =
+      case verified_context do
+        {:revision, %CharterRevision{protocol_revision: 8}} -> [:signature, :ownership]
+        {:revision, _legacy} -> [:signature]
+        {:chain, _chain} -> []
+      end
+
     signing_key_id = if additions == [], do: receipt.envelope.kid, else: nil
 
     Facts.build(

@@ -245,7 +245,8 @@ defmodule CharterAgreementProtocol.RequirementMap do
     {"CAP-RECEIPT-partial-view",
      [
        {:corpus, ["receipt.verify:valid", "receipt.verify:invalid_constraint"]},
-       {:gate, CharterAgreementProtocol.Conformance.RunnerReportCliTest}
+       {:gate, CharterAgreementProtocol.Conformance.RunnerReportCliTest},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest}
      ]},
     {"CAP-CONFORMANCE-runner-inputs",
      [
@@ -333,6 +334,7 @@ defmodule CharterAgreementProtocol.RequirementMap do
      [
        {:corpus, ["signing.prepare:valid", "signing.prepare:invalid_constraint"]},
        {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest},
        {:mutation, "signing-snapshot-match-skip"},
        {:mutation, "signing-receipt-first-key-only"}
      ]},

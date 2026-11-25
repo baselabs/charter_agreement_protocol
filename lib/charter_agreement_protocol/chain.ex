@@ -688,20 +688,12 @@ defmodule CharterAgreementProtocol.Chain do
   defp ancestry_walk(digest, by_digest, memo) do
     case Map.get(by_digest, digest) do
       %RevisionFacts{prev_revision_digest: previous} when is_binary(previous) ->
-        linked_ancestry(digest, previous, by_digest, memo)
+        {parent_set, memo} = ancestry_set(previous, by_digest, memo)
+        set = MapSet.put(parent_set, digest)
+        {set, Map.put(memo, digest, set)}
 
       _root_or_missing ->
         unreachable_set(digest, memo)
-    end
-  end
-
-  defp linked_ancestry(digest, previous, by_digest, memo) do
-    if Map.has_key?(by_digest, previous) do
-      {parent_set, memo} = ancestry_set(previous, by_digest, memo)
-      set = MapSet.put(parent_set, digest)
-      {set, Map.put(memo, digest, set)}
-    else
-      unreachable_set(digest, memo)
     end
   end
 

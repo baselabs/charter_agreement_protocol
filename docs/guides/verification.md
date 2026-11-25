@@ -15,7 +15,7 @@ order, and then your limits:
 
 - `revisions`: canonical charter revision bytes;
 - `acceptances`: acceptance compacts;
-- `descriptors`: party descriptor compacts for both parties;
+- `descriptors`: party descriptor compacts for the histories the view names;
 - `terminations`: termination notice compacts, often `[]`.
 
 `build_set/4`, which you use before producing an acceptance or a termination, takes the
@@ -86,20 +86,21 @@ party signed one thing. That case shows up as a contested view at the chain leve
 
 Over the complete view you supply, `verify_chain/5` requires:
 
-- exactly two descriptor histories, every one of them a party that some revision
-  names;
-- each revision's parties resolving to different histories, so one party cannot hold
-  both roles (a revision that names the same descriptor twice already fails to decode,
-  with `:revision_invalid`);
+- exactly two descriptor histories in a legacy-only view, with every history
+  named by some revision;
+- every revision-8 party binding resolving to a distinct supplied history.
+  A revision that names the same descriptor twice fails with `:revision_invalid`;
 - unique revision digests and one genesis revision, whose digest is the charter id;
 - every later revision naming, as `prev_revision_digest`, a revision in the view with
   the number one lower;
 - every `supersedes` target being a revision of the same charter with a lower number,
-  and, for an accepted revision, an accepted one.
+  and every target named by a signed revision having sufficient verified signatures.
 
-A revision is **accepted** when every party-and-role pair it lists has one verified
-acceptance. Otherwise it is **proposed**. Proposed revisions stay in the facts as
-data, and they never govern.
+A legacy revision requires one verified acceptance for each of its two parties.
+A revision-8 charter uses its declared acceptance quorum and, for successors,
+the inherited quorum. An assignment also requires assent from all candidate
+parties and each assignor. A successor needs an accepted immediate predecessor.
+Revisions that have yet to meet their requirements remain proposed.
 
 Two accepted revisions at the same number are fork evidence and make the view
 contested. An accepted later revision can list contested branches in `supersedes`.
@@ -130,8 +131,10 @@ time an action happened) is up to you.
 
 ## Termination closes the charter
 
-A verified termination notice closes the charter from its `effective_at` instant, if
-the notice names the revision that governs at that instant. From then on:
+For a legacy revision, one verified termination notice closes the charter if
+it names the revision governing at its `effective_at`. Revision 8 requires
+a termination quorum of eligible roles with the same revision, reason, and
+effective instant. From the closing instant:
 
 - `governing_revision/2` returns `:none` at and after `effective_at`;
 - a receipt for an action at or after `effective_at` reports
@@ -164,8 +167,8 @@ prove your view is complete. A verifier still checks everything it receives.
 
 ## Repairing a contested view
 
-To repair a contested view, both parties accept a later revision that covers every
-competing branch: each competing revision is either an ancestor of the new one
+To repair a contested view, meet the acceptance rules of a later revision
+that covers every competing branch: each competing revision is either an ancestor of the new one
 through `prev_revision_digest` or listed in its `supersedes`. Descending from one
 branch and superseding the other is enough; listing every sibling in `supersedes` also
 works. The [fork-repair notebook](../notebooks/fork-repair.livemd) runs one repair

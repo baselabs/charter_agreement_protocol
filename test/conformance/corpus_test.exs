@@ -202,8 +202,8 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert counts["termination.verify"] == 31
     assert counts["chain.verify"] + counts["governing_revision"] == 86
     assert counts["chain.verify_profile"] == 20
-    assert counts["receipt.verify"] == 64
-    assert counts["signing.prepare"] == 123
+    assert counts["receipt.verify"] == 66
+    assert counts["signing.prepare"] == 127
   end
 
   for group <- [:ed25519, :ml_dsa] do
@@ -680,6 +680,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     one = Enum.find(cases, &(&1["id"] == "quorum-three-party-roster"))
     bytes = one["input"]["text"]
     floating = String.replace(bytes, ~s("threshold":2), ~s("threshold":2.0), global: false)
+
     assert {:error, %Error{code: :invalid_type}} =
              CharterRevision.decode(floating, Limits.default())
 
@@ -723,12 +724,28 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       profile = Profile.full()
 
       assert {:ok, frame} = producer.(claims, set)
+      assert frame.kind == operation
+      header = frame.protected_segment |> Base.url_decode64!(padding: false) |> :json.decode()
+      assert %{"typ" => "cap+acceptance"} = header
       assert {:ok, plan} = CAP.prepare_signing(operation, request, set, limits, profile)
       assert plan.signing_input == frame
       assert {:error, %Error{code: :signing_refused}} = wrong_producer.(claims, set)
 
       assert {:error, %Error{code: :signing_refused}} =
                CAP.prepare_signing(wrong, request, set, limits, profile)
+    end
+  end
+
+  test "replacement inputs distinguish missing intent from an incorrect assignor" do
+    for {id, error} <- [
+          {"signing-assignment-empty-claims", :signing_refused},
+          {"signing-assignment-wrong-assignor-binding", :acceptance_claims_mismatch}
+        ] do
+      input = shipped_input("signing-prepare", id)
+      set = signing_context(input["context"])
+      request = Map.take(input, ["kid", "claims", "algorithm"])
+
+      assert {:error, %Error{code: ^error}} = CAP.party_replacement_signing_input(request, set)
     end
   end
 
@@ -764,10 +781,19 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     {key, _private} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<4>>, 32))
     request = %{"kid" => "quorum-key-4", "claims" => claims, "public_key" => key}
 
-    for context <- [revision, chain] do
-      assert {:ok, _facts} = CAP.verify_receipt(input["compact"], context, limits)
-      assert {:ok, _plan} = CAP.prepare_signing(:receipt, request, context, limits, profile)
-    end
+    assert {:ok, bare} = CAP.verify_receipt(input["compact"], revision, limits)
+    assert :signature in bare.not_verified
+    assert :ownership in bare.not_verified
+
+    assert {:error, %Error{code: :signing_refused, subject: ["signing_input", "context"]}} =
+             CAP.prepare_signing(:receipt, request, revision, limits, profile)
+
+    assert {:ok, verified} = CAP.verify_receipt(input["compact"], chain, limits)
+    refute :signature in verified.not_verified
+    refute :ownership in verified.not_verified
+
+    assert {:ok, %{key: :matched}} =
+             CAP.prepare_signing(:receipt, request, chain, limits, profile)
 
     for invalid <- malformed_revisions(revision) do
       malformed = %{revision_facts | revision: invalid}
@@ -942,6 +968,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
         ] do
       one = Enum.find(cases, &(&1["id"] == id))
       assert {:ok, context} = receipt_context(one["input"], limits)
+
       assert {:ok, %{holder_match: ^holder_match}} =
                Receipt.verify(one["input"]["compact"], context, limits)
     end
