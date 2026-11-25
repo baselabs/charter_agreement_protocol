@@ -2732,10 +2732,75 @@ quorum_ids = ~w(
   chain-legacy-duplicate-before-revision-profile
 )
 
-cases =
-  cases ++
-    CharterAgreementProtocol.DescriptorPublicationCorpus.cases() ++
-    Enum.map(quorum_ids, &Map.fetch!(shared_lifecycle_cases, &1))
+revision_content_digest = fn text ->
+  :charter_revision_content |> Digest.hash(text) |> Digest.to_tagged()
+end
+
+# Reuse signed genesis and predecessor evidence. Include the competing sibling's
+# revision bytes without its votes, so the signer reaches the proposed target.
+legacy_parent_view =
+  Map.fetch!(shared_lifecycle_cases, "legacy-signed-child-supersedes-signed-target")["input"]
+
+legacy_sibling_view =
+  Map.fetch!(shared_lifecycle_cases, "legacy-signed-successor-of-unsigned-genesis")["input"]
+
+[legacy_parent, legacy_genesis] = legacy_parent_view["revisions"]
+[legacy_target, ^legacy_genesis] = legacy_sibling_view["revisions"]
+legacy_parent_digest = revision_content_digest.(legacy_parent)
+legacy_target_digest = revision_content_digest.(legacy_target)
+
+legacy_candidate_claims =
+  legacy_parent
+  |> :json.decode()
+  |> Map.update!("revision_number", &(&1 + 1))
+  |> Map.put("effective_from", "2026-08-25T12:00:02Z")
+  |> Map.put("prev_revision_digest", legacy_parent_digest)
+  |> Map.put("supersedes", [legacy_target_digest])
+
+legacy_candidate = canonical.(legacy_candidate_claims)
+
+legacy_set =
+  Map.put(legacy_parent_view, "revisions", [
+    legacy_candidate,
+    legacy_target,
+    legacy_parent,
+    legacy_genesis
+  ])
+
+legacy_supersession_input =
+  Map.fetch!(shared_lifecycle_cases, "signing-legacy-successor-without-accepted-parent")["input"]
+  |> put_in(["claims", "revision_number"], legacy_candidate_claims["revision_number"])
+  |> put_in(["claims", "revision_digest"], revision_content_digest.(legacy_candidate))
+  |> put_in(["claims", "prev_revision_digest"], legacy_parent_digest)
+  |> Map.put("context", %{"set" => legacy_set})
+
+legacy_supersession_case = %{
+  "id" => "signing-legacy-supersession-target-still-proposed",
+  "surface" => "signing.prepare",
+  "class" => "invalid_constraint",
+  "input" => legacy_supersession_input,
+  "expect" => invalid.("signing_refused")
+}
+
+case_with_genesis_identity = fn
+  %{
+    "input" => %{"revisions" => revisions},
+    "expect" => %{"output" => %{"charter_id" => _}}
+  } = one ->
+    [genesis] = Enum.filter(revisions, &(:json.decode(&1)["revision_number"] == 1))
+    put_in(one, ["expect", "output", "charter_id"], revision_content_digest.(genesis))
+
+  one ->
+    one
+end
+
+supplemental_cases =
+  Enum.map(quorum_ids, fn
+    "signing-legacy-supersession-target-still-proposed" -> legacy_supersession_case
+    id -> shared_lifecycle_cases |> Map.fetch!(id) |> case_with_genesis_identity.()
+  end)
+
+cases = cases ++ CharterAgreementProtocol.DescriptorPublicationCorpus.cases() ++ supplemental_cases
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 

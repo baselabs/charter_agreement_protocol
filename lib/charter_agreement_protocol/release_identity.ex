@@ -167,7 +167,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     %{
       package_versions: ["1.1.0"],
       verification_semantics: 7,
-      census_digest: "sha-256:NBhh3sS6mPIeMhRVAOrcbNJRc3QxmSnxgpvhf4-aHQg",
+      census_digest: "sha-256:YWWrKUBf9INHHAfLipSBV4-n5dHpJbZU0yX85MV3aLo",
       protocol_revisions: [1, 2, 3, 8],
       transitions: [
         %{
@@ -1903,13 +1903,13 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
                   "accepted_revision_digests" => [
                     "sha-256:xl40k5Q85s00eHs3IbvsHyIHc38aCd_DxhpNuKbNIn8"
                   ],
-                  "charter_id" => "sha-256:Tm_tHinVBmwjGzwxKrnorhAHkYZ8rufIhZ2Y5xTBkJo",
+                  "charter_id" => "sha-256:BXFSer6GFfvVXCLJP72w9CgV5q50EnyKCq23CnjVQmI",
                   "superseded_revision_digests" => [],
                   "topology" => "linear"
                 },
                 "after" => %{
                   "accepted_revision_digests" => [],
-                  "charter_id" => "sha-256:Tm_tHinVBmwjGzwxKrnorhAHkYZ8rufIhZ2Y5xTBkJo",
+                  "charter_id" => "sha-256:BXFSer6GFfvVXCLJP72w9CgV5q50EnyKCq23CnjVQmI",
                   "superseded_revision_digests" => [],
                   "topology" => "linear"
                 }

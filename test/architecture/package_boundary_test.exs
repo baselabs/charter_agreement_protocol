@@ -1,7 +1,7 @@
 defmodule CharterAgreementProtocol.Architecture.PackageBoundaryTest do
   use ExUnit.Case, async: true
 
-  @index_sha "EIax4Ke24qt7ujEbFadp6_lFlidTfkyj-vp_y_3eh-w"
+  @index_sha "m0lyG1Uk49ESNy6ZvhUaSwP35vX80oHvJvJ2WDO0hC4"
 
   test "the explicit package boundary includes certified release evidence and excludes tooling" do
     files = CharterAgreementProtocol.MixProject.project()[:package][:files]
