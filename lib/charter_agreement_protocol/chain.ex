@@ -750,6 +750,31 @@ defmodule CharterAgreementProtocol.Chain do
     end)
   end
 
+  @doc false
+  @spec latest_assignment_revision(ChainFacts.t(), binary(), Timestamp.t()) :: binary() | nil
+  def latest_assignment_revision(facts, role, at) do
+    ctx = view_context(facts)
+
+    transfers =
+      for facts <- ctx.accepted,
+          Enum.any?(facts.revision.party_replacements, &(&1.role == role)),
+          into: MapSet.new(),
+          do: facts.revision_digest
+
+    ctx.accepted
+    |> Enum.flat_map(&[&1.revision.effective_from, &1.revision.effective_until])
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.filter(&(Timestamp.compare(&1, at) != :gt))
+    |> Enum.sort(&(Timestamp.compare(&1, &2) != :lt))
+    |> Enum.find_value(&governing_transfer(facts, &1, ctx, transfers))
+  end
+
+  defp governing_transfer(facts, at, ctx, transfers) do
+    digest = do_select(facts, at, ctx)
+    if MapSet.member?(transfers, digest) and not terminated?(facts, at), do: digest
+  end
+
   defp timestamp(%DateTime{time_zone: "Etc/UTC", utc_offset: 0, std_offset: 0} = datetime) do
     datetime |> DateTime.to_iso8601() |> Timestamp.parse()
   end

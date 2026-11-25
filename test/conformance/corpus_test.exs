@@ -200,7 +200,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert counts["termination.verify"] == 30
     assert counts["chain.verify"] + counts["governing_revision"] == 77
     assert counts["chain.verify_profile"] == 20
-    assert counts["receipt.verify"] == 59
+    assert counts["receipt.verify"] == 62
     assert counts["signing.prepare"] == 117
   end
 
@@ -801,6 +801,44 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp projected_set_result({:error, %Error{code: code}}),
     do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+
+  test "receipt facts distinguish current and undetermined holders" do
+    cases = shipped_cases("receipt-verify")
+    limits = Limits.default()
+
+    for {id, holder_match} <- [
+          {"assignment-receipt-new-holder", :match},
+          {"assignment-receipt-latest-holder-after-close", :undetermined},
+          {"assignment-receipt-contested-holder", :undetermined}
+        ] do
+      one = Enum.find(cases, &(&1["id"] == id))
+      assert {:ok, context} = receipt_context(one["input"], limits)
+      assert {:ok, %{holder_match: ^holder_match}} =
+               Receipt.verify(one["input"]["compact"], context, limits)
+    end
+  end
+
+  test "receipt preparation refuses a former holder before signing" do
+    cases = shipped_cases("receipt-verify")
+    one = Enum.find(cases, &(&1["id"] == "assignment-receipt-former-holder"))
+    input = one["input"]
+    limits = Limits.default()
+    [_, payload, _] = String.split(input["compact"], ".")
+    claims = payload |> Base.url_decode64!(padding: false) |> :json.decode()
+    {public_key, _key} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<1>>, 32))
+    signing = %{"kid" => "quorum-key-1", "claims" => claims, "public_key" => public_key}
+
+    assert {:ok, context} = receipt_context(input, limits)
+
+    assert {:error, %Error{code: :receipt_claims_mismatch}} =
+             CharterAgreementProtocol.prepare_signing(
+               :receipt,
+               signing,
+               context,
+               limits,
+               Profile.full()
+             )
+  end
 
   defp assert_receipt_expectations(cases) do
     receipt_cases = Enum.filter(cases, &(&1["surface"] == "receipt.verify"))

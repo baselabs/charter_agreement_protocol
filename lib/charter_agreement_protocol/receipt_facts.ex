@@ -28,6 +28,8 @@ defmodule CharterAgreementProtocol.ReceiptFacts do
   - `chain_conflict`: `:fork_evidenced` when the receipt names a revision
     that is not accepted in your view but whose number is at or below the
     newest accepted revision. Otherwise `:none`.
+  - `holder_match`: issuing role ownership at the receipt instant, evaluated
+    when the verified view contains an accepted assignment.
   - `governing_match`: the receipt's revision compared with the revision
     that governs at `occurred_at`: `:match`, `:mismatch` (including when
     nothing governs), or `:undetermined` when the view is contested or the
@@ -81,7 +83,7 @@ defmodule CharterAgreementProtocol.ReceiptFacts do
     :optional_extensions_retained,
     :not_verified
   ]
-  defstruct @enforce_keys ++ [protocol_revision: nil, alg: nil]
+  defstruct @enforce_keys ++ [protocol_revision: nil, alg: nil, holder_match: :not_evaluated]
 
   @typedoc "Facts for one verified receipt. See the module doc for each field."
   @type t :: %__MODULE__{
@@ -102,6 +104,7 @@ defmodule CharterAgreementProtocol.ReceiptFacts do
           signing_key_id: nil | binary(),
           chain_conflict: :none | :fork_evidenced,
           governing_match: :match | :mismatch | :undetermined,
+          holder_match: :match | :undetermined | :not_evaluated,
           deployment_digest_matched: boolean(),
           optional_extensions_retained: [binary()],
           not_verified: [atom()],

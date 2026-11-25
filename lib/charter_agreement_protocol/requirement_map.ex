@@ -73,7 +73,7 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:corpus,
         [
           "receipt.verify:valid",
-          "receipt.verify:signature_invalid"
+          "receipt.verify:invalid_constraint"
         ]},
        {:gate, CharterAgreementProtocol.Conformance.CorpusTest}
      ]},

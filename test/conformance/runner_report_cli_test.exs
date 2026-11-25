@@ -42,7 +42,7 @@ defmodule CharterAgreementProtocol.Conformance.RunnerReportCliTest do
     ml = CorpusAlgorithms.select(corpus.cases, :ml_dsa)
     assert length(ed) == 566
     assert length(ml) == 21
-    assert length(ed) + length(ml) == 632
+    assert length(ed) + length(ml) == 635
     assert Enum.sort(ed ++ ml) == Enum.sort(corpus.cases)
     assert Enum.all?(ml, &(&1["id"] =~ "mldsa" or &1["id"] == "signing-wrong-algorithm"))
   end

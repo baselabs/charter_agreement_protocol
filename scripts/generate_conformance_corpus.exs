@@ -2589,6 +2589,9 @@ quorum_ids = ~w(
   signing-assignment-marker-unexpected
   assignment-receipt-new-holder
   assignment-receipt-former-holder
+  assignment-receipt-latest-holder-after-close
+  assignment-receipt-former-holder-after-close
+  assignment-receipt-contested-holder
 )
 
 cases =

@@ -242,7 +242,7 @@ defmodule CharterAgreementProtocol.Receipt do
     do: :receipt_content |> Digest.hash(bytes) |> Digest.to_tagged()
 
   defp do_verify(compact, context, limits, profile) do
-    with {:ok, prepared} <- prepare(compact, context, limits, profile),
+    with {:ok, prepared} <- prepare_receipt(compact, context, limits, profile),
          :ok <- verify_prepared_signature(prepared, profile) do
       facts(prepared.artifact, prepared.projection, prepared.context)
     end
@@ -252,36 +252,70 @@ defmodule CharterAgreementProtocol.Receipt do
   @spec prepare(term(), ChainFacts.t() | CharterRevision.t(), Limits.t(), Profile.t()) ::
           {:ok, map()} | {:error, Error.t()}
   def prepare(compact, context, limits, profile) do
+    with {:ok, prepared} <- prepare_receipt(compact, context, limits, profile) do
+      if prepared.keys not in [:unnamed, []] and prepared.holder_keys == [],
+        do: claims_error(),
+        else: {:ok, %{prepared | keys: prepared.holder_keys}}
+    end
+  end
+
+  defp prepare_receipt(compact, context, limits, profile) do
     with {:ok, verified_context} <- reverify_context(context, limits, profile),
          {:ok, receipt} <- decode(compact, limits),
          {:ok, projection} <- project(receipt, verified_context),
          :ok <- CompactJws.admit(receipt.envelope, profile) do
+      {keys, holder_keys, holder_match} = context_keys(verified_context, receipt)
+
       {:ok,
        %{
          artifact: receipt,
-         projection: projection,
+         projection: Map.put(projection, :holder_match, holder_match),
          context: verified_context,
          verify_with: elem(verified_context, 1),
-         keys: context_keys(verified_context, receipt)
+         keys: keys,
+         holder_keys: holder_keys
        }}
     end
   end
 
-  defp context_keys({:revision, _revision}, _receipt), do: :unnamed
+  defp context_keys({:revision, _revision}, _receipt), do: {:unnamed, :unnamed, :not_evaluated}
 
   defp context_keys({:chain, chain}, receipt) do
-    chain |> signing_keys(receipt) |> Enum.uniq()
+    accepted = Enum.filter(chain.revision_facts, &(&1.acceptance_status == :accepted))
+
+    revisions =
+      case Enum.filter(accepted, &(&1.revision_digest == receipt.revision_digest)) do
+        [] -> accepted
+        recognized -> recognized
+      end
+
+    descriptors = Enum.flat_map(chain.descriptor_chains, & &1.descriptors)
+    role = receipt.issuing_party_role
+    digests = MapSet.new(revisions, &role_digest(&1.revision, role))
+    claimed = Enum.filter(descriptors, &MapSet.member?(digests, &1.descriptor_digest))
+    {holder_match, holder} = receipt_holder(chain, accepted, receipt, descriptors)
+    keys = descriptor_keys(claimed, receipt.envelope.kid)
+    held = Enum.filter(claimed, &(&1.party_id == holder))
+    holder_keys = if holder, do: descriptor_keys(held, receipt.envelope.kid), else: keys
+    {keys, holder_keys, holder_match}
   end
 
   defp verify_prepared_signature(%{keys: :unnamed}, _profile), do: :ok
 
-  defp verify_prepared_signature(%{artifact: receipt, keys: keys}, profile) do
-    keys
-    |> Enum.map(fn {public_key, algorithm} ->
-      CompactJws.verify_signature(receipt.envelope, public_key, algorithm, profile)
-    end)
-    |> signature_outcome()
+  defp verify_prepared_signature(%{artifact: receipt, keys: keys, holder_keys: holders}, profile) do
+    results =
+      Enum.map(keys, fn {public_key, algorithm} ->
+        CompactJws.verify_signature(receipt.envelope, public_key, algorithm, profile)
+      end)
+
+    with :ok <- signature_outcome(results) do
+      if Enum.any?(Enum.zip(keys, results), &holder_signature?(&1, holders)),
+        do: :ok,
+        else: claims_error()
+    end
   end
+
+  defp holder_signature?({key, status}, holders), do: status == :ok and key in holders
 
   defp decode(compact, limits) do
     with {:ok, envelope} <- CompactJws.parse(compact, "cap+receipt", limits),
@@ -596,38 +630,52 @@ defmodule CharterAgreementProtocol.Receipt do
   defp honest_failure?({:error, %Error{code: :revision_outside_profile}}), do: true
   defp honest_failure?(_other), do: false
 
-  defp signing_keys(chain, receipt) do
-    descriptor_digests =
-      chain
-      |> receipt_key_revisions(receipt)
-      |> Enum.flat_map(fn facts ->
-        for %{role: role, party_descriptor_digest: digest} <- facts.revision.parties,
-            role == receipt.issuing_party_role,
-            do: digest
-      end)
-      |> Enum.uniq()
-
-    chain.descriptor_chains
-    |> Enum.flat_map(& &1.descriptors)
-    |> Enum.filter(&(&1.descriptor_digest in descriptor_digests))
+  defp descriptor_keys(descriptors, kid) do
+    descriptors
     |> Enum.flat_map(fn facts ->
-      facts.descriptor.verification_keys
-      |> Enum.filter(&(&1.key_id == receipt.envelope.kid and &1.status == :active))
-      |> Enum.map(&{&1.public_key, &1.algorithm})
+      for key <- facts.descriptor.verification_keys,
+          key.key_id == kid and key.status == :active,
+          do: {key.public_key, key.algorithm}
+    end)
+    |> Enum.uniq()
+  end
+
+  defp role_digest(revision, role) do
+    Enum.find_value(revision.parties, fn binding ->
+      if binding.role == role, do: binding.party_descriptor_digest
     end)
   end
 
-  defp receipt_key_revisions(chain, receipt) do
-    accepted = Enum.filter(chain.revision_facts, &(&1.acceptance_status == :accepted))
-
+  defp receipt_holder(chain, accepted, receipt, descriptors) do
     if Enum.any?(accepted, &(&1.revision.party_replacements != [])) do
-      {:ok, digest} = Chain.governing_revision(chain, receipt.occurred_at)
-      Enum.filter(accepted, &(&1.revision_digest == digest))
+      {status, digest} = holder_revision(chain, receipt)
+      held = Enum.find(accepted, &(&1.revision_digest == digest))
+      descriptor = held && role_digest(held.revision, receipt.issuing_party_role)
+      owner =
+        Enum.find_value(descriptors, fn facts ->
+          if facts.descriptor_digest == descriptor, do: facts.party_id
+        end)
+
+
+      {if(owner, do: status, else: :undetermined), owner}
     else
-      case Enum.filter(accepted, &(&1.revision_digest == receipt.revision_digest)) do
-        [] -> accepted
-        recognized -> recognized
-      end
+      {:not_evaluated, nil}
+    end
+  end
+
+  defp holder_revision(chain, receipt) do
+    case Chain.governing_revision(chain, receipt.occurred_at) do
+      {:ok, digest} when is_binary(digest) ->
+        {:match, digest}
+
+      {:ok, :none} ->
+        digest =
+          Chain.latest_assignment_revision(chain, receipt.issuing_party_role, receipt.occurred_at)
+
+        {:undetermined, digest}
+
+      {:ok, :contested} ->
+        {:undetermined, nil}
     end
   end
 
@@ -657,6 +705,7 @@ defmodule CharterAgreementProtocol.Receipt do
         signing_key_id: signing_key_id,
         chain_conflict: projection.chain_conflict,
         governing_match: projection.governing_match,
+        holder_match: projection.holder_match,
         deployment_digest_matched: projection.deployment_digest_matched,
         optional_extensions_retained: receipt.extension_outcome.optional_retained
       },

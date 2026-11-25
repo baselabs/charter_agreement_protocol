@@ -590,10 +590,18 @@ revision MUST themselves use protocol revision 8, with producers
 emitting `Ed25519` or `ML-DSA-65` [CAP-ASSIGNMENT-signing].
 
 In a view containing an accepted assignment, receipt verification MUST
-derive the issuing role's signing keys from the unique revision governing
-at the receipt's `occurred_at` [CAP-ASSIGNMENT-receipt-owner]. A previous holder's key cannot sign for
-that role during the assignee's governing interval. If a predecessor
-resumes, its own role binding applies again [CAP-ASSIGNMENT-receipt-owner].
+compare the verified signing descriptor's party identity with the issuing
+role's owner in the unique revision governing at `occurred_at`
+[CAP-ASSIGNMENT-receipt-owner]. A verified signature from a former holder
+returns `receipt_claims_mismatch` during the assignee's governing interval.
+A predecessor that resumes supplies its own role binding
+[CAP-ASSIGNMENT-receipt-owner].
+
+At a contested instant, the receipt uses its named revision's keys and
+ownership is undetermined. If no revision governs and a transfer of the
+issuing role already took effect, the verified signer MUST match the
+most recent effective transfer's holder, with ownership reported as
+undetermined [CAP-ASSIGNMENT-receipt-owner].
 
 ## 7. Facts and error surface
 

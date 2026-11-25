@@ -48,7 +48,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ### CAP-ASSIGNMENT-receipt-owner
 
-- Corpus: `receipt.verify:valid`, `receipt.verify:signature_invalid`
+- Corpus: `receipt.verify:valid`, `receipt.verify:invalid_constraint`
 - Gate: `CharterAgreementProtocol.Conformance.CorpusTest`
 
 ### CAP-DESCRIPTOR-commitment-member

@@ -6,7 +6,8 @@ defmodule CharterAgreementProtocol.Architecture.PreSignCheckTest do
     for module <- ["party_descriptor", "acceptance", "termination_notice", "receipt"] do
       source = File.read!("lib/charter_agreement_protocol/#{module}.ex")
       assert source =~ "def prepare("
-      assert source =~ "<- prepare(compact,"
+      shared = if module == "receipt", do: "prepare_receipt", else: "prepare"
+      assert source =~ "<- #{shared}(compact,"
     end
 
     source = File.read!("lib/charter_agreement_protocol/signing_plan.ex")
