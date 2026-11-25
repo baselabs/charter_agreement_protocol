@@ -26,6 +26,7 @@ defmodule CharterAgreementProtocol.DescriptorPublicationTest do
       "priv/conformance/cases/party_descriptor-verify.json" |> File.read!() |> JSON.decode!()
 
     one = Enum.find(cases, &(&1["id"] == "descriptor-publication-downgrade"))
+
     assert [%{actual: %{"error_code" => "descriptor_commitment_mismatch"}, agree: true}] =
              Runner.run(struct(Corpus, cases: [one]))
   end

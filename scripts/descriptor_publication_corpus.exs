@@ -21,6 +21,7 @@ defmodule CharterAgreementProtocol.DescriptorPublicationCorpus do
     legacy = descriptor([first], signer, nil, %{"protocol_revision" => 2})
     legacy_current = descriptor([second], signer, legacy, %{"protocol_revision" => 2})
     legacy_next = descriptor([third], {second, second_private}, legacy_current)
+
     same_time =
       descriptor(keys, signer, current, %{"effective_from" => current.claims["effective_from"]})
 
@@ -42,6 +43,7 @@ defmodule CharterAgreementProtocol.DescriptorPublicationCorpus do
     with_current = [current.compact]
     downgrade = descriptor(keys, signer, current, %{"protocol_revision" => 2})
     alias_key = %{retained | "key_id" => "alias"}
+
     legacy =
       descriptor([first], signer, nil, %{
         "protocol_revision" => 2,

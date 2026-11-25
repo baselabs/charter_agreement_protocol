@@ -114,8 +114,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       n_a: "single-artifact and foundational codec-only behavior are outside descriptor topology"
     },
     "descriptor_publication.verify" => %{
-      required:
-        ~w(
+      required: ~w(
           valid invalid_type invalid_constraint unknown_member non_canonical_bytes
           maximum_plus_one signature_invalid profile_revision_outside profile_algorithm_outside
         ),
