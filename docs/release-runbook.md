@@ -158,32 +158,35 @@ resolve when the published commit is tagged after registry readback.
 ## 5. Publication
 
 The release operator owns the `publish` environment and its `HEX_API_KEY`. The release operator obtains release
-authorization and dispatches `.github/workflows/publish.yml` on the default branch.
-The workflow admits only the declared owners, refuses an existing version tag,
-installs the exact runtime and locked dependencies without a dependency cache,
+authorization and dispatches `.github/workflows/publish.yml` on the default branch
+with the full qualified SHA as `release_commit`. The first job checks default-branch
+history, the successful `qualified` check and the absence of a version tag before
+checkout. The workflow takes the registry scripts from its own revision, then builds
+the requested commit in a job without the publish environment. The upload job verifies
+checksums and runs the workflow revision’s uploader. The build installs the exact runtime and locked dependencies without a dependency cache,
 builds the docs, and checks package contents and reproducibility. It builds the
 package archive and the docs archive once into `release-assets/`. After the docs
 build and before packing, it writes root `release.json` with exactly `package`,
-`version` and `commit`; the commit is the run's `GITHUB_SHA`.
+`version` and `commit`; the commit is the validated `release_commit`.
 
-The registry check uses an isolated read login for an organization and anonymous
-reads for public Hex. A package name the registry lacks is refused: a first
+The registry check reads public Hex anonymously. A package name the registry lacks is refused: a first
 publication is the owner's decision. A retired version or differing served package
 bytes is refused. The package is the release; docs are a rendering of it, and an
 ExDoc build is not byte-stable, so docs bytes are never compared: docs the registry
 already serves for this version are kept. The keyed step only uploads the two
 verified archives, package first, using `mix run --no-mix-exs` from
-`release-assets/`, where there is no `mix.exs` and no project is loaded. The uploader
-re-reads the served state before each POST. It skips a matching package and
+the runner's temporary directory, with absolute paths to the verified
+archives. The uploader re-reads the served state before each POST. It skips a matching package and
 docs that the final read reports as served. For a staged package, it first
 checks the stage checksum and then confirms the release is still unpublished.
-The uploader follows no redirects and retries no POSTs. A second publisher or
-an approval between the final read and the POST is the residual race,
-controlled by custody of the publication key. No project code runs with that
-key.
+The uploader preserves a matching pending stage with its docs. Hex's client can
+resend an in-flight upload if the connection drops before the response. It also
+retains the key across a redirect from Hex. A second publisher or approval after
+the final read or between attempts is the residual race, controlled by custody of
+the publication key. Only the isolated upload job receives that key.
 
 A release or its docs may be held for approval. After the owner approves, dispatch
-`publish.yml` again on the same commit. The workflow checks the rebuilt package
+`publish.yml` again with the same `release_commit`. The workflow checks the rebuilt package
 against the served package. The run succeeds only
 when read-back serves the matching package and a readable docs archive containing
 root `index.html` and `release.json`. The record must name this package and version
