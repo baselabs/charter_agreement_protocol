@@ -163,9 +163,11 @@ key of its own parameterization whose public-key and signature byte
 lengths are the registry row's exact values; a name below its row's
 minimum revision MUST be rejected — no honest producer could have minted
 the pair [CAP-ALG-registry-binding] [CAP-ALG-mldsa-registry-rows].
-Outside revision-8 descriptors, acceptances, and termination notices, producers
-MUST mint exactly (`Ed25519`, `protocol_revision` 2) or
-(`ML-DSA-65`, `protocol_revision` 3); accepting `EdDSA`
+For legacy artifacts, including receipts, producers MUST mint exactly
+(`Ed25519`, `protocol_revision` 2) or (`ML-DSA-65`, `protocol_revision` 3).
+Revision-8 party descriptors, acceptances (including marked assignor
+acceptances), and termination notices MUST use one of those two algorithm
+names with `protocol_revision` 8. Accepting `EdDSA`
 at revisions 2 and 3 keeps artifacts from producers that adopt a revision
 before renaming their emission verifiable [CAP-ALG-registry-binding].
 
@@ -477,8 +479,11 @@ A chain view MUST be bounded before any decode or signature check, with
 each artifact list holding at most `max_artifact_set_items` items and the
 byte lengths of all artifacts across the lists summing to at most
 `max_artifact_set_bytes` [CAP-CHAIN-artifact-set-bounds]. A view exactly at
-either ceiling verifies; one item or one byte above it rejects with
-`limit_exceeded` [CAP-CHAIN-artifact-set-bounds].
+either ceiling remains eligible for verification. Within each list, the
+verifier MUST check the item limit and then the item type at each position,
+before reporting a byte limit exceeded by the list. An item that is not
+artifact text within the count bound returns `invalid_type`. Exceeding
+either bound returns `limit_exceeded` [CAP-CHAIN-artifact-set-bounds].
 
 ## 6. Chain verification and governing revision
 
@@ -488,8 +493,12 @@ the nonempty revision check. With empty revisions, strict artifact set limits
 can therefore return `limit_exceeded`, and a malformed descriptor can return
 `compact_invalid`, before `chain_invalid`. Signing preparation uses the same
 order when verifying an artifact set context after its earlier signing input
-and key checks [CAP-CHAIN-check-order]. Descriptor histories are checked in
-ascending party ID order. After validating revision links and party histories,
+and key checks [CAP-CHAIN-check-order]. After decoding every descriptor, the
+verifier MUST verify descriptor histories in ascending byte order of their
+tagged party IDs. If more than one history fails, return the error from the
+first failing history in that order, regardless of the number of histories
+or the order in which they were supplied [CAP-CHAIN-check-order].
+After validating revision links and party histories,
 the verifier checks acceptances in input order. It rejects duplicate acceptance
 coordinates only after every acceptance verifies. It then checks signed
 supersession targets before verifying termination notices in input order

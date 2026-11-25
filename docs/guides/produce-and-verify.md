@@ -304,8 +304,10 @@ later.
 
 To sign with ML-DSA-65 instead, use an ML-DSA-65 key (listed in the descriptor
 with `"algorithm" => "ML-DSA-65"`), pass `algorithm: "ML-DSA-65"` to each signer
-call, and set `"protocol_revision" => 3` in the descriptor and acceptance
-claims.
+call, and set `"protocol_revision" => 3` in this legacy example's descriptor
+and acceptance claims. Revision-8 party descriptors, acceptances (including
+marked assignor acceptances), and termination notices can use either signing
+algorithm. Receipts use the legacy emission pairs.
 
 ## Sign with your own code
 

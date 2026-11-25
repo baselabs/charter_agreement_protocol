@@ -232,7 +232,8 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ### CAP-CHAIN-check-order
 
-- Corpus: `chain.verify:invalid_type`, `signing.prepare:invalid_type`
+- Corpus: `chain.verify:invalid_type`, `chain.verify:chain_invalid`, `signing.prepare:invalid_type`
+- Gate: `CharterAgreementProtocol.Conformance.CorpusTest`
 - Gate: `CharterAgreementProtocol.Conformance.RunnerPropertyTest`
 - Mutation: `chain-empty-before-set-checks`
 

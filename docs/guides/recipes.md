@@ -127,11 +127,12 @@ acceptance_compacts = [
   CAP.verify_chain([revision_bytes], acceptance_compacts, descriptor_compacts, [], limits)
 ```
 
-Every signed artifact here uses `"protocol_revision" => 2`. The default
-producer signs with `Ed25519` at revision 2, and it refuses claims that name
-another revision with `:signing_input_invalid`. To sign with `ML-DSA-65`,
+Every signed artifact in this legacy example uses `"protocol_revision" => 2`
+with the default `Ed25519` producer. To sign the example with `ML-DSA-65`,
 pass `"algorithm" => "ML-DSA-65"` next to `"kid"` and `"claims"`, and set
-`"protocol_revision" => 3`.
+`"protocol_revision" => 3`. Revision-8 party descriptors, acceptances
+(including marked assignor acceptances), and termination notices can use
+either algorithm. Receipts retain the legacy emission pairs.
 
 In production, produce artifacts with
 [`charter_agreement_signer`](produce-and-verify.md). It holds no keys, calls

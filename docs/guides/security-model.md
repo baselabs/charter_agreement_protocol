@@ -109,8 +109,10 @@ private-key parameter, no signer callback and no custody handle. The flow is:
 
 1. CAP builds a signing input: the exact RFC 7515 message bytes and the closed
    protected header.
-2. You sign those bytes with your key, outside CAP: `Ed25519`, or `ML-DSA-65` when
-   minting at `protocol_revision` 3.
+2. You sign those bytes with your key, outside CAP. Legacy claims, including
+   receipts, use `Ed25519` at revision 2 or `ML-DSA-65` at revision 3. Revision-8
+   party descriptors, acceptances (including marked assignor acceptances), and
+   termination notices can use either algorithm.
 3. `assemble_compact/2` checks the signing input again, accepts one raw signature of
    the exact length for its algorithm (64 bytes for `Ed25519`, 3,309 bytes for
    `ML-DSA-65`), and returns the compact.

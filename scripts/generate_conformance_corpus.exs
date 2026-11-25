@@ -2626,6 +2626,7 @@ quorum_ids = ~w(
   chain-item-type-before-item-limit
   chain-item-type-before-list-byte-limit
   chain-history-descendant-before-next-branch
+  chain-many-histories-first-party-error
 )
 
 cases =

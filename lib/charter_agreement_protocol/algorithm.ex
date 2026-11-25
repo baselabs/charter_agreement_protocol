@@ -35,10 +35,11 @@ defmodule CharterAgreementProtocol.Algorithm do
 
   ## What producers emit
 
-  New artifacts use exactly one of two pairs: `"Ed25519"` at
-  `protocol_revision` 2 (the default) or `"ML-DSA-65"` at
-  `protocol_revision` 3. Older artifacts keep verifying. Nothing new is
-  minted under `EdDSA`, which RFC 9864 marks deprecated. The
+  Legacy artifacts, including receipts, use `"Ed25519"` at
+  `protocol_revision` 2 (the default) or `"ML-DSA-65"` at revision 3.
+  Revision-8 party descriptors, acceptances (including marked assignor
+  acceptances), and termination notices can use either algorithm. Older
+  artifacts minted under `EdDSA` keep verifying. The
   [algorithm name ADR](algorithm-name-agility.md) and the
   [ML-DSA ADR](ml-dsa-admission.md) record why.
 

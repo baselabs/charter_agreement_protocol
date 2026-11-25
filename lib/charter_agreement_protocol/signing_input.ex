@@ -4,14 +4,13 @@ defmodule CharterAgreementProtocol.SigningInput do
   never authorizes, never holds a key and never signs.
 
   Callers pass `%{"kid" => kid, "claims" => claims}` with an optional
-  `"algorithm"` member: `"Ed25519"` (the default) or `"ML-DSA-65"`. The
-  claims' `protocol_revision` must equal that algorithm's emission revision:
-  2 for `"Ed25519"` and 3 for `"ML-DSA-65"`. Party descriptors, acceptances
-  and termination notices can also use revision 8 with either emission
-  algorithm. This module builds the closed protected header, canonicalizes
-  the claims, and checks them with the same
-  decoder verification uses, and returns the exact RFC 7515 signing bytes in
-  `message`.
+  `"algorithm"` member: `"Ed25519"` (the default) or `"ML-DSA-65"`.
+  Legacy claims, including receipts, use `protocol_revision` 2 for
+  `"Ed25519"` or 3 for `"ML-DSA-65"`. Party descriptors, acceptances
+  (including marked assignor acceptances), and termination notices can use
+  revision 8 with either algorithm. This module builds the closed protected
+  header, canonicalizes the claims, checks them with the verification
+  decoder, and returns the exact RFC 7515 signing bytes in `message`.
 
   The Acceptance and termination builders also verify the artifact set the
   signer holds and refuse with `:signing_refused` when signing would be

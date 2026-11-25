@@ -74,9 +74,10 @@ defmodule CharterAgreementProtocol do
   3. Pass the raw signature to `assemble_compact/2` to get the compact JWS.
   4. Verify the result before you use it.
 
-  The claims' `protocol_revision` must match the algorithm you sign with: 2
-  for `"Ed25519"` (the default) and 3 for `"ML-DSA-65"`.
-  Party descriptors can also use revision 8 with either emission algorithm.
+  Legacy claims use `protocol_revision` 2 for `"Ed25519"` (the default) or
+  3 for `"ML-DSA-65"`. Revision-8 party descriptors, acceptances (including
+  marked assignor acceptances), and termination notices can use either algorithm.
+  Receipts use the legacy emission pairs.
 
   ## Limits, profiles and errors
 
@@ -641,7 +642,8 @@ defmodule CharterAgreementProtocol do
   `"algorithm"` member: `"Ed25519"` (the default) or `"ML-DSA-65"`. `kid` is
   the signing key's id, 1 to 128 characters from `A-Z a-z 0-9 - . _ ~`.
   `claims` is the descriptor's claims as a plain map with string keys. Its
-  `protocol_revision` must be 2 for `"Ed25519"` or 3 for `"ML-DSA-65"`.
+  `protocol_revision` is 2 for `"Ed25519"`, 3 for `"ML-DSA-65"`, or 8
+  with either algorithm.
 
   Returns `{:ok, %CharterAgreementProtocol.SigningInput{}}`. Sign its
   `message` bytes with your key, then pass the signature to
@@ -728,9 +730,9 @@ defmodule CharterAgreementProtocol do
   Build the bytes to sign for an Acceptance, after checking it against a set.
 
   `input` has the same shape as for `descriptor_signing_input/1`, and the
-  claims' `protocol_revision` must be 2 for `"Ed25519"` (the default) or 3
-  for `"ML-DSA-65"`. `set` comes from `build_set/4` and holds the artifacts
-  the signer has. Revision-8 claims may use either emission algorithm.
+  claims' `protocol_revision` is 2 for `"Ed25519"` (the default), 3 for
+  `"ML-DSA-65"`, or 8 with either algorithm. `set` comes from
+  `build_set/4` and holds the artifacts the signer has.
   CAP verifies the set under default limits, then refuses
   with `:signing_refused` when:
 
@@ -794,8 +796,9 @@ defmodule CharterAgreementProtocol do
   against a set.
 
   `input` has the same shape as for `descriptor_signing_input/1`, and the
-  claims' `protocol_revision` must be 2 for `"Ed25519"` (the default) or 3
-  for `"ML-DSA-65"`. `set` comes from `build_set/4`. CAP verifies the set
+  claims' `protocol_revision` is 2 for `"Ed25519"` (the default), 3 for
+  `"ML-DSA-65"`, or 8 with either algorithm. `set` comes from
+  `build_set/4`. CAP verifies the set
   under default limits, then refuses with `:signing_refused` unless the
   revision the claims name is in the set, the charter id matches, the
   `reason_code` is listed in that revision's `termination_rules`, the role

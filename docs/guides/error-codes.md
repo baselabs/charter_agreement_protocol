@@ -90,7 +90,7 @@ the subject names the schema, and the member when there is one.
 | `:invalid_type` | a value has the wrong type | a string where a number belongs, or your code passed the wrong Elixir term (a non-list for a list of artifacts, a string for a governing instant) | reject the input; if the subject names your argument, fix your call |
 | `:unknown_member` | a member the schema does not define | an extra claim, or data meant for the `extensions` envelope | reject the input |
 | `:missing_required` | a required member is absent | an incomplete producer | reject the input |
-| `:constraint_violation` | a value is outside its allowed form | a `protocol_revision` outside 1 to 3, a value outside its enumeration, a string too long or too short, a digest that does not match the `sha-256:` pattern | reject the input |
+| `:constraint_violation` | a value is outside its allowed form | a `protocol_revision` outside the artifact's admitted revisions, a value outside its enumeration, a string too long or too short, a digest that does not match the `sha-256:` pattern | reject the input |
 | `:cardinality_violation` | a list has too few or too many items | a revision with one or three parties, or more than 32 extensions | reject the input |
 | `:nested_invalid` | a nested object or list item breaks its own schema | a bad entry inside `parties`, `verification_keys` or `grant` | reject the input |
 | `:cross_field_invalid` | members are valid alone but not together | a receipt `decision` and `outcome` pair outside the allowed set, or an extension body whose floor is above its cap | reject the input |

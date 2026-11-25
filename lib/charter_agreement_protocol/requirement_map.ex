@@ -282,7 +282,13 @@ defmodule CharterAgreementProtocol.RequirementMap do
      ]},
     {"CAP-CHAIN-check-order",
      [
-       {:corpus, ["chain.verify:invalid_type", "signing.prepare:invalid_type"]},
+       {:corpus,
+        [
+          "chain.verify:invalid_type",
+          "chain.verify:chain_invalid",
+          "signing.prepare:invalid_type"
+        ]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest},
        {:gate, CharterAgreementProtocol.Conformance.RunnerPropertyTest},
        {:mutation, "chain-empty-before-set-checks"}
      ]},

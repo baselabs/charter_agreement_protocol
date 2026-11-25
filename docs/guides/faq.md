@@ -17,9 +17,10 @@ received bytes only if encoding them again gives the same bytes. To produce byte
 [Implement CAP in another language](implementing.md) lists the exact rules.
 
 **Why does a `*_signing_input` call return `:signing_input_invalid`?**
-The most common cause is `protocol_revision` in your claims. Each signing algorithm
-mints at one revision: `Ed25519`, the default, at 2, and `ML-DSA-65` at 3. Claims that
-carry any other value are refused. The same error covers claims that fail the
+Check `protocol_revision` in your claims. Legacy artifacts, including receipts, use
+`Ed25519` at revision 2 or `ML-DSA-65` at revision 3. Revision-8 party descriptors,
+acceptances (including marked assignor acceptances), and termination notices can
+use either algorithm. The same error covers claims that fail the
 artifact's own rules, such as a missing member. The [error guide](error-codes.md) lists
 the causes.
 

@@ -284,6 +284,19 @@ defmodule CharterAgreementProtocol.ChainTest do
     assert_chain_error([setup.genesis.bytes], [], [setup.issuer.compact], [])
   end
 
+  test "set bounds still inspect item shape and count after the byte budget is exceeded" do
+    limits = %{Limits.default() | max_artifact_set_bytes: 1, max_artifact_set_items: 2}
+
+    assert {:error, %Error{code: :invalid_type}} =
+             Chain.verify(["aa", :invalid], [], [], [], limits)
+
+    assert {:error, %Error{code: :limit_exceeded, subject: ["chain", "artifacts"]}} =
+             Chain.verify(["aa", "bb", :invalid], [], [], [], limits)
+
+    assert {:error, %Error{code: :limit_exceeded, subject: ["chain", "bytes"]}} =
+             Chain.verify(["aa", "bb"], [], [], [], limits)
+  end
+
   test "set verification propagates descriptor decoding and chain verification failures" do
     setup = ChainFixture.base()
 

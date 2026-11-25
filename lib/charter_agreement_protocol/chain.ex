@@ -126,8 +126,8 @@ defmodule CharterAgreementProtocol.Chain do
   end
 
   defp accumulate_list(list, {:ok, bytes}, limits) do
-    case bounded_list(list, 0, 0, limits) do
-      {:ok, size} -> accumulate_bytes(bytes + size, limits)
+    case bounded_list(list, 0, bytes, limits) do
+      {:ok, total} -> accumulate_bytes(total, limits)
       {:error, %Error{} = error} -> {:halt, {:error, error}}
     end
   end
@@ -142,7 +142,9 @@ defmodule CharterAgreementProtocol.Chain do
 
   defp bounded_list([item | rest], count, bytes, limits)
        when is_binary(item) and count < limits.max_artifact_set_items do
-    bounded_list(rest, count + 1, bytes + byte_size(item), limits)
+    # Once over budget, only list shape and item count can change the error.
+    total = if bytes > limits.max_artifact_set_bytes, do: bytes, else: bytes + byte_size(item)
+    bounded_list(rest, count + 1, total, limits)
   end
 
   defp bounded_list([_item | _rest], count, _bytes, limits)
