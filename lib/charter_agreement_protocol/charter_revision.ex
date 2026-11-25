@@ -310,7 +310,11 @@ defmodule CharterAgreementProtocol.CharterRevision do
               ])
 
   @quorum_definition Schema.definition("quorum", [
-                       Schema.field("roles", required?: true, types: [:array], cardinality: {0, 64}),
+                       Schema.field("roles",
+                         required?: true,
+                         types: [:array],
+                         cardinality: {0, 64}
+                       ),
                        Schema.field("threshold",
                          required?: true,
                          types: [:integer],
@@ -322,6 +326,10 @@ defmodule CharterAgreementProtocol.CharterRevision do
                   types: [:object],
                   nested: {:object, @quorum_definition}
                 )
+  @replacement_digest_fields ~w(
+    assignor_party_id assignor_descriptor_digest assignee_descriptor_digest
+  )
+
   @replacement_definition Schema.definition("party_replacement", [
                             Schema.field("role",
                               required?: true,
@@ -329,7 +337,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
                               constraint: {:string_bytes, 1, 128}
                             )
                             | Enum.map(
-                                ~w(assignor_party_id assignor_descriptor_digest assignee_descriptor_digest),
+                                @replacement_digest_fields,
                                 &Schema.field(&1,
                                   required?: true,
                                   types: [:string],

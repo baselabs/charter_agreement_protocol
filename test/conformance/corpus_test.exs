@@ -197,10 +197,10 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     counts = Enum.frequencies_by(cases, & &1["surface"])
     assert counts["party_descriptor.verify"] + counts["descriptor_chain.verify"] == 81
     assert counts["descriptor_publication.verify"] == 22
-    assert counts["charter_revision.decode"] == 58
+    assert counts["charter_revision.decode"] == 59
     assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 54
     assert counts["termination.verify"] == 31
-    assert counts["chain.verify"] + counts["governing_revision"] == 83
+    assert counts["chain.verify"] + counts["governing_revision"] == 86
     assert counts["chain.verify_profile"] == 20
     assert counts["receipt.verify"] == 64
     assert counts["signing.prepare"] == 123
@@ -680,7 +680,8 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     one = Enum.find(cases, &(&1["id"] == "quorum-three-party-roster"))
     bytes = one["input"]["text"]
     floating = String.replace(bytes, ~s("threshold":2), ~s("threshold":2.0), global: false)
-    assert {:error, %Error{code: :invalid_type}} = CharterRevision.decode(floating, Limits.default())
+    assert {:error, %Error{code: :invalid_type}} =
+             CharterRevision.decode(floating, Limits.default())
 
     claims = :json.decode(floating)
     assert {:error, %Error{code: :invalid_type}} = CharterRevision.encode(claims)

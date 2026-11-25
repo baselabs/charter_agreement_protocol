@@ -302,7 +302,10 @@ defmodule CharterAgreementProtocol.Receipt do
 
   defp verify_prepared_signature(%{keys: :unnamed}, _profile), do: :ok
 
-  defp verify_prepared_signature(%{artifact: receipt, keys: keys, holder_keys: holders}, profile) do
+  defp verify_prepared_signature(
+         %{artifact: receipt, keys: keys, holder_keys: holders},
+         profile
+       ) do
     results =
       Enum.map(keys, fn {public_key, algorithm} ->
         CompactJws.verify_signature(receipt.envelope, public_key, algorithm, profile)

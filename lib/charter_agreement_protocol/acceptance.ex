@@ -297,7 +297,10 @@ defmodule CharterAgreementProtocol.Acceptance do
   defp decode(compact, limits) do
     with {:ok, envelope} <- CompactJws.parse(compact, "cap+acceptance", limits),
          {:ok, payload} <-
-           Schema.validate(definition(CompactJws.protocol_revision(envelope)), envelope.payload) do
+           Schema.validate(
+             definition(CompactJws.protocol_revision(envelope)),
+             envelope.payload
+           ) do
       extract(payload, envelope)
     end
   end

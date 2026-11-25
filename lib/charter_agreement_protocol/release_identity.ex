@@ -167,7 +167,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     %{
       package_versions: ["1.1.0"],
       verification_semantics: 7,
-      census_digest: "sha-256:9vJWiiTVB8wP57VlmP4pDb1cfPyryoKrI9Ux2zBB6qA",
+      census_digest: "sha-256:2NRHST-VlZn6ygbZ-k3jIAL5Li5en5HSLjmde4S6GGg",
       protocol_revisions: [1, 2, 3, 8],
       transitions: [
         %{
@@ -190,6 +190,13 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           description:
             "A signed successor stays proposed until its immediate predecessor is accepted, " <>
               "including for legacy revisions."
+        },
+        %{
+          class: :verdict_narrowing,
+          direction: :green_to_red,
+          description:
+            "A signed revision cannot supersede an unsigned target, even while its " <>
+              "immediate predecessor is still proposed."
         }
       ]
     }

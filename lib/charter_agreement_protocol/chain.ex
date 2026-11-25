@@ -54,7 +54,7 @@ defmodule CharterAgreementProtocol.Chain do
            verify_acceptances(acceptances, revision_index, descriptor_chains, limits, profile),
          :ok <- unique_acceptance_coordinates(acceptance_facts),
          {:ok, revision_facts} <- build_revision_facts(indexed_revisions, acceptance_facts),
-         :ok <- supersession_targets(revision_facts),
+         :ok <- signed_supersession_targets(revision_facts),
          {:ok, termination_facts} <-
            verify_terminations(terminations, revision_index, descriptor_chains, limits, profile) do
       build_facts(
@@ -496,30 +496,17 @@ defmodule CharterAgreementProtocol.Chain do
   defp assignment_state(_records, []), do: :accepted
   defp assignment_state(_records, _missing), do: :pending
 
-  defp supersession_targets(revision_facts) do
-    accepted = MapSet.new(accepted_revisions(revision_facts), & &1.revision_digest)
+  defp signed_supersession_targets(revision_facts) do
+    signed = Enum.filter(revision_facts, &(&1.signature_status == :accepted))
+    signed_digests = MapSet.new(signed, & &1.revision_digest)
 
-    signed =
-      revision_facts
-      |> Enum.filter(&(&1.signature_status == :accepted))
-      |> MapSet.new(& &1.revision_digest)
-
-    if Enum.all?(revision_facts, &valid_supersession_targets?(&1, accepted, signed)),
+    if Enum.all?(signed, &signed_targets?(&1.revision.supersedes, signed_digests)),
       do: :ok,
       else: chain_error()
   end
 
-  defp valid_supersession_targets?(
-         %{protocol_revision: 8, signature_status: :accepted} = facts,
-         _accepted,
-         signed
-       ),
-       do: Enum.all?(facts.revision.supersedes, &MapSet.member?(signed, &1))
-
-  defp valid_supersession_targets?(%{acceptance_status: :accepted} = facts, accepted, _signed),
-    do: Enum.all?(facts.revision.supersedes, &MapSet.member?(accepted, &1))
-
-  defp valid_supersession_targets?(_facts, _accepted, _signed), do: true
+  defp signed_targets?(targets, signed_digests),
+    do: Enum.all?(targets, &MapSet.member?(signed_digests, &1))
 
   defp build_facts(
          charter_id,

@@ -1078,6 +1078,10 @@ defmodule CharterAgreementProtocol do
   Sign the returned `signing_input.message`, then call `finish_signing/2`.
   CAP holds only public verification material and never signs.
 
+  For a departing party's assignment acceptance, pass `:party_replacement`
+  with a matching `replacement_role` claim. The incoming and remaining
+  parties use `:acceptance` and send their signatures separately.
+
   ## Examples
 
       iex> CharterAgreementProtocol.prepare_signing(:receipt, %{}, nil,
@@ -1095,10 +1099,6 @@ defmodule CharterAgreementProtocol do
       {:matched, true}
       iex> CharterAgreementProtocol.finish_signing(plan, descriptor.envelope.signature) == {:ok, compact}
       true
-  For a departing party's assignment acceptance, pass `:party_replacement`
-  with a matching `replacement_role` claim. The incoming and remaining
-  parties use `:acceptance` and send their signatures separately.
-
   """
   @spec prepare_signing(
           CharterAgreementProtocol.SigningInput.kind() | :party_replacement,

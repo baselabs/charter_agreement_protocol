@@ -7,8 +7,9 @@ defmodule CharterAgreementProtocol.SigningInput do
   `"algorithm"` member: `"Ed25519"` (the default) or `"ML-DSA-65"`. The
   claims' `protocol_revision` must equal that algorithm's emission revision:
   2 for `"Ed25519"` and 3 for `"ML-DSA-65"`. Party descriptors, acceptances
-  and termination notices can also use revision 8 with either emission algorithm. This module builds the closed
-  protected header, canonicalizes the claims, checks them with the same
+  and termination notices can also use revision 8 with either emission
+  algorithm. This module builds the closed protected header, canonicalizes
+  the claims, and checks them with the same
   decoder verification uses, and returns the exact RFC 7515 signing bytes in
   `message`.
 

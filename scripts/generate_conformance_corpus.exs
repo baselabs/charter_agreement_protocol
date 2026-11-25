@@ -2609,6 +2609,10 @@ quorum_ids = ~w(
   quorum-mldsa65-revision-eight-vote
   assignment-mldsa65-revision-eight-assignor
   quorum-mldsa65-revision-eight-termination
+  legacy-signed-child-supersedes-unsigned-target
+  legacy-incomplete-child-keeps-unsigned-target
+  legacy-signed-child-supersedes-signed-target
+  charter-revision-replacement-container-missing-required
 )
 
 cases =

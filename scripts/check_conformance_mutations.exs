@@ -459,7 +459,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "party-histories-skip",
       path: "lib/charter_agreement_protocol/chain.ex",
-      from: "         :ok <- party_histories(indexed_revisions, revision_index, descriptor_chains),",
+      from:
+        "         :ok <- party_histories(indexed_revisions, revision_index, descriptor_chains),",
       to: "         :ok <- :ok,",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
