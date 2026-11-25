@@ -121,6 +121,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
   test "a released compatibility row retains the census from its tagged index" do
     version = "1.0.0"
     row = Enum.find(ReleaseIdentity.compatibility(), &(version in &1.package_versions))
+
     live =
       "priv/conformance/index.json"
       |> File.read!()
