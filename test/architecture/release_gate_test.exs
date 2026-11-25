@@ -138,6 +138,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
       |> :json.decode()
       |> Map.fetch!("corpus_digest")
 
+    assert row.verification_semantics == 6
     refute row.census_digest == live
     root = File.cwd!()
 
@@ -148,6 +149,21 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
       stale = %{row | census_digest: "different"}
       ReleaseCompatibility.verify!(stale, version, row.verification_semantics, live, root)
     end
+  end
+
+  test "the descriptor publication candidate records its live compatibility identity" do
+    version = Mix.Project.config()[:version]
+    semantics = ReleaseIdentity.verification_semantics()
+    row = Enum.find(ReleaseIdentity.compatibility(), &(version in &1.package_versions))
+
+    live =
+      "priv/conformance/index.json"
+      |> File.read!()
+      |> :json.decode()
+      |> Map.fetch!("corpus_digest")
+
+    assert row.census_digest == live
+    assert :ok = ReleaseCompatibility.verify!(row, version, semantics, live, File.cwd!())
   end
 
   test "a new package version requires the live corpus census" do

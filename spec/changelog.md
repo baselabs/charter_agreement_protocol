@@ -12,7 +12,7 @@ release.
 
 Revision 8 binds a successor's complete active key set and defines a bounded,
 unsigned publication of the current and next descriptors. The current source
-candidate records verification semantics 7.
+candidate, 1.1.0, records verification semantics 7.
 
 ## 2026-11-09 — editorial clarification for package 1.0.0
 

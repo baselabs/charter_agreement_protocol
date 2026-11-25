@@ -233,10 +233,10 @@ bare `mix run -e` would drop it. Record the Hex checksum next to the tag.
 When the matching `charter_agreement_signer` release is on Hex, run
 [Produce and verify with the signer](guides/produce-and-verify.md) and both
 notebooks in a clean project with the exact dependency lines they show
-(`~> 1.0.0` for both packages). The docs tests execute both tutorials and both
-notebooks against this checkout and the matching signer release. During coordinated
-preparation, `CAP_DOCS_SIGNER_PATH` may select the real matching signer source; it
-never falls back to an older release. CAS also executes its quickstart and third
+(`~> 1.0.0` for both published packages). The docs tests execute both
+tutorials and both notebooks against the CAP candidate checkout and the
+matching signer release. During coordinated preparation, `CAP_DOCS_SIGNER_PATH`
+can select the matching signer source. CAS also executes its quickstart and third
 Livebook. Repeat with a fresh `MIX_INSTALL_DIR` and no source overrides after
 publication to check the original Hex install lines.
 

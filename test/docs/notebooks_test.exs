@@ -9,11 +9,11 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
   Livebook does, and prints each cell's result for the assertions below.
 
   Network: the notebooks install the matching 1.0 signer from Hex.
-  `CAP_DOCS_SIGNER_PATH` may select real matching source during coordinated release
-  preparation; the evaluated application version must still be 1.0.0. When neither the
-  `Mix.install` cache nor the local Hex package cache holds it, the first run needs network
-  access; later runs reuse the cache. Offline, `mix test --exclude notebooks` skips this
-  file.
+  `CAP_DOCS_SIGNER_PATH` may select real matching signer source during coordinated
+  preparation. The evaluated CAP version comes from the checkout and the signer
+  version must be 1.0.0. If both the `Mix.install` cache and the local Hex package
+  cache lack it, the first run needs network access. Later runs reuse the cache.
+  Offline, `mix test --exclude notebooks` skips this file.
 
   `CAP_NOTEBOOKS_DIR` points the test at another directory of notebooks. It exists so a
   broken copy can be run to show the test fails; leave it unset otherwise.
@@ -25,8 +25,9 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
   @moduletag timeout: :timer.minutes(10)
 
   @root Path.expand("../..", __DIR__)
-  # The notebooks install the release they ship in.
-  @hex_dependency ~s({:charter_agreement_protocol, "~> #{Mix.Project.config()[:version]}"})
+  @candidate_version Mix.Project.config()[:version]
+  # Published setup cells use the same CAP release line as the 1.0 signer.
+  @hex_dependency ~s({:charter_agreement_protocol, "~> 1.0.0"})
 
   # Evaluates cell_*.exs in order with one binding and one environment, then prints
   # each result under a marker line.
@@ -170,11 +171,16 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
       end
 
     setup <>
-      ~S"""
+      """
 
-      for app <- [:charter_agreement_protocol, :charter_agreement_signer],
+      expected_versions = [
+        charter_agreement_protocol: #{inspect(@candidate_version)},
+        charter_agreement_signer: "1.0.0"
+      ]
+
+      for {app, expected} <- expected_versions,
           version = Application.spec(app, :vsn), version != nil do
-        unless to_string(version) == "1.0.0", do: raise("documentation dependency version drift")
+        unless to_string(version) == expected, do: raise("documentation dependency version drift")
       end
       """
   end

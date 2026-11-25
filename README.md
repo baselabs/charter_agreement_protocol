@@ -134,7 +134,8 @@ capability-limited expectations for Node and browser verification.
 
 ## Status
 
-Version 1.0.0. The source candidate also verifies revision-8 party descriptors and publications. See the [changelog](CHANGELOG.md)
+The 1.1.0 candidate verifies revision-8 party descriptors and publications.
+The installation example targets the published 1.0.0 series. See the [changelog](CHANGELOG.md)
 for what changed, and [upgrading](docs/guides/upgrading-verification-identity.md) before
 moving between versions.
 
