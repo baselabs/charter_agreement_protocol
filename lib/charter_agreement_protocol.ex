@@ -1085,9 +1085,10 @@ defmodule CharterAgreementProtocol do
 
   The closed input contains `"kid"`, `"claims"`, raw `"public_key"` bytes
   and optionally `"algorithm"`. Kinds are `:party_descriptor`, `:acceptance`,
-  `:termination` and `:receipt`. Descriptor context is nil or predecessor
-  facts. Acceptance and termination context is an `ArtifactSet`. Receipt
-  context is `ChainFacts` or a bare `CharterRevision`.
+  `:party_replacement`, `:termination` and `:receipt`. Descriptor context
+  is nil or predecessor facts. Acceptance, replacement and termination
+  context is an `ArtifactSet`. Receipt context is `ChainFacts` or a bare
+  legacy `CharterRevision`.
 
   Checks run in this order: limits, profile, context type, input build, key
   shape, set verification and producer refusals, verification preparation,
