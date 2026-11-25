@@ -875,17 +875,36 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           ]
         },
         %{
-          class: :unsupported_in_baseline,
-          direction: :baseline_unsupported,
+          class: :admission,
+          direction: :red_to_green,
           operation: "descriptor_publication.verify",
           description:
-            "Published runners cannot express unsigned descriptor publication " <>
-            "verification.",
+            "Admit descriptor publication verification through the corpus dispatcher.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "unsupported",
+              from: "invalid_type",
+              to: "valid",
+              cases: ~w(
+                descriptor-publication-legacy-history
+                descriptor-publication-mldsa-opening
+                descriptor-publication-opened
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          operation: "descriptor_publication.verify",
+          description:
+            "Descriptor publication verification returns errors from its own checks.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "invalid_type",
               to: "algorithm_outside_profile",
               cases: ~w(
                 descriptor-publication-algorithm-profile
@@ -895,7 +914,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             %{
               entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "unsupported",
+              from: "invalid_type",
               to: "descriptor_commitment_mismatch",
               cases: ~w(
                 descriptor-publication-opening-mismatch
@@ -904,7 +923,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             %{
               entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "unsupported",
+              from: "invalid_type",
               to: "descriptor_publication_invalid",
               cases: ~w(
                 descriptor-publication-duplicate
@@ -922,16 +941,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             %{
               entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "unsupported",
-              to: "invalid_type",
-              cases: ~w(
-                descriptor-publication-type
-              )
-            },
-            %{
-              entry_point: "corpus_runner",
-              baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "unsupported",
+              from: "invalid_type",
               to: "limit_exceeded",
               cases: ~w(
                 descriptor-publication-artifact-limit
@@ -941,31 +951,28 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             %{
               entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "unsupported",
+              from: "invalid_type",
               to: "revision_outside_profile",
               cases: ~w(
                 descriptor-publication-document-profile
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "invalid_profile",
+              to: "revision_outside_profile",
+              cases: ~w(
                 descriptor-publication-history-profile
               )
             },
             %{
               entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "unsupported",
+              from: "invalid_type",
               to: "signature_invalid",
               cases: ~w(
                 descriptor-publication-corrupt-signature
-              )
-            },
-            %{
-              entry_point: "corpus_runner",
-              baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "unsupported",
-              to: "valid",
-              cases: ~w(
-                descriptor-publication-legacy-history
-                descriptor-publication-mldsa-opening
-                descriptor-publication-opened
               )
             }
           ]
@@ -1374,17 +1381,35 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           ]
         },
         %{
-          class: :unsupported_in_baseline,
-          direction: :baseline_unsupported,
+          class: :admission,
+          direction: :red_to_green,
           operation: "signing.prepare",
           description:
-            "Published signing entry points cannot express a marked replacement " <>
-            "operation.",
+            "Recognize replacement signing requests in preparation.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "unsupported",
+              from: "invalid_type",
+              to: "valid",
+              cases: ~w(
+                signing-assignment-departing-party
+                signing-mldsa65-assignment-assignor
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          operation: "signing.prepare",
+          description:
+            "Replacement signing checks the departing party binding and marker.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "invalid_type",
               to: "acceptance_claims_mismatch",
               cases: ~w(
                 signing-assignment-wrong-assignor-binding
@@ -1393,21 +1418,11 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             %{
               entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "unsupported",
+              from: "invalid_type",
               to: "signing_refused",
               cases: ~w(
                 signing-assignment-empty-claims
                 signing-assignment-marker-required
-              )
-            },
-            %{
-              entry_point: "corpus_runner",
-              baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "unsupported",
-              to: "valid",
-              cases: ~w(
-                signing-assignment-departing-party
-                signing-mldsa65-assignment-assignor
               )
             }
           ]
@@ -1943,15 +1958,9 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             | :resource_boundary
             | :typed_error
             | :error_code_change
-            | :output_change
-            | :unsupported_in_baseline,
+            | :output_change,
           required(:direction) =>
-            :green_to_red
-            | :red_to_green
-            | :crash_to_typed
-            | :red_to_red
-            | :green_to_green
-            | :baseline_unsupported,
+            :green_to_red | :red_to_green | :crash_to_typed | :red_to_red | :green_to_green,
           required(:description) => binary(),
           optional(:operation) => binary(),
           optional(:witnesses) => [witness()]

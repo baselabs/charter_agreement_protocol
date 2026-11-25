@@ -22,22 +22,11 @@ defmodule CharterAgreementProtocol.ReverseCorpus do
     fresh = Enum.map(frozen.cases, &Map.update!(&1, "id", fn id -> "dispatch-" <> id end))
     checked!(%{frozen | cases: fresh})
 
-    supported_surfaces = MapSet.new(Corpus.surfaces())
-
-    {supported, unsupported} =
-      Enum.split_with(cases, &supported?(&1, supported_surfaces))
-
-    observed =
-      %{frozen | cases: supported}
-      |> Runner.run()
-      |> Map.new(&outcome/1)
-
-    unavailable =
-      Map.new(unsupported, fn %{"id" => id, "surface" => surface} ->
-        {qualified(id), observation(surface, "unsupported")}
-      end)
-
-    Map.merge(observed, unavailable)
+    # The candidate loader has validated the case envelopes. Let the
+    # published runner report its own fallback for unfamiliar operations.
+    %{frozen | cases: cases}
+    |> Runner.run()
+    |> Map.new(&outcome/1)
   end
 
   def with_public_probes(corpus_outcomes, probes) do
@@ -52,23 +41,6 @@ defmodule CharterAgreementProtocol.ReverseCorpus do
   def read_outcomes!(path), do: path |> File.read!() |> :erlang.binary_to_term([:safe])
 
   def observation(operation, value), do: %{"operation" => operation, "value" => value}
-
-  # The published corpus interface lacks exactly these two known entry shapes.
-  defp supported?(%{"surface" => "descriptor_publication.verify"}, _surfaces), do: false
-
-  defp supported?(
-         %{"surface" => "signing.prepare", "input" => %{"kind" => "party_replacement"}},
-         _surfaces
-       ),
-       do: false
-
-  defp supported?(%{"surface" => surface}, surfaces) do
-    unless MapSet.member?(surfaces, surface) do
-      raise "missing published dispatch for #{surface}"
-    end
-
-    true
-  end
 
   defp checked_outcome!(%{agree: true} = result), do: outcome(result)
 

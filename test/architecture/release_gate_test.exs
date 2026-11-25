@@ -327,6 +327,23 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     end
   end
 
+  test "reverse differential keeps the published replacement signing error" do
+    id = "signing-assignment-departing-party"
+    transitions = List.last(ReleaseIdentity.compatibility()).transitions
+    transition = isolate_witness(transitions, id)
+    row = %{transitions: [transition]}
+    key = "corpus_runner/" <> id
+    before = %{key => observation("signing.prepare", "invalid_type")}
+    candidate = %{key => observation("signing.prepare", success(%{}))}
+
+    assert ReleaseCompatibility.verify_reverse!(row, "hex:1.0.0", before, candidate) == 1
+
+    assert_raise RuntimeError, ~r/outcome drift.*signing-assignment-departing-party/, fn ->
+      skipped = %{key => observation("signing.prepare", "unsupported")}
+      ReleaseCompatibility.verify_reverse!(row, "hex:1.0.0", skipped, candidate)
+    end
+  end
+
   test "qualification rejects npm-only witness drift from the pinned row" do
     row = List.last(ReleaseIdentity.compatibility())
     pinned = File.read!("priv/release-metadata.json")

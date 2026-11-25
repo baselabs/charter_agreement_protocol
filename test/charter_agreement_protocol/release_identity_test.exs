@@ -26,8 +26,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
                  :resource_boundary,
                  :typed_error,
                  :error_code_change,
-                 :output_change,
-                 :unsupported_in_baseline
+                 :output_change
                ]
 
         assert transition.direction in [
@@ -35,8 +34,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
                  :red_to_green,
                  :crash_to_typed,
                  :red_to_red,
-                 :green_to_green,
-                 :baseline_unsupported
+                 :green_to_green
                ]
 
         assert is_binary(transition.description) and byte_size(transition.description) > 0

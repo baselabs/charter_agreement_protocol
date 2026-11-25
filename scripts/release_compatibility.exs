@@ -13,8 +13,7 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
     resource_boundary: [:green_to_red, :red_to_green],
     typed_error: [:crash_to_typed],
     error_code_change: [:red_to_red],
-    output_change: [:green_to_green],
-    unsupported_in_baseline: [:baseline_unsupported]
+    output_change: [:green_to_green]
   }
 
   def verify!(row, version, semantics, live_digest, root) do
@@ -244,7 +243,6 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
 
   defp witness_direction(from, to, nil) do
     case {outcome_kind(from), outcome_kind(to)} do
-      {"unsupported", kind} when kind in ["valid", :typed] -> :baseline_unsupported
       {"raised", :typed} -> :crash_to_typed
       {"valid", :typed} -> :green_to_red
       {:typed, "valid"} -> :red_to_green
