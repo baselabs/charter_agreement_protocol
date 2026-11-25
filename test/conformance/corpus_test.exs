@@ -197,9 +197,9 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert counts["charter_revision.decode"] == 50
     assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 49
     assert counts["termination.verify"] == 29
-    assert counts["chain.verify"] + counts["governing_revision"] == 49
+    assert counts["chain.verify"] + counts["governing_revision"] == 54
     assert counts["chain.verify_profile"] == 20
-    assert counts["receipt.verify"] == 50
+    assert counts["receipt.verify"] == 57
     assert Enum.any?(cases, &(&1["surface"] == "signing.prepare"))
   end
 
