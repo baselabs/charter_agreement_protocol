@@ -23,9 +23,12 @@ defmodule CharterAgreementProtocol.Chain do
     PartyDescriptor,
     Quorum,
     RevisionFacts,
+    TerminationFacts,
     TerminationNotice,
     Timestamp
   }
+
+  alias CharterAgreementProtocol.Internal.Retained
 
   @doc "Verify a complete caller-supplied charter artifact view."
   @spec verify(term(), term(), term(), term(), Limits.t()) ::
@@ -103,15 +106,62 @@ defmodule CharterAgreementProtocol.Chain do
           {:ok, binary() | :contested | :none} | {:error, Error.t()}
   def governing_revision(%ChainFacts{} = facts, %DateTime{} = at) do
     with {:ok, timestamp} <- timestamp(at) do
-      if terminated?(facts, timestamp), do: {:ok, :none}, else: {:ok, select(facts, timestamp)}
+      governing_revision(facts, timestamp)
     end
   end
 
   def governing_revision(%ChainFacts{} = facts, %Timestamp{} = at) do
-    if terminated?(facts, at), do: {:ok, :none}, else: {:ok, select(facts, at)}
+    if timestamp_shape?(at) and governing_facts_shape?(facts) do
+      if terminated?(facts, at), do: {:ok, :none}, else: {:ok, select(facts, at)}
+    else
+      invalid_type()
+    end
   end
 
   def governing_revision(_facts, _at), do: invalid_type()
+
+  defp governing_facts_shape?(%ChainFacts{
+         revision_facts: revisions,
+         termination_facts: notices,
+         superseded_revision_digests: superseded
+       }) do
+    Retained.binaries?(superseded) and Retained.list?(revisions) and Retained.list?(notices) and
+      Enum.all?(revisions, &governing_revision_shape?/1) and
+      Enum.all?(notices, &governing_notice_shape?/1)
+  end
+
+  defp governing_facts_shape?(_facts), do: false
+
+  defp governing_revision_shape?(%RevisionFacts{
+         revision: revision,
+         revision_digest: digest,
+         revision_number: number,
+         prev_revision_digest: previous,
+         acceptance_status: status
+       }) do
+    is_binary(digest) and is_integer(number) and (is_nil(previous) or is_binary(previous)) and
+      status in [:accepted, :proposed] and Retained.revision_shape?(revision) and
+      timestamp_shape?(revision.effective_from) and
+      (is_nil(revision.effective_until) or timestamp_shape?(revision.effective_until))
+  end
+
+  defp governing_revision_shape?(_facts), do: false
+
+  defp governing_notice_shape?(%TerminationFacts{
+         governing_revision_digest: digest,
+         reason_code: reason,
+         effective_at: at,
+         party_role: role
+       }) do
+    is_binary(digest) and is_binary(reason) and is_binary(role) and timestamp_shape?(at)
+  end
+
+  defp governing_notice_shape?(_facts), do: false
+
+  defp timestamp_shape?(%Timestamp{ordering_ticks: ticks, fraction: fraction}),
+    do: is_integer(ticks) and is_binary(fraction) and String.valid?(fraction)
+
+  defp timestamp_shape?(_at), do: false
 
   # One traversal bounds the whole input: every list must be proper and binary,
   # each list within max_artifact_set_items, and the aggregate byte sum within
@@ -692,14 +742,15 @@ defmodule CharterAgreementProtocol.Chain do
   end
 
   defp ancestry_walk(digest, by_digest, memo) do
-    case Map.get(by_digest, digest) do
-      %RevisionFacts{prev_revision_digest: previous} when is_binary(previous) ->
-        {parent_set, memo} = ancestry_set(previous, by_digest, memo)
-        set = MapSet.put(parent_set, digest)
-        {set, Map.put(memo, digest, set)}
-
-      _root_or_missing ->
-        unreachable_set(digest, memo)
+    with %RevisionFacts{prev_revision_digest: previous, revision_number: number} <-
+           Map.get(by_digest, digest),
+         %RevisionFacts{revision_number: previous_number} when previous_number < number <-
+           Map.get(by_digest, previous) do
+      {parent_set, memo} = ancestry_set(previous, by_digest, memo)
+      set = MapSet.put(parent_set, digest)
+      {set, Map.put(memo, digest, set)}
+    else
+      _root_or_missing -> unreachable_set(digest, memo)
     end
   end
 
@@ -726,12 +777,13 @@ defmodule CharterAgreementProtocol.Chain do
     |> Enum.group_by(&{&1.governing_revision_digest, &1.reason_code, &1.effective_at})
     |> Enum.any?(fn {{digest, _reason, effective}, votes} ->
       Timestamp.compare(effective, at) in [:lt, :eq] and
-        Quorum.met?(
-          Quorum.termination(Map.fetch!(index, digest)),
-          Enum.map(votes, & &1.party_role)
-        ) and
-        do_select(facts, effective, ctx) == digest
+        do_select(facts, effective, ctx) == digest and
+        termination_quorum_met?(Map.get(index, digest), votes)
     end)
+  end
+
+  defp termination_quorum_met?(revision, votes) do
+    Quorum.met?(Quorum.termination(revision), Enum.map(votes, & &1.party_role))
   end
 
   @doc false

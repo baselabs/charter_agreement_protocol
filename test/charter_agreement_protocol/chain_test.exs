@@ -17,7 +17,8 @@ defmodule CharterAgreementProtocol.ChainTest do
     Limits,
     RevisionFacts,
     TerminationFacts,
-    TerminationFixture
+    TerminationFixture,
+    Timestamp
   }
 
   @not_verified ~w(tenancy live_policy authority effect_ownership execution billing evaluation_truth legal_validity term_satisfaction view_completeness counterparty_view wall_clock)a
@@ -165,6 +166,43 @@ defmodule CharterAgreementProtocol.ChainTest do
 
     assert {:ok, :none} =
              Chain.governing_revision(facts, at!("2026-08-26T13:00:00Z"))
+
+    assert {:ok, :none} =
+             CharterAgreementProtocol.governing_revision(
+               %{facts | revision_facts: []},
+               at!("2026-08-26T13:00:00Z")
+             )
+
+    [notice] = facts.termination_facts
+    [genesis, successor] = facts.revision_facts
+    bad_revision = %{successor | revision: %{successor.revision | parties: nil}}
+
+    for malformed <- [
+          Map.delete(facts, :revision_facts),
+          %{facts | revision_facts: [%{}]},
+          %{facts | revision_facts: [bad_revision]},
+          %{facts | termination_facts: [%{}]},
+          %{facts | termination_facts: [%{notice | effective_at: nil}]}
+        ] do
+      assert {:error, %Error{code: :invalid_type}} =
+               CharterAgreementProtocol.governing_revision(malformed, at!("2026-08-26T13:00:00Z"))
+    end
+
+    assert {:error, %Error{code: :invalid_type}} =
+             CharterAgreementProtocol.governing_revision(
+               facts,
+               %Timestamp{ordering_ticks: 0, fraction: nil}
+             )
+
+    cyclic = %{genesis | prev_revision_digest: successor.revision_digest}
+
+    assert {:ok, digest} =
+             CharterAgreementProtocol.governing_revision(
+               %{facts | revision_facts: [cyclic, successor]},
+               at!("2026-08-26T12:59:59Z")
+             )
+
+    assert digest == revision_2.digest
   end
 
   test "rejects missing predecessor bindings and invalid supersession targets" do

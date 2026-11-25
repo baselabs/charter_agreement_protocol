@@ -169,6 +169,12 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
                String.contains?(transition.description, "chain-many-histories-first-party-error")
            end)
 
+    assert Enum.any?(row.transitions, fn transition ->
+             transition.class == :error_code_change and transition.direction == :red_to_red and
+               String.contains?(transition.description, "chain-expanded-histories") and
+               String.contains?(transition.description, "invalid_syntax")
+           end)
+
     assert :ok = ReleaseCompatibility.verify!(row, version, semantics, live, File.cwd!())
   end
 

@@ -27,6 +27,9 @@ release.
   descendants in the same order as Elixir, validates acceptance compacts
   before checking duplicates, and uses the specified artifact-list check
   order for types and bounds.
+- Set verification processes three or more histories before checking revision
+  decoding, profile admission and vote validity. Shared cases record the
+  typed errors that replace the earlier history count rejection.
 
 ## 2026-11-25 — descriptor key commitments and publication
 

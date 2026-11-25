@@ -153,7 +153,7 @@ Signed artifacts are attached compact JWS strings.
 | Code | Meaning | Typical cause | What to do |
 |---|---|---|---|
 | `:invalid_limits` | the limits value is not valid | an unknown field, a negative value, or a value above the maximum | fix your call; build limits with `Limits.new/1` |
-| `:invalid_profile` | the profile value is not valid | an unknown `alg` name, an empty or duplicated list, a revision range outside 1 to 3 or reversed | fix your call; build profiles with `Profile.new/1` |
+| `:invalid_profile` | the profile value is not valid | an unknown `alg` name, an empty or duplicated list, a reversed revision range or an endpoint outside 1, 2, 3, and 8 | fix your call; build profiles with `Profile.new/1` |
 | `:limit_exceeded` | the input is larger than a limit allows; the subject names which one | an oversized artifact, a deep JSON value, a chain view with too many artifacts or bytes | reject the input, or raise that limit if the input is legitimate |
 | `:algorithm_outside_profile` | the artifact's `alg` is not in your profile | an ML-DSA artifact under an Ed25519-only profile | reject the input under your policy |
 | `:revision_outside_profile` | the artifact's `protocol_revision` is outside your profile's range | a revision-1 artifact under `revisions: {2, 3}` | reject the input under your policy |

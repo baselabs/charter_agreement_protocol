@@ -83,9 +83,9 @@ An artifact outside the profile fails with `:algorithm_outside_profile` or
 a signature verdict. Artifacts the call checked earlier, such as the context, may
 already have had their signatures verified.
 
-`Profile.full/0` is every registry name and revisions 1 to 3. A call without a profile
-behaves exactly like a call with `Profile.full/0`. A profile can only narrow; there is
-no way to admit something the registry does not.
+`Profile.full/0` includes every registry name and revisions 1, 2, 3, and 8.
+A call without a profile behaves exactly like a call with `Profile.full/0`.
+A profile selects a subset of the registry.
 
 ```elixir
 alias CharterAgreementProtocol.Capability.Profile
@@ -98,7 +98,8 @@ alias CharterAgreementProtocol.Capability.Profile
 ```
 
 `Profile.new/1` takes `:algorithms` (a non-empty list of registry names without
-repeats) and `:revisions` (`{min, max}` within 1 to 3, with `min <= max`). Leave
+repeats) and `:revisions` (`{min, max}` with endpoints among 1, 2, 3, and 8,
+and `min <= max`). Leave
 either out, or pass `nil`, to keep the full value. Anything else returns
 `{:error, %Error{code: :invalid_profile}}`, and a malformed profile struct passed to a
 verify call fails the same way before verification starts.

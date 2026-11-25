@@ -139,7 +139,7 @@ the `charter_revision_content` domain. The first revision's digest is the charte
 
 | Member | Required | Rule |
 |---|---|---|
-| `protocol_revision` | yes | 1 to 3 |
+| `protocol_revision` | yes | 1, 2, or 8 |
 | `revision_number` | yes | 1 for the first revision, then exactly one more each time |
 | `charter_id` | after the first | The charter id |
 | `prev_revision_digest` | after the first | Digest of the revision numbered one lower |

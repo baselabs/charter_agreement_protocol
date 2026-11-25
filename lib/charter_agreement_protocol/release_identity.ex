@@ -167,7 +167,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     %{
       package_versions: ["1.1.0"],
       verification_semantics: 7,
-      census_digest: "sha-256:Nh8JvOqsBWluwNWCc35l4Y-306YC0o-u6V20B5mErgI",
+      census_digest: "sha-256:W_Mefd6sxz-3YTVAe47dRX_jUAKL3I6SjnUqAQCiNEo",
       protocol_revisions: [1, 2, 3, 8],
       transitions: [
         %{
@@ -189,14 +189,19 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           direction: :green_to_red,
           description:
             "A signed successor stays proposed until its immediate predecessor is accepted, " <>
-              "including for legacy revisions."
+              "including in legacy-signed-successor-of-unsigned-genesis. The child no longer " <>
+              "governs, so a receipt bound to it returns receipt_claims_mismatch and signing " <>
+              "its termination returns signing_refused."
         },
         %{
           class: :verdict_narrowing,
           direction: :green_to_red,
           description:
-            "A signed revision cannot supersede an unsigned target, even while its " <>
-              "immediate predecessor is still proposed."
+            "Signing a legacy successor requires an accepted immediate predecessor and " <>
+              "accepted supersession targets. " <>
+              "See signing-legacy-successor-without-accepted-parent and " <>
+              "signing-legacy-supersession-target-still-proposed. Signed sources still " <>
+              "reject unsigned targets at set verification, even if the source stays proposed."
         },
         %{
           class: :error_code_change,
@@ -210,9 +215,62 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :error_code_change,
           direction: :red_to_red,
           description:
+            "With three or more histories, set verification reaches history verification, " <>
+              "revision decoding and admission. The chain-expanded-histories cases change " <>
+              "chain_invalid to descriptor_chain_invalid, algorithm_outside_profile, " <>
+              "revision_outside_profile, invalid_syntax, trailing_bytes, limit_exceeded, " <>
+              "duplicate_member, non_canonical_bytes, invalid_type, unknown_member, " <>
+              "missing_required, constraint_violation, cardinality_violation, nested_invalid, " <>
+              "timestamp_invalid, revision_invalid, cross_field_invalid, " <>
+              "extension_criticality_conflict, extension_duplicate, " <>
+              "extension_namespace_invalid, extension_retired, extension_scope_invalid, " <>
+              "or extension_unknown_critical."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "With three or more histories and a valid revision-8 charter, invalid votes can " <>
+              "reach envelope, binding and signature checks. The chain-expanded-histories " <>
+              "vote cases return compact_invalid, protected_header_invalid, " <>
+              "acceptance_claims_mismatch, termination_claims_mismatch or signature_invalid " <>
+              "instead of chain_invalid."
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          description:
+            "Elixir profiles recognize 8 as a range endpoint. The case " <>
+              "chain-profile-endpoint-eight-admits-legacy-view verifies instead of returning " <>
+              "invalid_profile, matching the TypeScript profile constructor."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "Revision-8 acceptance and termination envelopes are admitted to claims checks. " <>
+              "The quorum-acceptance-rejects-legacy-binding and " <>
+              "quorum-termination-rejects-legacy-binding cases return their claims mismatch " <>
+              "codes instead of protected_header_invalid. An ordinary signing operation " <>
+              "with a replacement marker returns signing_refused instead of " <>
+              "signing_input_invalid."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "A receipt signed by the former holder in assignment-receipt-former-holder " <>
+              "returns receipt_claims_mismatch instead of chain_invalid. Signing with only " <>
+              "the bare revision-8 charter returns signing_refused instead of unknown_member."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
             "The TypeScript verifier preserves the root signature error in " <>
               "chain-root-signature-before-revision: signature_invalid instead of " <>
-              "descriptor_chain_invalid."
+              "descriptor_chain_invalid. A missing root key similarly returns " <>
+              "descriptor_key_invalid in chain-root-key-error-before-revision."
         },
         %{
           class: :error_code_change,
@@ -236,7 +294,16 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           description:
             "The TypeScript verifier checks the acceptance list before duplicate coordinates, " <>
               "returning compact_invalid instead of chain_invalid when a malformed compact " <>
-              "follows a duplicate acceptance."
+              "follows a duplicate acceptance in chain-malformed-vote-before-legacy-duplicate."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "The TypeScript verifyChain entry point rejects a non-record set with " <>
+              "invalid_type instead of chain_invalid. Set-aware builders return " <>
+              "signing_input_invalid instead of invalid_type when malformed claims " <>
+              "are paired with an invalid list inside a set."
         }
       ]
     }

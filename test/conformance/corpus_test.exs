@@ -198,12 +198,12 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert counts["party_descriptor.verify"] + counts["descriptor_chain.verify"] == 81
     assert counts["descriptor_publication.verify"] == 22
     assert counts["charter_revision.decode"] == 59
-    assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 54
-    assert counts["termination.verify"] == 31
-    assert counts["chain.verify"] + counts["governing_revision"] == 92
-    assert counts["chain.verify_profile"] == 21
-    assert counts["receipt.verify"] == 67
-    assert counts["signing.prepare"] == 127
+    assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 55
+    assert counts["termination.verify"] == 32
+    assert counts["chain.verify"] + counts["governing_revision"] == 125
+    assert counts["chain.verify_profile"] == 24
+    assert counts["receipt.verify"] == 68
+    assert counts["signing.prepare"] == 131
   end
 
   for group <- [:ed25519, :ml_dsa] do

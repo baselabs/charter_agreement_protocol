@@ -38,7 +38,9 @@ defmodule CharterAgreementProtocol.Internal.Retained do
   @spec verified_context?(term(), term()) :: boolean()
   def verified_context?(revision, chain), do: revision_shape?(revision) and chain_shape?(chain)
 
-  defp revision_shape?(%CharterRevision{} = revision) do
+  @doc false
+  @spec revision_shape?(term()) :: boolean()
+  def revision_shape?(%CharterRevision{} = revision) do
     Map.keys(revision) == Map.keys(struct(CharterRevision)) and
       is_binary(revision.canonical_bytes) and is_integer(revision.revision_number) and
       optional_binary?(revision.charter_id) and optional_binary?(revision.prev_revision_digest) and
@@ -48,7 +50,7 @@ defmodule CharterAgreementProtocol.Internal.Retained do
       revision_rules_shape?(revision)
   end
 
-  defp revision_shape?(_other), do: false
+  def revision_shape?(_other), do: false
 
   defp revision_rules_shape?(revision) do
     optional_quorum_shape?(revision.acceptance_quorum) and

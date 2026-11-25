@@ -2627,6 +2627,49 @@ quorum_ids = ~w(
   chain-item-type-before-list-byte-limit
   chain-history-descendant-before-next-branch
   chain-many-histories-first-party-error
+  quorum-acceptance-rejects-legacy-binding
+  quorum-termination-rejects-legacy-binding
+  chain-expanded-histories-before-revision-syntax
+  chain-expanded-histories-before-revision-trailing
+  chain-expanded-histories-before-revision-byte-limit
+  chain-expanded-histories-before-revision-revision-invalid
+  chain-expanded-histories-before-revision-nested-invalid
+  chain-expanded-histories-before-revision-unknown-member
+  chain-expanded-histories-before-revision-missing-required
+  chain-expanded-histories-before-revision-non-canonical-bytes
+  chain-expanded-histories-before-revision-duplicate-member
+  chain-expanded-histories-before-revision-constraint-violation
+  chain-expanded-histories-before-revision-timestamp-invalid
+  chain-expanded-histories-before-revision-invalid-type
+  chain-expanded-histories-before-revision-cardinality-violation
+  chain-expanded-histories-before-revision-extension-criticality-conflict
+  chain-expanded-histories-before-revision-extension-duplicate
+  chain-expanded-histories-before-revision-extension-namespace-invalid
+  chain-expanded-histories-before-revision-extension-retired
+  chain-expanded-histories-before-revision-extension-scope-invalid
+  chain-expanded-histories-before-revision-cross-field-invalid
+  chain-expanded-histories-before-revision-extension-unknown-critical
+  chain-expanded-histories-before-acceptance-compact
+  chain-expanded-histories-before-termination-compact
+  chain-expanded-histories-before-history-shape
+  legacy-signed-successor-of-unsigned-genesis
+  chain-malformed-vote-before-legacy-duplicate
+  chain-root-key-error-before-revision
+  chain-expanded-histories-before-acceptance-binding
+  chain-expanded-histories-before-acceptance-header
+  chain-expanded-histories-before-acceptance-signature
+  chain-expanded-histories-before-termination-binding
+  chain-expanded-histories-before-termination-header
+  chain-expanded-histories-before-termination-signature
+  chain-expanded-histories-before-artifact-profile
+  chain-expanded-histories-before-revision-profile
+  chain-profile-endpoint-eight-admits-legacy-view
+  legacy-unsigned-predecessor-leaves-no-governing-revision
+  receipt-legacy-successor-without-accepted-parent
+  signing-legacy-ordinary-acceptance-with-marker
+  signing-legacy-successor-without-accepted-parent
+  signing-termination-without-accepted-predecessor
+  signing-legacy-supersession-target-still-proposed
 )
 
 cases =
