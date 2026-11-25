@@ -8,10 +8,7 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
       do: raise("current compatibility row does not match the verification semantics")
 
     if row.census_digest != expected_digest,
-      do:
-        raise(
-          "compatibility census for #{version}: #{row.census_digest} != #{expected_digest}"
-        )
+      do: raise("compatibility census for #{version}: #{row.census_digest} != #{expected_digest}")
 
     :ok
   end
