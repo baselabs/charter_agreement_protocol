@@ -6,7 +6,7 @@ clock, opens no network connection and holds no keys; the conformance CLI,
 which reads a corpus directory, is the only part that touches the
 filesystem.
 
-CAP never authorizes anything. A verified charter tells you what two parties
+CAP never authorizes anything. A verified charter tells you what the parties
 signed and which revision governs at a given instant. Whether your
 application does anything because of it is for your application to decide.
 
@@ -290,10 +290,12 @@ verify step is yours.
 ### Check before external signing
 
 Pass the holder's snapshot public key as raw bytes. CAP derives and keeps
-its verification context in the returned plan. Acceptance and termination
-use an `ArtifactSet`; a descriptor uses nil or predecessor facts; a receipt
-uses `ChainFacts` or a `CharterRevision`. A bare revision returns
-`key: :unnamed` because it names no descriptor key.
+its verification context in the returned plan. Acceptance, party replacement
+and termination use an `ArtifactSet`. A descriptor uses nil or predecessor
+facts. A receipt uses `ChainFacts` or, for a legacy charter, a
+`CharterRevision`. A bare legacy revision returns `key: :unnamed` because
+it names no descriptor key. Preparing against a bare revision-8 charter
+returns `:signing_refused`.
 
 Keep the plan as returned. `finish_signing/2` assembles under its limits
 and runs public verification with its context and profile. Limits apply

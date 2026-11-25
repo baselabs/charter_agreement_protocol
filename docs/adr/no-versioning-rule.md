@@ -68,7 +68,7 @@ path makes it fail.
 ## Consequences
 
 The protocol evolves at the revision boundary inside the artifact, where the change is
-digest-covered and both parties have to accept it. The code surface stays free of
+digest-covered and must meet the revision's acceptance rules. The code surface stays free of
 versions and stable under renames. No module, function, path, config key, test,
 separator, `typ` or internal compatibility branch may take its name from a release,
 a task or an implementation sequence. Wire revisions stay digest-covered data. The

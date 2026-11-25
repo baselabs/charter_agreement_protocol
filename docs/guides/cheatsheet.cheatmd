@@ -97,8 +97,9 @@ signature = your_signer.(plan.signing_input.message)
 {:ok, compact} = CAP.finish_signing(plan, signature)
 ```
 
-Kinds: `:party_descriptor` (context `nil` or predecessor facts), `:acceptance` and
-`:termination` (an `ArtifactSet`), `:receipt` (`ChainFacts` or a bare revision). A
+Kinds include `:party_descriptor` (context `nil` or predecessor facts),
+`:acceptance`, `:party_replacement`, and `:termination` (an `ArtifactSet`),
+and `:receipt` (`ChainFacts` or a bare legacy revision). A
 refusal arrives before any signature exists: `:signing_key_mismatch` when the key is
 not the holder's, or the code verification would return.
 
@@ -107,6 +108,7 @@ not the holder's, or the code verification would return.
 ```elixir
 {:ok, set} = CAP.build_set(revisions, acceptances, terminations, descriptors)
 CAP.acceptance_signing_input(%{"kid" => kid, "claims" => claims}, set)
+CAP.party_replacement_signing_input(%{"kid" => kid, "claims" => replacement_claims}, set)
 CAP.termination_signing_input(%{"kid" => kid, "claims" => claims}, set)
 CAP.receipt_signing_input(%{"kid" => kid, "claims" => claims})
 ```

@@ -1,22 +1,21 @@
 # Overview
 
-Two companies, or two companies' software agents, agree on terms. Later they amend
-them, maybe end them, and act under them in between. Each side keeps its own records,
-and there is no shared database to settle what was agreed. CAP gives both sides the
-same evidence: signed, byte-exact artifacts that either side, or an auditor years
-later, can verify and get the same answer from.
+Companies or their software agents agree on terms. Later they amend them, maybe end
+them, and act under them in between. Each party keeps its own records. CAP gives
+parties signed, byte-exact artifacts they can exchange and verify without a shared
+database.
 
 ## The questions CAP answers
 
-- **Which revision is in force right now?** Agreements change. Both parties need the
+- **Which revision is in force right now?** Agreements change. Parties need the
   same answer for the same instant, computed from evidence each can check.
-- **Did both parties accept this exact revision?** An acceptance signs claims naming the exact revision's digest
-  and coordinates, with a key the other side can trace to the signer's published
-  key history.
+- **Did this exact revision meet its acceptance requirements?** An acceptance
+  signs claims naming the revision's digest and coordinates, with a key that
+  verifiers can trace to the signer's published key history.
 - **What if a party signs two different revisions at the same number?** CAP keeps both
   as evidence and, for an instant at which both compete, reports the charter as
-  contested. It never picks a winner. A new revision that both parties accept, and
-  that descends from or supersedes each competing one, repairs the fork. The answer
+  contested. A new revision that meets its acceptance requirements and descends
+  from or supersedes each competing revision repairs the fork. The answer
   is per instant, so a contest also ends at instants after a competing revision's
   effective window closes; the fork evidence stays in the facts either way.
 - **Which revision was an action taken under?** A receipt ties a signed action to the
@@ -27,6 +26,8 @@ answer whether the evidence is enough for your purpose. That is your application
 decision.
 
 ## How the artifacts fit together
+
+This diagram shows a legacy two-party charter.
 
 ```mermaid
 flowchart LR
@@ -43,14 +44,16 @@ flowchart LR
 - A **party descriptor** is one party's signed key history. Each new descriptor is
   signed by a key from the one before it, so a rotation or a retired key stays
   visible.
-- A **charter revision** is the agreed terms as canonical JSON. It names both parties
+- A **charter revision** is the agreed terms as canonical JSON. It names its parties
   (by their descriptor digests), the digest of the legal text, whether the legal text
-  or machine-readable terms govern, when it takes effect, and the reasons either party
-  may terminate. Revisions are unsigned. Assent comes from acceptances.
-- An **acceptance** is one party's signed assent naming one exact revision by digest. A revision
-  counts as accepted when every party has accepted it.
-- A **termination notice** is one party's signed notice that the charter ends at a
-  stated instant, for a reason the revision lists.
+  or machine-readable terms govern, when it takes effect, and the allowed termination
+  reasons. Revisions are unsigned. Assent comes from acceptances.
+- An **acceptance** is one party's signed assent naming one exact revision by digest.
+  Legacy revisions need both parties' assent. Revision 8 applies current and inherited
+  quorums and requires every party's assent for a party assignment.
+- A **termination notice** is one party's signed notice for a stated instant and a
+  reason the revision lists. One qualifying notice can close a legacy charter.
+  Revision 8 requires a quorum for the same reason and instant.
 - A **receipt** is a signed record of an action, tied to the revision that governed it.
 
 `verify_chain/5` takes the descriptors, revisions, acceptances and termination

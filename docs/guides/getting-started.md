@@ -68,7 +68,7 @@ refuse.
 
 ## Load a two-party artifact set
 
-The corpus case `chain-dual-acceptance-valid` holds one charter
+The legacy corpus case `chain-dual-acceptance-valid` holds one charter
 [revision](glossary.md), a [party descriptor](glossary.md) for each of the
 two parties, and an [acceptance](glossary.md) signed by each party.
 
@@ -144,7 +144,7 @@ Map.take(facts, [
 
 - `charter_id` names the charter. For the first revision it is that
   revision's own digest.
-- `accepted_revision_digests` lists the revisions that both parties accepted.
+- `accepted_revision_digests` lists revisions with acceptance status `:accepted`.
 - `chain_topology` is `:linear` when the accepted revisions that nothing
   supersedes form one line of history through their `prev_revision_digest`
   links, and `:forked` when they branch. A repaired fork reads `:linear` again,

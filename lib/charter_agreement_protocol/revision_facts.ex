@@ -1,8 +1,10 @@
 defmodule CharterAgreementProtocol.RevisionFacts do
   @moduledoc """
   Facts about one Charter Revision inside a verified set. They are
-  non-authorizing: `acceptance_status: :accepted` records that every listed
-  party signed an Acceptance, not that anything is allowed.
+  non-authorizing. `acceptance_status: :accepted` records that the verified
+  acceptances and predecessor meet the applicable rules. Legacy revisions
+  require both parties' assent. Revision 8 checks quorum and any required
+  assignment assent.
 
   You find these in `CharterAgreementProtocol.ChainFacts.revision_facts`.
 

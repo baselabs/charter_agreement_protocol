@@ -18,7 +18,7 @@ The returned facts identify the named pair and the verified opening status.
 
 ## When to use it
 
-Use CAP when two parties need agreement evidence they can exchange as files or
+Use CAP when charter parties need agreement evidence they can exchange as files or
 messages and re-check at any time:
 
 - bilateral terms between companies or between their software agents;
@@ -95,7 +95,7 @@ flow.
 | Party descriptor | signed (`cap+party`) | One party's verification keys and their history (Ed25519, and ML-DSA from protocol revision 3) |
 | Charter revision | canonical JSON | The agreed terms: parties, legal text digest, which text governs, when it takes effect, termination reasons |
 | Acceptance | signed (`cap+acceptance`) | One party's signed assent to exact revision bytes |
-| Termination notice | signed (`cap+termination`) | One party ending the charter at a stated instant, under a listed reason |
+| Termination notice | signed (`cap+termination`) | One party's notice for a stated instant and a listed reason |
 | Receipt | signed (`cap+receipt`) | A signed action tied to the exact revision it was taken under |
 
 ## The family

@@ -23,7 +23,6 @@ defmodule CharterAgreementProtocol.Chain do
     PartyDescriptor,
     Quorum,
     RevisionFacts,
-    TerminationFacts,
     TerminationNotice,
     Timestamp
   }

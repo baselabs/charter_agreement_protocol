@@ -1,6 +1,6 @@
 # Produce and verify with the signer
 
-In this tutorial two parties, an issuer and an acceptor, form a charter. Each
+In this tutorial two parties, an issuer and an acceptor, form a legacy charter. Each
 publishes a [party descriptor](glossary.md), they agree on one charter
 [revision](glossary.md), and each signs an [acceptance](glossary.md). Then you
 switch sides and verify everything with CAP alone, the way the other party

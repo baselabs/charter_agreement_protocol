@@ -200,9 +200,9 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert counts["charter_revision.decode"] == 59
     assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 54
     assert counts["termination.verify"] == 31
-    assert counts["chain.verify"] + counts["governing_revision"] == 86
+    assert counts["chain.verify"] + counts["governing_revision"] == 87
     assert counts["chain.verify_profile"] == 20
-    assert counts["receipt.verify"] == 66
+    assert counts["receipt.verify"] == 67
     assert counts["signing.prepare"] == 127
   end
 
@@ -746,6 +746,18 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       request = Map.take(input, ["kid", "claims", "algorithm"])
 
       assert {:error, %Error{code: ^error}} = CAP.party_replacement_signing_input(request, set)
+    end
+  end
+
+  test "set-aware signing inputs check the outer context before the claims" do
+    request = %{"kid" => "k", "claims" => %{}}
+
+    for producer <- [
+          &CAP.acceptance_signing_input/2,
+          &CAP.party_replacement_signing_input/2,
+          &CAP.termination_signing_input/2
+        ] do
+      assert {:error, %Error{code: :signing_input_invalid}} = producer.(request, nil)
     end
   end
 

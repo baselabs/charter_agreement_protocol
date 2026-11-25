@@ -5,7 +5,8 @@ defmodule CharterAgreementProtocol.SigningPlan do
   Sign `signing_input.message`, then pass this record and the raw signature
   to `CharterAgreementProtocol.finish_signing/2`. `key` is `:matched` when
   the snapshot matches a resolved descriptor key, or `:unnamed` for a
-  receipt checked against a bare revision.
+  receipt checked against a bare legacy revision. A revision-8 charter
+  requires chain context for receipt preparation.
 
   `public_key`, `verify_with`, `limits` and `profile` are internal fields.
   Callers must retain the returned record without changing these fields.

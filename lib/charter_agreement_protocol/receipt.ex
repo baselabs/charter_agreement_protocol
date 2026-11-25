@@ -8,10 +8,10 @@ defmodule CharterAgreementProtocol.Receipt do
   party signature, and compares the claimed revision with governance at the
   caller-authored receipt instant. Revision-only context cannot resolve a
   charter key or governance view. Its facts add `:signature` to `not_verified`
-  and also add `:ownership` for a bare revision-8 charter
-  and report governance as undetermined.
+  and report governance as undetermined. A bare revision-8 charter also
+  adds `:ownership` to `not_verified`.
 
-  Only bilaterally accepted revision facts contribute role-to-descriptor
+  Only revisions that meet their acceptance rules contribute role-to-descriptor
   mappings in chain context. Proposed revision bytes are unauthenticated data
   and cannot promote a counterparty key into another charter role.
 
@@ -663,10 +663,8 @@ defmodule CharterAgreementProtocol.Receipt do
       held = Enum.find(accepted, &(&1.revision_digest == digest))
       descriptor = held && role_digest(held.revision, receipt.issuing_party_role)
 
-      owner =
-        Enum.find_value(descriptors, fn facts ->
-          if facts.descriptor_digest == descriptor, do: facts.party_id
-        end)
+      holder = Enum.find(descriptors, &(&1.descriptor_digest == descriptor))
+      owner = holder && holder.party_id
 
       {if(owner, do: status, else: :undetermined), owner}
     else

@@ -116,4 +116,4 @@ describing how hosts evaluate them. It cannot change how signatures, acceptances
 precedence work. Those are closed core members outside any extension body, so no
 extension can weaken verification.
 
-Changing an agreed formula takes a new charter revision that both parties accept.
+Changing an agreed formula takes a new charter revision that meets its acceptance rules.

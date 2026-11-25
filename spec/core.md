@@ -333,8 +333,9 @@ The check MUST apply limits validation, profile validation, kind-specific
 context typing, input construction, key shape, set verification and
 producer refusals, verification preparation, snapshot membership, and
 runtime support in that order [CAP-SIGNING-prepare-order]. Descriptor
-context is absent or predecessor facts; acceptance and termination context
-is an artifact set; receipt context is chain facts or a bare revision.
+context is absent or predecessor facts; acceptance, party replacement and
+termination context is an artifact set. Receipt preparation takes chain
+facts, or a bare charter revision for legacy charters.
 
 Input construction MUST frame, canonicalize, validate claims and decode a
 zero-signature provisional compact under the caller's limits, including
@@ -380,7 +381,7 @@ re-verification, claims matching and profile admission
 [CAP-SIGNING-shared-preparation].
 
 Preparation MUST check declared support plus a known-answer verification
-before returning a plan for every kind, including bare-revision receipts
+before returning a plan for every kind, including bare legacy revision receipts
 [CAP-SIGNING-runtime-support].
 That answer MUST be cached once per key algorithm
 [CAP-SIGNING-runtime-support]. A raising provider call

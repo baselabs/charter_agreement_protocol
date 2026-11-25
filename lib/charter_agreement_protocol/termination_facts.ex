@@ -6,9 +6,10 @@ defmodule CharterAgreementProtocol.TerminationFacts do
 
   `CharterAgreementProtocol.verify_termination/4` returns one of these, and
   `CharterAgreementProtocol.ChainFacts.termination_facts` holds one per
-  notice in a verified set. A notice ends governance only when the revision it
-  names governs at its `effective_at`; `CharterAgreementProtocol.governing_revision/2`
-  applies that rule.
+  notice in a verified set. A notice can contribute to closure only when its
+  revision governs at `effective_at`. One qualifying notice closes a legacy
+  charter. In revision 8, `CharterAgreementProtocol.governing_revision/2`
+  checks the termination quorum for the same revision, reason and instant.
 
   ## Fields
 

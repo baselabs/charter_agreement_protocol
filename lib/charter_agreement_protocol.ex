@@ -400,8 +400,8 @@ defmodule CharterAgreementProtocol do
   name.
 
   Returns `{:ok, %CharterAgreementProtocol.AcceptanceFacts{}}`. One
-  Acceptance is one party's assent. Whether every party accepted the
-  revision is decided by `verify_chain/5`.
+  Acceptance is one party's assent. Use `verify_chain/5` to check whether
+  the revision's acceptance requirements are met.
 
   ## Examples
 
@@ -477,9 +477,10 @@ defmodule CharterAgreementProtocol do
   `reason_code` must be one the revision's `termination_rules` list, and
   `issued_at` must not be after `effective_at`.
 
-  Returns `{:ok, %CharterAgreementProtocol.TerminationFacts{}}`. A verified
-  notice ends the charter only if the revision it names is the one that
-  governs at its `effective_at`; `governing_revision/2` applies that rule.
+  Returns `{:ok, %CharterAgreementProtocol.TerminationFacts{}}`. The notice
+  can contribute to closure if its revision governs at its `effective_at`.
+  `governing_revision/2` checks for a qualifying legacy notice or, in revision 8,
+  a met quorum for the same revision, reason and effective instant.
 
   ## Examples
 
@@ -1021,17 +1022,21 @@ defmodule CharterAgreementProtocol do
   never reads a clock, so pass the current time yourself when that is what
   you mean.
 
-  A revision is a candidate at `at` when every party accepted it, no
-  accepted revision supersedes it, and `effective_from <= at` (and
-  `at < effective_until` when it has an end). Returns:
+  A revision is a candidate at `at` when its acceptance status is
+  `:accepted`, no accepted revision supersedes it, and
+  `effective_from <= at` (and `at < effective_until` when it has an end).
+  Legacy revisions need assent from both parties. Revision 8 applies the
+  current and inherited acceptance quorums and any required assignment assent.
+
+  Returns:
 
   - `{:ok, digest}` when one candidate is the newest and every other
     candidate is its ancestor. `digest` is a `"sha-256:<base64url>"` string.
   - `{:ok, :contested}` when the candidates do not form one line, for
     example two accepted revisions with the same number.
-  - `{:ok, :none}` when there is no candidate, or a verified termination
-    notice that named the then-governing revision took effect at or before
-    `at`.
+  - `{:ok, :none}` when there is no candidate or the charter closed at or
+    before `at`. Closure requires a qualifying notice for the then-governing
+    legacy revision or a met termination quorum for that revision in revision 8.
 
   A `DateTime` in another time zone returns `:governing_invalid`. Any other
   type returns `:invalid_type`.

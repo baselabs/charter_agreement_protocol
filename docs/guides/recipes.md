@@ -374,8 +374,8 @@ list the `reason_code`.
 
 ## Repair a contested fork
 
-A fork appears when both parties accept two different revisions at the same
-revision number. CAP's producer will not sign the second acceptance, so this
+In this legacy example, a fork appears when both parties accept two different
+revisions at the same number. CAP's producer will not sign the second acceptance, so this
 recipe signs it by hand to stand in for a party that did. Two sibling
 revisions come first:
 

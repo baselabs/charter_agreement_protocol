@@ -351,26 +351,25 @@ defmodule CharterAgreementProtocol.SigningInput do
   end
 
   defp termination_revision(termination, chain) do
-    case Chain.signing_revision(:termination, termination, chain) do
-      {:ok, revision} ->
-        charter_id = revision.charter_id || CharterRevision.digest(revision)
-
-        party_matches? =
-          Enum.any?(revision.parties, fn party ->
-            party.role == termination.party_role and
-              party.party_descriptor_digest == termination.party_descriptor_digest
-          end)
-
-        if (termination.protocol_revision == 8) == (revision.protocol_revision == 8) and
-             termination.charter_id == charter_id and
-             termination.reason_code in revision.termination_rules.reason_codes and
-             party_matches? and termination.party_role in Quorum.termination(revision).roles,
-           do: {:ok, revision},
-           else: refused()
-
-      _missing ->
-        refused()
+    with {:ok, revision} <- Chain.signing_revision(:termination, termination, chain),
+         true <- termination_matches?(termination, revision) do
+      {:ok, revision}
+    else
+      _failure -> refused()
     end
+  end
+
+  defp termination_matches?(termination, revision) do
+    charter_id = revision.charter_id || CharterRevision.digest(revision)
+
+    (termination.protocol_revision == 8) == (revision.protocol_revision == 8) and
+      termination.charter_id == charter_id and
+      termination.reason_code in revision.termination_rules.reason_codes and
+      termination.party_role in Quorum.termination(revision).roles and
+      Enum.any?(revision.parties, fn party ->
+        party.role == termination.party_role and
+          party.party_descriptor_digest == termination.party_descriptor_digest
+      end)
   end
 
   defp no_equivocation(acceptance, chain) do

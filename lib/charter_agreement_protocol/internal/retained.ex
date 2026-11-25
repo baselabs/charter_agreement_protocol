@@ -45,12 +45,16 @@ defmodule CharterAgreementProtocol.Internal.Retained do
       binaries?(revision.supersedes) and
       list?(revision.parties) and
       Enum.all?(revision.parties, &party_shape?/1) and
-      optional_quorum_shape?(revision.acceptance_quorum) and
-      replacements_shape?(revision.party_replacements) and
-      rules_shape?(revision.termination_rules)
+      revision_rules_shape?(revision)
   end
 
   defp revision_shape?(_other), do: false
+
+  defp revision_rules_shape?(revision) do
+    optional_quorum_shape?(revision.acceptance_quorum) and
+      replacements_shape?(revision.party_replacements) and
+      rules_shape?(revision.termination_rules)
+  end
 
   defp party_shape?(%CharterRevision.Party{role: role, party_descriptor_digest: digest} = party) do
     complete?(party, CharterRevision.Party) and is_binary(role) and is_binary(digest) and

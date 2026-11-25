@@ -36,8 +36,8 @@ keeps those out of logs. Read the fields you need directly, for example
 
 **What do I do when `governing_revision` returns `:contested`?**
 Stop and treat it as unresolved. Two accepted branches compete at that instant, and
-CAP does not pick one. To repair it, both parties accept a later revision that covers
-every competing branch: each one is either an ancestor of the new revision through
+To repair the fork, a later revision must meet its acceptance requirements and cover
+every competing branch. Each must be an ancestor of the new revision through
 `prev_revision_digest` or listed in its `supersedes`. The
 [fork-repair notebook](../notebooks/fork-repair.livemd) walks through one repair. The
 answer is per instant: when a competing revision's `effective_until` passes, a later
@@ -46,7 +46,7 @@ the chain facts.
 
 **What does `:none` mean?**
 No revision is in force at that instant. Either nothing accepted has taken effect yet,
-the in-force revision has ended, or a verified termination notice closed the charter.
+the in-force revision has ended, or the applicable termination rule closed the charter.
 See [verification semantics](verification.md).
 
 **My counterparty sent an extension namespace CAP doesn't know. Now what?**
@@ -81,7 +81,7 @@ limit changes, or when an input that returned a result now raises. Store it, wit
 limits and profile you used, beside each result. [Upgrade and persist verification identity](upgrading-verification-identity.md)
 explains what to store.
 
-**Do both parties have to run this package?**
+**Do all parties have to run this package?**
 No. Artifacts are bytes, and any implementation that follows the specification can
 produce and verify them. `@charter-agreement-protocol/verifier` on npm is a separate
 TypeScript verifier that shares no code with this package. To write your own, start

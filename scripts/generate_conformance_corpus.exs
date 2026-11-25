@@ -2619,6 +2619,8 @@ quorum_ids = ~w(
   signing-receipt-revision-eight-chain
   signing-assignment-wrong-assignor-binding
   signing-assignment-empty-claims
+  assignment-successor-history-missing
+  receipt-rejects-revision-eight-envelope
 )
 
 cases =

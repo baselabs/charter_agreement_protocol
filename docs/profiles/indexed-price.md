@@ -87,7 +87,7 @@ So:
   computed correctly or that the other party agrees with it;
 - an observation body cannot change the revision's formula, precedence, acceptance or
   signature rules;
-- changing an agreed formula takes a new charter revision that both parties accept.
+- changing an agreed formula takes a new charter revision that meets its acceptance rules.
 
 If you use this profile for real money, your application evaluates the terms itself.
 CAP's format checks do not do that for you.

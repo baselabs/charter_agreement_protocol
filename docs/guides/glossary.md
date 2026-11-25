@@ -2,8 +2,9 @@
 
 **Acceptance.** One party's signed claims naming the digest and coordinates of one
 exact charter revision (`cap+acceptance`). The signature covers the JWS signing
-input, not the revision bytes directly. A revision counts as accepted when every party it lists has an
-acceptance.
+input, which binds the exact revision by digest. Legacy revisions require both
+parties' assent. Revision 8 applies acceptance quorums and any required party
+assignment assent.
 
 **Artifact.** One of the five things CAP verifies: party descriptor, charter revision,
 acceptance, termination notice, receipt. Four are signed compact JWS; the charter
