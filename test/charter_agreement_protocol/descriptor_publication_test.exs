@@ -3,8 +3,17 @@ defmodule CharterAgreementProtocol.DescriptorPublicationTest do
   use ExUnit.Case, async: true
 
   alias CharterAgreementProtocol, as: CAP
-  alias CAP.{Capability, CompactJws, DescriptorPublicationFacts, Error, Facts, Limits}
-  alias CAP.Conformance.{Corpus, Runner}
+
+  alias CharterAgreementProtocol.{
+    Capability,
+    CompactJws,
+    DescriptorPublicationFacts,
+    Error,
+    Facts,
+    Limits
+  }
+
+  alias CharterAgreementProtocol.Conformance.{Corpus, Runner}
 
   test "the Ed25519 publication vectors verify the complete history and pair" do
     cases =

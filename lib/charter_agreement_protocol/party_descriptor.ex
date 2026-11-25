@@ -537,21 +537,23 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
          entries = Enum.reverse(reversed),
          true <- publication_history_shape?(entries) do
       entries
-      |> Enum.reduce_while({:ok, %{}, []}, fn entry, {:ok, index, verified} ->
-        previous = Map.get(index, entry.descriptor.prev_descriptor_digest)
-
-        case verify_decoded(entry.descriptor, entry.compact, previous, profile) do
-          {:ok, facts} ->
-            {:cont, {:ok, Map.put(index, entry.digest, facts), [facts | verified]}}
-
-          error ->
-            {:halt, error}
-        end
-      end)
+      |> Enum.reduce_while({:ok, %{}, []}, &verify_publication_entry(&1, &2, profile))
       |> publication_history_result()
     else
       false -> {:error, Error.new(:descriptor_publication_invalid, ["descriptor_publication"])}
       error -> error
+    end
+  end
+
+  defp verify_publication_entry(entry, {:ok, index, verified}, profile) do
+    previous = Map.get(index, entry.descriptor.prev_descriptor_digest)
+
+    case verify_decoded(entry.descriptor, entry.compact, previous, profile) do
+      {:ok, facts} ->
+        {:cont, {:ok, Map.put(index, entry.digest, facts), [facts | verified]}}
+
+      error ->
+        {:halt, error}
     end
   end
 
