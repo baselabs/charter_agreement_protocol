@@ -169,23 +169,7 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
             "signature_bytes" => row.signature_bytes
           }
         end),
-      "compatibility" =>
-        Enum.map(ReleaseIdentity.compatibility(), fn row ->
-          %{
-            "package_versions" => row.package_versions,
-            "verification_semantics" => row.verification_semantics,
-            "census_digest" => row.census_digest,
-            "protocol_revisions" => row.protocol_revisions,
-            "transitions" =>
-              Enum.map(row.transitions, fn transition ->
-                %{
-                  "class" => Atom.to_string(transition.class),
-                  "direction" => Atom.to_string(transition.direction),
-                  "description" => transition.description
-                }
-              end)
-          }
-        end)
+      "compatibility" => ReleaseCompatibility.manifest(ReleaseIdentity.compatibility())
     }
 
     if Map.take(metadata, Map.keys(expected_members)) != expected_members,

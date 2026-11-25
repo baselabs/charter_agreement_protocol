@@ -593,6 +593,7 @@ defmodule CharterAgreementProtocol.ChainTest do
           Map.delete(at, :calendar),
           %{at | day: 99},
           %{at | second: 99},
+          %{at | zone_abbr: nil},
           %{at | calendar: nil}
         ] do
       assert {:error, %Error{code: :governing_invalid}} =

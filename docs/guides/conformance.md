@@ -35,6 +35,12 @@ is the one place in the guides where they are recorded.
 The [TypeScript source pin](../../priv/verifier-source.json) selects the
 verifier that CI runs against every case.
 
+CI also replays the candidate cases against published Hex and npm verifiers.
+The compatibility row records the case IDs and exact baseline and candidate
+verdicts for each change, including inputs the baseline cannot express.
+The check fails on differences without a witness and on witnesses whose
+recorded outcomes no longer occur.
+
 What each one tells you:
 
 - **Corpus digest.** A domain-separated digest computed over the index itself, with

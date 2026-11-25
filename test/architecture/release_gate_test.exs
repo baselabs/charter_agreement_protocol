@@ -116,6 +116,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     "test --cover --seed 42",
     "conformance.verify",
     "historical.check",
+    "historical.reverse",
     "conformance.mutations",
     "verifier.agreement",
     "differential.check",
@@ -164,18 +165,42 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
 
     assert row.census_digest == live
 
-    assert Enum.any?(row.transitions, fn transition ->
-             transition.class == :error_code_change and transition.direction == :red_to_red and
-               String.contains?(transition.description, "chain-many-histories-first-party-error")
+    witnesses = Enum.flat_map(row.transitions, & &1.witnesses)
+
+    assert Enum.any?(witnesses, fn group ->
+             group.from == "chain_invalid" and group.to == "descriptor_key_invalid" and
+               "chain-many-histories-first-party-error" in group.cases
            end)
 
-    assert Enum.any?(row.transitions, fn transition ->
-             transition.class == :error_code_change and transition.direction == :red_to_red and
-               String.contains?(transition.description, "chain-expanded-histories") and
-               String.contains?(transition.description, "invalid_syntax")
+    assert Enum.any?(witnesses, fn group ->
+             group.from == "chain_invalid" and group.to == "invalid_syntax" and
+               "chain-expanded-histories-before-revision-syntax" in group.cases
            end)
 
     assert :ok = ReleaseCompatibility.verify!(row, version, semantics, live, File.cwd!())
+  end
+
+  test "reverse differential rejects missing, stale, and incorrect witnesses" do
+    baseline = "hex:1.0.0"
+    named = %{"new-case" => "valid"}
+    old = %{"new-case" => "chain_invalid"}
+    witness = %{baselines: [baseline], cases: ["new-case"], from: "chain_invalid", to: "valid"}
+    transition = %{description: "A case verifies after the change", witnesses: [witness]}
+    row = %{transitions: [transition]}
+
+    assert ReleaseCompatibility.verify_reverse!(row, baseline, old, named) == 1
+
+    assert_raise RuntimeError, ~r/unrecorded.*new-case/, fn ->
+      ReleaseCompatibility.verify_reverse!(%{transitions: []}, baseline, old, named)
+    end
+
+    assert_raise RuntimeError, ~r/no longer firing.*new-case/, fn ->
+      ReleaseCompatibility.verify_reverse!(row, baseline, named, named)
+    end
+
+    assert_raise RuntimeError, ~r/outcome drift.*new-case/, fn ->
+      ReleaseCompatibility.verify_reverse!(row, baseline, %{"new-case" => "invalid_type"}, named)
+    end
   end
 
   test "a new package version requires the live corpus census" do

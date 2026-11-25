@@ -2,11 +2,14 @@
 # normative specification tree. Run from the repository root after any
 # deliberate spec-byte or corpus change:
 #     mix run --no-start scripts/record_release_metadata.exs
+Code.require_file("release_compatibility.exs", __DIR__)
+
 alias CharterAgreementProtocol.{
   Algorithm,
   Canonicalization,
   Conformance.Report,
   Digest,
+  ReleaseCompatibility,
   ReleaseIdentity,
   SpecificationIdentity
 }
@@ -44,30 +47,14 @@ registry_rows =
      ]}
   end)
 
-compatibility_rows =
-  Enum.map(ReleaseIdentity.compatibility(), fn row ->
-    {:object,
-     [
-       {"package_versions", {:array, Enum.map(row.package_versions, &{:string, &1})}},
-       {"verification_semantics", {:integer, row.verification_semantics}},
-       {"census_digest", {:string, row.census_digest}},
-       {"protocol_revisions", {:array, Enum.map(row.protocol_revisions, &{:integer, &1})}},
-       {"transitions",
-        {:array,
-         Enum.map(row.transitions, fn transition ->
-           {:object,
-            [
-              {"class", {:string, Atom.to_string(transition.class)}},
-              {"direction", {:string, Atom.to_string(transition.direction)}},
-              {"description", {:string, transition.description}}
-            ]}
-         end)}}
-     ]}
-  end)
+{:ok, compatibility_rows} =
+  ReleaseIdentity.compatibility()
+  |> ReleaseCompatibility.manifest()
+  |> Canonicalization.from_plain()
 
 metadata = %{
   "archive_is_publication_authorization" => {:boolean, false},
-  "compatibility" => {:array, compatibility_rows},
+  "compatibility" => compatibility_rows,
   "corpus_digest" => {:string, index["corpus_digest"]},
   "format" => {:string, "charter-agreement-protocol-release-metadata"},
   "index_sha256_base64url" => {:string, Report.index_identity(index_bytes)},

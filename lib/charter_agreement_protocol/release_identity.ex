@@ -171,182 +171,1283 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
       protocol_revisions: [1, 2, 3, 8],
       transitions: [
         %{
-          class: :admission,
-          direction: :red_to_green,
-          description:
-            "Revision 8 admits descriptor key commitments, requires complete active-key " <>
-              "openings, and admits unsigned current and next descriptor publication"
-        },
-        %{
-          class: :admission,
-          direction: :red_to_green,
-          description:
-            "Revision 8 admits distinct-role acceptance and termination quorums and " <>
-              "unanimous declared party assignments."
-        },
-        %{
           class: :verdict_narrowing,
           direction: :green_to_red,
           description:
-            "A signed successor stays proposed until its immediate predecessor is accepted, " <>
-              "including in legacy-signed-successor-of-unsigned-genesis. The child no longer " <>
-              "governs, so a receipt bound to it returns receipt_claims_mismatch and signing " <>
-              "its termination returns signing_refused."
-        },
-        %{
-          class: :verdict_narrowing,
-          direction: :green_to_red,
-          description:
-            "Signing a legacy successor requires an accepted immediate predecessor and " <>
-              "accepted supersession targets. " <>
-              "See signing-legacy-successor-without-accepted-parent and " <>
-              "signing-legacy-supersession-target-still-proposed. Signed sources still " <>
-              "reject unsigned targets at set verification, even if the source stays proposed."
-        },
-        %{
-          class: :error_code_change,
-          direction: :red_to_red,
-          description:
-            "Descriptor histories are verified in ascending party ID order. The first " <>
-              "invalid root in chain-many-histories-first-party-error returns " <>
-              "descriptor_key_invalid instead of chain_invalid."
-        },
-        %{
-          class: :error_code_change,
-          direction: :red_to_red,
-          description:
-            "With three or more histories, set verification reaches history verification, " <>
-              "revision decoding and admission. The chain-expanded-histories cases change " <>
-              "chain_invalid to descriptor_chain_invalid, algorithm_outside_profile, " <>
-              "revision_outside_profile, invalid_syntax, trailing_bytes, limit_exceeded, " <>
-              "duplicate_member, non_canonical_bytes, invalid_type, unknown_member, " <>
-              "missing_required, constraint_violation, cardinality_violation, nested_invalid, " <>
-              "timestamp_invalid, revision_invalid, cross_field_invalid, " <>
-              "extension_criticality_conflict, extension_duplicate, " <>
-              "extension_namespace_invalid, extension_retired, extension_scope_invalid, " <>
-              "or extension_unknown_critical."
+            "Legacy successor eligibility requires an accepted predecessor. Signing also " <>
+            "requires accepted supersession targets.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "valid",
+              to: "receipt_claims_mismatch",
+              cases: ~w(
+                receipt-legacy-successor-without-accepted-parent
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "valid",
+              to: "signing_refused",
+              cases: ~w(
+                signing-legacy-successor-without-accepted-parent
+                signing-legacy-supersession-target-still-proposed
+                signing-termination-without-accepted-predecessor
+              )
+            }
+          ]
         },
         %{
           class: :error_code_change,
           direction: :red_to_red,
           description:
-            "With three or more histories and a valid revision-8 charter, invalid votes can " <>
-              "reach envelope, binding and signature checks. The chain-expanded-histories " <>
-              "vote cases return compact_invalid, protected_header_invalid, " <>
-              "acceptance_claims_mismatch, termination_claims_mismatch, signature_invalid, " <>
-              "invalid_type, missing_required, unknown_member, constraint_violation, " <>
-              "timestamp_invalid, acceptance_invalid or termination_invalid instead of " <>
-              "chain_invalid."
+            "The TypeScript verifier checks list items and bounds in list order.",
+          witnesses: [
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "limit_exceeded",
+              to: "invalid_type",
+              cases: ~w(
+                chain-item-type-before-item-limit
+                chain-item-type-before-list-byte-limit
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "TypeScript compact assembly checks for an algorithm field before registry " <>
+            "lookup.",
+          witnesses: [
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "algorithm_unsupported",
+              to: "signing_input_invalid",
+              cases: ~w(
+                api-assemble-missing-alg
+              )
+            }
+          ]
         },
         %{
           class: :admission,
           direction: :red_to_green,
           description:
-            "Elixir profiles recognize 8 as a range endpoint. The case " <>
-              "chain-profile-endpoint-eight-admits-legacy-view verifies instead of returning " <>
-              "invalid_profile, matching the TypeScript profile constructor."
+            "Revision-8 descriptor histories reach topology or commitment validation.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "descriptor_chain_invalid",
+              to: "valid",
+              cases: ~w(
+                descriptor-publication-chain-fork
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          description:
+            "Revision-8 descriptors reach key and commitment checks.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "valid",
+              cases: ~w(
+                descriptor-publication-successor
+              )
+            }
+          ]
         },
         %{
           class: :error_code_change,
           direction: :red_to_red,
           description:
-            "Revision-8 acceptance and termination envelopes are admitted to claims checks. " <>
-              "The quorum-acceptance-rejects-legacy-binding and " <>
-              "quorum-termination-rejects-legacy-binding cases return their claims mismatch " <>
-              "codes instead of protected_header_invalid. An ordinary signing operation " <>
-              "with a replacement marker returns signing_refused instead of " <>
-              "signing_input_invalid."
+            "Revision-8 descriptors reach key and commitment checks.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "descriptor_commitment_mismatch",
+              cases: ~w(
+                descriptor-publication-different-active
+                descriptor-publication-downgrade
+                descriptor-publication-extra-active
+                descriptor-publication-missing-active
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "descriptor_invalid",
+              cases: ~w(
+                descriptor-publication-active-material-alias
+                descriptor-publication-noncanonical-commitment
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          description:
+            "Descriptor signing checks the admitted revision-8 predecessor and its key " <>
+            "commitment.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "valid",
+              cases: ~w(
+                descriptor-publication-sign-successor
+              )
+            }
+          ]
         },
         %{
           class: :error_code_change,
           direction: :red_to_red,
           description:
-            "The revision-8 integer-token check covers acceptance, termination and " <>
-              "assignment thresholds before canonical encoding or schema validation. " <>
-              "The charter-revision quorum threshold cases return invalid_type instead of " <>
-              "non_canonical_bytes, unknown_member or missing_required. A replacement object " <>
-              "in place of the records array returns missing_required " <>
-              "instead of unknown_member " <>
-              "in charter-revision-replacement-container-missing-required."
+            "Descriptor signing checks the admitted revision-8 predecessor and its key " <>
+            "commitment.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "descriptor_commitment_mismatch",
+              cases: ~w(
+                descriptor-publication-sign-opening-mismatch
+              )
+            }
+          ]
         },
         %{
           class: :error_code_change,
           direction: :red_to_red,
           description:
-            "With a legacy charter context, revision-8 acceptance and termination " <>
-              "envelopes can reach signature length and claims validation. The quorum " <>
-              "envelope cases return signature_invalid, invalid_type, missing_required, " <>
-              "unknown_member, constraint_violation, timestamp_invalid, acceptance_invalid " <>
-              "or termination_invalid instead of protected_header_invalid."
+            "The TypeScript verifier evaluates the acceptance list before checking " <>
+            "duplicate coordinates.",
+          witnesses: [
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "acceptance_claims_mismatch",
+              cases: ~w(
+                chain-legacy-duplicate-before-claims-binding
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "acceptance_invalid",
+              cases: ~w(
+                chain-legacy-duplicate-before-claims-coordinates
+                chain-legacy-duplicate-before-key-resolution
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "algorithm_outside_profile",
+              cases: ~w(
+                chain-legacy-duplicate-before-algorithm-profile
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "compact_invalid",
+              cases: ~w(
+                chain-malformed-vote-before-legacy-duplicate
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "constraint_violation",
+              cases: ~w(
+                chain-legacy-duplicate-before-claims-constraint
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "invalid_type",
+              cases: ~w(
+                chain-legacy-duplicate-before-claims-type
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "limit_exceeded",
+              cases: ~w(
+                chain-legacy-duplicate-before-compact-limit
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "missing_required",
+              cases: ~w(
+                chain-legacy-duplicate-before-claims-required
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "non_canonical_bytes",
+              cases: ~w(
+                chain-legacy-duplicate-before-payload-bytes
+                chain-legacy-duplicate-before-payload-syntax
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "protected_header_invalid",
+              cases: ~w(
+                chain-legacy-duplicate-before-protected-type
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "revision_outside_profile",
+              cases: ~w(
+                chain-legacy-duplicate-before-revision-profile
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "signature_invalid",
+              cases: ~w(
+                chain-legacy-duplicate-before-signature-encoding
+                chain-legacy-duplicate-before-signature-length
+                chain-legacy-duplicate-before-signature-validity
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "timestamp_invalid",
+              cases: ~w(
+                chain-legacy-duplicate-before-claims-timestamp
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "unknown_member",
+              cases: ~w(
+                chain-legacy-duplicate-before-claims-unknown
+              )
+            }
+          ]
         },
         %{
           class: :error_code_change,
           direction: :red_to_red,
           description:
-            "Standalone revision-8 vote verification reaches key resolution and signature " <>
-              "verification. The quorum envelope cases for unresolved keys and invalid " <>
-              "signatures return acceptance_invalid, termination_invalid or signature_invalid " <>
-              "instead of unknown_member."
+            "The chain-expanded-histories cases and " <>
+            "chain-many-histories-first-party-error expose errors past the old history " <>
+            "count.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "acceptance_claims_mismatch",
+              cases: ~w(
+                chain-expanded-histories-before-acceptance-binding
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "acceptance_invalid",
+              cases: ~w(
+                chain-expanded-histories-before-acceptance-claims-coordinates
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "algorithm_outside_profile",
+              cases: ~w(
+                chain-expanded-histories-before-artifact-profile
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "cardinality_violation",
+              cases: ~w(
+                chain-expanded-histories-before-revision-cardinality-violation
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "compact_invalid",
+              cases: ~w(
+                chain-expanded-histories-before-acceptance-compact
+                chain-expanded-histories-before-termination-compact
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "constraint_violation",
+              cases: ~w(
+                chain-expanded-histories-before-acceptance-claims-constraint
+                chain-expanded-histories-before-revision-constraint-violation
+                chain-expanded-histories-before-termination-claims-constraint
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "cross_field_invalid",
+              cases: ~w(
+                chain-expanded-histories-before-revision-cross-field-invalid
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "descriptor_chain_invalid",
+              cases: ~w(
+                chain-expanded-histories-before-history-shape
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "descriptor_key_invalid",
+              cases: ~w(
+                chain-many-histories-first-party-error
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "duplicate_member",
+              cases: ~w(
+                chain-expanded-histories-before-revision-duplicate-member
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "extension_criticality_conflict",
+              cases: ~w(
+                chain-expanded-histories-before-revision-extension-criticality-conflict
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "extension_duplicate",
+              cases: ~w(
+                chain-expanded-histories-before-revision-extension-duplicate
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "extension_namespace_invalid",
+              cases: ~w(
+                chain-expanded-histories-before-revision-extension-namespace-invalid
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "extension_retired",
+              cases: ~w(
+                chain-expanded-histories-before-revision-extension-retired
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "extension_scope_invalid",
+              cases: ~w(
+                chain-expanded-histories-before-revision-extension-scope-invalid
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "extension_unknown_critical",
+              cases: ~w(
+                chain-expanded-histories-before-revision-extension-unknown-critical
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "invalid_syntax",
+              cases: ~w(
+                chain-expanded-histories-before-revision-syntax
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "invalid_type",
+              cases: ~w(
+                chain-expanded-histories-before-acceptance-claims-type
+                chain-expanded-histories-before-revision-invalid-type
+                chain-expanded-histories-before-termination-claims-type
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "limit_exceeded",
+              cases: ~w(
+                chain-expanded-histories-before-revision-byte-limit
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "missing_required",
+              cases: ~w(
+                chain-expanded-histories-before-acceptance-claims-required
+                chain-expanded-histories-before-revision-missing-required
+                chain-expanded-histories-before-termination-claims-required
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "nested_invalid",
+              cases: ~w(
+                chain-expanded-histories-before-revision-nested-invalid
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "non_canonical_bytes",
+              cases: ~w(
+                chain-expanded-histories-before-revision-non-canonical-bytes
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "protected_header_invalid",
+              cases: ~w(
+                chain-expanded-histories-before-acceptance-header
+                chain-expanded-histories-before-termination-header
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "revision_invalid",
+              cases: ~w(
+                chain-expanded-histories-before-revision-revision-invalid
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "revision_outside_profile",
+              cases: ~w(
+                chain-expanded-histories-before-revision-profile
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "signature_invalid",
+              cases: ~w(
+                chain-expanded-histories-before-acceptance-signature
+                chain-expanded-histories-before-termination-signature
+                chain-expanded-histories-before-termination-signature-length
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "termination_claims_mismatch",
+              cases: ~w(
+                chain-expanded-histories-before-termination-binding
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "termination_invalid",
+              cases: ~w(
+                chain-expanded-histories-before-termination-claims-coordinates
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "timestamp_invalid",
+              cases: ~w(
+                chain-expanded-histories-before-acceptance-claims-timestamp
+                chain-expanded-histories-before-revision-timestamp-invalid
+                chain-expanded-histories-before-termination-claims-timestamp
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "trailing_bytes",
+              cases: ~w(
+                chain-expanded-histories-before-revision-trailing
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "unknown_member",
+              cases: ~w(
+                chain-expanded-histories-before-acceptance-claims-unknown
+                chain-expanded-histories-before-revision-unknown-member
+                chain-expanded-histories-before-termination-claims-unknown
+              )
+            }
+          ]
         },
         %{
           class: :error_code_change,
           direction: :red_to_red,
           description:
-            "A receipt signed by the former holder in assignment-receipt-former-holder " <>
-              "returns receipt_claims_mismatch instead of chain_invalid. Signing with only " <>
-              "the bare revision-8 charter returns signing_refused instead of unknown_member."
+            "The TypeScript verifier finishes descendants before the next descriptor " <>
+            "branch.",
+          witnesses: [
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "revision_outside_profile",
+              to: "descriptor_chain_invalid",
+              cases: ~w(
+                chain-history-descendant-before-next-branch
+              )
+            }
+          ]
         },
         %{
           class: :error_code_change,
           direction: :red_to_red,
           description:
-            "The TypeScript verifier preserves the root signature error in " <>
-              "chain-root-signature-before-revision: signature_invalid instead of " <>
-              "descriptor_chain_invalid. A missing root key similarly returns " <>
-              "descriptor_key_invalid in chain-root-key-error-before-revision."
+            "Invalid UTC calendar components return a governing input error before " <>
+            "conversion.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0"],
+              from: "timestamp_invalid",
+              to: "governing_invalid",
+              cases: ~w(
+                api-governing-invalid-day
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          description:
+            "Capability profiles recognize revision 8 as a range endpoint.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "invalid_profile",
+              to: "valid",
+              cases: ~w(
+                chain-profile-endpoint-eight-admits-legacy-view
+              )
+            }
+          ]
+        },
+        %{
+          class: :unsupported_in_baseline,
+          direction: :baseline_unsupported,
+          description:
+            "Published runners cannot express unsigned descriptor publication " <>
+            "verification.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unsupported",
+              to: "algorithm_outside_profile",
+              cases: ~w(
+                descriptor-publication-algorithm-profile
+                descriptor-publication-mldsa-policy
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unsupported",
+              to: "descriptor_commitment_mismatch",
+              cases: ~w(
+                descriptor-publication-opening-mismatch
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unsupported",
+              to: "descriptor_publication_invalid",
+              cases: ~w(
+                descriptor-publication-duplicate
+                descriptor-publication-equal-effective-time
+                descriptor-publication-missing-genesis
+                descriptor-publication-non-direct
+                descriptor-publication-noncanonical
+                descriptor-publication-reversed
+                descriptor-publication-signed-fork
+                descriptor-publication-unknown-member
+                descriptor-publication-wrong-current
+                descriptor-publication-wrong-party
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unsupported",
+              to: "invalid_type",
+              cases: ~w(
+                descriptor-publication-type
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unsupported",
+              to: "limit_exceeded",
+              cases: ~w(
+                descriptor-publication-artifact-limit
+                descriptor-publication-compact-byte-limit
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unsupported",
+              to: "revision_outside_profile",
+              cases: ~w(
+                descriptor-publication-document-profile
+                descriptor-publication-history-profile
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unsupported",
+              to: "signature_invalid",
+              cases: ~w(
+                descriptor-publication-corrupt-signature
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unsupported",
+              to: "valid",
+              cases: ~w(
+                descriptor-publication-legacy-history
+                descriptor-publication-mldsa-opening
+                descriptor-publication-opened
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          description:
+            "Set verification applies revision-8 roster, assignment, predecessor, and " <>
+            "vote rules.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "valid",
+              cases: ~w(
+                assignment-all-parties-assented
+                assignment-all-roles-at-once
+                assignment-proposed-missing-assignor
+                assignment-proposed-missing-remaining-party
+                quorum-genesis-met
+                quorum-genesis-pending
+                quorum-narrowed-pending
+                quorum-narrowed-predecessor-role
+                quorum-no-accepted-ancestor
+                quorum-termination-duplicate-role
+                quorum-termination-ineligible-role
+                quorum-termination-instants-stay-separate
+                quorum-termination-reasons-stay-separate
+                quorum-termination-two-roles
+                quorum-unsigned-hop-cannot-lower-threshold
+                quorum-unsigned-predecessor-blocks-governance
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "valid",
+              cases: ~w(
+                assignment-mldsa65-revision-eight-complete
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "valid",
+              cases: ~w(
+                quorum-mixed-accepted-predecessors
+                quorum-mixed-accepted-predecessors-governing
+                quorum-mixed-unsigned-genesis
+                quorum-mixed-unsigned-genesis-governing
+              )
+            }
+          ]
         },
         %{
           class: :error_code_change,
           direction: :red_to_red,
           description:
-            "The TypeScript verifier visits descendants before the next branch, returning " <>
-              "descriptor_chain_invalid instead of revision_outside_profile in " <>
-              "chain-history-descendant-before-next-branch."
+            "Set verification applies revision-8 roster, assignment, predecessor, and " <>
+            "vote rules.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "compact_invalid",
+              cases: ~w(
+                assignment-malformed-vote-before-duplicate
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "chain_invalid",
+              cases: ~w(
+                quorum-revision-downgrade
+                quorum-roster-history-missing
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "signing_refused",
+              cases: ~w(
+                signing-quorum-legacy-hop-without-predecessor
+              )
+            }
+          ]
         },
         %{
           class: :error_code_change,
           direction: :red_to_red,
           description:
-            "The TypeScript verifier returns invalid_type instead of limit_exceeded for a " <>
-              "non-text item before the item bound or in a list that exceeds the byte " <>
-              "bound, including a hole in an oversized sparse array."
+            "Revision-8 quorum thresholds are checked for integer tokens ahead of " <>
+            "canonical bytes and schema checks.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "missing_required",
+              to: "invalid_type",
+              cases: ~w(
+                charter-revision-termination-quorum-fractional-threshold
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "non_canonical_bytes",
+              to: "invalid_type",
+              cases: ~w(
+                charter-revision-acceptance-quorum-integral-float
+                charter-revision-assignment-quorum-integral-float
+                charter-revision-termination-quorum-integral-float
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "invalid_type",
+              cases: ~w(
+                charter-revision-acceptance-quorum-fractional-threshold
+                charter-revision-assignment-quorum-fractional-threshold
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          description:
+            "Receipt verification resolves the issuing role in a quorum or assignment " <>
+            "view.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "valid",
+              cases: ~w(
+                assignment-receipt-contested-holder
+                assignment-receipt-latest-holder-after-close
+                assignment-receipt-new-holder
+                assignment-receipt-predecessor-resumes
+                receipt-matches-accepted-quorum
+                signing-receipt-revision-eight-chain
+              )
+            }
+          ]
         },
         %{
           class: :error_code_change,
           direction: :red_to_red,
           description:
-            "The TypeScript verifier checks the acceptance list before duplicate coordinates, " <>
-              "so a later acceptance can return compact_invalid, protected_header_invalid, " <>
-              "non_canonical_bytes, signature_invalid, invalid_type, missing_required, " <>
-              "unknown_member, constraint_violation, timestamp_invalid, acceptance_invalid, " <>
-              "acceptance_claims_mismatch, limit_exceeded, algorithm_outside_profile or " <>
-              "revision_outside_profile instead of chain_invalid. See the duplicate-vote cases."
-        },
-        %{
-          class: :error_code_change,
-          direction: :red_to_red,
-          description:
-            "The TypeScript verifyChain entry point rejects a non-record set with " <>
-              "invalid_type instead of chain_invalid. Set-aware builders return " <>
-              "signing_input_invalid instead of invalid_type when malformed claims " <>
-              "are paired with an invalid list inside a set."
+            "Receipt verification resolves the issuing role in a quorum or assignment " <>
+            "view.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "receipt_claims_mismatch",
+              cases: ~w(
+                assignment-receipt-expired-holder
+                assignment-receipt-former-holder
+                assignment-receipt-former-holder-after-close
+              )
+            }
+          ]
         },
         %{
           class: :typed_error,
           direction: :crash_to_typed,
           description:
-            "Incomplete caller-built UTC datetimes and retained signing, key and digest " <>
-              "inputs return typed failures through the Elixir public APIs."
+            "Incomplete caller-built host records return typed errors through public " <>
+            "verification and signing.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0"],
+              from: "raised",
+              to: "acceptance_equivocation_invalid",
+              cases: ~w(
+                api-equivocation-missing-digest
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0"],
+              from: "raised",
+              to: "governing_invalid",
+              cases: ~w(
+                api-governing-missing-year
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0"],
+              from: "raised",
+              to: "invalid_type",
+              cases: ~w(
+                api-descriptor-digest-missing-envelope
+                api-revision-digest-missing-bytes
+                api-signing-set-missing-list
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0"],
+              from: "raised",
+              to: "signing_input_invalid",
+              cases: ~w(
+                api-assemble-missing-alg
+              )
+            }
+          ]
+        },
+        %{
+          class: :verdict_narrowing,
+          direction: :green_to_red,
+          description:
+            "Caller-built host records must contain valid fields for equivocation, " <>
+            "governing queries, and signing claims.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0"],
+              from: "valid",
+              to: "acceptance_equivocation_invalid",
+              cases: ~w(
+                api-equivocation-nil-digest
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0"],
+              from: "valid",
+              to: "governing_invalid",
+              cases: ~w(
+                api-governing-nil-zone-abbreviation
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0"],
+              from: "valid",
+              to: "signing_input_invalid",
+              cases: ~w(
+                api-signing-claims-enumerable-struct
+              )
+            }
+          ]
+        },
+        %{
+          class: :unsupported_in_baseline,
+          direction: :baseline_unsupported,
+          description:
+            "Published signing entry points cannot express a marked replacement " <>
+            "operation.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unsupported",
+              to: "acceptance_claims_mismatch",
+              cases: ~w(
+                signing-assignment-wrong-assignor-binding
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unsupported",
+              to: "signing_refused",
+              cases: ~w(
+                signing-assignment-empty-claims
+                signing-assignment-marker-required
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unsupported",
+              to: "valid",
+              cases: ~w(
+                signing-assignment-departing-party
+                signing-mldsa65-assignment-assignor
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          description:
+            "Revision-8 charter decoding admits the roster and quorum schema and checks " <>
+            "rule semantics.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "valid",
+              cases: ~w(
+                quorum-three-party-roster
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "Revision-8 charter decoding admits the roster and quorum schema and checks " <>
+            "rule semantics.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "missing_required",
+              cases: ~w(
+                charter-revision-replacement-container-missing-required
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "revision_invalid",
+              cases: ~w(
+                assignment-assent-role-outside-candidate-rule
+                assignment-role-outside-candidate-rule
+                quorum-arbiter-outside-acceptance-rule
+                quorum-nonstring-role
+                quorum-roles-are-ordered
+                quorum-threshold-exceeds-roster
+                quorum-votes-must-be-distinct
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "The TypeScript verifier preserves the initial descriptor signature or key " <>
+            "error.",
+          witnesses: [
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "descriptor_chain_invalid",
+              to: "descriptor_key_invalid",
+              cases: ~w(
+                chain-root-key-error-before-revision
+              )
+            },
+            %{
+              baselines: ["npm:1.0.0"],
+              from: "descriptor_chain_invalid",
+              to: "signature_invalid",
+              cases: ~w(
+                chain-root-signature-before-revision
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          description:
+            "Signing preparation admits revision-8 acceptance and termination emission " <>
+            "and checks replacement intent.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "signing_input_invalid",
+              to: "valid",
+              cases: ~w(
+                signing-assignment-incoming-party
+                signing-mldsa65-quorum-acceptance
+                signing-mldsa65-quorum-termination
+                signing-quorum-accepted-supersession-target
+                signing-quorum-predecessor-role
+                signing-quorum-termination-second-role
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "Signing preparation admits revision-8 acceptance and termination emission " <>
+            "and checks replacement intent.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "signing_input_invalid",
+              to: "signing_refused",
+              cases: ~w(
+                signing-assignment-marker-unexpected
+                signing-legacy-ordinary-acceptance-with-marker
+                signing-quorum-ineligible-termination-role
+                signing-quorum-proposed-supersession-target
+                signing-quorum-unaccepted-predecessor
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          description:
+            "Bare revision-8 receipt verification admits descriptive context. " <>
+            "Preparation requires a verified set.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "valid",
+              cases: ~w(
+                receipt-bare-revision-eight-descriptive
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "Bare revision-8 receipt verification admits descriptive context. " <>
+            "Preparation requires a verified set.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "protected_header_invalid",
+              cases: ~w(
+                receipt-rejects-revision-eight-envelope
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "signing_refused",
+              cases: ~w(
+                signing-receipt-bare-revision-eight-refused
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          description:
+            "Standalone vote verification can decode the revision-8 charter and reach " <>
+            "the vote checks.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "valid",
+              cases: ~w(
+                assignment-assignor-pairing
+                assignment-mldsa65-revision-eight-assignor
+                quorum-mldsa65-revision-eight-termination
+                quorum-mldsa65-revision-eight-vote
+                quorum-termination-pairing
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "Standalone vote verification can decode the revision-8 charter and reach " <>
+            "the vote checks.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "acceptance_claims_mismatch",
+              cases: ~w(
+                assignment-rejects-assignee-marker
+                assignment-rejects-marker-role-mismatch
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "acceptance_invalid",
+              cases: ~w(
+                quorum-acceptance-envelope-unresolved-key
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "signature_invalid",
+              cases: ~w(
+                quorum-acceptance-envelope-signature-validity
+                quorum-termination-envelope-signature-validity
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "termination_invalid",
+              cases: ~w(
+                quorum-termination-envelope-unresolved-key
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "Revision-8 vote envelopes reach signature length, claims validation and " <>
+            "binding.",
+          witnesses: [
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "acceptance_claims_mismatch",
+              cases: ~w(
+                quorum-acceptance-rejects-legacy-binding
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "acceptance_invalid",
+              cases: ~w(
+                quorum-acceptance-envelope-claims-coordinates
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "constraint_violation",
+              cases: ~w(
+                quorum-acceptance-envelope-claims-constraint
+                quorum-termination-envelope-claims-constraint
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "invalid_type",
+              cases: ~w(
+                quorum-acceptance-envelope-claims-type
+                quorum-termination-envelope-claims-type
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "missing_required",
+              cases: ~w(
+                quorum-acceptance-envelope-claims-required
+                quorum-termination-envelope-claims-required
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "signature_invalid",
+              cases: ~w(
+                quorum-acceptance-envelope-signature-length
+                quorum-termination-envelope-signature-length
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "termination_claims_mismatch",
+              cases: ~w(
+                quorum-termination-rejects-legacy-binding
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "termination_invalid",
+              cases: ~w(
+                quorum-termination-envelope-claims-coordinates
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "timestamp_invalid",
+              cases: ~w(
+                quorum-acceptance-envelope-claims-timestamp
+                quorum-termination-envelope-claims-timestamp
+              )
+            },
+            %{
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "unknown_member",
+              cases: ~w(
+                quorum-acceptance-envelope-claims-unknown
+                quorum-termination-envelope-claims-unknown
+              )
+            }
+          ]
         }
       ]
     }
@@ -362,9 +1463,20 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             | :verdict_narrowing
             | :resource_boundary
             | :typed_error
-            | :error_code_change,
-          required(:direction) => :green_to_red | :red_to_green | :crash_to_typed | :red_to_red,
-          required(:description) => binary()
+            | :error_code_change
+            | :unsupported_in_baseline,
+          required(:direction) =>
+            :green_to_red | :red_to_green | :crash_to_typed | :red_to_red | :baseline_unsupported,
+          required(:description) => binary(),
+          optional(:witnesses) => [witness()]
+        }
+
+  @typedoc "Case IDs and exact normalized outcomes for named published baselines."
+  @type witness :: %{
+          baselines: [binary()],
+          cases: [binary()],
+          from: binary(),
+          to: binary()
         }
 
   @typedoc "One row of the compatibility table."
@@ -402,8 +1514,9 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
   One semantics value can span several rows. A release that adds cases
   without changing any verdict keeps the semantics value and adds a row with
   an empty `transitions` list. Each transition names its class, its
-  direction and what changed. The rows are evidence over the named corpus
-  inputs, not a proof that every possible input behaves the same.
+  direction and what changed. New rows name the case IDs and outcomes that
+  must differ when replayed under the published baselines. The evidence is
+  finite and covers the named inputs.
   """
   @spec compatibility() :: [release_row()]
   def compatibility, do: @compatibility

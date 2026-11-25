@@ -87,7 +87,7 @@ the subject names the schema, and the member when there is one.
 
 | Code | Meaning | Typical cause | What to do |
 |---|---|---|---|
-| `:invalid_type` | a value has the wrong type | a string where a number belongs, or your code passed the wrong Elixir term (a non-list for a list of artifacts, a string for a governing instant) | reject the input; if the subject names your argument, fix your call |
+| `:invalid_type` | a value has the wrong type or a retained record is incomplete | a string where a number belongs, a non-list artifact collection, a string for a governing instant, or a missing field in a signing set, key, or decoded digest input | reject the input; if the subject names your argument, fix your call |
 | `:unknown_member` | a member the schema does not define | an extra claim, or data meant for the `extensions` envelope | reject the input |
 | `:missing_required` | a required member is absent | an incomplete producer | reject the input |
 | `:constraint_violation` | a value is outside its allowed form | a `protocol_revision` outside the artifact's admitted revisions, a value outside its enumeration, a string too long or too short, a digest that does not match the `sha-256:` pattern | reject the input |
@@ -122,11 +122,11 @@ Signed artifacts are attached compact JWS strings.
 | `:revision_invalid` | the revision's claims are inconsistent | a genesis with `charter_id`, `prev_revision_digest` or `supersedes`; a later revision without the first two; duplicate roles; one descriptor named for multiple roles; an ABP binding for a role that is not a party; an `effective_until` that does not follow `effective_from`; an unregistered `receipt_profile` | reject the input |
 | `:acceptance_invalid` | the acceptance's claims are inconsistent, or its key is not active | revision 1 with a `prev_revision_digest`, a later revision without one, or a `kid` that is not an active key in the party's descriptor | reject the input |
 | `:acceptance_claims_mismatch` | the acceptance does not match the revision it is checked against | another charter, revision number, digest or predecessor; a role or descriptor that is not one of the revision's parties | reject the input |
-| `:acceptance_equivocation_invalid` | `Acceptance.equivocation/2` got two acceptances that are not one party accepting two revisions at one number | different parties or numbers, or the same revision twice | fix your call |
+| `:acceptance_equivocation_invalid` | the facts cannot establish one party accepting two revisions at one number | incomplete or invalid facts, different parties or numbers, or the same revision twice | pass verified acceptance facts |
 | `:termination_invalid` | the notice's claims are inconsistent, or its key is not active | `issued_at` after `effective_at`, or a `kid` that is not an active key | reject the input |
 | `:termination_claims_mismatch` | the notice does not match the revision it names | another charter or revision, a `reason_code` the revision's `termination_rules` do not list, or a party that is not one of the revision's | reject the input |
 | `:chain_invalid` | the artifacts do not form one charter view | no revisions or no descriptors; a legacy charter with other than two descriptor histories, or a revision-8 roster with a missing history; revision parties that resolve to one party's descriptor history, or a history no revision names; zero or two genesis revisions; mixed charters; a broken predecessor or `supersedes` link; an acceptance or notice that names a revision or descriptor missing from the view; two acceptances by one party for one revision; a fully signed revision that supersedes a revision without the required signatures | reject the input; if you assembled the view, check that it is complete |
-| `:governing_invalid` | `governing_revision/2` got a `DateTime` that is not in UTC | a local-time `DateTime` | fix your call: convert the instant to UTC |
+| `:governing_invalid` | `governing_revision/2` got a malformed or non-UTC `DateTime` | a missing year, an invalid calendar date, or a local-time `DateTime` | pass a complete, valid UTC instant |
 
 ## Receipts
 
@@ -185,7 +185,8 @@ The signing-input functions (`descriptor_signing_input/1`,
 | `:signing_key_mismatch` | snapshot differs from every resolved descriptor key | kid, bytes or key algorithm mismatch | check the holder's descriptor key |
 | `:signing_refused` | the claims contradict the signer's own view of the charter | accepting a revision with wrong coordinates, accepting a sibling of a revision the party already accepted, an ancestry that leaves out an accepted head, a notice whose revision does not govern at `effective_at` or whose `reason_code` is not listed | do not sign; correct the claims or the view you passed |
 
-`assemble_compact/2` returns `:signature_invalid` when the signature length is
+`assemble_compact/2` returns `:signing_input_invalid` when framing fields are
+missing or inconsistent. It returns `:signature_invalid` when the signature length is
 wrong for the algorithm. It does not check that the signature belongs to the
 right key, so verify each artifact after you assemble it.
 
@@ -251,7 +252,7 @@ library's own tests through the public API (`test-exercised`).
 | `:extension_schema_unavailable` | corpus-exercised | a corpus case expects this code |
 | `:extension_scope_invalid` | corpus-exercised | a corpus case expects this code |
 | `:extension_unknown_critical` | corpus-exercised | a corpus case expects this code |
-| `:governing_invalid` | test-exercised | needs a non-UTC instant, which the runner does not pass |
+| `:governing_invalid` | test-exercised | public API tests pass non-UTC datetimes and datetimes with missing or invalid fields |
 | `:integer_magnitude` | corpus-exercised | a corpus case expects this code |
 | `:invalid_encoding` | corpus-exercised | a corpus case expects this code |
 | `:invalid_limits` | corpus-exercised | a corpus case expects this code |
