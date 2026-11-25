@@ -46,9 +46,9 @@ the last one hashes every shipped file, so it has to see the final bytes.
 
 4. **Compatibility row.** The live corpus digest is recorded in release
    metadata during development. Preserve released compatibility rows.
-   For a new package version, update `lib/charter_agreement_protocol/release_identity.ex`,
-   the row whose `package_versions` holds the release version must carry the
-   new corpus digest as `census_digest`.
+   For a new package version, update
+   `lib/charter_agreement_protocol/release_identity.ex` so the row for the
+   new version carries the live corpus digest as `census_digest`.
    - No verdict changed: keep `@verification_semantics`. If the corpus
      changed, open a new row for the release with an empty `transitions`
      list.
@@ -64,9 +64,9 @@ the last one hashes every shipped file, so it has to see the final bytes.
       [TypeScript repository](https://github.com/baselabs/charter_agreement_protocol_typescript),
       copy `priv/conformance/` into its `conformance/` directory byte for
       byte, set `CERTIFIED_INDEX_SHA256_BASE64URL` and
-      `CERTIFIED_REGISTRY_DIGEST` in `core.ts`, make the verifier agree on
-      every case, and land it through the maintainers' landing tool and the
-      maintainers' release process.
+      `CERTIFIED_REGISTRY_DIGEST` in `core.ts`, and record the canonical
+      Elixir corpus commit. Run the native and browser suites on the
+      copied bytes through the maintainers' landing tool.
    2. Here, set `commit` in `priv/verifier-source.json` to that commit. It
       must be on the TypeScript repository's `main` as fetched from GitHub,
       and it must descend from the current pin.

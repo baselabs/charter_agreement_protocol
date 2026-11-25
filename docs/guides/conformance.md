@@ -29,8 +29,8 @@ is the one place in the guides where they are recorded.
 | Specification digest | `sha-256:Px81vuBEqTF94EHyT3k0XhX_DyS9u0eBo1sSMGchbGo` |
 | Cases | 553, in 16 case files |
 
-The pinned TypeScript verifier 0.7.0 (commit
-`dc77838be3760067aa5722f1e55f2d2d68931b87`) agrees with this corpus on every case.
+The [TypeScript source pin](../../priv/verifier-source.json) selects the
+verifier that CI runs against every case.
 
 What each one tells you:
 
