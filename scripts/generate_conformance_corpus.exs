@@ -2525,6 +2525,8 @@ limited_ids = ~w(
   signing-mldsa65-acceptance
   signing-mldsa65-party_descriptor
   signing-mldsa65-receipt
+  signing-mldsa65-receipt-float-protocol-revision
+  signing-mldsa65-receipt-float-revision-number
   signing-mldsa65-termination
   chain-mldsa-mixed-revision
   descriptor-mldsa65-rev3-valid

@@ -4,6 +4,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+- Record limited-substrate outcomes for receipt preparation when an ML-DSA
+  chain blocks verification before malformed claims are checked.
+
 
 - Add shared verdict cases for partial receipt views, termination at equal
   instants, and sibling repair. Record explicit outcomes for limited runtimes.

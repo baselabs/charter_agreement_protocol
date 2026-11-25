@@ -4,6 +4,9 @@ The source of record is `priv/conformance` in this repository. Consumers
 pin a Git commit and the raw index digest, which in turn authenticates each
 case file. Every row runs on a capable verifier and the browser bundle.
 The limited substrate uses the explicit `expect_limited` outcome when supplied.
+A serialized signing context is verified before claims are prepared. A
+receipt case with an ML-DSA chain can therefore report a substrate error
+before reaching an invalid claim.
 
 The conformance corpus is a fixed set of test cases. Each case gives exact input bytes
 and the exact result CAP returns for them: the full output for a valid case, the error
@@ -23,8 +26,8 @@ is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:SotPOwrvIWssswNuoV1L_Eql_IJohQFX1-0ICNkCXmI` |
-| Index SHA-256 (base64url) | `4ygWJ7RKHHLFtOxbx8F5RqLH47b4acS70QD8XQi8FY4` |
+| Corpus digest | `sha-256:XqGDtUk7QIIJO_tgaoe3g74i2vSTBujREFIQpSta5F8` |
+| Index SHA-256 (base64url) | `WbBb7BEOGDGOUmKQ7oo64tXFFj6vWMSIWd1lAaTx9J8` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
 | Specification digest | `sha-256:QOAg_nMQxQCEAnHSwvupvlE5lalC893OglZKYZA3vvg` |
 | Cases | 553, in 16 case files |
