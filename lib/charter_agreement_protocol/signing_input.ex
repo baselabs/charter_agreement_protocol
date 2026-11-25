@@ -88,15 +88,21 @@ defmodule CharterAgreementProtocol.SigningInput do
   See `CharterAgreementProtocol.acceptance_signing_input/2`.
   """
   @spec acceptance(term(), ArtifactSet.t()) :: {:ok, t()} | {:error, Error.t()}
-  def acceptance(input, %ArtifactSet{} = set) do
-    with {:ok, signing_input, acceptance} <- build(:acceptance, input, Limits.default()),
+  def acceptance(input, set), do: acceptance_input(:acceptance, input, set)
+
+  @doc "Build an assignor's acceptance signing input after checking the declared replacement."
+  @spec party_replacement(term(), ArtifactSet.t()) :: {:ok, t()} | {:error, Error.t()}
+  def party_replacement(input, set), do: acceptance_input(:party_replacement, input, set)
+
+  defp acceptance_input(kind, input, %ArtifactSet{} = set) do
+    with {:ok, signing_input, acceptance} <- build(kind, input, Limits.default()),
          {:ok, chain} <- verify_set(set),
          {:ok, _revision} <- refusal_check(:acceptance, acceptance, chain) do
       {:ok, signing_input}
     end
   end
 
-  def acceptance(_input, _set), do: invalid()
+  defp acceptance_input(_kind, _input, _set), do: invalid()
 
   @doc """
   Build a termination signing input after checking it against `set`.
@@ -152,14 +158,17 @@ defmodule CharterAgreementProtocol.SigningInput do
   end
 
   @doc false
-  @spec build(kind(), term(), Limits.t()) :: {:ok, t(), struct()} | {:error, Error.t()}
+  @spec build(kind() | :party_replacement, term(), Limits.t()) ::
+          {:ok, t(), struct()} | {:error, Error.t()}
   def build(kind, %{"claims" => claims, "kid" => kid} = input, limits)
       when map_size(input) == 2 and is_map(claims) and is_binary(kid) do
     build(kind, Map.put(input, "algorithm", Algorithm.default_emission_name()), limits)
   end
 
-  def build(kind, %{"claims" => claims, "kid" => kid, "algorithm" => alg} = input, limits)
+  def build(operation, %{"claims" => claims, "kid" => kid, "algorithm" => alg} = input, limits)
       when map_size(input) == 3 and is_map(claims) and is_binary(kid) and is_binary(alg) do
+    kind = if operation == :party_replacement, do: :acceptance, else: operation
+
     with {:ok, revision} <- emission_revision(alg),
          {:ok, claims_value} <- Canonicalization.from_plain(claims),
          :ok <- IntegerClaims.check(kind, claims_value),
@@ -176,13 +185,19 @@ defmodule CharterAgreementProtocol.SigningInput do
          provisional <-
            signing_input.message <> "." <> Base64Url.encode(<<0::size(signature_bytes)-unit(8)>>),
          {:ok, artifact} <- decode_kind(kind, provisional, limits) do
-      {:ok, signing_input, artifact}
+      with :ok <- assignment_marker(operation, artifact), do: {:ok, signing_input, artifact}
     else
       _failure -> invalid()
     end
   end
 
   def build(_kind, _input, _limits), do: invalid()
+
+  defp assignment_marker(operation, %Acceptance{replacement_role: marker}) do
+    if (operation == :party_replacement) == is_binary(marker), do: :ok, else: refused()
+  end
+
+  defp assignment_marker(_operation, _artifact), do: :ok
 
   # The declared emission names stay closed. The provisional decode enforces
   # the artifact-specific revision and protected header binding.
@@ -293,7 +308,7 @@ defmodule CharterAgreementProtocol.SigningInput do
         previous = Map.get(Chain.revision_index(chain), revision.prev_revision_digest)
 
         eligible =
-          revision.protocol_revision != 8 or revision.revision_number == 1 or
+          revision.revision_number == 1 or
             (revision.prev_revision_digest in chain.accepted_revision_digests and
                Enum.all?(revision.supersedes, &(&1 in chain.accepted_revision_digests)))
 

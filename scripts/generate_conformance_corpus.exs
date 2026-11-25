@@ -2592,6 +2592,23 @@ quorum_ids = ~w(
   assignment-receipt-latest-holder-after-close
   assignment-receipt-former-holder-after-close
   assignment-receipt-contested-holder
+  quorum-mixed-unsigned-genesis
+  quorum-mixed-accepted-predecessors
+  quorum-revision-downgrade
+  assignment-mldsa65-revision-eight-complete
+  quorum-mixed-unsigned-genesis-governing
+  quorum-mixed-accepted-predecessors-governing
+  signing-quorum-legacy-hop-without-predecessor
+  signing-quorum-proposed-supersession-target
+  signing-quorum-accepted-supersession-target
+  signing-mldsa65-quorum-acceptance
+  signing-mldsa65-quorum-termination
+  signing-mldsa65-assignment-assignor
+  assignment-receipt-predecessor-resumes
+  assignment-receipt-expired-holder
+  quorum-mldsa65-revision-eight-vote
+  assignment-mldsa65-revision-eight-assignor
+  quorum-mldsa65-revision-eight-termination
 )
 
 cases =

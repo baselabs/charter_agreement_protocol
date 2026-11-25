@@ -530,7 +530,7 @@ A successor preserves roles and participation, and MUST NOT downgrade
 a revision-8 predecessor [CAP-QUORUM-roster-and-votes]. Every revision-8 roster binding MUST resolve
 to a distinct supplied party history [CAP-QUORUM-roster-and-votes].
 
-Each role contributes at most one vote to each rule. A successor's
+Each role contributes at most one vote to each rule. A revision-8 successor's
 acceptances MUST meet its own rule and the latest accepted predecessor's
 rule [CAP-QUORUM-roster-and-votes]. A vote from a role named by either rule contributes to each rule
 that names it. A legacy predecessor contributes its all-party rule.
@@ -538,8 +538,8 @@ Verified votes outside both rules contribute no quorum vote. Legacy
 revisions retain the all-party acceptance and single-party termination
 rules [CAP-QUORUM-roster-and-votes].
 
-Only an accepted immediate predecessor allows a revision-8 successor
-to become accepted. Proposed revisions convey no quorum rule to
+A successor becomes accepted only when its immediate predecessor is
+accepted. Proposed revisions convey no quorum rule to
 successors. When there is no accepted ancestor, the raw predecessor's
 rule may describe signature sufficiency, without making the successor
 eligible. A proposal that meets its own and the inherited rule and
@@ -582,7 +582,7 @@ revisions remain contested [CAP-ASSIGNMENT-assent].
 
 Checked preparation accepts the assignor marker only for kind
 `party_replacement`. Both preparation kinds emit `cap+acceptance` artifacts.
-Preparation MUST refuse a revision-8 successor whose immediate predecessor
+Preparation MUST refuse a successor whose immediate predecessor
 or supersession target is still proposed [CAP-ASSIGNMENT-signing]. Ordinary quorum preparation MUST
 refuse roles outside both acceptance rules, except for parties assenting
 to an assignment [CAP-ASSIGNMENT-signing]. Acceptances and notices paired with a revision-8 charter

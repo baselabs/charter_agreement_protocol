@@ -45,21 +45,54 @@ defmodule CharterAgreementProtocol.Internal.Retained do
       binaries?(revision.supersedes) and
       list?(revision.parties) and
       Enum.all?(revision.parties, &party_shape?/1) and
+      optional_quorum_shape?(revision.acceptance_quorum) and
+      replacements_shape?(revision.party_replacements) and
       rules_shape?(revision.termination_rules)
   end
 
   defp revision_shape?(_other), do: false
 
   defp party_shape?(%CharterRevision.Party{role: role, party_descriptor_digest: digest} = party) do
-    complete?(party, CharterRevision.Party) and is_binary(role) and is_binary(digest)
+    complete?(party, CharterRevision.Party) and is_binary(role) and is_binary(digest) and
+      party.participation in [nil, "acceptor", "arbiter"]
   end
 
   defp party_shape?(_other), do: false
 
   defp rules_shape?(%CharterRevision.TerminationRules{reason_codes: codes} = rules),
-    do: complete?(rules, CharterRevision.TerminationRules) and binaries?(codes)
+    do:
+      complete?(rules, CharterRevision.TerminationRules) and binaries?(codes) and
+        optional_quorum_shape?(rules.quorum)
 
   defp rules_shape?(_other), do: false
+
+  defp optional_quorum_shape?(nil), do: true
+  defp optional_quorum_shape?(rule), do: quorum_shape?(rule)
+
+  defp quorum_shape?(%{roles: roles, threshold: threshold} = rule) when map_size(rule) == 2 do
+    binaries?(roles) and is_integer(threshold) and threshold >= 0 and threshold <= length(roles)
+  end
+
+  defp quorum_shape?(_rule), do: false
+
+  defp replacements_shape?(records),
+    do: list?(records) and Enum.all?(records, &replacement_shape?/1)
+
+  defp replacement_shape?(
+         %{
+           role: role,
+           assignor_party_id: owner,
+           assignor_descriptor_digest: from,
+           assignee_descriptor_digest: to,
+           assent_quorum: quorum
+         } = record
+       )
+       when map_size(record) == 5 do
+    is_binary(role) and is_binary(owner) and is_binary(from) and is_binary(to) and
+      quorum_shape?(quorum)
+  end
+
+  defp replacement_shape?(_record), do: false
 
   defp chain_shape?(%DescriptorChain{} = chain) do
     Map.keys(chain) == Map.keys(%DescriptorChain{topology: :linear, descriptors: []}) and
@@ -187,6 +220,12 @@ defmodule CharterAgreementProtocol.Internal.Retained do
               :acceptance_digests
             ],
        do: binaries?(supplied)
+
+  defp field_shape?(field, supplied, verified) when field in [:acceptance_quorum, :quorum] do
+    if is_nil(verified), do: is_nil(supplied), else: quorum_shape?(supplied)
+  end
+
+  defp field_shape?(:party_replacements, supplied, _verified), do: replacements_shape?(supplied)
 
   defp field_shape?(:not_verified, supplied, _verified),
     do: list?(supplied) and Enum.all?(supplied, &is_atom/1)

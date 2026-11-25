@@ -651,11 +651,11 @@ defmodule CharterAgreementProtocol.Receipt do
       {status, digest} = holder_revision(chain, receipt)
       held = Enum.find(accepted, &(&1.revision_digest == digest))
       descriptor = held && role_digest(held.revision, receipt.issuing_party_role)
+
       owner =
         Enum.find_value(descriptors, fn facts ->
           if facts.descriptor_digest == descriptor, do: facts.party_id
         end)
-
 
       {if(owner, do: status, else: :undetermined), owner}
     else

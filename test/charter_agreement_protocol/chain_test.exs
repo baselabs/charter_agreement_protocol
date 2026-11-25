@@ -483,7 +483,7 @@ defmodule CharterAgreementProtocol.ChainTest do
     assert {:ok, :contested} = Chain.governing_revision(facts, at!("2026-08-25T12:00:02Z"))
   end
 
-  test "an accepted revision beyond an unaccepted predecessor is contested, never a crash" do
+  test "a signed successor stays proposed while its immediate predecessor is proposed" do
     setup = ChainFixture.base()
     revision_2 = ChainFixture.successor(setup.genesis, 2)
     revision_3 = ChainFixture.successor(revision_2, 3)
@@ -493,7 +493,7 @@ defmodule CharterAgreementProtocol.ChainTest do
         [ChainFixture.acceptance(revision_2, setup.issuer, "issuer")] ++
         ChainFixture.dual_acceptances(revision_3, setup)
 
-    assert {:ok, %ChainFacts{chain_topology: :forked} = facts} =
+    assert {:ok, %ChainFacts{chain_topology: :linear} = facts} =
              Chain.verify(
                Enum.map([setup.genesis, revision_2, revision_3], & &1.bytes),
                Enum.map(acceptances, & &1.compact),
@@ -502,7 +502,11 @@ defmodule CharterAgreementProtocol.ChainTest do
                Limits.default()
              )
 
-    assert {:ok, :contested} = Chain.governing_revision(facts, at!("2026-08-25T12:00:02Z"))
+    assert facts.accepted_revision_digests == [setup.genesis.digest]
+    assert [successor] = Enum.filter(facts.revision_facts, &(&1.revision_number == 3))
+    assert successor.signature_status == :accepted
+    assert {:ok, digest} = Chain.governing_revision(facts, at!("2026-08-25T12:00:02Z"))
+    assert digest == setup.genesis.digest
   end
 
   test "governing computation rejects a non-UTC DateTime" do

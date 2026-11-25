@@ -431,8 +431,8 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "termination-close-ignored",
       path: "lib/charter_agreement_protocol/chain.ex",
-      from: "      effective and\n        do_select(",
-      to: "      effective and false and\n        do_select(",
+      from: "        do_select(facts, effective, ctx) == digest",
+      to: "        false and do_select(facts, effective, ctx) == digest",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{

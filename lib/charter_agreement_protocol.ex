@@ -728,7 +728,8 @@ defmodule CharterAgreementProtocol do
   `input` has the same shape as for `descriptor_signing_input/1`, and the
   claims' `protocol_revision` must be 2 for `"Ed25519"` (the default) or 3
   for `"ML-DSA-65"`. `set` comes from `build_set/4` and holds the artifacts
-  the signer has. CAP verifies the set under default limits, then refuses
+  the signer has. Revision-8 claims may use either emission algorithm.
+  CAP verifies the set under default limits, then refuses
   with `:signing_refused` when:
 
   - the claims do not match a revision in the set (charter id, revision
@@ -736,6 +737,7 @@ defmodule CharterAgreementProtocol do
     descriptor digest);
   - the set already has an Acceptance of a different revision with the same
     charter and revision number;
+  - the revision's predecessor or a supersession target is still proposed;
   - the revision does not descend from, or supersede, every highest accepted
     revision in the set.
 
@@ -772,6 +774,18 @@ defmodule CharterAgreementProtocol do
   @spec acceptance_signing_input(term(), ArtifactSet.t()) ::
           {:ok, SigningInput.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate acceptance_signing_input(input, set), to: SigningInput, as: :acceptance
+
+  @doc """
+  Build the bytes to sign for an assignor's Acceptance of a declared replacement.
+
+  The claims use protocol revision 8 and carry `replacement_role`. The
+  returned input frames a `cap+acceptance` artifact.
+  """
+  @spec party_replacement_signing_input(term(), ArtifactSet.t()) ::
+          {:ok, SigningInput.t()} | {:error, CharterAgreementProtocol.Error.t()}
+  defdelegate party_replacement_signing_input(input, set),
+    to: SigningInput,
+    as: :party_replacement
 
   @doc """
   Build the bytes to sign for a termination notice, after checking it

@@ -462,8 +462,7 @@ defmodule CharterAgreementProtocol.Chain do
       raw_previous = Map.get(raw, revision.prev_revision_digest)
       {quorum, missing} = Quorum.evaluate(revision, matches, previous || raw_previous)
       signed? = quorum and missing == []
-      eligible? = revision.protocol_revision != 8 or previous == raw_previous
-      accepted? = signed? and eligible?
+      accepted? = signed? and previous == raw_previous
 
       result = revision_facts(digest, revision, matches, signed?, accepted?, missing)
       {[result | facts], Map.put(inherited, digest, if(accepted?, do: revision, else: previous))}

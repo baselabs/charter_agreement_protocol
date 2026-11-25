@@ -167,7 +167,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     %{
       package_versions: ["1.1.0"],
       verification_semantics: 7,
-      census_digest: "sha-256:7Yl7G-MzHWelujI1Gy_KyR6uuJBhqrw-SqzA2q7rP7E",
+      census_digest: "sha-256:9vJWiiTVB8wP57VlmP4pDb1cfPyryoKrI9Ux2zBB6qA",
       protocol_revisions: [1, 2, 3, 8],
       transitions: [
         %{
@@ -183,6 +183,13 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           description:
             "Revision 8 admits distinct-role acceptance and termination quorums and " <>
               "unanimous declared party assignments."
+        },
+        %{
+          class: :verdict_narrowing,
+          direction: :green_to_red,
+          description:
+            "A signed successor stays proposed until its immediate predecessor is accepted, " <>
+              "including for legacy revisions."
         }
       ]
     }

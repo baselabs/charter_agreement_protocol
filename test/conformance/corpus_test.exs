@@ -1,6 +1,8 @@
 defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   use ExUnit.Case, async: false
 
+  alias CharterAgreementProtocol, as: CAP
+
   alias CharterAgreementProtocol.Conformance.Corpus
   alias CharterAgreementProtocol.ConformanceTest.{Builder, CorpusAlgorithms}
 
@@ -196,12 +198,12 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert counts["party_descriptor.verify"] + counts["descriptor_chain.verify"] == 81
     assert counts["descriptor_publication.verify"] == 22
     assert counts["charter_revision.decode"] == 58
-    assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 52
-    assert counts["termination.verify"] == 30
-    assert counts["chain.verify"] + counts["governing_revision"] == 77
+    assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 54
+    assert counts["termination.verify"] == 31
+    assert counts["chain.verify"] + counts["governing_revision"] == 83
     assert counts["chain.verify_profile"] == 20
-    assert counts["receipt.verify"] == 62
-    assert counts["signing.prepare"] == 117
+    assert counts["receipt.verify"] == 64
+    assert counts["signing.prepare"] == 123
   end
 
   for group <- [:ed25519, :ml_dsa] do
@@ -682,6 +684,132 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
     claims = :json.decode(floating)
     assert {:error, %Error{code: :invalid_type}} = CharterRevision.encode(claims)
+  end
+
+  test "mixed revisions expose signatures across an unsigned predecessor without governing" do
+    input = shipped_input("chain-verify", "quorum-mixed-unsigned-genesis")
+
+    assert {:ok, facts} = verify_chain_input(input)
+    assert facts.accepted_revision_digests == []
+
+    assert Enum.map(facts.revision_facts, &{&1.protocol_revision, &1.signature_status}) ==
+             [{2, :proposed}, {2, :accepted}, {8, :accepted}]
+
+    assert {:ok, :none} = CAP.governing_revision(facts, ~U[2026-08-25 13:00:00Z])
+
+    signing = shipped_input("signing-prepare", "signing-quorum-legacy-hop-without-predecessor")
+    set = signing_context(signing["context"])
+
+    assert {:error, %Error{code: :signing_refused}} =
+             CAP.acceptance_signing_input(Map.take(signing, ["kid", "claims"]), set)
+  end
+
+  test "ordinary and replacement operations require the corresponding marker on both paths" do
+    marked = shipped_input("signing-prepare", "signing-assignment-departing-party")
+    ordinary = shipped_input("signing-prepare", "signing-assignment-incoming-party")
+
+    for {input, operation, wrong, producer, wrong_producer} <- [
+          {marked, :party_replacement, :acceptance, &CAP.party_replacement_signing_input/2,
+           &CAP.acceptance_signing_input/2},
+          {ordinary, :acceptance, :party_replacement, &CAP.acceptance_signing_input/2,
+           &CAP.party_replacement_signing_input/2}
+        ] do
+      set = signing_context(input["context"])
+      claims = Map.take(input, ["kid", "claims", "algorithm"])
+      key = Base.url_decode64!(input["public_key"], padding: false)
+      request = Map.put(claims, "public_key", key)
+      limits = Limits.default()
+      profile = Profile.full()
+
+      assert {:ok, frame} = producer.(claims, set)
+      assert {:ok, plan} = CAP.prepare_signing(operation, request, set, limits, profile)
+      assert plan.signing_input == frame
+      assert {:error, %Error{code: :signing_refused}} = wrong_producer.(claims, set)
+
+      assert {:error, %Error{code: :signing_refused}} =
+               CAP.prepare_signing(wrong, request, set, limits, profile)
+    end
+  end
+
+  test "standalone verification rechecks closed retained quorum and replacement shapes" do
+    limits = Limits.default()
+
+    for {file, id, verify} <- [
+          {"acceptance-verify", "assignment-assignor-pairing", &CAP.verify_acceptance/4},
+          {"termination-verify", "quorum-termination-pairing", &CAP.verify_termination/4}
+        ] do
+      input = shipped_input(file, id)
+      assert {:ok, revision} = CAP.decode_charter_revision(input["revision_text"], limits)
+      assert {:ok, chain} = DescriptorChain.verify(input["descriptor_compacts"], limits)
+      assert {:ok, _facts} = verify.(input["compact"], revision, chain, limits)
+
+      for invalid <- malformed_revisions(revision) do
+        assert {:error, %Error{code: :invalid_type}} =
+                 verify.(input["compact"], invalid, chain, limits)
+      end
+    end
+  end
+
+  test "receipt verification and preparation recheck a retained revision and chain" do
+    input = shipped_input("receipt-verify", "assignment-receipt-new-holder")
+    limits = Limits.default()
+    profile = Profile.full()
+    assert {:ok, chain} = receipt_context(input, limits)
+    revision_position = Enum.find_index(chain.revision_facts, &(&1.revision_number == 2))
+    revision_facts = Enum.at(chain.revision_facts, revision_position)
+    revision = revision_facts.revision
+    [_, payload, _] = String.split(input["compact"], ".")
+    claims = payload |> Base.url_decode64!(padding: false) |> :json.decode()
+    {key, _private} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<4>>, 32))
+    request = %{"kid" => "quorum-key-4", "claims" => claims, "public_key" => key}
+
+    for context <- [revision, chain] do
+      assert {:ok, _facts} = CAP.verify_receipt(input["compact"], context, limits)
+      assert {:ok, _plan} = CAP.prepare_signing(:receipt, request, context, limits, profile)
+    end
+
+    for invalid <- malformed_revisions(revision) do
+      malformed = %{revision_facts | revision: invalid}
+      altered = List.replace_at(chain.revision_facts, revision_position, malformed)
+
+      for context <- [invalid, %{chain | revision_facts: altered}] do
+        assert {:error, %Error{code: :invalid_type}} =
+                 CAP.verify_receipt(input["compact"], context, limits)
+
+        assert {:error, %Error{code: :invalid_type}} =
+                 CAP.prepare_signing(:receipt, request, context, limits, profile)
+      end
+    end
+  end
+
+  defp malformed_revisions(revision) do
+    termination = revision.termination_rules
+    replacement = List.first(revision.party_replacements)
+    malformed_records = malformed_replacements(replacement)
+
+    [
+      %{revision | acceptance_quorum: Map.put(revision.acceptance_quorum, :extra, true)},
+      %{revision | acceptance_quorum: %{roles: ["alpha" | :tail], threshold: 1}},
+      %{revision | acceptance_quorum: %{roles: ["alpha"], threshold: "1"}},
+      %{revision | termination_rules: %{termination | quorum: %{roles: []}}},
+      %{revision | party_replacements: [replacement | :tail]}
+      | Enum.map(malformed_records, &%{revision | party_replacements: [&1]})
+    ]
+  end
+
+  defp malformed_replacements(nil), do: [%{}]
+
+  defp malformed_replacements(record) do
+    [
+      Map.put(record, :extra, true),
+      %{record | assignor_descriptor_digest: 1},
+      %{record | assent_quorum: %{roles: [true], threshold: 1}}
+    ]
+  end
+
+  defp shipped_input(file, id) do
+    one = Enum.find(shipped_cases(file), &(&1["id"] == id))
+    one["input"]
   end
 
   defp shipped_cases(file) do

@@ -55,9 +55,8 @@ defmodule CharterAgreementProtocol.SigningPlan do
   def prepare(kind, input, context, limits, profile) do
     with :ok <- options(limits, profile),
          :ok <- context_type(kind, context),
-         {:ok, signing_input, artifact, public_key} <- build(artifact_kind(kind), input, limits),
-         :ok <- assignment_marker(kind, artifact),
-         kind = artifact_kind(kind),
+         {:ok, signing_input, artifact, public_key} <- build(kind, input, limits),
+         kind = signing_input.kind,
          :ok <- key_shape(public_key, signing_input.alg),
          {:ok, verify_with} <- derive(kind, artifact, context, limits, profile),
          {:ok, provisional} <-
@@ -106,17 +105,6 @@ defmodule CharterAgreementProtocol.SigningPlan do
   defp context_type(:receipt, %ChainFacts{}), do: :ok
   defp context_type(:receipt, %CharterRevision{}), do: :ok
   defp context_type(_kind, _context), do: invalid_type()
-
-  defp artifact_kind(:party_replacement), do: :acceptance
-  defp artifact_kind(kind), do: kind
-
-  defp assignment_marker(kind, %Acceptance{replacement_role: marker}) do
-    if (kind == :party_replacement) == is_binary(marker),
-      do: :ok,
-      else: {:error, Error.new(:signing_refused, ["signing_input", "claims"])}
-  end
-
-  defp assignment_marker(_kind, _artifact), do: :ok
 
   defp build(kind, %{"public_key" => public_key} = input, limits) do
     with {:ok, signing_input, artifact} <-
