@@ -425,8 +425,10 @@ defmodule CharterAgreementProtocol.Acceptance do
   defp claims_match(acceptance, revision) do
     revision_digest = CharterRevision.digest(revision)
     charter_id = revision.charter_id || revision_digest
+    quorum_acceptance? = acceptance.protocol_revision == 8
+    quorum_revision? = revision.protocol_revision == 8
 
-    if (acceptance.protocol_revision == 8) == (revision.protocol_revision == 8) and
+    if quorum_acceptance? == quorum_revision? and
          acceptance.charter_id == charter_id and
          acceptance.revision_number == revision.revision_number and
          acceptance.revision_digest == revision_digest and

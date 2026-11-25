@@ -277,8 +277,8 @@ defmodule CharterAgreementProtocol.Chain do
 
         if party_ids == Enum.uniq(party_ids) and
              party_transition?(revision, revision_index, owner, party_ids),
-          do: {:cont, {:ok, MapSet.union(seen, MapSet.new(party_ids))}},
-          else: {:halt, :error}
+           do: {:cont, {:ok, MapSet.union(seen, MapSet.new(party_ids))}},
+           else: {:halt, :error}
       end)
 
     histories = MapSet.new(descriptor_chains, &descriptor_chain_id/1)

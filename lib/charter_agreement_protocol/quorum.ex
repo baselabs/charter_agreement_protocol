@@ -134,9 +134,15 @@ defmodule CharterAgreementProtocol.Quorum do
     next_owner = owners[to]
 
     cond do
-      is_nil(owner) or is_nil(next_owner) -> false
-      owner == next_owner -> is_nil(record)
-      is_nil(record) -> false
+      is_nil(owner) or is_nil(next_owner) ->
+        false
+
+      owner == next_owner ->
+        is_nil(record)
+
+      is_nil(record) ->
+        false
+
       true ->
         record.assignor_party_id == owner and record.assignor_descriptor_digest == from and
           record.assignee_descriptor_digest == to and

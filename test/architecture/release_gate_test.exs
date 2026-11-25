@@ -6,6 +6,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
   use ExUnit.Case, async: true
 
   alias CharterAgreementProtocol.Conformance.Corpus
+
   alias CharterAgreementProtocol.{
     ReleaseCompatibility,
     ReleaseIdentity,

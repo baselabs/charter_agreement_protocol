@@ -99,6 +99,7 @@ defmodule CharterAgreementProtocol.SigningPlan do
 
   defp context_type(:party_descriptor, nil), do: :ok
   defp context_type(:party_descriptor, %DescriptorFacts{}), do: :ok
+
   defp context_type(kind, %ArtifactSet{})
        when kind in [:acceptance, :party_replacement, :termination],
        do: :ok

@@ -330,21 +330,24 @@ defmodule CharterAgreementProtocol.CharterRevision do
     assignor_party_id assignor_descriptor_digest assignee_descriptor_digest
   )
 
-  @replacement_definition Schema.definition("party_replacement", [
-                            Schema.field("role",
-                              required?: true,
-                              types: [:string],
-                              constraint: {:string_bytes, 1, 128}
-                            )
-                            | Enum.map(
-                                @replacement_digest_fields,
-                                &Schema.field(&1,
-                                  required?: true,
-                                  types: [:string],
-                                  constraint: {:matches, @tagged_digest}
-                                )
+  @replacement_definition Schema.definition(
+                            "party_replacement",
+                            [
+                              Schema.field("role",
+                                required?: true,
+                                types: [:string],
+                                constraint: {:string_bytes, 1, 128}
                               )
-                          ] ++ [%{@quorum_field | name: "assent_quorum"}])
+                              | Enum.map(
+                                  @replacement_digest_fields,
+                                  &Schema.field(&1,
+                                    required?: true,
+                                    types: [:string],
+                                    constraint: {:matches, @tagged_digest}
+                                  )
+                                )
+                            ] ++ [%{@quorum_field | name: "assent_quorum"}]
+                          )
   @quorum_revision_definition %{
     @definition
     | fields:

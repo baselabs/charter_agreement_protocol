@@ -373,8 +373,10 @@ defmodule CharterAgreementProtocol.TerminationNotice do
   defp claims_match(termination, revision) do
     revision_digest = CharterRevision.digest(revision)
     charter_id = revision.charter_id || revision_digest
+    quorum_termination? = termination.protocol_revision == 8
+    quorum_revision? = revision.protocol_revision == 8
 
-    if (termination.protocol_revision == 8) == (revision.protocol_revision == 8) and
+    if quorum_termination? == quorum_revision? and
          termination.charter_id == charter_id and
          termination.governing_revision_digest == revision_digest and
          termination.reason_code in revision.termination_rules.reason_codes do

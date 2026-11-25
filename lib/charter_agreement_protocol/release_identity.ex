@@ -176,7 +176,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "receipt.verify",
           description:
             "Legacy successor eligibility requires an accepted predecessor. Signing also " <>
-            "requires accepted supersession targets.",
+              "requires accepted supersession targets.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -195,7 +195,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "signing.prepare",
           description:
             "Legacy successor eligibility requires an accepted predecessor. Signing also " <>
-            "requires accepted supersession targets.",
+              "requires accepted supersession targets.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -234,7 +234,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "assemble_compact",
           description:
             "TypeScript compact assembly checks for an algorithm field before registry " <>
-            "lookup.",
+              "lookup.",
           witnesses: [
             %{
               entry_point: "public_api",
@@ -251,8 +251,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :admission,
           direction: :red_to_green,
           operation: "descriptor_chain.verify",
-          description:
-            "Revision-8 descriptor histories reach topology or commitment validation.",
+          description: "Revision-8 descriptor histories reach topology or commitment validation.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -269,8 +268,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :admission,
           direction: :red_to_green,
           operation: "party_descriptor.verify",
-          description:
-            "Revision-8 descriptors reach key and commitment checks.",
+          description: "Revision-8 descriptors reach key and commitment checks.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -287,8 +285,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :error_code_change,
           direction: :red_to_red,
           operation: "party_descriptor.verify",
-          description:
-            "Revision-8 descriptors reach key and commitment checks.",
+          description: "Revision-8 descriptors reach key and commitment checks.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -320,7 +317,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "signing.prepare",
           description:
             "Descriptor signing checks the admitted revision-8 predecessor and its key " <>
-            "commitment.",
+              "commitment.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -339,7 +336,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "signing.prepare",
           description:
             "Descriptor signing checks the admitted revision-8 predecessor and its key " <>
-            "commitment.",
+              "commitment.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -358,7 +355,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "chain.verify",
           description:
             "The TypeScript verifier evaluates the acceptance list before checking " <>
-            "duplicate coordinates.",
+              "duplicate coordinates.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -480,7 +477,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "chain.verify_profile",
           description:
             "The TypeScript verifier evaluates the acceptance list before checking " <>
-            "duplicate coordinates.",
+              "duplicate coordinates.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -508,8 +505,8 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "chain.verify",
           description:
             "The chain-expanded-histories cases and " <>
-            "chain-many-histories-first-party-error expose errors past the old history " <>
-            "count.",
+              "chain-many-histories-first-party-error expose errors past the old history " <>
+              "count.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -794,8 +791,8 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "chain.verify_profile",
           description:
             "The chain-expanded-histories cases and " <>
-            "chain-many-histories-first-party-error expose errors past the old history " <>
-            "count.",
+              "chain-many-histories-first-party-error expose errors past the old history " <>
+              "count.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -823,7 +820,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "chain.verify_profile",
           description:
             "The TypeScript verifier finishes descendants before the next descriptor " <>
-            "branch.",
+              "branch.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -842,7 +839,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "governing_revision",
           description:
             "Invalid UTC calendar components return a governing input error before " <>
-            "conversion.",
+              "conversion.",
           witnesses: [
             %{
               entry_point: "public_api",
@@ -859,8 +856,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :admission,
           direction: :red_to_green,
           operation: "chain.verify_profile",
-          description:
-            "Capability profiles recognize revision 8 as a range endpoint.",
+          description: "Capability profiles recognize revision 8 as a range endpoint.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -877,8 +873,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :admission,
           direction: :red_to_green,
           operation: "descriptor_publication.verify",
-          description:
-            "Admit descriptor publication verification through the corpus dispatcher.",
+          description: "Admit descriptor publication verification through the corpus dispatcher.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -897,8 +892,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :error_code_change,
           direction: :red_to_red,
           operation: "descriptor_publication.verify",
-          description:
-            "Descriptor publication verification returns errors from its own checks.",
+          description: "Descriptor publication verification returns errors from its own checks.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -982,7 +976,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "chain.verify",
           description:
             "Set verification applies revision-8 roster, assignment, predecessor, and " <>
-            "vote rules.",
+              "vote rules.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1030,7 +1024,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "governing_revision",
           description:
             "Set verification applies revision-8 roster, assignment, predecessor, and " <>
-            "vote rules.",
+              "vote rules.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1063,7 +1057,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "chain.verify",
           description:
             "Set verification applies revision-8 roster, assignment, predecessor, and " <>
-            "vote rules.",
+              "vote rules.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1092,7 +1086,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "signing.prepare",
           description:
             "Set verification applies revision-8 roster, assignment, predecessor, and " <>
-            "vote rules.",
+              "vote rules.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1111,7 +1105,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "charter_revision.decode",
           description:
             "Revision-8 quorum thresholds are checked for integer tokens ahead of " <>
-            "canonical bytes and schema checks.",
+              "canonical bytes and schema checks.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1151,7 +1145,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "receipt.verify",
           description:
             "Receipt verification resolves the issuing role in a quorum or assignment " <>
-            "view.",
+              "view.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1174,7 +1168,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "signing.prepare",
           description:
             "Receipt verification resolves the issuing role in a quorum or assignment " <>
-            "view.",
+              "view.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1193,7 +1187,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "receipt.verify",
           description:
             "Receipt verification resolves the issuing role in a quorum or assignment " <>
-            "view.",
+              "view.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1214,7 +1208,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "equivocation",
           description:
             "Incomplete caller-built host records return typed errors through public " <>
-            "verification and signing.",
+              "verification and signing.",
           witnesses: [
             %{
               entry_point: "public_api",
@@ -1233,7 +1227,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "governing_revision",
           description:
             "Incomplete caller-built host records return typed errors through public " <>
-            "verification and signing.",
+              "verification and signing.",
           witnesses: [
             %{
               entry_point: "public_api",
@@ -1252,7 +1246,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "descriptor_digest",
           description:
             "Incomplete caller-built host records return typed errors through public " <>
-            "verification and signing.",
+              "verification and signing.",
           witnesses: [
             %{
               entry_point: "public_api",
@@ -1271,7 +1265,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "revision_digest",
           description:
             "Incomplete caller-built host records return typed errors through public " <>
-            "verification and signing.",
+              "verification and signing.",
           witnesses: [
             %{
               entry_point: "public_api",
@@ -1290,7 +1284,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "acceptance_signing_input",
           description:
             "Incomplete caller-built host records return typed errors through public " <>
-            "verification and signing.",
+              "verification and signing.",
           witnesses: [
             %{
               entry_point: "public_api",
@@ -1309,7 +1303,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "assemble_compact",
           description:
             "Incomplete caller-built host records return typed errors through public " <>
-            "verification and signing.",
+              "verification and signing.",
           witnesses: [
             %{
               entry_point: "public_api",
@@ -1328,7 +1322,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "equivocation",
           description:
             "Caller-built host records must contain valid fields for equivocation, " <>
-            "governing queries, and signing claims.",
+              "governing queries, and signing claims.",
           witnesses: [
             %{
               entry_point: "public_api",
@@ -1347,7 +1341,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "governing_revision",
           description:
             "Caller-built host records must contain valid fields for equivocation, " <>
-            "governing queries, and signing claims.",
+              "governing queries, and signing claims.",
           witnesses: [
             %{
               entry_point: "public_api",
@@ -1366,7 +1360,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "descriptor_signing_input",
           description:
             "Caller-built host records must contain valid fields for equivocation, " <>
-            "governing queries, and signing claims.",
+              "governing queries, and signing claims.",
           witnesses: [
             %{
               entry_point: "public_api",
@@ -1383,8 +1377,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :admission,
           direction: :red_to_green,
           operation: "signing.prepare",
-          description:
-            "Recognize replacement signing requests in preparation.",
+          description: "Recognize replacement signing requests in preparation.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1402,8 +1395,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :error_code_change,
           direction: :red_to_red,
           operation: "signing.prepare",
-          description:
-            "Replacement signing checks the departing party binding and marker.",
+          description: "Replacement signing checks the departing party binding and marker.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1432,7 +1424,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "charter_revision.decode",
           description:
             "Revision-8 charter decoding admits the roster and quorum schema and checks " <>
-            "rule semantics.",
+              "rule semantics.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1451,7 +1443,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "charter_revision.decode",
           description:
             "Revision-8 charter decoding admits the roster and quorum schema and checks " <>
-            "rule semantics.",
+              "rule semantics.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1485,7 +1477,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "chain.verify",
           description:
             "The TypeScript verifier preserves the initial descriptor signature or key " <>
-            "error.",
+              "error.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1513,7 +1505,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "signing.prepare",
           description:
             "Signing preparation admits revision-8 acceptance and termination emission " <>
-            "and checks replacement intent.",
+              "and checks replacement intent.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1537,7 +1529,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "signing.prepare",
           description:
             "Signing preparation admits revision-8 acceptance and termination emission " <>
-            "and checks replacement intent.",
+              "and checks replacement intent.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1560,7 +1552,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "receipt.verify",
           description:
             "Bare revision-8 receipt verification admits descriptive context. " <>
-            "Preparation requires a verified set.",
+              "Preparation requires a verified set.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1579,7 +1571,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "receipt.verify",
           description:
             "Bare revision-8 receipt verification admits descriptive context. " <>
-            "Preparation requires a verified set.",
+              "Preparation requires a verified set.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1598,7 +1590,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "signing.prepare",
           description:
             "Bare revision-8 receipt verification admits descriptive context. " <>
-            "Preparation requires a verified set.",
+              "Preparation requires a verified set.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1617,7 +1609,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "acceptance.verify",
           description:
             "Standalone vote verification can decode the revision-8 charter and reach " <>
-            "the vote checks.",
+              "the vote checks.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1638,7 +1630,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "termination.verify",
           description:
             "Standalone vote verification can decode the revision-8 charter and reach " <>
-            "the vote checks.",
+              "the vote checks.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1658,7 +1650,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "acceptance.verify",
           description:
             "Standalone vote verification can decode the revision-8 charter and reach " <>
-            "the vote checks.",
+              "the vote checks.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1696,7 +1688,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "termination.verify",
           description:
             "Standalone vote verification can decode the revision-8 charter and reach " <>
-            "the vote checks.",
+              "the vote checks.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1724,7 +1716,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "acceptance.verify",
           description:
             "Revision-8 vote envelopes reach signature length, claims validation and " <>
-            "binding.",
+              "binding.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1806,7 +1798,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           operation: "termination.verify",
           description:
             "Revision-8 vote envelopes reach signature length, claims validation and " <>
-            "binding.",
+              "binding.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1886,8 +1878,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :output_change,
           direction: :green_to_green,
           operation: "chain.verify",
-          description:
-            "A signed legacy successor of an unsigned genesis remains proposed.",
+          description: "A signed legacy successor of an unsigned genesis remains proposed.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -1920,8 +1911,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :output_change,
           direction: :green_to_green,
           operation: "governing_revision",
-          description:
-            "An ineligible legacy successor leaves no governing revision.",
+          description: "An ineligible legacy successor leaves no governing revision.",
           witnesses: [
             %{
               entry_point: "corpus_runner",

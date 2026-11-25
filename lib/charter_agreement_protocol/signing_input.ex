@@ -335,13 +335,15 @@ defmodule CharterAgreementProtocol.SigningInput do
   defp acceptance_eligible?(acceptance, revision, chain) do
     charter_id = revision.charter_id || CharterRevision.digest(revision)
     previous = Map.get(Chain.revision_index(chain), revision.prev_revision_digest)
+    quorum_acceptance? = acceptance.protocol_revision == 8
+    quorum_revision? = revision.protocol_revision == 8
 
     eligible =
       revision.revision_number == 1 or
         (revision.prev_revision_digest in chain.accepted_revision_digests and
            Enum.all?(revision.supersedes, &(&1 in chain.accepted_revision_digests)))
 
-    (acceptance.protocol_revision == 8) == (revision.protocol_revision == 8) and
+    quorum_acceptance? == quorum_revision? and
       acceptance.charter_id == charter_id and
       acceptance.revision_number == revision.revision_number and
       acceptance.prev_revision_digest == revision.prev_revision_digest and eligible and
@@ -359,8 +361,10 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   defp termination_matches?(termination, revision) do
     charter_id = revision.charter_id || CharterRevision.digest(revision)
+    quorum_termination? = termination.protocol_revision == 8
+    quorum_revision? = revision.protocol_revision == 8
 
-    (termination.protocol_revision == 8) == (revision.protocol_revision == 8) and
+    quorum_termination? == quorum_revision? and
       termination.charter_id == charter_id and
       termination.reason_code in revision.termination_rules.reason_codes and
       termination.party_role in Quorum.termination(revision).roles and
