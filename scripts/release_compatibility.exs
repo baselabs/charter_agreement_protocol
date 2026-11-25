@@ -2,6 +2,8 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
   @moduledoc false
 
   @baselines ~w(hex:1.0.0 npm:1.0.0)
+  @entry_points ~w(corpus_runner public_api)
+  @non_errors ~w(valid raised unsupported)
 
   @directions %{
     admission: [:red_to_green],
@@ -21,7 +23,7 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
     if row.census_digest != expected_digest,
       do: raise("compatibility census for #{version}: #{row.census_digest} != #{expected_digest}")
 
-    Enum.each(row.transitions, &verify_direction!/1)
+    Enum.each(row.transitions, &verify_transition!/1)
     :ok
   end
 
@@ -73,6 +75,7 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
     if expected != changed do
       unexpected = Map.drop(changed, Map.keys(expected)) |> Enum.sort()
       stale = Map.drop(expected, Map.keys(changed)) |> Enum.sort()
+
       drift =
         Enum.filter(changed, fn {id, pair} ->
           Map.has_key?(expected, id) and expected[id] != pair
@@ -91,27 +94,27 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
 
   defp reverse_witnesses(row, baseline) do
     Enum.reduce(row.transitions, %{}, fn transition, collected ->
-      case Map.fetch!(transition, :witnesses) do
-        [_first | _rest] = witnesses ->
-          Enum.reduce(witnesses, collected, &add_witnesses(&1, &2, baseline))
-
-        [] ->
-          raise "reverse differential: transition has no witnesses: #{transition.description}"
-      end
+      witnesses = transition_witnesses!(transition)
+      Enum.reduce(witnesses, collected, &add_witnesses(&1, &2, baseline))
     end)
   end
 
-  defp add_witnesses(
-         %{baselines: baselines, cases: [_first | _rest] = cases} = group,
-         acc,
-         baseline
-       ) do
-    if baselines == [] or Enum.any?(baselines, &(&1 not in @baselines)) do
-      raise "reverse differential: unknown or empty baseline group"
-    end
+  defp transition_witnesses!(%{witnesses: [_first | _rest] = witnesses} = transition) do
+    verify_transition!(transition)
+    witnesses
+  end
 
-    if baseline in baselines do
-      Enum.reduce(cases, acc, &add_witness(&1, &2, {group.from, group.to}, baseline))
+  defp transition_witnesses!(transition) do
+    raise "reverse differential: transition has no witnesses: #{transition.description}"
+  end
+
+  defp add_witnesses(group, acc, baseline) do
+    if baseline in group.baselines do
+      pair = {group.from, group.to}
+
+      Enum.reduce(group.cases, acc, fn id, witnesses ->
+        add_witness(group.entry_point <> "/" <> id, witnesses, pair, baseline)
+      end)
     else
       acc
     end
@@ -125,11 +128,46 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
     Map.put(acc, id, pair)
   end
 
-  defp verify_direction!(%{class: class, direction: direction}) do
+  defp verify_transition!(%{class: class, direction: direction} = transition) do
     unless direction in Map.get(@directions, class, []) do
       raise "incompatible release transition #{inspect(class)}: #{inspect(direction)}"
     end
+
+    Enum.each(Map.get(transition, :witnesses, []), &verify_witness!(&1, direction))
   end
+
+  defp verify_witness!(
+         %{baselines: baselines, cases: [_ | _], entry_point: entry_point, from: from, to: to},
+         direction
+       )
+       when entry_point in @entry_points do
+    if baselines == [] or Enum.any?(baselines, &(&1 not in @baselines)) do
+      raise "reverse differential: unknown or empty baseline group"
+    end
+
+    unless witness_direction(from, to) == direction do
+      raise "reverse differential: witness #{inspect({from, to})} disagrees with #{direction}"
+    end
+  end
+
+  defp verify_witness!(_group, _direction) do
+    raise "reverse differential: witness requires an entry point and case IDs"
+  end
+
+  defp witness_direction(from, to) do
+    case {outcome_kind(from), outcome_kind(to)} do
+      {"unsupported", kind} when kind in ["valid", :typed] -> :baseline_unsupported
+      {"raised", :typed} -> :crash_to_typed
+      {"valid", :typed} -> :green_to_red
+      {:typed, "valid"} -> :red_to_green
+      {:typed, :typed} when from != to -> :red_to_red
+      _other -> nil
+    end
+  end
+
+  defp outcome_kind(value) when value in @non_errors, do: value
+  defp outcome_kind(value) when is_binary(value) and byte_size(value) > 0, do: :typed
+  defp outcome_kind(_value), do: nil
 
   defp released_digest(root, version) do
     ref = "refs/tags/v#{version}"

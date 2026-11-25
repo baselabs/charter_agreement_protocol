@@ -1,37 +1,59 @@
+# Corpus witnesses use each package's own Runner.run/1. Host-record probes
+# call the same public APIs separately. CI materializes the pinned TypeScript
+# reference before this gate, so the published Hex outer pin has one source.
 Code.require_file("release_compatibility.exs", __DIR__)
 Code.require_file("reverse_boundary.exs", __DIR__)
+Code.require_file("reverse_corpus.exs", __DIR__)
+Code.require_file("verifier_source.exs", __DIR__)
 
 defmodule CharterAgreementProtocol.ReverseDifferentialGate do
   @moduledoc false
 
-  alias CharterAgreementProtocol.Conformance.Corpus
-  alias CharterAgreementProtocol.{ReleaseCompatibility, ReleaseIdentity, ReverseBoundary}
+  alias CharterAgreementProtocol.{
+    ReleaseCompatibility,
+    ReleaseIdentity,
+    ReverseBoundary,
+    ReverseCorpus,
+    VerifierSource
+  }
 
-  @baseline "hex:1.0.0"
+  alias Mix.Dep.Lock
+
+  @version "1.0.0"
+  @baseline "hex:" <> @version
+  @inner_checksum "aed6035909e8af2cb2a67755748723ed2490bd1226dbe3424cbf1378fe6b456a"
 
   def run do
     root = Path.expand("../priv/conformance", __DIR__)
-    {:ok, corpus} = Corpus.load(corpus_files(root))
+    corpus = ReverseCorpus.load!(root)
     version = Mix.Project.config()[:version]
     row = Enum.find(ReleaseIdentity.compatibility(), &(version in &1.package_versions))
 
     if row.census_digest != corpus.identity, do: raise("reverse differential: census mismatch")
 
-    expected = Map.new(corpus.cases, &{&1["id"], verdict(&1["expect"])})
-    expected = Map.merge(expected, ReverseBoundary.outcomes(corpus.cases))
-    observed = published(corpus.cases)
-    count = ReleaseCompatibility.verify_reverse!(row, @baseline, observed, expected)
-    IO.puts("reverse differential #{@baseline}: #{map_size(expected)} inputs, #{count} changes")
+    checked = ReverseCorpus.checked!(corpus)
+    checked = ReverseCorpus.with_public_probes(checked, ReverseBoundary.outcomes(corpus.cases))
+    observed = published(corpus.cases, outer_checksum!())
+    count = ReleaseCompatibility.verify_reverse!(row, @baseline, observed, checked)
+    IO.puts("reverse differential #{@baseline}: #{map_size(checked)} inputs, #{count} changes")
   end
 
-  defp corpus_files(root) do
-    root
-    |> Path.join("{index.json,cases/*.json}")
-    |> Path.wildcard()
-    |> Map.new(&{Path.relative_to(&1, root), File.read!(&1)})
+  defp outer_checksum! do
+    VerifierSource.current!()
+    reference = Path.join(VerifierSource.path(), "reference.json")
+    decoded = reference |> File.read!() |> :json.decode()
+
+    %{"package" => "charter_agreement_protocol", "version" => @version} = decoded
+    outer = Map.fetch!(decoded, "archive_sha256")
+
+    unless outer =~ ~r/\A[0-9a-f]{64}\z/ do
+      raise "invalid #{@baseline} archive checksum"
+    end
+
+    outer
   end
 
-  defp published(cases) do
+  defp published(cases, outer_checksum) do
     name = "cap-hex-" <> Base.url_encode64(:crypto.strong_rand_bytes(12))
     scratch = Path.join(System.tmp_dir!(), name)
     File.mkdir!(scratch)
@@ -40,13 +62,27 @@ defmodule CharterAgreementProtocol.ReverseDifferentialGate do
       File.write!(Path.join(scratch, "mix.exs"), project())
       File.write!(Path.join(scratch, "cases.etf"), :erlang.term_to_binary(cases))
       File.write!(Path.join(scratch, "run.exs"), runner())
-      boundary_script = "reverse_boundary.exs"
-      File.cp!(Path.join(__DIR__, boundary_script), Path.join(scratch, boundary_script))
+
+      for script <- ~w(reverse_boundary.exs reverse_corpus.exs) do
+        File.cp!(Path.join(__DIR__, script), Path.join(scratch, script))
+      end
+
       mix!(scratch, ["deps.get", "--only", "prod"])
+      verify_lock!(scratch, outer_checksum)
       mix!(scratch, ["run", "--no-start", "run.exs"])
       scratch |> Path.join("outcomes.json") |> File.read!() |> :json.decode()
     after
       File.rm_rf!(scratch)
+    end
+  end
+
+  defp verify_lock!(scratch, outer_checksum) do
+    expected =
+      {:hex, :charter_agreement_protocol, @version, @inner_checksum, [:mix], [], "hexpm",
+       outer_checksum}
+
+    unless Lock.read(Path.join(scratch, "mix.lock")) == %{charter_agreement_protocol: expected} do
+      raise "reverse differential #{@baseline}: published package lock checksums disagree"
     end
   end
 
@@ -76,7 +112,11 @@ defmodule CharterAgreementProtocol.ReverseDifferentialGate do
       use Mix.Project
 
       def project do
-        [app: :published_cap, version: "0.0.0", deps: [{:charter_agreement_protocol, "== 1.0.0"}]]
+        [
+          app: :published_cap,
+          version: "0.0.0",
+          deps: [{:charter_agreement_protocol, "== #{@version}"}]
+        ]
       end
     end
     """
@@ -84,39 +124,24 @@ defmodule CharterAgreementProtocol.ReverseDifferentialGate do
 
   defp runner do
     """
-    alias CharterAgreementProtocol.Conformance.{Corpus, Runner}
-    alias CharterAgreementProtocol.ReverseBoundary
+    alias CharterAgreementProtocol.{ReverseBoundary, ReverseCorpus}
 
     Code.require_file("reverse_boundary.exs", __DIR__)
+    Code.require_file("reverse_corpus.exs", __DIR__)
 
     unless CharterAgreementProtocol.Capability.kat_verifies?("ML-DSA-65") do
       raise "published verifier requires ML-DSA-65"
     end
 
     cases = "cases.etf" |> File.read!() |> :erlang.binary_to_term([:safe])
+    root = Application.app_dir(:charter_agreement_protocol, "priv/conformance")
+    frozen = ReverseCorpus.load!(root)
+    observed = ReverseCorpus.published!(frozen, cases)
+    outcomes = ReverseCorpus.with_public_probes(observed, ReverseBoundary.outcomes(cases))
 
-    supported? = fn one ->
-      one["surface"] in Corpus.surfaces() and
-        not (one["surface"] == "signing.prepare" and one["input"]["kind"] == "party_replacement")
-    end
-
-    {supported, unsupported} = Enum.split_with(cases, supported?)
-    outcomes = Map.new(unsupported, &{&1["id"], "unsupported"})
-
-    observed =
-      struct(Corpus, cases: supported)
-      |> Runner.run()
-      |> Map.new(fn %{id: id, actual: actual} ->
-        {id, if(actual["status"] == "valid", do: "valid", else: Map.fetch!(actual, "error_code"))}
-      end)
-
-    outcomes = outcomes |> Map.merge(observed) |> Map.merge(ReverseBoundary.outcomes(cases))
     File.write!("outcomes.json", :json.encode(outcomes))
     """
   end
-
-  defp verdict(%{"status" => "valid"}), do: "valid"
-  defp verdict(%{"status" => "invalid", "error_code" => code}), do: code
 end
 
 CharterAgreementProtocol.ReverseDifferentialGate.run()

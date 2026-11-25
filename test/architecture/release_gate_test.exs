@@ -182,10 +182,24 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
 
   test "reverse differential rejects missing, stale, and incorrect witnesses" do
     baseline = "hex:1.0.0"
-    named = %{"new-case" => "valid"}
-    old = %{"new-case" => "chain_invalid"}
-    witness = %{baselines: [baseline], cases: ["new-case"], from: "chain_invalid", to: "valid"}
-    transition = %{description: "A case verifies after the change", witnesses: [witness]}
+    named = %{"corpus_runner/new-case" => "valid", "public_api/new-case" => "valid"}
+    old = %{named | "corpus_runner/new-case" => "chain_invalid"}
+
+    witness = %{
+      entry_point: "corpus_runner",
+      baselines: [baseline],
+      cases: ["new-case"],
+      from: "chain_invalid",
+      to: "valid"
+    }
+
+    transition = %{
+      class: :admission,
+      direction: :red_to_green,
+      description: "A case verifies after the change",
+      witnesses: [witness]
+    }
+
     row = %{transitions: [transition]}
 
     assert ReleaseCompatibility.verify_reverse!(row, baseline, old, named) == 1
@@ -199,7 +213,14 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     end
 
     assert_raise RuntimeError, ~r/outcome drift.*new-case/, fn ->
-      ReleaseCompatibility.verify_reverse!(row, baseline, %{"new-case" => "invalid_type"}, named)
+      wrong_code = %{old | "corpus_runner/new-case" => "invalid_type"}
+      ReleaseCompatibility.verify_reverse!(row, baseline, wrong_code, named)
+    end
+
+    assert_raise RuntimeError, ~r/witness .* disagrees with red_to_green/, fn ->
+      path = [:transitions, Access.at(0), :witnesses, Access.at(0), :to]
+      wrong_direction = put_in(row, path, "invalid_type")
+      ReleaseCompatibility.verify_reverse!(wrong_direction, baseline, old, named)
     end
   end
 

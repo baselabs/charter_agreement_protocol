@@ -178,6 +178,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "requires accepted supersession targets.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "valid",
               to: "receipt_claims_mismatch",
@@ -186,6 +187,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "valid",
               to: "signing_refused",
@@ -201,9 +203,10 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :error_code_change,
           direction: :red_to_red,
           description:
-            "The TypeScript verifier checks list items and bounds in list order.",
+            "The TypeScript public chain API checks list items and bounds in list order.",
           witnesses: [
             %{
+              entry_point: "public_api",
               baselines: ["npm:1.0.0"],
               from: "limit_exceeded",
               to: "invalid_type",
@@ -222,6 +225,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "lookup.",
           witnesses: [
             %{
+              entry_point: "public_api",
               baselines: ["npm:1.0.0"],
               from: "algorithm_unsupported",
               to: "signing_input_invalid",
@@ -238,6 +242,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "Revision-8 descriptor histories reach topology or commitment validation.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "descriptor_chain_invalid",
               to: "valid",
@@ -254,6 +259,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "Revision-8 descriptors reach key and commitment checks.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "valid",
@@ -270,6 +276,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "Revision-8 descriptors reach key and commitment checks.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "descriptor_commitment_mismatch",
@@ -281,6 +288,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "descriptor_invalid",
@@ -299,6 +307,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "commitment.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "valid",
@@ -316,6 +325,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "commitment.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "descriptor_commitment_mismatch",
@@ -333,6 +343,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "duplicate coordinates.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "acceptance_claims_mismatch",
@@ -341,6 +352,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "acceptance_invalid",
@@ -350,6 +362,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "algorithm_outside_profile",
@@ -358,6 +371,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "compact_invalid",
@@ -366,6 +380,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "constraint_violation",
@@ -374,6 +389,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "invalid_type",
@@ -382,6 +398,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "limit_exceeded",
@@ -390,6 +407,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "missing_required",
@@ -398,6 +416,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "non_canonical_bytes",
@@ -407,6 +426,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "protected_header_invalid",
@@ -415,6 +435,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "revision_outside_profile",
@@ -423,6 +444,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "signature_invalid",
@@ -433,6 +455,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "timestamp_invalid",
@@ -441,6 +464,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
               to: "unknown_member",
@@ -459,6 +483,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "count.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "acceptance_claims_mismatch",
@@ -467,6 +492,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "acceptance_invalid",
@@ -475,6 +501,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "algorithm_outside_profile",
@@ -483,6 +510,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "cardinality_violation",
@@ -491,6 +519,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "compact_invalid",
@@ -500,6 +529,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "constraint_violation",
@@ -510,6 +540,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "cross_field_invalid",
@@ -518,6 +549,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "descriptor_chain_invalid",
@@ -526,6 +558,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "descriptor_key_invalid",
@@ -534,6 +567,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "duplicate_member",
@@ -542,6 +576,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "extension_criticality_conflict",
@@ -550,6 +585,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "extension_duplicate",
@@ -558,6 +594,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "extension_namespace_invalid",
@@ -566,6 +603,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "extension_retired",
@@ -574,6 +612,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "extension_scope_invalid",
@@ -582,6 +621,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "extension_unknown_critical",
@@ -590,6 +630,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "invalid_syntax",
@@ -598,6 +639,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "invalid_type",
@@ -608,6 +650,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "limit_exceeded",
@@ -616,6 +659,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "missing_required",
@@ -626,6 +670,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "nested_invalid",
@@ -634,6 +679,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "non_canonical_bytes",
@@ -642,6 +688,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "protected_header_invalid",
@@ -651,6 +698,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "revision_invalid",
@@ -659,6 +707,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "revision_outside_profile",
@@ -667,6 +716,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "signature_invalid",
@@ -677,6 +727,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "termination_claims_mismatch",
@@ -685,6 +736,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "termination_invalid",
@@ -693,6 +745,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "timestamp_invalid",
@@ -703,6 +756,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "trailing_bytes",
@@ -711,6 +765,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "unknown_member",
@@ -730,6 +785,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "branch.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "revision_outside_profile",
               to: "descriptor_chain_invalid",
@@ -747,6 +803,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "conversion.",
           witnesses: [
             %{
+              entry_point: "public_api",
               baselines: ["hex:1.0.0"],
               from: "timestamp_invalid",
               to: "governing_invalid",
@@ -763,6 +820,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "Capability profiles recognize revision 8 as a range endpoint.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "invalid_profile",
               to: "valid",
@@ -780,6 +838,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "verification.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unsupported",
               to: "algorithm_outside_profile",
@@ -789,6 +848,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unsupported",
               to: "descriptor_commitment_mismatch",
@@ -797,6 +857,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unsupported",
               to: "descriptor_publication_invalid",
@@ -814,6 +875,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unsupported",
               to: "invalid_type",
@@ -822,6 +884,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unsupported",
               to: "limit_exceeded",
@@ -831,6 +894,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unsupported",
               to: "revision_outside_profile",
@@ -840,6 +904,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unsupported",
               to: "signature_invalid",
@@ -848,6 +913,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unsupported",
               to: "valid",
@@ -867,6 +933,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "vote rules.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "valid",
@@ -890,6 +957,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "valid",
@@ -898,6 +966,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "valid",
@@ -918,6 +987,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "vote rules.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "compact_invalid",
@@ -926,6 +996,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "chain_invalid",
@@ -935,6 +1006,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "signing_refused",
@@ -952,6 +1024,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "canonical bytes and schema checks.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "missing_required",
               to: "invalid_type",
@@ -960,6 +1033,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "non_canonical_bytes",
               to: "invalid_type",
@@ -970,6 +1044,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "invalid_type",
@@ -988,6 +1063,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "view.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "valid",
@@ -1010,6 +1086,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "view.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
               to: "receipt_claims_mismatch",
@@ -1029,6 +1106,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "verification and signing.",
           witnesses: [
             %{
+              entry_point: "public_api",
               baselines: ["hex:1.0.0"],
               from: "raised",
               to: "acceptance_equivocation_invalid",
@@ -1037,6 +1115,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "public_api",
               baselines: ["hex:1.0.0"],
               from: "raised",
               to: "governing_invalid",
@@ -1045,6 +1124,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "public_api",
               baselines: ["hex:1.0.0"],
               from: "raised",
               to: "invalid_type",
@@ -1055,6 +1135,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "public_api",
               baselines: ["hex:1.0.0"],
               from: "raised",
               to: "signing_input_invalid",
@@ -1072,6 +1153,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "governing queries, and signing claims.",
           witnesses: [
             %{
+              entry_point: "public_api",
               baselines: ["hex:1.0.0"],
               from: "valid",
               to: "acceptance_equivocation_invalid",
@@ -1080,6 +1162,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "public_api",
               baselines: ["hex:1.0.0"],
               from: "valid",
               to: "governing_invalid",
@@ -1088,6 +1171,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "public_api",
               baselines: ["hex:1.0.0"],
               from: "valid",
               to: "signing_input_invalid",
@@ -1105,6 +1189,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "operation.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unsupported",
               to: "acceptance_claims_mismatch",
@@ -1113,6 +1198,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unsupported",
               to: "signing_refused",
@@ -1122,6 +1208,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unsupported",
               to: "valid",
@@ -1140,6 +1227,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "rule semantics.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "valid",
@@ -1157,6 +1245,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "rule semantics.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "missing_required",
@@ -1165,6 +1254,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "revision_invalid",
@@ -1188,6 +1278,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "error.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "descriptor_chain_invalid",
               to: "descriptor_key_invalid",
@@ -1196,6 +1287,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "descriptor_chain_invalid",
               to: "signature_invalid",
@@ -1213,6 +1305,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "and checks replacement intent.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "signing_input_invalid",
               to: "valid",
@@ -1235,6 +1328,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "and checks replacement intent.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "signing_input_invalid",
               to: "signing_refused",
@@ -1256,6 +1350,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "Preparation requires a verified set.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "valid",
@@ -1273,6 +1368,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "Preparation requires a verified set.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "protected_header_invalid",
@@ -1281,6 +1377,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "signing_refused",
@@ -1298,6 +1395,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "the vote checks.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "valid",
@@ -1319,6 +1417,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "the vote checks.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "acceptance_claims_mismatch",
@@ -1328,6 +1427,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "acceptance_invalid",
@@ -1336,6 +1436,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "signature_invalid",
@@ -1345,6 +1446,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "unknown_member",
               to: "termination_invalid",
@@ -1362,6 +1464,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             "binding.",
           witnesses: [
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "acceptance_claims_mismatch",
@@ -1370,6 +1473,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "acceptance_invalid",
@@ -1378,6 +1482,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "constraint_violation",
@@ -1387,6 +1492,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "invalid_type",
@@ -1396,6 +1502,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "missing_required",
@@ -1405,6 +1512,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "signature_invalid",
@@ -1414,6 +1522,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "termination_claims_mismatch",
@@ -1422,6 +1531,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "termination_invalid",
@@ -1430,6 +1540,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "timestamp_invalid",
@@ -1439,6 +1550,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               )
             },
             %{
+              entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "protected_header_invalid",
               to: "unknown_member",
@@ -1473,6 +1585,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
 
   @typedoc "Case IDs and exact normalized outcomes for named published baselines."
   @type witness :: %{
+          entry_point: binary(),
           baselines: [binary()],
           cases: [binary()],
           from: binary(),
