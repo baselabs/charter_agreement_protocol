@@ -51,7 +51,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
   ]
 
   @type t :: %__MODULE__{
-          protocol_revision: 1 | 2 | 3,
+          protocol_revision: 1 | 2 | 3 | 8,
           charter_id: binary(),
           governing_revision_digest: binary(),
           party_descriptor_digest: binary(),
@@ -111,6 +111,15 @@ defmodule CharterAgreementProtocol.TerminationNotice do
                   constraint: {:matches, @tagged_digest}
                 )
               ])
+
+  @revision_eight_definition %{
+    @definition
+    | fields:
+        Enum.map(@definition.fields, fn
+          %{name: "protocol_revision"} = field -> %{field | constraint: {:integer_range, 8, 8}}
+          field -> field
+        end)
+  }
 
   @doc "Verify one attached termination notice against exact caller-supplied artifacts."
   @spec verify(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t()) ::
@@ -249,10 +258,14 @@ defmodule CharterAgreementProtocol.TerminationNotice do
 
   defp decode(compact, limits) do
     with {:ok, envelope} <- CompactJws.parse(compact, "cap+termination", limits),
-         {:ok, payload} <- Schema.validate(@definition, envelope.payload) do
+         {:ok, payload} <-
+           Schema.validate(definition(CompactJws.protocol_revision(envelope)), envelope.payload) do
       extract(payload, envelope)
     end
   end
+
+  defp definition(8), do: @revision_eight_definition
+  defp definition(_revision), do: @definition
 
   defp extract({:object, members}, envelope) do
     values = Map.new(members)
@@ -358,7 +371,8 @@ defmodule CharterAgreementProtocol.TerminationNotice do
     revision_digest = CharterRevision.digest(revision)
     charter_id = revision.charter_id || revision_digest
 
-    if termination.charter_id == charter_id and
+    if (termination.protocol_revision == 8) == (revision.protocol_revision == 8) and
+         termination.charter_id == charter_id and
          termination.governing_revision_digest == revision_digest and
          termination.reason_code in revision.termination_rules.reason_codes do
       :ok

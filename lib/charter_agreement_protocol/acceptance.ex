@@ -28,6 +28,7 @@ defmodule CharterAgreementProtocol.Acceptance do
     Internal.Retained,
     Limits,
     PartyDescriptor,
+    Quorum,
     Schema,
     Timestamp
   }
@@ -48,6 +49,7 @@ defmodule CharterAgreementProtocol.Acceptance do
     :revision_number,
     :revision_digest,
     :prev_revision_digest,
+    :replacement_role,
     :party_descriptor_digest,
     :party_role,
     :accepted_at,
@@ -55,11 +57,12 @@ defmodule CharterAgreementProtocol.Acceptance do
   ]
 
   @type t :: %__MODULE__{
-          protocol_revision: 1 | 2 | 3,
+          protocol_revision: 1 | 2 | 3 | 8,
           charter_id: binary(),
           revision_number: pos_integer(),
           revision_digest: binary(),
           prev_revision_digest: nil | binary(),
+          replacement_role: nil | binary(),
           party_descriptor_digest: binary(),
           party_role: binary(),
           accepted_at: Timestamp.t(),
@@ -110,6 +113,21 @@ defmodule CharterAgreementProtocol.Acceptance do
                   constraint: {:string_bytes, 1, 64}
                 )
               ])
+
+  @revision_eight_definition %{
+    @definition
+    | fields:
+        Enum.map(@definition.fields, fn
+          %{name: "protocol_revision"} = field -> %{field | constraint: {:integer_range, 8, 8}}
+          field -> field
+        end) ++
+          [
+            Schema.field("replacement_role",
+              types: [:string],
+              constraint: {:string_bytes, 1, 128}
+            )
+          ]
+  }
 
   @doc "Verify one Acceptance. See `CharterAgreementProtocol.verify_acceptance/4`."
   @spec verify(term(), CharterRevision.t(), DescriptorChain.t(), Limits.t()) ::
@@ -278,10 +296,14 @@ defmodule CharterAgreementProtocol.Acceptance do
 
   defp decode(compact, limits) do
     with {:ok, envelope} <- CompactJws.parse(compact, "cap+acceptance", limits),
-         {:ok, payload} <- Schema.validate(@definition, envelope.payload) do
+         {:ok, payload} <-
+           Schema.validate(definition(CompactJws.protocol_revision(envelope)), envelope.payload) do
       extract(payload, envelope)
     end
   end
+
+  defp definition(8), do: @revision_eight_definition
+  defp definition(_revision), do: @definition
 
   defp extract({:object, members}, envelope) do
     values = Map.new(members)
@@ -303,6 +325,7 @@ defmodule CharterAgreementProtocol.Acceptance do
          revision_number: revision_number,
          revision_digest: revision_digest,
          prev_revision_digest: previous,
+         replacement_role: replacement_role(values["replacement_role"]),
          party_descriptor_digest: party_digest,
          party_role: party_role,
          accepted_at: accepted_at,
@@ -312,6 +335,9 @@ defmodule CharterAgreementProtocol.Acceptance do
       {:error, %Error{} = error} -> {:error, error}
     end
   end
+
+  defp replacement_role(nil), do: nil
+  defp replacement_role({:string, role}), do: role
 
   defp required_digest(values, name) do
     {:string, tagged} = Map.fetch!(values, name)
@@ -382,7 +408,8 @@ defmodule CharterAgreementProtocol.Acceptance do
     revision_digest = CharterRevision.digest(revision)
     charter_id = revision.charter_id || revision_digest
 
-    if acceptance.charter_id == charter_id and
+    if (acceptance.protocol_revision == 8) == (revision.protocol_revision == 8) and
+         acceptance.charter_id == charter_id and
          acceptance.revision_number == revision.revision_number and
          acceptance.revision_digest == revision_digest and
          acceptance.prev_revision_digest == revision.prev_revision_digest do
@@ -393,11 +420,7 @@ defmodule CharterAgreementProtocol.Acceptance do
   end
 
   defp pinned_descriptor(acceptance, revision, chain) do
-    party_matches? =
-      Enum.any?(revision.parties, fn party ->
-        party.role == acceptance.party_role and
-          party.party_descriptor_digest == acceptance.party_descriptor_digest
-      end)
+    party_matches? = Quorum.accepts_binding?(acceptance, revision)
 
     descriptor =
       Enum.find(chain.descriptors, &(&1.descriptor_digest == acceptance.party_descriptor_digest))

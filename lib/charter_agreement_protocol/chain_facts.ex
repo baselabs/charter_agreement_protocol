@@ -15,8 +15,8 @@ defmodule CharterAgreementProtocol.ChainFacts do
     that nothing supersedes are not all ancestors of one newest revision.
   - `revision_facts`: one `CharterAgreementProtocol.RevisionFacts` per
     supplied revision, sorted by revision number, then digest.
-  - `accepted_revision_digests`: digests of the revisions every listed party
-    accepted, sorted.
+  - `accepted_revision_digests`: sorted digests of revisions whose applicable
+    quorum, assignment assent, and predecessor rules are met.
   - `acceptance_facts`: one `CharterAgreementProtocol.AcceptanceFacts` per
     supplied Acceptance, sorted by Acceptance digest.
   - `descriptor_chains`: one `CharterAgreementProtocol.DescriptorChain` per

@@ -1081,9 +1081,13 @@ defmodule CharterAgreementProtocol do
       {:matched, true}
       iex> CharterAgreementProtocol.finish_signing(plan, descriptor.envelope.signature) == {:ok, compact}
       true
+  For a departing party's assignment acceptance, pass `:party_replacement`
+  with a matching `replacement_role` claim. The incoming and remaining
+  parties use `:acceptance` and send their signatures separately.
+
   """
   @spec prepare_signing(
-          CharterAgreementProtocol.SigningInput.kind(),
+          CharterAgreementProtocol.SigningInput.kind() | :party_replacement,
           term(),
           term(),
           Limits.t(),

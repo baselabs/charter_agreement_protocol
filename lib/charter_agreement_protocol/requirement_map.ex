@@ -9,6 +9,74 @@ defmodule CharterAgreementProtocol.RequirementMap do
   """
 
   @entries [
+    {"CAP-QUORUM-roster-and-votes",
+     [
+       {:corpus,
+        [
+          "charter_revision.decode:valid",
+          "charter_revision.decode:invalid_constraint",
+          "chain.verify:valid",
+          "chain.verify:chain_invalid"
+        ]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest}
+     ]},
+    {"CAP-CHAIN-accepted-predecessor",
+     [
+       {:corpus,
+        [
+          "chain.verify:valid",
+          "chain.verify:chain_invalid",
+          "signing.prepare:invalid_constraint"
+        ]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest}
+     ]},
+    {"CAP-QUORUM-termination-grouping",
+     [
+       {:corpus,
+        [
+          "governing_revision:precedence_selection",
+          "governing_revision:terminated",
+          "signing.prepare:invalid_constraint"
+        ]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest}
+     ]},
+    {"CAP-ASSIGNMENT-declared-positions",
+     [
+       {:corpus,
+        [
+          "chain.verify:valid",
+          "chain.verify:chain_invalid",
+          "charter_revision.decode:invalid_constraint"
+        ]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest}
+     ]},
+    {"CAP-ASSIGNMENT-assent",
+     [
+       {:corpus,
+        [
+          "chain.verify:valid",
+          "acceptance.verify:invalid_constraint"
+        ]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest}
+     ]},
+    {"CAP-ASSIGNMENT-signing",
+     [
+       {:corpus,
+        [
+          "signing.prepare:valid",
+          "signing.prepare:invalid_constraint"
+        ]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest}
+     ]},
+    {"CAP-ASSIGNMENT-receipt-owner",
+     [
+       {:corpus,
+        [
+          "receipt.verify:valid",
+          "receipt.verify:signature_invalid"
+        ]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest}
+     ]},
     {"CAP-DESCRIPTOR-commitment-member",
      [
        {:corpus, ["party_descriptor.verify:unknown_member", "party_descriptor.verify:valid"]},

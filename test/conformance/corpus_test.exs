@@ -195,13 +195,13 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     counts = Enum.frequencies_by(cases, & &1["surface"])
     assert counts["party_descriptor.verify"] + counts["descriptor_chain.verify"] == 81
     assert counts["descriptor_publication.verify"] == 22
-    assert counts["charter_revision.decode"] == 50
-    assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 49
-    assert counts["termination.verify"] == 29
-    assert counts["chain.verify"] + counts["governing_revision"] == 54
+    assert counts["charter_revision.decode"] == 58
+    assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 52
+    assert counts["termination.verify"] == 30
+    assert counts["chain.verify"] + counts["governing_revision"] == 77
     assert counts["chain.verify_profile"] == 20
-    assert counts["receipt.verify"] == 57
-    assert Enum.any?(cases, &(&1["surface"] == "signing.prepare"))
+    assert counts["receipt.verify"] == 59
+    assert counts["signing.prepare"] == 117
   end
 
   for group <- [:ed25519, :ml_dsa] do
@@ -650,6 +650,44 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   defp projected_termination_result({:error, %Error{code: code}}),
     do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+
+  test "assignment facts distinguish incomplete assent and predecessor eligibility" do
+    cases = shipped_cases("chain-verify")
+
+    for {id, status, missing} <- [
+          {"assignment-proposed-missing-assignor", :pending, ["alpha"]},
+          {"assignment-proposed-missing-remaining-party", :pending, ["gamma"]},
+          {"assignment-all-parties-assented", :accepted, []}
+        ] do
+      one = Enum.find(cases, &(&1["id"] == id))
+      assert {:ok, facts} = verify_chain_input(one["input"])
+      assert [revision] = Enum.filter(facts.revision_facts, &(&1.revision_number == 2))
+      assert revision.assignment_status == status
+      assert revision.missing_assent_roles == missing
+    end
+
+    one = Enum.find(cases, &(&1["id"] == "quorum-unsigned-predecessor-blocks-governance"))
+    assert {:ok, facts} = verify_chain_input(one["input"])
+    assert [revision] = Enum.filter(facts.revision_facts, &(&1.revision_number == 3))
+    assert revision.signature_status == :accepted
+    assert revision.acceptance_status == :proposed
+  end
+
+  test "quorum thresholds preserve integer token typing before canonical encoding" do
+    cases = shipped_cases("charter_revision-decode")
+    one = Enum.find(cases, &(&1["id"] == "quorum-three-party-roster"))
+    bytes = one["input"]["text"]
+    floating = String.replace(bytes, ~s("threshold":2), ~s("threshold":2.0), global: false)
+    assert {:error, %Error{code: :invalid_type}} = CharterRevision.decode(floating, Limits.default())
+
+    claims = :json.decode(floating)
+    assert {:error, %Error{code: :invalid_type}} = CharterRevision.encode(claims)
+  end
+
+  defp shipped_cases(file) do
+    %{"cases" => cases} = :json.decode(File.read!("priv/conformance/cases/" <> file <> ".json"))
+    cases
+  end
 
   defp assert_chain_expectations(cases) do
     chain_cases =

@@ -19,6 +19,7 @@ defmodule CharterAgreementProtocol.CharterRevision do
     Internal.IntegerClaims,
     Json,
     Limits,
+    Quorum,
     Schema,
     Timestamp
   }
@@ -26,9 +27,13 @@ defmodule CharterAgreementProtocol.CharterRevision do
   defmodule Party do
     @moduledoc "A non-authorizing revision-party binding to one verified descriptor digest."
     @enforce_keys [:party_descriptor_digest, :role]
-    defstruct @enforce_keys
+    defstruct @enforce_keys ++ [:participation]
 
-    @type t :: %__MODULE__{party_descriptor_digest: binary(), role: binary()}
+    @type t :: %__MODULE__{
+            party_descriptor_digest: binary(),
+            role: binary(),
+            participation: binary() | nil
+          }
   end
 
   defmodule LegalText do
@@ -57,9 +62,9 @@ defmodule CharterAgreementProtocol.CharterRevision do
   defmodule TerminationRules do
     @moduledoc "The revision-local, non-authorizing set of termination reason codes."
     @enforce_keys [:reason_codes]
-    defstruct @enforce_keys
+    defstruct @enforce_keys ++ [:quorum]
 
-    @type t :: %__MODULE__{reason_codes: [binary()]}
+    @type t :: %__MODULE__{reason_codes: [binary()], quorum: Quorum.rule() | nil}
   end
 
   defmodule AbpBinding do
@@ -117,16 +122,20 @@ defmodule CharterAgreementProtocol.CharterRevision do
     :supersedes,
     :extensions,
     :extension_outcome,
-    :canonical_bytes
+    :canonical_bytes,
+    :acceptance_quorum,
+    party_replacements: []
   ]
 
   @type precedence :: :legal_text_governs | :machine_terms_govern
   @type t :: %__MODULE__{
-          protocol_revision: 1 | 2,
+          protocol_revision: 1 | 2 | 8,
           charter_id: nil | binary(),
           revision_number: pos_integer(),
           prev_revision_digest: nil | binary(),
           parties: [Party.t()],
+          acceptance_quorum: Quorum.rule() | nil,
+          party_replacements: [Quorum.replacement()],
           legal_text: LegalText.t(),
           precedence_declaration: precedence(),
           attribution_declaration: AttributionDeclaration.t(),
@@ -300,6 +309,73 @@ defmodule CharterAgreementProtocol.CharterRevision do
                 Schema.field("extensions", required?: true, types: [:object])
               ])
 
+  @quorum_definition Schema.definition("quorum", [
+                       Schema.field("roles", required?: true, types: [:array], cardinality: {0, 64}),
+                       Schema.field("threshold",
+                         required?: true,
+                         types: [:integer],
+                         constraint: {:integer_range, 0, 64}
+                       )
+                     ])
+  @quorum_field Schema.field("quorum",
+                  required?: true,
+                  types: [:object],
+                  nested: {:object, @quorum_definition}
+                )
+  @replacement_definition Schema.definition("party_replacement", [
+                            Schema.field("role",
+                              required?: true,
+                              types: [:string],
+                              constraint: {:string_bytes, 1, 128}
+                            )
+                            | Enum.map(
+                                ~w(assignor_party_id assignor_descriptor_digest assignee_descriptor_digest),
+                                &Schema.field(&1,
+                                  required?: true,
+                                  types: [:string],
+                                  constraint: {:matches, @tagged_digest}
+                                )
+                              )
+                          ] ++ [%{@quorum_field | name: "assent_quorum"}])
+  @quorum_revision_definition %{
+    @definition
+    | fields:
+        Enum.map(@definition.fields, fn
+          %{name: "protocol_revision"} = field ->
+            %{field | constraint: {:integer_range, 8, 8}}
+
+          %{name: "parties"} = field ->
+            participation =
+              Schema.field("participation",
+                required?: true,
+                types: [:string],
+                constraint: {:one_of, [{:string, "acceptor"}, {:string, "arbiter"}]}
+              )
+
+            party = %{@party_definition | fields: @party_definition.fields ++ [participation]}
+            %{field | cardinality: {2, 64}, nested: {:array, party}}
+
+          %{name: "termination_rules"} = field ->
+            definition = %{
+              @termination_definition
+              | fields: @termination_definition.fields ++ [@quorum_field]
+            }
+
+            %{field | nested: {:object, definition}}
+
+          field ->
+            field
+        end) ++
+          [
+            %{@quorum_field | name: "acceptance_quorum"},
+            Schema.field("party_replacements",
+              types: [:array],
+              cardinality: {0, 64},
+              nested: {:array, @replacement_definition}
+            )
+          ]
+  }
+
   @doc "Decode and validate one canonical unsigned Charter Revision."
   @spec decode(term(), Limits.t()) :: {:ok, t()} | {:error, Error.t()}
   def decode(bytes, %Limits{} = limits) do
@@ -347,10 +423,18 @@ defmodule CharterAgreementProtocol.CharterRevision do
          :ok <- IntegerClaims.check(:charter_revision, value),
          {:ok, canonical} <- Canonicalization.encode(value),
          :ok <- exact_bytes(bytes, canonical),
-         {:ok, validated} <- Schema.validate(@definition, value) do
+         {:ok, validated} <- Schema.validate(definition(value), value) do
       extract(validated, bytes)
     end
   end
+
+  defp definition({:object, members}) do
+    if List.keyfind(members, "protocol_revision", 0) == {"protocol_revision", {:integer, 8}},
+      do: @quorum_revision_definition,
+      else: @definition
+  end
+
+  defp definition(_value), do: @definition
 
   defp exact_bytes(bytes, bytes), do: :ok
 
@@ -381,7 +465,8 @@ defmodule CharterAgreementProtocol.CharterRevision do
          :ok <- ordered_interval(effective_from, effective_until),
          :ok <- unique_roles(parties),
          :ok <- distinct_descriptors(parties),
-         :ok <- binding_roles(bindings, parties) do
+         :ok <- binding_roles(bindings, parties),
+         {:ok, acceptance_quorum, replacements} <- Quorum.decode(values, parties) do
       {:ok,
        %__MODULE__{
          protocol_revision: protocol_revision,
@@ -389,6 +474,8 @@ defmodule CharterAgreementProtocol.CharterRevision do
          revision_number: revision_number,
          prev_revision_digest: previous,
          parties: parties,
+         acceptance_quorum: acceptance_quorum,
+         party_replacements: replacements,
          legal_text: legal_text,
          precedence_declaration: precedence,
          attribution_declaration: attribution,
@@ -414,7 +501,8 @@ defmodule CharterAgreementProtocol.CharterRevision do
       {:string, role} = value["role"]
 
       with :ok <- valid_digest(digest) do
-        {:ok, %Party{party_descriptor_digest: digest, role: role}}
+        {:ok, participation} = optional_string(value, "participation")
+        {:ok, %Party{party_descriptor_digest: digest, role: role, participation: participation}}
       end
     end)
   end
@@ -451,11 +539,11 @@ defmodule CharterAgreementProtocol.CharterRevision do
   defp attribution_basis({:string, "legal_text"}), do: {:ok, :legal_text}
 
   defp termination({:object, members}) do
-    %{"reason_codes" => {:array, reason_values}} = Map.new(members)
+    %{"reason_codes" => {:array, reason_values}} = values = Map.new(members)
 
     with {:ok, reason_codes} <- bounded_strings(reason_values, 128),
          true <- reason_codes == Enum.uniq(reason_codes) do
-      {:ok, %TerminationRules{reason_codes: reason_codes}}
+      {:ok, %TerminationRules{reason_codes: reason_codes, quorum: Quorum.rule(values["quorum"])}}
     else
       _failure -> revision_error()
     end

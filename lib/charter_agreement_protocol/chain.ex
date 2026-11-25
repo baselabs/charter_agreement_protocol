@@ -21,6 +21,7 @@ defmodule CharterAgreementProtocol.Chain do
     ForkEvidence,
     Limits,
     PartyDescriptor,
+    Quorum,
     RevisionFacts,
     TerminationFacts,
     TerminationNotice,
@@ -48,12 +49,12 @@ defmodule CharterAgreementProtocol.Chain do
          {:ok, descriptor_chains} <- verify_descriptor_chains(descriptors, limits, profile),
          {:ok, indexed_revisions, revision_index, charter_id} <-
            verify_revisions(revisions, limits, profile),
-         :ok <- party_histories(indexed_revisions, descriptor_chains),
+         :ok <- party_histories(indexed_revisions, revision_index, descriptor_chains),
          {:ok, acceptance_facts} <-
            verify_acceptances(acceptances, revision_index, descriptor_chains, limits, profile),
          :ok <- unique_acceptance_coordinates(acceptance_facts),
          {:ok, revision_facts} <- build_revision_facts(indexed_revisions, acceptance_facts),
-         :ok <- accepted_supersession_targets(revision_facts),
+         :ok <- supersession_targets(revision_facts),
          {:ok, termination_facts} <-
            verify_terminations(terminations, revision_index, descriptor_chains, limits, profile) do
       build_facts(
@@ -158,7 +159,7 @@ defmodule CharterAgreementProtocol.Chain do
   defp verify_descriptor_chains(compacts, limits, profile) do
     with {:ok, decoded} <- decode_descriptors(compacts, limits),
          groups <- Enum.group_by(decoded, &descriptor_party_id/1, &elem(&1, 0)),
-         true <- map_size(groups) == 2,
+         true <- map_size(groups) >= 2,
          {:ok, chains} <-
            groups |> Map.values() |> map_ok(&DescriptorChain.verify(&1, limits, profile)) do
       {:ok, Enum.sort_by(chains, &descriptor_chain_id/1)}
@@ -182,7 +183,7 @@ defmodule CharterAgreementProtocol.Chain do
   # Every revision's parties resolve to different descriptor histories, and
   # every supplied history is one some revision names: a single party cannot
   # hold two roles, and no unnamed history can stand in as the other party.
-  defp party_histories(indexed_revisions, descriptor_chains) do
+  defp party_histories(indexed_revisions, revision_index, descriptor_chains) do
     owner =
       for %DescriptorChain{descriptors: descriptors} <- descriptor_chains,
           facts <- descriptors,
@@ -199,7 +200,8 @@ defmodule CharterAgreementProtocol.Chain do
           |> Enum.map(&Map.get(owner, &1.party_descriptor_digest))
           |> Enum.reject(&is_nil/1)
 
-        if party_ids == Enum.uniq(party_ids),
+        if party_ids == Enum.uniq(party_ids) and
+             party_transition?(revision, revision_index, owner, party_ids),
           do: {:cont, {:ok, MapSet.union(seen, MapSet.new(party_ids))}},
           else: {:halt, :error}
       end)
@@ -208,11 +210,28 @@ defmodule CharterAgreementProtocol.Chain do
 
     case named do
       {:ok, party_ids} ->
-        if MapSet.subset?(histories, party_ids), do: :ok, else: chain_error()
+        if MapSet.subset?(histories, party_ids) and
+             valid_history_count?(histories, indexed_revisions),
+           do: :ok,
+           else: chain_error()
 
       :error ->
         chain_error()
     end
+  end
+
+  defp valid_history_count?(histories, indexed_revisions) do
+    MapSet.size(histories) == 2 or
+      Enum.any?(indexed_revisions, fn {_, revision} -> revision.protocol_revision == 8 end)
+  end
+
+  defp party_transition?(%{protocol_revision: 8, revision_number: 1} = revision, _, _, ids),
+    do: revision.party_replacements == [] and length(ids) == length(revision.parties)
+
+  defp party_transition?(%{revision_number: 1}, _index, _owners, _ids), do: true
+
+  defp party_transition?(revision, index, owners, _ids) do
+    Quorum.transition?(revision, Map.fetch!(index, revision.prev_revision_digest), owners)
   end
 
   defp descriptor_party_id({_compact, descriptor}),
@@ -432,51 +451,76 @@ defmodule CharterAgreementProtocol.Chain do
   end
 
   defp build_revision_facts(indexed_revisions, acceptance_facts) do
-    indexed_revisions
-    |> Enum.map(fn {digest, revision} ->
-      matches = Enum.filter(acceptance_facts, &(&1.revision_digest == digest))
-      status = if dual_accepted?(revision, matches), do: :accepted, else: :proposed
+    votes = Enum.group_by(acceptance_facts, & &1.revision_digest)
+    raw = Map.new(indexed_revisions)
 
-      Facts.build(RevisionFacts, %{
-        revision: revision,
-        revision_digest: digest,
-        protocol_revision: revision.protocol_revision,
-        charter_id: revision.charter_id || digest,
-        revision_number: revision.revision_number,
-        prev_revision_digest: revision.prev_revision_digest,
-        optional_extensions_retained: revision.extension_outcome.optional_retained,
-        acceptance_facts: matches,
-        acceptance_digests: matches |> Enum.map(& &1.acceptance_digest) |> Enum.sort(),
-        acceptance_status: status
-      })
+    indexed_revisions
+    |> Enum.sort_by(fn {digest, revision} -> {revision.revision_number, digest} end)
+    |> Enum.reduce({[], %{}}, fn {digest, revision}, {facts, inherited} ->
+      matches = Map.get(votes, digest, [])
+      previous = Map.get(inherited, revision.prev_revision_digest)
+      raw_previous = Map.get(raw, revision.prev_revision_digest)
+      {quorum, missing} = Quorum.evaluate(revision, matches, previous || raw_previous)
+      signed? = quorum and missing == []
+      eligible? = revision.protocol_revision != 8 or previous == raw_previous
+      accepted? = signed? and eligible?
+
+      result = revision_facts(digest, revision, matches, signed?, accepted?, missing)
+      {[result | facts], Map.put(inherited, digest, if(accepted?, do: revision, else: previous))}
     end)
+    |> elem(0)
     |> collect_ok()
   end
 
-  defp dual_accepted?(revision, acceptance_facts) do
-    expected =
-      revision.parties
-      |> Enum.map(&{&1.party_descriptor_digest, &1.role})
-      |> MapSet.new()
-
-    actual =
-      acceptance_facts
-      |> Enum.map(&{&1.party_descriptor_digest, &1.party_role})
-      |> MapSet.new()
-
-    actual == expected
+  defp revision_facts(digest, revision, matches, signed?, accepted?, missing) do
+    Facts.build(RevisionFacts, %{
+      revision: revision,
+      revision_digest: digest,
+      protocol_revision: revision.protocol_revision,
+      charter_id: revision.charter_id || digest,
+      revision_number: revision.revision_number,
+      prev_revision_digest: revision.prev_revision_digest,
+      optional_extensions_retained: revision.extension_outcome.optional_retained,
+      acceptance_facts: matches,
+      acceptance_digests: matches |> Enum.map(& &1.acceptance_digest) |> Enum.sort(),
+      acceptance_status: revision_state(accepted?),
+      signature_status: revision_state(signed?),
+      assignment_status: assignment_state(revision.party_replacements, missing),
+      missing_assent_roles: missing
+    })
   end
 
-  defp accepted_supersession_targets(revision_facts) do
-    accepted = accepted_revisions(revision_facts)
-    accepted_digests = MapSet.new(accepted, & &1.revision_digest)
+  defp revision_state(true), do: :accepted
+  defp revision_state(false), do: :proposed
 
-    if Enum.all?(accepted, fn facts ->
-         Enum.all?(facts.revision.supersedes, &MapSet.member?(accepted_digests, &1))
-       end),
-       do: :ok,
-       else: chain_error()
+  defp assignment_state([], _missing), do: :none
+  defp assignment_state(_records, []), do: :accepted
+  defp assignment_state(_records, _missing), do: :pending
+
+  defp supersession_targets(revision_facts) do
+    accepted = MapSet.new(accepted_revisions(revision_facts), & &1.revision_digest)
+
+    signed =
+      revision_facts
+      |> Enum.filter(&(&1.signature_status == :accepted))
+      |> MapSet.new(& &1.revision_digest)
+
+    if Enum.all?(revision_facts, &valid_supersession_targets?(&1, accepted, signed)),
+      do: :ok,
+      else: chain_error()
   end
+
+  defp valid_supersession_targets?(
+         %{protocol_revision: 8, signature_status: :accepted} = facts,
+         _accepted,
+         signed
+       ),
+       do: Enum.all?(facts.revision.supersedes, &MapSet.member?(signed, &1))
+
+  defp valid_supersession_targets?(%{acceptance_status: :accepted} = facts, accepted, _signed),
+    do: Enum.all?(facts.revision.supersedes, &MapSet.member?(accepted, &1))
+
+  defp valid_supersession_targets?(_facts, _accepted, _signed), do: true
 
   defp build_facts(
          charter_id,
@@ -692,11 +736,17 @@ defmodule CharterAgreementProtocol.Chain do
   defp terminated?(facts, at) do
     ctx = view_context(facts)
 
-    Enum.any?(facts.termination_facts, fn %TerminationFacts{} = termination ->
-      effective = Timestamp.compare(termination.effective_at, at) in [:lt, :eq]
+    index = revision_index(facts)
 
-      effective and
-        do_select(facts, termination.effective_at, ctx) == termination.governing_revision_digest
+    facts.termination_facts
+    |> Enum.group_by(&{&1.governing_revision_digest, &1.reason_code, &1.effective_at})
+    |> Enum.any?(fn {{digest, _reason, effective}, votes} ->
+      Timestamp.compare(effective, at) in [:lt, :eq] and
+        Quorum.met?(
+          Quorum.termination(Map.fetch!(index, digest)),
+          Enum.map(votes, & &1.party_role)
+        ) and
+        do_select(facts, effective, ctx) == digest
     end)
   end
 

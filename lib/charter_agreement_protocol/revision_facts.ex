@@ -23,9 +23,11 @@ defmodule CharterAgreementProtocol.RevisionFacts do
   - `acceptance_facts`: the `CharterAgreementProtocol.AcceptanceFacts` for
     Acceptances of this revision.
   - `acceptance_digests`: the digests of those Acceptances, sorted.
-  - `acceptance_status`: `:accepted` when the Acceptances cover exactly the
-    parties the revision lists (by descriptor digest and role), otherwise
-    `:proposed`.
+  - `acceptance_status`: `:accepted` when the applicable quorum and assent
+    rules are met and the revision is eligible, otherwise `:proposed`.
+  - `signature_status`: quorum and assent status before predecessor eligibility.
+  - `assignment_status`: `:none`, `:pending`, or `:accepted`.
+  - `missing_assent_roles`: sorted roles still owing a signature on the assignment.
   - `protocol_revision`: the revision's `protocol_revision` member.
   - `alg`: always `nil`. Revisions are unsigned; the algorithm names live on
     the Acceptances.
@@ -56,6 +58,9 @@ defmodule CharterAgreementProtocol.RevisionFacts do
     acceptance_facts: [],
     acceptance_digests: [],
     acceptance_status: :proposed,
+    signature_status: :proposed,
+    assignment_status: :none,
+    missing_assent_roles: [],
     protocol_revision: nil,
     alg: nil,
     not_verified: []
@@ -74,6 +79,9 @@ defmodule CharterAgreementProtocol.RevisionFacts do
           acceptance_facts: [AcceptanceFacts.t()],
           acceptance_digests: [binary()],
           acceptance_status: :proposed | :accepted,
+          signature_status: :proposed | :accepted,
+          assignment_status: :none | :pending | :accepted,
+          missing_assent_roles: [binary()],
           not_verified: [atom()]
         }
 end

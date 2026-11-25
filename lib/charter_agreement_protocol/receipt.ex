@@ -597,23 +597,13 @@ defmodule CharterAgreementProtocol.Receipt do
   defp honest_failure?(_other), do: false
 
   defp signing_keys(chain, receipt) do
-    recognized_revision? =
-      Enum.any?(
-        chain.revision_facts,
-        &(&1.acceptance_status == :accepted and
-            &1.revision_digest == receipt.revision_digest)
-      )
-
     descriptor_digests =
-      chain.revision_facts
-      |> Enum.filter(fn facts ->
-        facts.acceptance_status == :accepted and
-          (facts.revision_digest == receipt.revision_digest or not recognized_revision?)
-      end)
+      chain
+      |> receipt_key_revisions(receipt)
       |> Enum.flat_map(fn facts ->
-        facts.revision.parties
-        |> Enum.filter(&(&1.role == receipt.issuing_party_role))
-        |> Enum.map(& &1.party_descriptor_digest)
+        for %{role: role, party_descriptor_digest: digest} <- facts.revision.parties,
+            role == receipt.issuing_party_role,
+            do: digest
       end)
       |> Enum.uniq()
 
@@ -625,6 +615,20 @@ defmodule CharterAgreementProtocol.Receipt do
       |> Enum.filter(&(&1.key_id == receipt.envelope.kid and &1.status == :active))
       |> Enum.map(&{&1.public_key, &1.algorithm})
     end)
+  end
+
+  defp receipt_key_revisions(chain, receipt) do
+    accepted = Enum.filter(chain.revision_facts, &(&1.acceptance_status == :accepted))
+
+    if Enum.any?(accepted, &(&1.revision.party_replacements != [])) do
+      {:ok, digest} = Chain.governing_revision(chain, receipt.occurred_at)
+      Enum.filter(accepted, &(&1.revision_digest == digest))
+    else
+      case Enum.filter(accepted, &(&1.revision_digest == receipt.revision_digest)) do
+        [] -> accepted
+        recognized -> recognized
+      end
+    end
   end
 
   defp facts(receipt, projection, verified_context) do

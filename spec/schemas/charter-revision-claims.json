@@ -42,6 +42,12 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 128
+        },
+        "participation": {
+          "enum": [
+            "acceptor",
+            "arbiter"
+          ]
         }
       },
       "additionalProperties": false
@@ -102,6 +108,9 @@
             "minLength": 1,
             "maxLength": 128
           }
+        },
+        "quorum": {
+          "$ref": "#/$defs/quorum"
         }
       },
       "additionalProperties": false
@@ -139,6 +148,61 @@
         }
       },
       "additionalProperties": false
+    },
+    "quorum": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roles",
+        "threshold"
+      ],
+      "properties": {
+        "roles": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "threshold": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        }
+      }
+    },
+    "party_replacement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "assignor_party_id",
+        "assignor_descriptor_digest",
+        "assignee_descriptor_digest",
+        "assent_quorum"
+      ],
+      "properties": {
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "assignor_party_id": {
+          "$ref": "#/$defs/tagged_digest"
+        },
+        "assignor_descriptor_digest": {
+          "$ref": "#/$defs/tagged_digest"
+        },
+        "assignee_descriptor_digest": {
+          "$ref": "#/$defs/tagged_digest"
+        },
+        "assent_quorum": {
+          "$ref": "#/$defs/quorum"
+        }
+      }
     }
   },
   "type": "object",
@@ -157,9 +221,11 @@
   ],
   "properties": {
     "protocol_revision": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 2
+      "enum": [
+        1,
+        2,
+        8
+      ]
     },
     "charter_id": {
       "$ref": "#/$defs/tagged_digest"
@@ -175,7 +241,7 @@
     "parties": {
       "type": "array",
       "minItems": 2,
-      "maxItems": 2,
+      "maxItems": 64,
       "items": {
         "$ref": "#/$defs/party_binding"
       }
@@ -224,7 +290,82 @@
     },
     "extensions": {
       "$ref": "#/$defs/extension_envelope"
+    },
+    "acceptance_quorum": {
+      "$ref": "#/$defs/quorum"
+    },
+    "party_replacements": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/party_replacement"
+      }
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "protocol_revision": {
+            "const": 8
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "acceptance_quorum"
+        ],
+        "properties": {
+          "parties": {
+            "items": {
+              "required": [
+                "participation"
+              ]
+            }
+          },
+          "termination_rules": {
+            "required": [
+              "quorum"
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "parties": {
+            "maxItems": 2,
+            "items": {
+              "not": {
+                "required": [
+                  "participation"
+                ]
+              }
+            }
+          },
+          "termination_rules": {
+            "not": {
+              "required": [
+                "quorum"
+              ]
+            }
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "acceptance_quorum"
+              ]
+            },
+            {
+              "required": [
+                "party_replacements"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
 }

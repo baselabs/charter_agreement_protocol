@@ -167,7 +167,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     %{
       package_versions: ["1.1.0"],
       verification_semantics: 7,
-      census_digest: "sha-256:DyEJlctii8DvvikKaHWnE1Jvg4-EdroMHoEw_jvXFs0",
+      census_digest: "sha-256:rE8OUIeDuOngqbpMv_PXcrr32XUKPmM3JWEubJ19hbs",
       protocol_revisions: [1, 2, 3, 8],
       transitions: [
         %{
@@ -176,6 +176,13 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           description:
             "Revision 8 admits descriptor key commitments, requires complete active-key " <>
               "openings, and admits unsigned current and next descriptor publication"
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          description:
+            "Revision 8 admits distinct-role acceptance and termination quorums and " <>
+              "unanimous declared party assignments."
         }
       ]
     }

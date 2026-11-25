@@ -4,6 +4,10 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+- Verify revision-8 party quorums and declared assignments from signed
+  acceptances and descriptor histories. Resolve receipt signing keys by
+  the issuing role's owner at the occurrence instant.
+
 - Admit revision-8 successor key commitments and verify unsigned current/next
   descriptor publications against their complete signed history.
 

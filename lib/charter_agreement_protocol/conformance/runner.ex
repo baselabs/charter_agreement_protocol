@@ -482,6 +482,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
 
   defp signing_kind("party_descriptor"), do: :party_descriptor
   defp signing_kind("acceptance"), do: :acceptance
+  defp signing_kind("party_replacement"), do: :party_replacement
   defp signing_kind("termination"), do: :termination
   defp signing_kind("receipt"), do: :receipt
   defp signing_kind(_other), do: :unknown

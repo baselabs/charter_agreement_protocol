@@ -226,7 +226,7 @@ defmodule CharterAgreementProtocol.CompactJws do
   # pair. This is the one place header and payload coexist.
   defp bind_algorithm(alg, {:object, members}, typ) do
     case List.keyfind(members, "protocol_revision", 0) do
-      {"protocol_revision", {:integer, 8}} when typ != "cap+party" ->
+      {"protocol_revision", {:integer, 8}} when typ not in ["cap+party", "cap+acceptance", "cap+termination"] ->
         protected_error()
 
       {"protocol_revision", {:integer, revision}} ->

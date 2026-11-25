@@ -24,9 +24,12 @@
  ],
  "properties": {
   "protocol_revision": {
-   "type": "integer",
-   "minimum": 1,
-   "maximum": 3
+   "enum": [
+    1,
+    2,
+    3,
+    8
+   ]
   },
   "charter_id": {
    "$ref": "#/$defs/tagged_digest"

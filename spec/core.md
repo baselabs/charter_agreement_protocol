@@ -144,7 +144,8 @@ Every attached artifact carries
 `protocol_revision`; revisions 1, 2, 3, and 8 are defined (revision 1 closed
 the `alg` name set to `EdDSA`; revision 2 admits the fully-specified
 `Ed25519` name; revision 3 admits the ML-DSA names; revision 8 adds
-key commitments and publication for party descriptors), and a decoder
+key commitments and publication for party descriptors, and quorum and
+assignment for charters), and a decoder
 encountering an unknown revision MUST fail closed
 [CAP-REVISION-fail-closed].
 
@@ -162,7 +163,8 @@ key of its own parameterization whose public-key and signature byte
 lengths are the registry row's exact values; a name below its row's
 minimum revision MUST be rejected — no honest producer could have minted
 the pair [CAP-ALG-registry-binding] [CAP-ALG-mldsa-registry-rows].
-Outside revision-8 party descriptors, producers MUST mint exactly (`Ed25519`, `protocol_revision` 2) or
+Outside revision-8 descriptors, acceptances, and termination notices, producers
+MUST mint exactly (`Ed25519`, `protocol_revision` 2) or
 (`ML-DSA-65`, `protocol_revision` 3); accepting `EdDSA`
 at revisions 2 and 3 keeps artifacts from producers that adopt a revision
 before renaming their emission verifiable [CAP-ALG-registry-binding].
@@ -293,7 +295,8 @@ member set decodes as the charter's founding document
 [CAP-CHARTER-REVISION-valid-genesis]. The member set of a revision is
 closed; an unknown member MUST be rejected
 [CAP-CHARTER-REVISION-closed-members]. Each member MUST satisfy its
-declared type and constraint — exactly two uniquely named party roles,
+declared type and constraint — exactly two uniquely named party roles before
+revision 8, or the roster defined in Section 6.1 at revision 8,
 a non-empty unique reason-code set, a declared precedence, and typed
 conditional members; a violation MUST be rejected
 [CAP-CHARTER-REVISION-claim-constraints]. The genesis digest under the
@@ -501,7 +504,7 @@ once both siblings are effective
 [CAP-CHAIN-repair-acceptance]. Where a unique governing revision
 exists, the revision with the highest precedence among eligible accepted
 revisions MUST govern [CAP-CHAIN-highest-precedence], with eligibility
-inclusive of the instant boundary. A verified termination notice that names
+inclusive of the instant boundary. A met termination quorum that names
 the revision governing at its `effective_at` MUST close the charter from
 that instant: the governing computation at or after it returns `none`, and
 a receipt for an effect at or after it does not match a governing revision
@@ -514,6 +517,83 @@ termination, then compare it to the notice's named revision
 naming a predecessor that has just lost precedence does not close the
 charter. A notice naming the new governing revision closes it from that
 instant, including queries and receipts at the same instant.
+
+### 6.1 Party quorums
+
+Revision 8 declares a roster of 2 to 64 distinct roles, each with
+`participation` equal to `acceptor` or `arbiter`. The roster and each
+rule's `roles` are sorted in UTF-8 byte order. The `acceptance_quorum`
+and `termination_rules.quorum` are closed objects with a distinct list
+of roster roles and a positive integer `threshold` no greater than
+the list length. Only acceptors may appear in the acceptance rule.
+A successor preserves roles and participation, and MUST NOT downgrade
+a revision-8 predecessor [CAP-QUORUM-roster-and-votes]. Every revision-8 roster binding MUST resolve
+to a distinct supplied party history [CAP-QUORUM-roster-and-votes].
+
+Each role contributes at most one vote to each rule. A successor's
+acceptances MUST meet its own rule and the latest accepted predecessor's
+rule [CAP-QUORUM-roster-and-votes]. A vote from a role named by either rule contributes to each rule
+that names it. A legacy predecessor contributes its all-party rule.
+Verified votes outside both rules contribute no quorum vote. Legacy
+revisions retain the all-party acceptance and single-party termination
+rules [CAP-QUORUM-roster-and-votes].
+
+Only an accepted immediate predecessor allows a revision-8 successor
+to become accepted. Proposed revisions convey no quorum rule to
+successors. When there is no accepted ancestor, the raw predecessor's
+rule may describe signature sufficiency, without making the successor
+eligible. A proposal that meets its own and the inherited rule and
+has completed any assignment assent MUST NOT supersede an unsigned
+target [CAP-CHAIN-accepted-predecessor]. An incomplete proposal does not supersede its targets
+[CAP-CHAIN-accepted-predecessor].
+
+Termination votes MUST be grouped by the named revision digest, reason
+code, and exact parsed effective instant [CAP-QUORUM-termination-grouping]. Count eligible roles once
+per group. A group closes the charter only if its quorum is met and its
+revision uniquely governs at the group's instant. Signing preparation
+MUST refuse a termination role outside its rule or a revision that
+does not govern at that instant [CAP-QUORUM-termination-grouping].
+
+### 6.2 Party assignments
+
+A revision-8 successor MAY declare `party_replacements`, a closed array
+of records sorted by distinct role [CAP-ASSIGNMENT-declared-positions]. A record names `role`,
+`assignor_party_id`, `assignor_descriptor_digest`,
+`assignee_descriptor_digest`, and `assent_quorum`. The descriptor
+digests MUST match the predecessor and candidate bindings respectively [CAP-ASSIGNMENT-declared-positions].
+Every changed owner MUST have exactly one record [CAP-ASSIGNMENT-declared-positions]. A record MUST change the
+owner to a party that held no predecessor role [CAP-ASSIGNMENT-declared-positions]. Genesis cannot declare an
+assignment. Descriptor rotation within the same party history preserves
+the owner [CAP-ASSIGNMENT-declared-positions].
+
+The record's role and the roles in its assent rule MUST belong to the
+candidate acceptance rule [CAP-ASSIGNMENT-declared-positions]. Assent roles MUST be unchanged roles [CAP-ASSIGNMENT-declared-positions]. The
+assent threshold is positive except when every role is replaced in
+one revision, which uses the empty, zero-threshold assent rule
+[CAP-ASSIGNMENT-declared-positions].
+
+An assignment requires an ordinary Acceptance from every candidate party
+and a separate Acceptance from every assignor carrying `replacement_role`
+equal to its `party_role`. The assignor signs under the predecessor binding.
+Both governing quorum rules apply, and an assignee cannot satisfy the
+predecessor rule for a replaced role. Incomplete assent leaves the
+assignment pending and reports outstanding roles. Competing accepted
+revisions remain contested [CAP-ASSIGNMENT-assent].
+
+Checked preparation accepts the assignor marker only for kind
+`party_replacement`. Both preparation kinds emit `cap+acceptance` artifacts.
+Preparation MUST refuse a revision-8 successor whose immediate predecessor
+or supersession target is still proposed [CAP-ASSIGNMENT-signing]. Ordinary quorum preparation MUST
+refuse roles outside both acceptance rules, except for parties assenting
+to an assignment [CAP-ASSIGNMENT-signing]. Acceptances and notices paired with a revision-8 charter
+revision MUST themselves use protocol revision 8, with producers
+emitting `Ed25519` or `ML-DSA-65` [CAP-ASSIGNMENT-signing].
+
+In a view containing an accepted assignment, receipt verification MUST
+derive the issuing role's signing keys from the unique revision governing
+at the receipt's `occurred_at` [CAP-ASSIGNMENT-receipt-owner]. A previous holder's key cannot sign for
+that role during the assignee's governing interval. If a predecessor
+resumes, its own role binding applies again [CAP-ASSIGNMENT-receipt-owner].
 
 ## 7. Facts and error surface
 

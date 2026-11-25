@@ -2543,7 +2543,58 @@ cases =
     end
   end) ++ Enum.map(shared_lifecycle_ids, &Map.fetch!(shared_lifecycle_cases, &1))
 
-cases = cases ++ CharterAgreementProtocol.DescriptorPublicationCorpus.cases()
+quorum_ids = ~w(
+  quorum-three-party-roster
+  quorum-threshold-exceeds-roster
+  quorum-nonstring-role
+  quorum-votes-must-be-distinct
+  quorum-roles-are-ordered
+  quorum-arbiter-outside-acceptance-rule
+  assignment-role-outside-candidate-rule
+  assignment-assent-role-outside-candidate-rule
+  quorum-genesis-met
+  quorum-genesis-pending
+  quorum-narrowed-pending
+  quorum-narrowed-predecessor-role
+  quorum-roster-history-missing
+  quorum-successor-role-changed
+  assignment-proposed-missing-assignor
+  assignment-proposed-missing-remaining-party
+  assignment-all-parties-assented
+  assignment-undeclared-owner-change
+  assignment-rejects-wrong-assignor
+  assignment-rejects-same-owner
+  assignment-rejects-genesis-record
+  assignment-all-roles-at-once
+  quorum-unsigned-hop-cannot-lower-threshold
+  quorum-inherited-signatures-reject-unsigned-target
+  quorum-unsigned-predecessor-blocks-governance
+  quorum-no-accepted-ancestor
+  quorum-termination-two-roles
+  quorum-termination-duplicate-role
+  quorum-termination-reasons-stay-separate
+  quorum-termination-instants-stay-separate
+  quorum-termination-ineligible-role
+  assignment-assignor-pairing
+  assignment-rejects-assignee-marker
+  assignment-rejects-marker-role-mismatch
+  quorum-termination-pairing
+  signing-quorum-predecessor-role
+  signing-quorum-unaccepted-predecessor
+  signing-quorum-ineligible-termination-role
+  signing-quorum-termination-second-role
+  signing-assignment-departing-party
+  signing-assignment-incoming-party
+  signing-assignment-marker-required
+  signing-assignment-marker-unexpected
+  assignment-receipt-new-holder
+  assignment-receipt-former-holder
+)
+
+cases =
+  cases ++
+    CharterAgreementProtocol.DescriptorPublicationCorpus.cases() ++
+    Enum.map(quorum_ids, &Map.fetch!(shared_lifecycle_cases, &1))
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 

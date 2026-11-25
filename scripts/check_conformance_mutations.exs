@@ -459,15 +459,15 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
     %{
       name: "party-histories-skip",
       path: "lib/charter_agreement_protocol/chain.ex",
-      from: "         :ok <- party_histories(indexed_revisions, descriptor_chains),",
+      from: "         :ok <- party_histories(indexed_revisions, revision_index, descriptor_chains),",
       to: "         :ok <- :ok,",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
       name: "two-party-history-count-relaxed",
       path: "lib/charter_agreement_protocol/chain.ex",
-      from: "         true <- map_size(groups) == 2,",
-      to: "         true <- map_size(groups) >= 2,",
+      from: "MapSet.size(histories) == 2 or",
+      to: "MapSet.size(histories) >= 2 or",
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{

@@ -6,8 +6,8 @@ defmodule CharterAgreementProtocol.SigningInput do
   Callers pass `%{"kid" => kid, "claims" => claims}` with an optional
   `"algorithm"` member: `"Ed25519"` (the default) or `"ML-DSA-65"`. The
   claims' `protocol_revision` must equal that algorithm's emission revision:
-  2 for `"Ed25519"` and 3 for `"ML-DSA-65"`. Party descriptors can also
-  use revision 8 with either emission algorithm. This module builds the closed
+  2 for `"Ed25519"` and 3 for `"ML-DSA-65"`. Party descriptors, acceptances
+  and termination notices can also use revision 8 with either emission algorithm. This module builds the closed
   protected header, canonicalizes the claims, checks them with the same
   decoder verification uses, and returns the exact RFC 7515 signing bytes in
   `message`.
@@ -49,6 +49,7 @@ defmodule CharterAgreementProtocol.SigningInput do
     Internal.IntegerClaims,
     Limits,
     PartyDescriptor,
+    Quorum,
     Receipt,
     TerminationNotice
   }
@@ -194,9 +195,15 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   defp claims_revision(kind, {:object, members}, revision) do
     case List.keyfind(members, "protocol_revision", 0) do
-      {"protocol_revision", {:integer, 8}} when kind == :party_descriptor -> true
-      {"protocol_revision", {:integer, ^revision}} -> true
-      _other -> false
+      {"protocol_revision", {:integer, 8}}
+      when kind in [:party_descriptor, :acceptance, :termination] ->
+        true
+
+      {"protocol_revision", {:integer, ^revision}} ->
+        true
+
+      _other ->
+        false
     end
   end
 
@@ -283,15 +290,19 @@ defmodule CharterAgreementProtocol.SigningInput do
       {:ok, revision} ->
         charter_id = revision.charter_id || CharterRevision.digest(revision)
 
-        party_matches? =
-          Enum.any?(revision.parties, fn party ->
-            party.role == acceptance.party_role and
-              party.party_descriptor_digest == acceptance.party_descriptor_digest
-          end)
+        previous = Map.get(Chain.revision_index(chain), revision.prev_revision_digest)
 
-        if acceptance.charter_id == charter_id and
+        eligible =
+          revision.protocol_revision != 8 or revision.revision_number == 1 or
+            (revision.prev_revision_digest in chain.accepted_revision_digests and
+               Enum.all?(revision.supersedes, &(&1 in chain.accepted_revision_digests)))
+
+        if (acceptance.protocol_revision == 8) == (revision.protocol_revision == 8) and
+             acceptance.charter_id == charter_id and
              acceptance.revision_number == revision.revision_number and
-             acceptance.prev_revision_digest == revision.prev_revision_digest and party_matches?,
+             acceptance.prev_revision_digest == revision.prev_revision_digest and
+             Quorum.accepts_binding?(acceptance, revision) and eligible and
+             Quorum.eligible?(acceptance, revision, previous),
            do: {:ok, revision},
            else: refused()
 
@@ -311,8 +322,10 @@ defmodule CharterAgreementProtocol.SigningInput do
               party.party_descriptor_digest == termination.party_descriptor_digest
           end)
 
-        if termination.charter_id == charter_id and
-             termination.reason_code in revision.termination_rules.reason_codes and party_matches?,
+        if (termination.protocol_revision == 8) == (revision.protocol_revision == 8) and
+             termination.charter_id == charter_id and
+             termination.reason_code in revision.termination_rules.reason_codes and
+             party_matches? and termination.party_role in Quorum.termination(revision).roles,
            do: {:ok, revision},
            else: refused()
 
