@@ -32,13 +32,20 @@ defmodule CharterAgreementProtocol.ReverseCorpus do
       |> Runner.run()
       |> Map.new(&outcome/1)
 
-    Map.merge(observed, Map.new(unsupported, &{qualified(&1["id"]), "unsupported"}))
+    unavailable =
+      Map.new(unsupported, fn %{"id" => id, "surface" => surface} ->
+        {qualified(id), observation(surface, "unsupported")}
+      end)
+
+    Map.merge(observed, unavailable)
   end
 
   def with_public_probes(corpus_outcomes, probes) do
-    public_outcomes = Map.new(probes, fn {id, code} -> {"public_api/" <> id, code} end)
+    public_outcomes = Map.new(probes, fn {id, result} -> {"public_api/" <> id, result} end)
     Map.merge(corpus_outcomes, public_outcomes)
   end
+
+  def observation(operation, value), do: %{"operation" => operation, "value" => value}
 
   # The published corpus interface lacks exactly these two known entry shapes.
   defp supported?(%{"surface" => "descriptor_publication.verify"}, _surfaces), do: false
@@ -63,10 +70,16 @@ defmodule CharterAgreementProtocol.ReverseCorpus do
     raise "corpus case #{id}: observed #{inspect(actual)}, expected #{inspect(expected)}"
   end
 
-  defp outcome(%{id: id, actual: %{"status" => "valid"}}), do: {qualified(id), "valid"}
+  defp outcome(%{id: id, surface: surface, actual: %{"status" => "valid"} = actual}),
+    do: {qualified(id), observation(surface, actual)}
 
-  defp outcome(%{id: id, actual: %{"status" => "invalid", "error_code" => code}}),
-    do: {qualified(id), code}
+  defp outcome(%{
+         id: id,
+         surface: surface,
+         actual: %{"status" => "invalid", "error_code" => code}
+       }) do
+    {qualified(id), observation(surface, code)}
+  end
 
   defp qualified(id), do: "corpus_runner/" <> id
 end

@@ -182,8 +182,13 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
 
   test "reverse differential rejects missing, stale, and incorrect witnesses" do
     baseline = "hex:1.0.0"
-    named = %{"corpus_runner/new-case" => "valid", "public_api/new-case" => "valid"}
-    old = %{named | "corpus_runner/new-case" => "chain_invalid"}
+
+    named = %{
+      "corpus_runner/new-case" => observation("chain.verify", success(%{})),
+      "public_api/new-case" => observation("verify_chain", success(%{}))
+    }
+
+    old = %{named | "corpus_runner/new-case" => observation("chain.verify", "chain_invalid")}
 
     witness = %{
       entry_point: "corpus_runner",
@@ -196,6 +201,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     transition = %{
       class: :admission,
       direction: :red_to_green,
+      operation: "chain.verify",
       description: "A case verifies after the change",
       witnesses: [witness]
     }
@@ -213,7 +219,9 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     end
 
     assert_raise RuntimeError, ~r/outcome drift.*new-case/, fn ->
-      wrong_code = %{old | "corpus_runner/new-case" => "invalid_type"}
+      wrong_code =
+        Map.put(old, "corpus_runner/new-case", observation("chain.verify", "invalid_type"))
+
       ReleaseCompatibility.verify_reverse!(row, baseline, wrong_code, named)
     end
 
@@ -221,6 +229,59 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
       path = [:transitions, Access.at(0), :witnesses, Access.at(0), :to]
       wrong_direction = put_in(row, path, "invalid_type")
       ReleaseCompatibility.verify_reverse!(wrong_direction, baseline, old, named)
+    end
+  end
+
+  test "reverse differential rejects swapped descriptor and signing witnesses" do
+    descriptor_id = "descriptor-publication-successor"
+    signing_id = "descriptor-publication-sign-successor"
+    transitions = List.last(ReleaseIdentity.compatibility()).transitions
+    descriptor = isolate_witness(transitions, descriptor_id)
+    signing = isolate_witness(transitions, signing_id)
+    row = %{transitions: [descriptor, signing]}
+
+    mappings = [
+      {"corpus_runner/" <> descriptor_id, "party_descriptor.verify"},
+      {"corpus_runner/" <> signing_id, "signing.prepare"}
+    ]
+
+    before =
+      Map.new(mappings, fn {key, op} -> {key, observation(op, "protected_header_invalid")} end)
+
+    after_change = Map.new(mappings, fn {key, op} -> {key, observation(op, success(%{}))} end)
+    assert ReleaseCompatibility.verify_reverse!(row, "hex:1.0.0", before, after_change) == 2
+
+    swapped = %{
+      transitions: [
+        %{descriptor | witnesses: signing.witnesses},
+        %{signing | witnesses: descriptor.witnesses}
+      ]
+    }
+
+    assert_raise RuntimeError, ~r/does not name operation party_descriptor.verify/, fn ->
+      ReleaseCompatibility.verify_reverse!(swapped, "hex:1.0.0", before, after_change)
+    end
+  end
+
+  test "reverse differential checks both successful projections" do
+    id = "legacy-unsigned-predecessor-leaves-no-governing-revision"
+    transitions = List.last(ReleaseIdentity.compatibility()).transitions
+    transition = isolate_witness(transitions, id)
+    row = %{transitions: [transition]}
+    [witness] = transition.witnesses
+    key = "corpus_runner/" <> id
+    before = %{key => observation(transition.operation, success(witness.outputs["before"]))}
+    after_change = %{key => observation(transition.operation, success(witness.outputs["after"]))}
+
+    assert ReleaseCompatibility.verify_reverse!(row, "hex:1.0.0", before, after_change) == 1
+
+    assert_raise RuntimeError, ~r/unrecorded.*legacy-unsigned-predecessor/, fn ->
+      ReleaseCompatibility.verify_reverse!(%{transitions: []}, "hex:1.0.0", before, after_change)
+    end
+
+    assert_raise RuntimeError, ~r/outcome drift.*legacy-unsigned-predecessor/, fn ->
+      changed = %{key => observation(transition.operation, success(%{}))}
+      ReleaseCompatibility.verify_reverse!(row, "hex:1.0.0", before, changed)
     end
   end
 
@@ -344,6 +405,19 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
       assert Base.encode16(:crypto.hash(:sha256, message), case: :lower) == expected
     end
   end
+
+  defp isolate_witness(transitions, id) do
+    transition =
+      Enum.find(transitions, fn transition ->
+        Enum.any?(transition.witnesses, &(id in &1.cases))
+      end)
+
+    group = Enum.find(transition.witnesses, &(id in &1.cases))
+    %{transition | witnesses: [%{group | cases: [id]}]}
+  end
+
+  defp observation(operation, value), do: %{"operation" => operation, "value" => value}
+  defp success(output), do: %{"status" => "valid", "output" => output}
 
   defp shipped_files do
     "priv/conformance/**/*"

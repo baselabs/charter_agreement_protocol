@@ -1,4 +1,5 @@
 Code.require_file("release_compatibility.exs", __DIR__)
+Code.require_file("reverse_corpus.exs", __DIR__)
 Code.require_file("verifier_source.exs", __DIR__)
 
 defmodule CharterAgreementProtocol.ReleaseCandidateGate do
@@ -8,6 +9,7 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
     Digest,
     ReleaseCompatibility,
     ReleaseIdentity,
+    ReverseCorpus,
     SpecificationIdentity,
     VerifierSource
   }
@@ -119,6 +121,9 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
       index["corpus_digest"],
       @root
     )
+
+    corpus = ReverseCorpus.load!(Path.dirname(Path.join(@root, @index)))
+    ReleaseCompatibility.verify_corpus_witnesses!(current_row, corpus.cases)
 
     pins = [
       {"lib/charter_agreement_protocol/conformance/cli.ex", index_identity},

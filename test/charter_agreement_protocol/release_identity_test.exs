@@ -26,6 +26,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
                  :resource_boundary,
                  :typed_error,
                  :error_code_change,
+                 :output_change,
                  :unsupported_in_baseline
                ]
 
@@ -34,10 +35,15 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
                  :red_to_green,
                  :crash_to_typed,
                  :red_to_red,
+                 :green_to_green,
                  :baseline_unsupported
                ]
 
         assert is_binary(transition.description) and byte_size(transition.description) > 0
+
+        if Map.has_key?(transition, :witnesses) do
+          assert is_binary(transition.operation) and byte_size(transition.operation) > 0
+        end
       end
     end
   end
@@ -81,6 +87,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentityTest do
     assert latest.package_versions == ["1.1.0"]
     assert latest.protocol_revisions == [1, 2, 3, 8]
     assert Enum.any?(latest.transitions, &(&1.class == :admission))
+    assert Enum.any?(latest.transitions, &(&1.class == :output_change))
     assert prior.package_versions == ["0.6.0", "1.0.0"]
     assert prior.verification_semantics == 6
     assert prior.protocol_revisions == [1, 2, 3]

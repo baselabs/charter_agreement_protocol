@@ -11,6 +11,7 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
     resource_boundary: [:green_to_red, :red_to_green],
     typed_error: [:crash_to_typed],
     error_code_change: [:red_to_red],
+    output_change: [:green_to_green],
     unsupported_in_baseline: [:baseline_unsupported]
   }
 
@@ -52,25 +53,40 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
           Map.new(group, fn {key, value} -> {Atom.to_string(key), value} end)
         end)
 
-      Map.put(plain, "witnesses", witnesses)
+      Map.merge(plain, %{"operation" => transition.operation, "witnesses" => witnesses})
     else
       plain
     end
   end
 
-  def verify_reverse!(row, baseline, actual, candidate) do
-    if MapSet.new(Map.keys(actual)) != MapSet.new(Map.keys(candidate)) do
-      raise "reverse differential #{baseline}: case IDs do not match"
+  def verify_corpus_witnesses!(row, cases) do
+    operations = Map.new(cases, &{"corpus_runner/" <> &1["id"], &1["surface"]})
+
+    for transition <- row.transitions,
+        group <- Map.get(transition, :witnesses, []),
+        group.entry_point == "corpus_runner",
+        id <- group.cases do
+      verify_operation!("corpus_runner/" <> id, transition.operation, operations)
     end
 
-    expected = reverse_witnesses(row, baseline)
+    :ok
+  end
+
+  def verify_reverse!(row, baseline, actual, candidate) do
+    operations = operations(candidate)
+
+    if operations(actual) != operations do
+      raise "reverse differential #{baseline}: case IDs or operations do not match"
+    end
+
+    expected = reverse_witnesses(row, baseline, operations)
 
     changed =
-      for {id, before} <- actual,
-          after_verdict = Map.fetch!(candidate, id),
-          before != after_verdict,
+      for {id, %{"value" => before}} <- actual,
+          %{"value" => later} = Map.fetch!(candidate, id),
+          before != later,
           into: %{},
-          do: {id, {before, after_verdict}}
+          do: {id, change(before, later)}
 
     if expected != changed do
       unexpected = Map.drop(changed, Map.keys(expected)) |> Enum.sort()
@@ -92,10 +108,28 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
     map_size(changed)
   end
 
-  defp reverse_witnesses(row, baseline) do
+  defp operations(observed) do
+    Map.new(observed, fn {id, %{"operation" => operation}} -> {id, operation} end)
+  end
+
+  defp change(
+         %{"status" => "valid", "output" => before},
+         %{"status" => "valid", "output" => later}
+       ),
+       do: {"valid", "valid", %{"before" => before, "after" => later}}
+
+  defp change(before, later), do: {verdict(before), verdict(later), nil}
+
+  defp verdict(%{"status" => "valid"}), do: "valid"
+  defp verdict(code) when is_binary(code), do: code
+
+  defp reverse_witnesses(row, baseline, operations) do
     Enum.reduce(row.transitions, %{}, fn transition, collected ->
       witnesses = transition_witnesses!(transition)
-      Enum.reduce(witnesses, collected, &add_witnesses(&1, &2, baseline))
+
+      Enum.reduce(witnesses, collected, fn group, acc ->
+        add_witnesses(group, acc, baseline, transition.operation, operations)
+      end)
     end)
   end
 
@@ -108,15 +142,23 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
     raise "reverse differential: transition has no witnesses: #{transition.description}"
   end
 
-  defp add_witnesses(group, acc, baseline) do
+  defp add_witnesses(group, acc, baseline, operation, operations) do
     if baseline in group.baselines do
-      pair = {group.from, group.to}
+      pair = {group.from, group.to, Map.get(group, :outputs)}
 
       Enum.reduce(group.cases, acc, fn id, witnesses ->
-        add_witness(group.entry_point <> "/" <> id, witnesses, pair, baseline)
+        key = group.entry_point <> "/" <> id
+        verify_operation!(key, operation, operations)
+        add_witness(key, witnesses, pair, baseline)
       end)
     else
       acc
+    end
+  end
+
+  defp verify_operation!(key, operation, operations) do
+    unless Map.get(operations, key) == operation do
+      raise "reverse differential: witness #{key} does not name operation #{operation}"
     end
   end
 
@@ -133,11 +175,18 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
       raise "incompatible release transition #{inspect(class)}: #{inspect(direction)}"
     end
 
-    Enum.each(Map.get(transition, :witnesses, []), &verify_witness!(&1, direction))
+    witnesses = Map.get(transition, :witnesses, [])
+
+    if witnesses != [] and not nonempty_text?(Map.get(transition, :operation)) do
+      raise "reverse differential: transition with witnesses requires an operation"
+    end
+
+    Enum.each(witnesses, &verify_witness!(&1, direction))
   end
 
   defp verify_witness!(
-         %{baselines: baselines, cases: [_ | _], entry_point: entry_point, from: from, to: to},
+         %{baselines: baselines, cases: [_ | _], entry_point: entry_point, from: from, to: to} =
+           witness,
          direction
        )
        when entry_point in @entry_points do
@@ -145,7 +194,7 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
       raise "reverse differential: unknown or empty baseline group"
     end
 
-    unless witness_direction(from, to) == direction do
+    unless witness_direction(from, to, Map.get(witness, :outputs)) == direction do
       raise "reverse differential: witness #{inspect({from, to})} disagrees with #{direction}"
     end
   end
@@ -154,7 +203,11 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
     raise "reverse differential: witness requires an entry point and case IDs"
   end
 
-  defp witness_direction(from, to) do
+  defp witness_direction("valid", "valid", %{"before" => before, "after" => later} = outputs)
+       when before != later and map_size(outputs) == 2,
+       do: :green_to_green
+
+  defp witness_direction(from, to, nil) do
     case {outcome_kind(from), outcome_kind(to)} do
       {"unsupported", kind} when kind in ["valid", :typed] -> :baseline_unsupported
       {"raised", :typed} -> :crash_to_typed
@@ -165,9 +218,13 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
     end
   end
 
+  defp witness_direction(_from, _to, _outputs), do: nil
+
   defp outcome_kind(value) when value in @non_errors, do: value
   defp outcome_kind(value) when is_binary(value) and byte_size(value) > 0, do: :typed
   defp outcome_kind(_value), do: nil
+
+  defp nonempty_text?(value), do: is_binary(value) and byte_size(value) > 0
 
   defp released_digest(root, version) do
     ref = "refs/tags/v#{version}"

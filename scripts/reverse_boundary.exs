@@ -3,7 +3,7 @@ defmodule CharterAgreementProtocol.ReverseBoundary do
 
   alias CharterAgreementProtocol, as: CAP
 
-  alias CharterAgreementProtocol.{Acceptance, ChainFacts, Error, Limits}
+  alias CharterAgreementProtocol.{Acceptance, ChainFacts, Error, Limits, ReverseCorpus}
 
   # Host records cannot be encoded in the wire corpus. Run identical calls in
   # the package being compared, using the same verified inputs from the corpus.
@@ -19,19 +19,33 @@ defmodule CharterAgreementProtocol.ReverseBoundary do
 
     fields = %{
       "api-equivocation-nil-digest" =>
-        outcome(fn -> Acceptance.equivocation(left, %{right | acceptance_digest: nil}) end),
+        observe("equivocation", fn ->
+          Acceptance.equivocation(left, %{right | acceptance_digest: nil})
+        end),
       "api-equivocation-missing-digest" =>
-        outcome(fn -> Acceptance.equivocation(left, Map.delete(right, :acceptance_digest)) end),
+        observe("equivocation", fn ->
+          Acceptance.equivocation(left, Map.delete(right, :acceptance_digest))
+        end),
       "api-governing-nil-zone-abbreviation" =>
-        outcome(fn -> CAP.governing_revision(%ChainFacts{}, %{datetime | zone_abbr: nil}) end),
+        observe("governing_revision", fn ->
+          CAP.governing_revision(%ChainFacts{}, %{datetime | zone_abbr: nil})
+        end),
       "api-governing-missing-year" =>
-        outcome(fn -> CAP.governing_revision(%ChainFacts{}, Map.delete(datetime, :year)) end),
+        observe("governing_revision", fn ->
+          CAP.governing_revision(%ChainFacts{}, Map.delete(datetime, :year))
+        end),
       "api-governing-invalid-day" =>
-        outcome(fn -> CAP.governing_revision(%ChainFacts{}, %{datetime | day: 99}) end),
+        observe("governing_revision", fn ->
+          CAP.governing_revision(%ChainFacts{}, %{datetime | day: 99})
+        end),
       "api-assemble-missing-alg" =>
-        outcome(fn -> CAP.assemble_compact(Map.delete(frame, :alg), <<0::512>>) end),
+        observe("assemble_compact", fn ->
+          CAP.assemble_compact(Map.delete(frame, :alg), <<0::512>>)
+        end),
       "api-signing-claims-enumerable-struct" =>
-        outcome(fn -> CAP.descriptor_signing_input(with_enumerable) end)
+        observe("descriptor_signing_input", fn ->
+          CAP.descriptor_signing_input(with_enumerable)
+        end)
     }
 
     Map.merge(fields, retained_outcomes(cases))
@@ -58,11 +72,17 @@ defmodule CharterAgreementProtocol.ReverseBoundary do
 
     %{
       "api-signing-set-missing-list" =>
-        outcome(fn -> CAP.acceptance_signing_input(signing, Map.delete(set, :terminations)) end),
+        observe("acceptance_signing_input", fn ->
+          CAP.acceptance_signing_input(signing, Map.delete(set, :terminations))
+        end),
       "api-revision-digest-missing-bytes" =>
-        outcome(fn -> CAP.revision_digest(Map.delete(revision, :canonical_bytes)) end),
+        observe("revision_digest", fn ->
+          CAP.revision_digest(Map.delete(revision, :canonical_bytes))
+        end),
       "api-descriptor-digest-missing-envelope" =>
-        outcome(fn -> CAP.descriptor_digest(Map.delete(descriptor, :envelope)) end)
+        observe("descriptor_digest", fn ->
+          CAP.descriptor_digest(Map.delete(descriptor, :envelope))
+        end)
     }
   end
 
@@ -77,13 +97,35 @@ defmodule CharterAgreementProtocol.ReverseBoundary do
     end)
   end
 
-  defp outcome(function) do
-    case function.() do
-      {:ok, _value} -> "valid"
-      digest when is_binary(digest) -> "valid"
-      {:error, %Error{code: code}} -> Atom.to_string(code)
-    end
-  rescue
-    _error -> "raised"
+  defp observe(operation, function) do
+    result =
+      case invoke(function) do
+        {:ok, value} -> valid(value)
+        digest when is_binary(digest) -> valid(digest)
+        {:error, %Error{code: code}} -> Atom.to_string(code)
+        :raised -> "raised"
+      end
+
+    ReverseCorpus.observation(operation, result)
   end
+
+  defp invoke(function) do
+    function.()
+  rescue
+    _error -> :raised
+  end
+
+  defp valid(value), do: %{"status" => "valid", "output" => json_value(value)}
+
+  defp json_value(%_{} = value), do: value |> Map.from_struct() |> json_value()
+  defp json_value(value) when is_list(value), do: Enum.map(value, &json_value/1)
+
+  defp json_value(value) when is_atom(value) and value not in [nil, true, false],
+    do: Atom.to_string(value)
+
+  defp json_value(value) when is_map(value) do
+    Map.new(value, fn {key, member} -> {to_string(key), json_value(member)} end)
+  end
+
+  defp json_value(value), do: value
 end

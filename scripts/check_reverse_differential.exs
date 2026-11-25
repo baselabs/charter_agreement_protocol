@@ -2,8 +2,8 @@
 # call the same public APIs separately. CI materializes the pinned TypeScript
 # reference before this gate, so the published Hex outer pin has one source.
 Code.require_file("release_compatibility.exs", __DIR__)
-Code.require_file("reverse_boundary.exs", __DIR__)
 Code.require_file("reverse_corpus.exs", __DIR__)
+Code.require_file("reverse_boundary.exs", __DIR__)
 Code.require_file("verifier_source.exs", __DIR__)
 
 defmodule CharterAgreementProtocol.ReverseDifferentialGate do
@@ -126,8 +126,8 @@ defmodule CharterAgreementProtocol.ReverseDifferentialGate do
     """
     alias CharterAgreementProtocol.{ReverseBoundary, ReverseCorpus}
 
-    Code.require_file("reverse_boundary.exs", __DIR__)
     Code.require_file("reverse_corpus.exs", __DIR__)
+    Code.require_file("reverse_boundary.exs", __DIR__)
 
     unless CharterAgreementProtocol.Capability.kat_verifies?("ML-DSA-65") do
       raise "published verifier requires ML-DSA-65"

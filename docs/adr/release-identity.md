@@ -91,6 +91,15 @@ runner. Verdicts must agree, except for an enumerated allowlist of changes keyed
 The published claim says only what the check shows: finite evidence over named inputs,
 never a proof that all inputs behave the same.
 
+The reverse check runs the candidate corpus through each published baseline.
+Compatibility witnesses name the baseline, entry point, operation, and case
+IDs. Verdict changes record the exact status or error code on each side.
+Successful cases are compared in the canonical output shape for their surface.
+An `output_change` with direction `green_to_green` records both successful
+outputs in the witness's `outputs.before` and `outputs.after` members. This
+records facts changes as compatibility evidence under the existing rules for
+the verification-semantics identity.
+
 The corpus loader gains an explicit historical mode. It keeps every integrity check
 on the corpus itself (self-digest, per-file hashes, file set, count reconciliation)
 and relaxes two checks: the compiled floor on which surfaces must be covered, because

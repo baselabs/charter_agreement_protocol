@@ -173,6 +173,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :verdict_narrowing,
           direction: :green_to_red,
+          operation: "receipt.verify",
           description:
             "Legacy successor eligibility requires an accepted predecessor. Signing also " <>
             "requires accepted supersession targets.",
@@ -185,7 +186,17 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               cases: ~w(
                 receipt-legacy-successor-without-accepted-parent
               )
-            },
+            }
+          ]
+        },
+        %{
+          class: :verdict_narrowing,
+          direction: :green_to_red,
+          operation: "signing.prepare",
+          description:
+            "Legacy successor eligibility requires an accepted predecessor. Signing also " <>
+            "requires accepted supersession targets.",
+          witnesses: [
             %{
               entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
@@ -202,6 +213,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "verify_chain",
           description:
             "The TypeScript public chain API checks list items and bounds in list order.",
           witnesses: [
@@ -220,6 +232,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "assemble_compact",
           description:
             "TypeScript compact assembly checks for an algorithm field before registry " <>
             "lookup.",
@@ -238,6 +251,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :admission,
           direction: :red_to_green,
+          operation: "descriptor_chain.verify",
           description:
             "Revision-8 descriptor histories reach topology or commitment validation.",
           witnesses: [
@@ -255,6 +269,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :admission,
           direction: :red_to_green,
+          operation: "party_descriptor.verify",
           description:
             "Revision-8 descriptors reach key and commitment checks.",
           witnesses: [
@@ -272,6 +287,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "party_descriptor.verify",
           description:
             "Revision-8 descriptors reach key and commitment checks.",
           witnesses: [
@@ -302,6 +318,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :admission,
           direction: :red_to_green,
+          operation: "signing.prepare",
           description:
             "Descriptor signing checks the admitted revision-8 predecessor and its key " <>
             "commitment.",
@@ -320,6 +337,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "signing.prepare",
           description:
             "Descriptor signing checks the admitted revision-8 predecessor and its key " <>
             "commitment.",
@@ -338,6 +356,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "chain.verify",
           description:
             "The TypeScript verifier evaluates the acceptance list before checking " <>
             "duplicate coordinates.",
@@ -359,15 +378,6 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               cases: ~w(
                 chain-legacy-duplicate-before-claims-coordinates
                 chain-legacy-duplicate-before-key-resolution
-              )
-            },
-            %{
-              entry_point: "corpus_runner",
-              baselines: ["npm:1.0.0"],
-              from: "chain_invalid",
-              to: "algorithm_outside_profile",
-              cases: ~w(
-                chain-legacy-duplicate-before-algorithm-profile
               )
             },
             %{
@@ -438,15 +448,6 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               entry_point: "corpus_runner",
               baselines: ["npm:1.0.0"],
               from: "chain_invalid",
-              to: "revision_outside_profile",
-              cases: ~w(
-                chain-legacy-duplicate-before-revision-profile
-              )
-            },
-            %{
-              entry_point: "corpus_runner",
-              baselines: ["npm:1.0.0"],
-              from: "chain_invalid",
               to: "signature_invalid",
               cases: ~w(
                 chain-legacy-duplicate-before-signature-encoding
@@ -477,6 +478,35 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "chain.verify_profile",
+          description:
+            "The TypeScript verifier evaluates the acceptance list before checking " <>
+            "duplicate coordinates.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "algorithm_outside_profile",
+              cases: ~w(
+                chain-legacy-duplicate-before-algorithm-profile
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["npm:1.0.0"],
+              from: "chain_invalid",
+              to: "revision_outside_profile",
+              cases: ~w(
+                chain-legacy-duplicate-before-revision-profile
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          operation: "chain.verify",
           description:
             "The chain-expanded-histories cases and " <>
             "chain-many-histories-first-party-error expose errors past the old history " <>
@@ -498,15 +528,6 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               to: "acceptance_invalid",
               cases: ~w(
                 chain-expanded-histories-before-acceptance-claims-coordinates
-              )
-            },
-            %{
-              entry_point: "corpus_runner",
-              baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "chain_invalid",
-              to: "algorithm_outside_profile",
-              cases: ~w(
-                chain-expanded-histories-before-artifact-profile
               )
             },
             %{
@@ -710,15 +731,6 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
               from: "chain_invalid",
-              to: "revision_outside_profile",
-              cases: ~w(
-                chain-expanded-histories-before-revision-profile
-              )
-            },
-            %{
-              entry_point: "corpus_runner",
-              baselines: ["hex:1.0.0", "npm:1.0.0"],
-              from: "chain_invalid",
               to: "signature_invalid",
               cases: ~w(
                 chain-expanded-histories-before-acceptance-signature
@@ -780,6 +792,36 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "chain.verify_profile",
+          description:
+            "The chain-expanded-histories cases and " <>
+            "chain-many-histories-first-party-error expose errors past the old history " <>
+            "count.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "algorithm_outside_profile",
+              cases: ~w(
+                chain-expanded-histories-before-artifact-profile
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "revision_outside_profile",
+              cases: ~w(
+                chain-expanded-histories-before-revision-profile
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          operation: "chain.verify_profile",
           description:
             "The TypeScript verifier finishes descendants before the next descriptor " <>
             "branch.",
@@ -798,6 +840,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "governing_revision",
           description:
             "Invalid UTC calendar components return a governing input error before " <>
             "conversion.",
@@ -816,6 +859,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :admission,
           direction: :red_to_green,
+          operation: "chain.verify_profile",
           description:
             "Capability profiles recognize revision 8 as a range endpoint.",
           witnesses: [
@@ -833,6 +877,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :unsupported_in_baseline,
           direction: :baseline_unsupported,
+          operation: "descriptor_publication.verify",
           description:
             "Published runners cannot express unsigned descriptor publication " <>
             "verification.",
@@ -928,6 +973,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :admission,
           direction: :red_to_green,
+          operation: "chain.verify",
           description:
             "Set verification applies revision-8 roster, assignment, predecessor, and " <>
             "vote rules.",
@@ -947,11 +993,6 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
                 quorum-narrowed-pending
                 quorum-narrowed-predecessor-role
                 quorum-no-accepted-ancestor
-                quorum-termination-duplicate-role
-                quorum-termination-ineligible-role
-                quorum-termination-instants-stay-separate
-                quorum-termination-reasons-stay-separate
-                quorum-termination-two-roles
                 quorum-unsigned-hop-cannot-lower-threshold
                 quorum-unsigned-predecessor-blocks-governance
               )
@@ -972,8 +1013,39 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               to: "valid",
               cases: ~w(
                 quorum-mixed-accepted-predecessors
-                quorum-mixed-accepted-predecessors-governing
                 quorum-mixed-unsigned-genesis
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          operation: "governing_revision",
+          description:
+            "Set verification applies revision-8 roster, assignment, predecessor, and " <>
+            "vote rules.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "valid",
+              cases: ~w(
+                quorum-termination-duplicate-role
+                quorum-termination-ineligible-role
+                quorum-termination-instants-stay-separate
+                quorum-termination-reasons-stay-separate
+                quorum-termination-two-roles
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "valid",
+              cases: ~w(
+                quorum-mixed-accepted-predecessors-governing
                 quorum-mixed-unsigned-genesis-governing
               )
             }
@@ -982,6 +1054,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "chain.verify",
           description:
             "Set verification applies revision-8 roster, assignment, predecessor, and " <>
             "vote rules.",
@@ -1004,7 +1077,17 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
                 quorum-revision-downgrade
                 quorum-roster-history-missing
               )
-            },
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          operation: "signing.prepare",
+          description:
+            "Set verification applies revision-8 roster, assignment, predecessor, and " <>
+            "vote rules.",
+          witnesses: [
             %{
               entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
@@ -1019,6 +1102,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "charter_revision.decode",
           description:
             "Revision-8 quorum thresholds are checked for integer tokens ahead of " <>
             "canonical bytes and schema checks.",
@@ -1058,6 +1142,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :admission,
           direction: :red_to_green,
+          operation: "receipt.verify",
           description:
             "Receipt verification resolves the issuing role in a quorum or assignment " <>
             "view.",
@@ -1073,6 +1158,24 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
                 assignment-receipt-new-holder
                 assignment-receipt-predecessor-resumes
                 receipt-matches-accepted-quorum
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          operation: "signing.prepare",
+          description:
+            "Receipt verification resolves the issuing role in a quorum or assignment " <>
+            "view.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "chain_invalid",
+              to: "valid",
+              cases: ~w(
                 signing-receipt-revision-eight-chain
               )
             }
@@ -1081,6 +1184,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "receipt.verify",
           description:
             "Receipt verification resolves the issuing role in a quorum or assignment " <>
             "view.",
@@ -1101,6 +1205,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :typed_error,
           direction: :crash_to_typed,
+          operation: "equivocation",
           description:
             "Incomplete caller-built host records return typed errors through public " <>
             "verification and signing.",
@@ -1113,7 +1218,17 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               cases: ~w(
                 api-equivocation-missing-digest
               )
-            },
+            }
+          ]
+        },
+        %{
+          class: :typed_error,
+          direction: :crash_to_typed,
+          operation: "governing_revision",
+          description:
+            "Incomplete caller-built host records return typed errors through public " <>
+            "verification and signing.",
+          witnesses: [
             %{
               entry_point: "public_api",
               baselines: ["hex:1.0.0"],
@@ -1122,7 +1237,17 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               cases: ~w(
                 api-governing-missing-year
               )
-            },
+            }
+          ]
+        },
+        %{
+          class: :typed_error,
+          direction: :crash_to_typed,
+          operation: "descriptor_digest",
+          description:
+            "Incomplete caller-built host records return typed errors through public " <>
+            "verification and signing.",
+          witnesses: [
             %{
               entry_point: "public_api",
               baselines: ["hex:1.0.0"],
@@ -1130,10 +1255,56 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               to: "invalid_type",
               cases: ~w(
                 api-descriptor-digest-missing-envelope
+              )
+            }
+          ]
+        },
+        %{
+          class: :typed_error,
+          direction: :crash_to_typed,
+          operation: "revision_digest",
+          description:
+            "Incomplete caller-built host records return typed errors through public " <>
+            "verification and signing.",
+          witnesses: [
+            %{
+              entry_point: "public_api",
+              baselines: ["hex:1.0.0"],
+              from: "raised",
+              to: "invalid_type",
+              cases: ~w(
                 api-revision-digest-missing-bytes
+              )
+            }
+          ]
+        },
+        %{
+          class: :typed_error,
+          direction: :crash_to_typed,
+          operation: "acceptance_signing_input",
+          description:
+            "Incomplete caller-built host records return typed errors through public " <>
+            "verification and signing.",
+          witnesses: [
+            %{
+              entry_point: "public_api",
+              baselines: ["hex:1.0.0"],
+              from: "raised",
+              to: "invalid_type",
+              cases: ~w(
                 api-signing-set-missing-list
               )
-            },
+            }
+          ]
+        },
+        %{
+          class: :typed_error,
+          direction: :crash_to_typed,
+          operation: "assemble_compact",
+          description:
+            "Incomplete caller-built host records return typed errors through public " <>
+            "verification and signing.",
+          witnesses: [
             %{
               entry_point: "public_api",
               baselines: ["hex:1.0.0"],
@@ -1148,6 +1319,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :verdict_narrowing,
           direction: :green_to_red,
+          operation: "equivocation",
           description:
             "Caller-built host records must contain valid fields for equivocation, " <>
             "governing queries, and signing claims.",
@@ -1160,7 +1332,17 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               cases: ~w(
                 api-equivocation-nil-digest
               )
-            },
+            }
+          ]
+        },
+        %{
+          class: :verdict_narrowing,
+          direction: :green_to_red,
+          operation: "governing_revision",
+          description:
+            "Caller-built host records must contain valid fields for equivocation, " <>
+            "governing queries, and signing claims.",
+          witnesses: [
             %{
               entry_point: "public_api",
               baselines: ["hex:1.0.0"],
@@ -1169,7 +1351,17 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               cases: ~w(
                 api-governing-nil-zone-abbreviation
               )
-            },
+            }
+          ]
+        },
+        %{
+          class: :verdict_narrowing,
+          direction: :green_to_red,
+          operation: "descriptor_signing_input",
+          description:
+            "Caller-built host records must contain valid fields for equivocation, " <>
+            "governing queries, and signing claims.",
+          witnesses: [
             %{
               entry_point: "public_api",
               baselines: ["hex:1.0.0"],
@@ -1184,6 +1376,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :unsupported_in_baseline,
           direction: :baseline_unsupported,
+          operation: "signing.prepare",
           description:
             "Published signing entry points cannot express a marked replacement " <>
             "operation.",
@@ -1222,6 +1415,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :admission,
           direction: :red_to_green,
+          operation: "charter_revision.decode",
           description:
             "Revision-8 charter decoding admits the roster and quorum schema and checks " <>
             "rule semantics.",
@@ -1240,6 +1434,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "charter_revision.decode",
           description:
             "Revision-8 charter decoding admits the roster and quorum schema and checks " <>
             "rule semantics.",
@@ -1273,6 +1468,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "chain.verify",
           description:
             "The TypeScript verifier preserves the initial descriptor signature or key " <>
             "error.",
@@ -1300,6 +1496,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :admission,
           direction: :red_to_green,
+          operation: "signing.prepare",
           description:
             "Signing preparation admits revision-8 acceptance and termination emission " <>
             "and checks replacement intent.",
@@ -1323,6 +1520,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "signing.prepare",
           description:
             "Signing preparation admits revision-8 acceptance and termination emission " <>
             "and checks replacement intent.",
@@ -1345,6 +1543,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :admission,
           direction: :red_to_green,
+          operation: "receipt.verify",
           description:
             "Bare revision-8 receipt verification admits descriptive context. " <>
             "Preparation requires a verified set.",
@@ -1363,6 +1562,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "receipt.verify",
           description:
             "Bare revision-8 receipt verification admits descriptive context. " <>
             "Preparation requires a verified set.",
@@ -1375,7 +1575,17 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               cases: ~w(
                 receipt-rejects-revision-eight-envelope
               )
-            },
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          operation: "signing.prepare",
+          description:
+            "Bare revision-8 receipt verification admits descriptive context. " <>
+            "Preparation requires a verified set.",
+          witnesses: [
             %{
               entry_point: "corpus_runner",
               baselines: ["hex:1.0.0", "npm:1.0.0"],
@@ -1390,6 +1600,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :admission,
           direction: :red_to_green,
+          operation: "acceptance.verify",
           description:
             "Standalone vote verification can decode the revision-8 charter and reach " <>
             "the vote checks.",
@@ -1402,8 +1613,26 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               cases: ~w(
                 assignment-assignor-pairing
                 assignment-mldsa65-revision-eight-assignor
-                quorum-mldsa65-revision-eight-termination
                 quorum-mldsa65-revision-eight-vote
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          operation: "termination.verify",
+          description:
+            "Standalone vote verification can decode the revision-8 charter and reach " <>
+            "the vote checks.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "valid",
+              cases: ~w(
+                quorum-mldsa65-revision-eight-termination
                 quorum-termination-pairing
               )
             }
@@ -1412,6 +1641,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "acceptance.verify",
           description:
             "Standalone vote verification can decode the revision-8 charter and reach " <>
             "the vote checks.",
@@ -1442,6 +1672,24 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               to: "signature_invalid",
               cases: ~w(
                 quorum-acceptance-envelope-signature-validity
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          operation: "termination.verify",
+          description:
+            "Standalone vote verification can decode the revision-8 charter and reach " <>
+            "the vote checks.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "signature_invalid",
+              cases: ~w(
                 quorum-termination-envelope-signature-validity
               )
             },
@@ -1459,6 +1707,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
         %{
           class: :error_code_change,
           direction: :red_to_red,
+          operation: "acceptance.verify",
           description:
             "Revision-8 vote envelopes reach signature length, claims validation and " <>
             "binding.",
@@ -1488,7 +1737,6 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               to: "constraint_violation",
               cases: ~w(
                 quorum-acceptance-envelope-claims-constraint
-                quorum-termination-envelope-claims-constraint
               )
             },
             %{
@@ -1498,7 +1746,6 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               to: "invalid_type",
               cases: ~w(
                 quorum-acceptance-envelope-claims-type
-                quorum-termination-envelope-claims-type
               )
             },
             %{
@@ -1508,7 +1755,6 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               to: "missing_required",
               cases: ~w(
                 quorum-acceptance-envelope-claims-required
-                quorum-termination-envelope-claims-required
               )
             },
             %{
@@ -1518,6 +1764,69 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               to: "signature_invalid",
               cases: ~w(
                 quorum-acceptance-envelope-signature-length
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "timestamp_invalid",
+              cases: ~w(
+                quorum-acceptance-envelope-claims-timestamp
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "unknown_member",
+              cases: ~w(
+                quorum-acceptance-envelope-claims-unknown
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          operation: "termination.verify",
+          description:
+            "Revision-8 vote envelopes reach signature length, claims validation and " <>
+            "binding.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "constraint_violation",
+              cases: ~w(
+                quorum-termination-envelope-claims-constraint
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "invalid_type",
+              cases: ~w(
+                quorum-termination-envelope-claims-type
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "missing_required",
+              cases: ~w(
+                quorum-termination-envelope-claims-required
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "signature_invalid",
+              cases: ~w(
                 quorum-termination-envelope-signature-length
               )
             },
@@ -1545,7 +1854,6 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               from: "protected_header_invalid",
               to: "timestamp_invalid",
               cases: ~w(
-                quorum-acceptance-envelope-claims-timestamp
                 quorum-termination-envelope-claims-timestamp
               )
             },
@@ -1555,9 +1863,68 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               from: "protected_header_invalid",
               to: "unknown_member",
               cases: ~w(
-                quorum-acceptance-envelope-claims-unknown
                 quorum-termination-envelope-claims-unknown
               )
+            }
+          ]
+        },
+        %{
+          class: :output_change,
+          direction: :green_to_green,
+          operation: "chain.verify",
+          description:
+            "A signed legacy successor of an unsigned genesis remains proposed.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "valid",
+              to: "valid",
+              cases: ~w(
+                legacy-signed-successor-of-unsigned-genesis
+              ),
+              outputs: %{
+                "before" => %{
+                  "accepted_revision_digests" => [
+                    "sha-256:xl40k5Q85s00eHs3IbvsHyIHc38aCd_DxhpNuKbNIn8"
+                  ],
+                  "charter_id" => "sha-256:Tm_tHinVBmwjGzwxKrnorhAHkYZ8rufIhZ2Y5xTBkJo",
+                  "superseded_revision_digests" => [],
+                  "topology" => "linear"
+                },
+                "after" => %{
+                  "accepted_revision_digests" => [],
+                  "charter_id" => "sha-256:Tm_tHinVBmwjGzwxKrnorhAHkYZ8rufIhZ2Y5xTBkJo",
+                  "superseded_revision_digests" => [],
+                  "topology" => "linear"
+                }
+              }
+            }
+          ]
+        },
+        %{
+          class: :output_change,
+          direction: :green_to_green,
+          operation: "governing_revision",
+          description:
+            "An ineligible legacy successor leaves no governing revision.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "valid",
+              to: "valid",
+              cases: ~w(
+                legacy-unsigned-predecessor-leaves-no-governing-revision
+              ),
+              outputs: %{
+                "before" => %{
+                  "governing_revisions" => ["sha-256:xl40k5Q85s00eHs3IbvsHyIHc38aCd_DxhpNuKbNIn8"]
+                },
+                "after" => %{
+                  "governing_revisions" => ["none"]
+                }
+              }
             }
           ]
         }
@@ -1568,7 +1935,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
   @manifest_version 1
   @verification_semantics 7
 
-  @typedoc "One verdict change between releases."
+  @typedoc "One recorded compatibility change between releases."
   @type transition :: %{
           required(:class) =>
             :admission
@@ -1576,20 +1943,28 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
             | :resource_boundary
             | :typed_error
             | :error_code_change
+            | :output_change
             | :unsupported_in_baseline,
           required(:direction) =>
-            :green_to_red | :red_to_green | :crash_to_typed | :red_to_red | :baseline_unsupported,
+            :green_to_red
+            | :red_to_green
+            | :crash_to_typed
+            | :red_to_red
+            | :green_to_green
+            | :baseline_unsupported,
           required(:description) => binary(),
+          optional(:operation) => binary(),
           optional(:witnesses) => [witness()]
         }
 
   @typedoc "Case IDs and exact normalized outcomes for named published baselines."
   @type witness :: %{
-          entry_point: binary(),
-          baselines: [binary()],
-          cases: [binary()],
-          from: binary(),
-          to: binary()
+          required(:entry_point) => binary(),
+          required(:baselines) => [binary()],
+          required(:cases) => [binary()],
+          required(:from) => binary(),
+          required(:to) => binary(),
+          optional(:outputs) => %{required(binary()) => term()}
         }
 
   @typedoc "One row of the compatibility table."
