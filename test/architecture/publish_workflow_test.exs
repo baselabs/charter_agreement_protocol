@@ -120,6 +120,7 @@ defmodule PublishWorkflowTest do
              ~r/workflow_dispatch:\n    inputs:\n      release_commit:\n        description: [^\n]+\n        required: true\n        type: string\n/
 
     assert [release, build, upload, readback] = release_jobs(workflow)
+
     actor_filter =
       ~s|if: contains(fromJSON('["corepay","palermo-git"]'), github.actor) && contains(fromJSON('["corepay","palermo-git"]'), github.triggering_actor)|
 
@@ -204,10 +205,17 @@ defmodule PublishWorkflowTest do
     refute keyed =~ "mix docs"
 
     assert [artifact] =
-             Enum.filter(release_steps(readback), &String.contains?(&1, "actions/upload-artifact@"))
+             Enum.filter(
+               release_steps(readback),
+               &String.contains?(&1, "actions/upload-artifact@")
+             )
+
     assert artifact =~ "name: release-assets\n"
     assert artifact =~ ~s(release-assets/charter_agreement_protocol-${{ env.VERSION }}.tar)
-    assert artifact =~ ~s(release-assets/charter_agreement_protocol-${{ env.VERSION }}-docs.tar.gz)
+
+    assert artifact =~
+             ~s(release-assets/charter_agreement_protocol-${{ env.VERSION }}-docs.tar.gz)
+
     assert artifact =~ "release-assets/SHA256SUMS"
     assert artifact =~ "if-no-files-found: error"
     assert artifact =~ "retention-days: 7\n"
