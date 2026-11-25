@@ -2621,6 +2621,11 @@ quorum_ids = ~w(
   signing-assignment-empty-claims
   assignment-successor-history-missing
   receipt-rejects-revision-eight-envelope
+  assignment-malformed-vote-before-duplicate
+  chain-root-signature-before-revision
+  chain-item-type-before-item-limit
+  chain-item-type-before-list-byte-limit
+  chain-history-descendant-before-next-branch
 )
 
 cases =

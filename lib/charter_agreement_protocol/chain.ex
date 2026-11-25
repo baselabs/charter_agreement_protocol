@@ -159,13 +159,18 @@ defmodule CharterAgreementProtocol.Chain do
     with {:ok, decoded} <- decode_descriptors(compacts, limits),
          groups <- Enum.group_by(decoded, &descriptor_party_id/1, &elem(&1, 0)),
          true <- map_size(groups) >= 2,
-         {:ok, chains} <-
-           groups |> Map.values() |> map_ok(&DescriptorChain.verify(&1, limits, profile)) do
-      {:ok, Enum.sort_by(chains, &descriptor_chain_id/1)}
+         {:ok, chains} <- verify_histories(groups, limits, profile) do
+      {:ok, chains}
     else
       {:error, %Error{} = error} -> {:error, error}
       _failure -> chain_error()
     end
+  end
+
+  defp verify_histories(groups, limits, profile) do
+    groups
+    |> Enum.sort_by(&elem(&1, 0))
+    |> map_ok(fn {_party_id, compacts} -> DescriptorChain.verify(compacts, limits, profile) end)
   end
 
   defp decode_descriptors(compacts, limits) do

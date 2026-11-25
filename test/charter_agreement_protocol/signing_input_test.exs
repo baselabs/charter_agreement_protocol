@@ -122,42 +122,44 @@ defmodule CharterAgreementProtocol.SigningInputTest do
     left = ChainFixture.successor(setup.genesis, 2, legal_text: "left\n")
     right = ChainFixture.successor(setup.genesis, 2, legal_text: "right\n")
     right_acceptance = ChainFixture.acceptance(right, setup.issuer, "issuer")
-    {:ok, set} = raw_set(setup, [setup.genesis, left, right], [right_acceptance], [])
+    acceptances = ChainFixture.dual_acceptances(setup.genesis, setup)
+    revisions = [setup.genesis, left, right]
+    {:ok, set} = raw_set(setup, revisions, acceptances ++ [right_acceptance], [])
+
+    {:ok, control} = raw_set(setup, revisions, acceptances, [])
 
     claims = AcceptanceFixture.claims(left, setup.issuer, "issuer")
+    request = envelope(setup.issuer.kid, claims)
+
+    assert {:ok, %SigningInput{kind: :acceptance}} =
+             CharterAgreementProtocol.acceptance_signing_input(request, control)
 
     assert {:error, %Error{code: :signing_refused}} =
-             CharterAgreementProtocol.acceptance_signing_input(
-               envelope(setup.issuer.kid, claims),
-               set
-             )
+             CharterAgreementProtocol.acceptance_signing_input(request, set)
   end
 
-  test "ancestry-closed refuses a branch that excludes the dual-accepted head" do
+  test "ancestry closure refuses a child that leaves an accepted sibling uncovered" do
     setup = ChainFixture.base()
     accepted_head = ChainFixture.successor(setup.genesis, 2, legal_text: "accepted\n")
     stale_parent = ChainFixture.successor(setup.genesis, 2, legal_text: "stale\n")
     stale_candidate = ChainFixture.successor(stale_parent, 3, legal_text: "stale child\n")
 
     acceptances =
-      ChainFixture.dual_acceptances(setup.genesis, setup) ++
-        ChainFixture.dual_acceptances(accepted_head, setup)
+      Enum.flat_map([setup.genesis, stale_parent], &ChainFixture.dual_acceptances(&1, setup))
 
-    {:ok, set} =
-      raw_set(
-        setup,
-        [setup.genesis, accepted_head, stale_parent, stale_candidate],
-        acceptances,
-        []
-      )
+    competing = ChainFixture.dual_acceptances(accepted_head, setup)
+    revisions = [setup.genesis, accepted_head, stale_parent, stale_candidate]
+    {:ok, set} = raw_set(setup, revisions, acceptances ++ competing, [])
+    {:ok, control} = raw_set(setup, revisions, acceptances, [])
 
     claims = AcceptanceFixture.claims(stale_candidate, setup.issuer, "issuer")
+    request = envelope(setup.issuer.kid, claims)
+
+    assert {:ok, %SigningInput{kind: :acceptance}} =
+             CharterAgreementProtocol.acceptance_signing_input(request, control)
 
     assert {:error, %Error{code: :signing_refused}} =
-             CharterAgreementProtocol.acceptance_signing_input(
-               envelope(setup.issuer.kid, claims),
-               set
-             )
+             CharterAgreementProtocol.acceptance_signing_input(request, set)
   end
 
   test "ancestry coverage accepts a successor of the retained accepted head" do

@@ -200,8 +200,8 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert counts["charter_revision.decode"] == 59
     assert counts["acceptance.verify"] + counts["acceptance.equivocation"] == 54
     assert counts["termination.verify"] == 31
-    assert counts["chain.verify"] + counts["governing_revision"] == 87
-    assert counts["chain.verify_profile"] == 20
+    assert counts["chain.verify"] + counts["governing_revision"] == 91
+    assert counts["chain.verify_profile"] == 21
     assert counts["receipt.verify"] == 67
     assert counts["signing.prepare"] == 127
   end

@@ -190,7 +190,7 @@ defmodule CharterAgreementProtocol.DescriptorPublicationTest do
              CAP.descriptor_next_key_commitment(List.duplicate(nil, 33), limits)
   end
 
-  test "signed revision-8 framing is confined to party descriptors" do
+  test "signed revision-eight framing admits party artifacts and rejects receipts" do
     %{"descriptors" => [compact | _]} = "opened" |> publication_text() |> JSON.decode!()
     [header, payload, signature] = String.split(compact, ".")
     protected = Base.url_decode64!(header, padding: false)
@@ -203,8 +203,15 @@ defmodule CharterAgreementProtocol.DescriptorPublicationTest do
 
       compact = Enum.join([changed, payload, signature], ".")
 
-      assert {:error, %Error{code: :protected_header_invalid}} =
-               CompactJws.parse(compact, type, Limits.default())
+      case type do
+        "cap+receipt" ->
+          assert {:error, %Error{code: :protected_header_invalid}} =
+                   CompactJws.parse(compact, type, Limits.default())
+
+        _party_artifact ->
+          assert {:ok, %CompactJws{typ: ^type}} =
+                   CompactJws.parse(compact, type, Limits.default())
+      end
     end
   end
 

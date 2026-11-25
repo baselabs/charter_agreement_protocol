@@ -488,7 +488,12 @@ the nonempty revision check. With empty revisions, strict artifact set limits
 can therefore return `limit_exceeded`, and a malformed descriptor can return
 `compact_invalid`, before `chain_invalid`. Signing preparation uses the same
 order when verifying an artifact set context after its earlier signing input
-and key checks [CAP-CHAIN-check-order].
+and key checks [CAP-CHAIN-check-order]. Descriptor histories are checked in
+ascending party ID order. After validating revision links and party histories,
+the verifier checks acceptances in input order. It rejects duplicate acceptance
+coordinates only after every acceptance verifies. It then checks signed
+supersession targets before verifying termination notices in input order
+[CAP-CHAIN-check-order].
 
 A set of revisions, acceptances, and descriptors whose acceptances pair
 exactly and whose topology is linear verifies as a valid chain

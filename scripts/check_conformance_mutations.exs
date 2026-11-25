@@ -250,9 +250,12 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       name: "chain-signature-skip",
       path: "lib/charter_agreement_protocol/compact_jws.ex",
       from:
-        "  def verify_signature(%__MODULE__{} = envelope, public_key, key_algorithm, %Profile{} = profile) do\n    with :ok <- admit(envelope, profile) do\n      case Algorithm.row_for(envelope.alg) do\n        %{key_algorithm: ^key_algorithm} = row ->\n          Signature.verify(envelope.message, envelope.signature, public_key, row.name)\n\n        _row_mismatch ->\n          signature_error()\n      end\n    end\n  end",
+        "          Signature.verify(envelope.message, envelope.signature, public_key, row.name)",
       to:
-        "  def verify_signature(%__MODULE__{} = _envelope, _public_key, _key_algorithm),\n    do: :ok",
+        "          _result =\n" <>
+          "            Signature.verify(envelope.message, envelope.signature, " <>
+          "public_key, row.name)\n" <>
+          "          :ok",
       command: ~w(mix test test/charter_agreement_protocol/descriptor_chain_test.exs --seed 42)
     },
     %{
