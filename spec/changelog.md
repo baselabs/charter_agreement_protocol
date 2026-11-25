@@ -8,6 +8,26 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-11-25 — party quorums and assignments
+
+- Revision 8 admits acceptance and termination quorums that count distinct
+  eligible roles. Termination votes must agree on the governing revision,
+  reason, and effective instant.
+- A declared party assignment takes effect through a revision accepted by
+  every party, including a marked acceptance from the departing party and
+  an ordinary acceptance from the incoming party.
+- A successor stays proposed until its immediate predecessor is accepted.
+  A narrowed rule can admit predecessor roles, and a signed supersession
+  requires a signed target, including in legacy histories.
+- Receipt verification checks the issuing role's holder in the verified
+  view. A bare revision-8 charter leaves signature and ownership unverified
+  and cannot be used to prepare a receipt for signing.
+- Chain verification checks descriptor histories in ascending party ID
+  order. The TypeScript verifier preserves typed errors from roots, visits
+  descendants in the same order as Elixir, validates acceptance compacts
+  before checking duplicates, and uses the specified artifact-list check
+  order for types and bounds.
+
 ## 2026-11-25 — descriptor key commitments and publication
 
 Revision 8 binds a successor's complete active key set and defines a bounded,

@@ -197,6 +197,46 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           description:
             "A signed revision cannot supersede an unsigned target, even while its " <>
               "immediate predecessor is still proposed."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "Descriptor histories are verified in ascending party ID order. The first " <>
+              "invalid root in chain-many-histories-first-party-error returns " <>
+              "descriptor_key_invalid instead of chain_invalid."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "The TypeScript verifier preserves the root signature error in " <>
+              "chain-root-signature-before-revision: signature_invalid instead of " <>
+              "descriptor_chain_invalid."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "The TypeScript verifier visits descendants before the next branch, returning " <>
+              "descriptor_chain_invalid instead of revision_outside_profile in " <>
+              "chain-history-descendant-before-next-branch."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "The TypeScript verifier returns invalid_type instead of limit_exceeded for a " <>
+              "non-text item before the item bound or in a list that exceeds the byte " <>
+              "bound, including a hole in an oversized sparse array."
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          description:
+            "The TypeScript verifier checks the acceptance list before duplicate coordinates, " <>
+              "returning compact_invalid instead of chain_invalid when a malformed compact " <>
+              "follows a duplicate acceptance."
         }
       ]
     }

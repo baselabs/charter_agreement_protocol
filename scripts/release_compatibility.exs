@@ -1,6 +1,14 @@
 defmodule CharterAgreementProtocol.ReleaseCompatibility do
   @moduledoc false
 
+  @directions %{
+    admission: [:red_to_green],
+    verdict_narrowing: [:green_to_red],
+    resource_boundary: [:green_to_red, :red_to_green],
+    typed_error: [:crash_to_typed],
+    error_code_change: [:red_to_red]
+  }
+
   def verify!(row, version, semantics, live_digest, root) do
     expected_digest = released_digest(root, version) || live_digest
 
@@ -10,7 +18,14 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
     if row.census_digest != expected_digest,
       do: raise("compatibility census for #{version}: #{row.census_digest} != #{expected_digest}")
 
+    Enum.each(row.transitions, &verify_direction!/1)
     :ok
+  end
+
+  defp verify_direction!(%{class: class, direction: direction}) do
+    unless direction in Map.get(@directions, class, []) do
+      raise "incompatible release transition #{inspect(class)}: #{inspect(direction)}"
+    end
   end
 
   defp released_digest(root, version) do

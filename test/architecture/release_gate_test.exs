@@ -151,7 +151,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     end
   end
 
-  test "the descriptor publication candidate records its live compatibility identity" do
+  test "the current candidate records its live compatibility identity" do
     version = Mix.Project.config()[:version]
     semantics = ReleaseIdentity.verification_semantics()
     row = Enum.find(ReleaseIdentity.compatibility(), &(version in &1.package_versions))
@@ -163,18 +163,36 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
       |> Map.fetch!("corpus_digest")
 
     assert row.census_digest == live
+
+    assert Enum.any?(row.transitions, fn transition ->
+             transition.class == :error_code_change and transition.direction == :red_to_red and
+               String.contains?(transition.description, "chain-many-histories-first-party-error")
+           end)
+
     assert :ok = ReleaseCompatibility.verify!(row, version, semantics, live, File.cwd!())
   end
 
   test "a new package version requires the live corpus census" do
     version = "99.0.0"
-    row = %{verification_semantics: 6, census_digest: "live"}
+    row = %{verification_semantics: 6, census_digest: "live", transitions: []}
     root = File.cwd!()
 
     assert :ok = ReleaseCompatibility.verify!(row, version, 6, "live", root)
 
     assert_raise RuntimeError, ~r/compatibility census for 99\.0\.0/, fn ->
       ReleaseCompatibility.verify!(row, version, 6, "different", root)
+    end
+  end
+
+  test "compatibility rejects a passing verdict for an error code change" do
+    row = %{
+      verification_semantics: 6,
+      census_digest: "live",
+      transitions: [%{class: :error_code_change, direction: :green_to_red}]
+    }
+
+    assert_raise RuntimeError, ~r/incompatible release transition :error_code_change/, fn ->
+      ReleaseCompatibility.verify!(row, "99.0.0", 6, "live", File.cwd!())
     end
   end
 
