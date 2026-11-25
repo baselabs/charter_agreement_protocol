@@ -326,6 +326,15 @@ an exception [CAP-SIGNING-retained-input-totality]. Facts are reconstructed
 from retained bytes, so supplied descriptive scalars do not replace the
 verified values.
 
+A companion signer accepting a caller-declared public key identity MUST
+run CAP preparation for that identity before invoking any handle callback.
+If preparation returns `signing_key_mismatch`, the signer MUST return a
+refusal with that code and zero identity or signing calls. Once preparation
+succeeds, the signer MUST take one atomic handle identity snapshot and
+refuse with the same code if it differs from the prepared identity. A
+signature returned by custody still requires independent verification
+against the prepared key [CAP-SIGNING-shared-preparation].
+
 ### 4.5 Termination Notice (`cap+termination`)
 
 A termination notice pinned to a governing revision, a party descriptor,
@@ -352,6 +361,18 @@ with outcome `indeterminate`; a verifier MUST NOT promote a signed claim
 to an observed fact [CAP-RECEIPT-outcome-indeterminate]. Unknown optional
 extension bodies MUST be retained byte-exactly through verification and
 named as quarantined [CAP-RECEIPT-extension-roundtrip].
+
+A chain-view receipt whose named revision is absent or lacks verified
+acceptances from all parties MUST NOT report a governing match or a matched
+deployment. If the signature and charter and role claims can be verified
+from the accepted revisions that are present, the receipt remains valid as
+signed evidence. It reports `governing_match: mismatch` for a unique
+different governing revision or none, and `undetermined` in a contested
+view. It reports `chain_conflict: fork_evidenced` when the receipt's
+revision number is at or below the highest accepted revision in the view.
+An acceptance naming a missing revision invalidates the supplied view
+with `chain_invalid` before receipt verification
+[CAP-RECEIPT-conflict-visible].
 
 ### 4.7 Extension envelope
 
@@ -404,14 +425,22 @@ MUST return `contested`; a verifier MUST NOT resolve a tie by digest
 ordering, freshness, or any other silent tie-break
 [CAP-CHAIN-contested-refusal]. A supersession repair MUST be applied: a
 later revision that supersedes contested siblings restores a unique
-governing digest while history is retained
+governing digest while history is retained. A repair carrying only a
+subset of the required party acceptances leaves the siblings contested
+once both siblings are effective
 [CAP-CHAIN-supersession-applied]. Where a unique governing revision
 exists, the revision with the highest precedence among eligible accepted
 revisions MUST govern [CAP-CHAIN-highest-precedence], with eligibility
 inclusive of the instant boundary. A verified termination notice that names
 the revision governing at its `effective_at` MUST close the charter from
 that instant: the governing computation at or after it returns `none`, and
-a receipt for an effect at or after it does not match a governing revision
+a receipt for an effect at or after it does not match a governing revision.
+Compare UTC instants at their full represented precision. At equal instants,
+first select the revision eligible at that instant without applying any
+termination, then compare it to the notice's named revision. A notice
+naming a predecessor that has just lost precedence does not close the
+charter. A notice naming the new governing revision closes it from that
+instant, including queries and receipts at the same instant
 [CAP-CHAIN-termination-closes].
 
 ## 7. Facts and error surface
@@ -437,6 +466,13 @@ an explicit null profile or axis is `invalid_profile`. It checks limits
 before profile and profile before operation inputs. Case file readers MUST retain the distinction
 between integer tokens and tokens with a fraction or exponent, including
 whole-number floats such as `2.0` [CAP-CONFORMANCE-number-tokens].
+
+The Elixir repository owns the canonical corpus. Consumers MUST pin an exact
+source commit and the SHA-256 of the raw index bytes, and check every case
+file against its digest in that index. Full-capability implementations MUST
+execute every row against `expect`. A substrate without ML-DSA verification
+MUST execute the same rows and use `expect_limited` where it is present.
+A capability diagnostic is distinct from a signature verdict.
 
 ## 9. Security and privacy posture
 

@@ -2496,6 +2496,50 @@ cases =
 
 cases = cases ++ CharterAgreementProtocol.RunnerInputCases.cases(cases)
 
+# These signed edge cases are retained from the canonical files just like
+# the other supplemental fixtures. Append them after generated input cases.
+shared_lifecycle_ids = ~w(
+  governing-termination-at-successor-start
+  governing-termination-for-predecessor-at-successor-start
+  governing-disputed-siblings
+  governing-dispute-repair-one-acceptance
+  governing-dispute-repair-both-acceptances
+  receipt-complete-successor-view
+  receipt-partial-view-missing-revision
+  receipt-partial-view-missing-acceptance
+  receipt-partial-view-dangling-acceptance
+  receipt-before-termination-instant
+  receipt-at-termination-instant
+  receipt-after-termination-instant
+)
+
+shared_lifecycle_cases =
+  root
+  |> Path.join("cases/*.json")
+  |> Path.wildcard()
+  |> Enum.flat_map(fn path -> path |> File.read!() |> :json.decode() |> Map.fetch!("cases") end)
+  |> Map.new(&{&1["id"], &1})
+
+limited_ids = ~w(
+  receipt-mldsa65-rev3-valid
+  signing-mldsa65-acceptance
+  signing-mldsa65-party_descriptor
+  signing-mldsa65-receipt
+  signing-mldsa65-termination
+  chain-mldsa-mixed-revision
+  descriptor-mldsa65-rev3-valid
+  acceptance-mldsa65-rev3-valid
+)
+
+cases =
+  Enum.map(cases, fn one ->
+    if one["id"] in limited_ids do
+      Map.put(one, "expect_limited", invalid.("algorithm_unsupported_on_substrate"))
+    else
+      one
+    end
+  end) ++ Enum.map(shared_lifecycle_ids, &Map.fetch!(shared_lifecycle_cases, &1))
+
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 
 grouped = Enum.group_by(cases, & &1["surface"])

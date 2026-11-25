@@ -103,6 +103,10 @@ flow.
 The two verifiers share no code. Both must give the same answer, byte for byte, on
 every case in the conformance corpus that ships with this package.
 
+The Elixir repository owns the canonical fixtures. TypeScript consumers pin
+the source commit and raw index SHA-256. The corpus includes full and
+capability-limited expectations for Node and browser verification.
+
 ## Documentation
 
 - [Overview](docs/guides/overview.md): how the artifacts fit together.

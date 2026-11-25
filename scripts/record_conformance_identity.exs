@@ -17,15 +17,6 @@ replace.(
 )
 
 replace.("test/architecture/package_boundary_test.exs", ~r/(@index_sha ")[^"]+/, index_sha)
-version = Regex.escape(Mix.Project.config()[:version])
-
-pattern =
-  Regex.compile!(
-    ~S|(package_versions: \[[^\]]*"VERSION"[^\]]*\],\s+verification_semantics: \d+,\s+census_digest: ")[^"]+|
-    |> String.replace("VERSION", version)
-  )
-
-replace.("lib/charter_agreement_protocol/release_identity.ex", pattern, index["corpus_digest"])
 
 spec_digest =
   "spec/**/*"

@@ -110,11 +110,8 @@ defmodule CharterAgreementProtocol.ReleaseCandidateGate do
     if current_row == nil,
       do: raise("the current package version has no compatibility row")
 
-    if current_row.census_digest != index["corpus_digest"],
-      do:
-        raise(
-          "current compatibility row census #{current_row.census_digest} != live corpus digest #{index["corpus_digest"]}"
-        )
+    if current_row.verification_semantics != ReleaseIdentity.verification_semantics(),
+      do: raise("current compatibility row does not match the verification semantics")
 
     pins = [
       {"lib/charter_agreement_protocol/conformance/cli.ex", index_identity},

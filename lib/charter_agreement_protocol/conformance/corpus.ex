@@ -26,6 +26,7 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
   @index_keys ~w(applicability corpus_digest files format registry_digest total_cases)
   @file_keys ~w(cases path sha256_base64url)
   @case_keys ~w(class expect id input surface)
+  @limited_case_keys ~w(class expect expect_limited id input surface)
 
   @surfaces [
     "base64url.decode",
@@ -361,12 +362,19 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
   end
 
   defp valid_case?(one) when is_map(one) do
-    sorted_keys(one) == @case_keys and is_binary(one["id"]) and one["id"] != "" and
+    valid_case_keys?(one) and is_binary(one["id"]) and one["id"] != "" and
       one["surface"] in @surfaces and one["class"] in @classes and
       valid_expectation?(one["expect"])
   end
 
   defp valid_case?(_one), do: false
+
+  defp valid_case_keys?(%{"expect_limited" => limited} = one) do
+    sorted_keys(one) == @limited_case_keys and
+      limited == %{"status" => "invalid", "error_code" => "algorithm_unsupported_on_substrate"}
+  end
+
+  defp valid_case_keys?(one), do: sorted_keys(one) == @case_keys
 
   defp valid_expectation?(%{"status" => "valid", "output" => _output} = expect),
     do: map_size(expect) == 2

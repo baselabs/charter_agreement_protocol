@@ -20,6 +20,24 @@ defmodule CharterAgreementProtocol.CapabilityLaneTest do
     Signature
   }
 
+  test "every certified case agrees with the expectation for this substrate" do
+    alias CharterAgreementProtocol.Conformance.{Corpus, Runner}
+
+    files =
+      "priv/conformance/**/*"
+      |> Path.wildcard()
+      |> Enum.filter(&File.regular?/1)
+      |> Map.new(fn path -> {Path.relative_to(path, "priv/conformance"), File.read!(path)} end)
+
+    assert {:ok, corpus} = Corpus.load(files)
+    limited? = not Capability.kat_verifies?("ML-DSA-65")
+
+    for {one, result} <- Enum.zip(corpus.cases, Runner.run(corpus)) do
+      expected = if limited?, do: Map.get(one, "expect_limited", one["expect"]), else: one["expect"]
+      assert result.actual == expected, result.id
+    end
+  end
+
   test "the report's per-row verdicts agree with actual verification behavior" do
     for %{key_algorithm: key_algorithm, verifiable: verifiable?} <- Capability.report().algorithms do
       assert verifiable? == Capability.kat_verifies?(key_algorithm)

@@ -1,5 +1,10 @@
 # The conformance corpus
 
+The source of record is `priv/conformance` in this repository. Consumers
+pin a Git commit and the raw index digest, which in turn authenticates each
+case file. Every row runs on a capable verifier and the browser bundle.
+The limited substrate uses the explicit `expect_limited` outcome when supplied.
+
 The conformance corpus is a fixed set of test cases. Each case gives exact input bytes
 and the exact result CAP returns for them: the full output for a valid case, the error
 code for an invalid one. Two implementations that agree on every case agree on those
@@ -18,11 +23,11 @@ is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:ZpJFSZnj2-4PGcOdggkwK62YFtCRmQfr_7kKnuwtKL0` |
-| Index SHA-256 (base64url) | `xiyty9a_VZTgiIYIKqGZQIAhJB-OQZRIcOX_zyNV-VQ` |
+| Corpus digest | `sha-256:SotPOwrvIWssswNuoV1L_Eql_IJohQFX1-0ICNkCXmI` |
+| Index SHA-256 (base64url) | `4ygWJ7RKHHLFtOxbx8F5RqLH47b4acS70QD8XQi8FY4` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:cfemklbEJO-YV3wRotDb80xBLtsRcrr0-zcHczOxX6E` |
-| Cases | 541, in 16 case files |
+| Specification digest | `sha-256:Px81vuBEqTF94EHyT3k0XhX_DyS9u0eBo1sSMGchbGo` |
+| Cases | 553, in 16 case files |
 
 The pinned TypeScript verifier 0.7.0 (commit
 `dc77838be3760067aa5722f1e55f2d2d68931b87`) agrees with this corpus on every case.

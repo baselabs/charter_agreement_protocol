@@ -4,6 +4,10 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+
+- Add shared verdict cases for partial receipt views, termination at equal
+  instants, and sibling repair. Record explicit outcomes for limited runtimes.
+
 - Read CI runtime defaults and compatibility lanes only through the shared
   toolchain reader, with exact installed-version checks.
 

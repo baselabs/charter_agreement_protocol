@@ -44,7 +44,9 @@ the last one hashes every shipped file, so it has to see the final bytes.
    cell or mutation, then run `mix run scripts/render_requirements.exs` to
    rewrite `spec/requirements.md`.
 
-4. **Compatibility row.** In `lib/charter_agreement_protocol/release_identity.ex`,
+4. **Compatibility row.** The live corpus digest is recorded in release
+   metadata during development. Preserve released compatibility rows.
+   For a new package version, update `lib/charter_agreement_protocol/release_identity.ex`,
    the row whose `package_versions` holds the release version must carry the
    new corpus digest as `census_digest`.
    - No verdict changed: keep `@verification_semantics`. If the corpus
