@@ -185,9 +185,12 @@ retains the key across a redirect from Hex. A second publisher or approval after
 the final read or between attempts is the residual race, controlled by custody of
 the publication key. Only the isolated upload job receives that key.
 
-A release or its docs may be held for approval. After the owner approves, dispatch
-`publish.yml` again with the same `release_commit`. The workflow checks the rebuilt package
-against the served package. The run succeeds only
+After the owner approves a held upload, dispatch `publish.yml` again with the
+same `release_commit`. An earlier matching stage may hold only the package.
+Approving that stage publishes the package alone. The next dispatch checks the
+served package bytes and uploads the missing docs. If Hex holds the docs for
+approval too, approve them and dispatch once more with the same
+`release_commit`. The run succeeds only
 when read-back serves the matching package and a readable docs archive containing
 root `index.html` and `release.json`. The record must name this package and version
 and a commit equal to the dispatched commit or an ancestor in the repository's
