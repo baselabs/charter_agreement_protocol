@@ -38,6 +38,7 @@ defmodule CharterAgreementProtocol.DescriptorPublication do
              {:ok, _document} <- decode(bytes, limits) do
           {:ok, bytes}
         else
+          {:error, %Error{code: :invalid_type, subject: ["protocol_revision"]}} = error -> error
           {:error, %Error{code: :limit_exceeded}} = error -> error
           _other -> invalid()
         end
@@ -73,7 +74,7 @@ defmodule CharterAgreementProtocol.DescriptorPublication do
          {:integer, 8} <- document["protocol_revision"],
          true <- Enum.all?(@coordinates, &coordinate?(document[&1])),
          {:array, items} when length(items) in 2..4096 <- document["descriptors"],
-         compacts = for({:string, compact} <- items, do: compact),
+         compacts = for({:string, compact} <- items, byte_size(compact) > 0, do: compact),
          true <- length(compacts) == length(items),
          :ok <- bound_history(compacts, limits) do
       {:ok, Map.put(document, "descriptors", compacts)}

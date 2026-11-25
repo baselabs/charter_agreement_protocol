@@ -1,3 +1,5 @@
+Code.require_file("runner_input_cases.exs", __DIR__)
+
 alias CharterAgreementProtocol.Conformance.{Cli, Report}
 
 alias CharterAgreementProtocol.{
@@ -117,6 +119,9 @@ defmodule CharterAgreementProtocol.ConformanceMatrixGate do
 end
 
 defmodule CharterAgreementProtocol.ConformanceRegenerationGate do
+  alias CharterAgreementProtocol.Conformance.{Corpus, Runner}
+  alias CharterAgreementProtocol.RunnerInputCases
+
   @root Path.expand("..", __DIR__)
 
   def run do
@@ -148,9 +153,22 @@ defmodule CharterAgreementProtocol.ConformanceRegenerationGate do
       if actual != expected, do: raise("corpus regeneration changed certified bytes")
 
       IO.puts("conformance regeneration: byte-identical")
+      check_publication_runner_inputs(target)
     after
       File.rm_rf!(scratch)
     end
+  end
+
+  defp check_publication_runner_inputs(root) do
+    path = Path.join(root, "cases/descriptor_publication-verify.json")
+    %{"cases" => cases} = path |> File.read!() |> :json.decode()
+    generated = RunnerInputCases.publication_cases(cases)
+
+    for %{agree: false} = result <- Runner.run(struct(Corpus, cases: generated)) do
+      raise "publication runner input mismatch: #{inspect(result)}"
+    end
+
+    IO.puts("publication runner inputs: #{length(generated)} agreed")
   end
 
   defp files(root) do

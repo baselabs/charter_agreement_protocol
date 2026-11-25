@@ -2,19 +2,29 @@ defmodule CharterAgreementProtocol.RunnerInputCases do
   alias CharterAgreementProtocol.Conformance.Corpus
 
   def cases(cases) do
-    profile_cases(cases) ++
+    surfaces = Corpus.surfaces() -- ["descriptor_publication.verify"]
+
+    profile_cases(cases, surfaces) ++
       context_cases(cases) ++
-      order_cases(cases) ++ float_cases(cases) ++ kind_cases(cases) ++ chain_view_cases(cases)
+      order_cases(cases) ++
+      float_cases(cases) ++ kind_cases(cases, surfaces) ++ chain_view_cases(cases)
   end
 
-  defp profile_cases(cases) do
-    for surface <- Corpus.surfaces() -- ["descriptor_publication.verify"],
+  # Exercise the shared runner inputs without adding rows to the certified census.
+  def publication_cases(cases) do
+    surfaces = ["descriptor_publication.verify"]
+    profile_cases(cases, surfaces) ++ kind_cases(cases, surfaces)
+  end
+
+  defp profile_cases(cases, surfaces) do
+    for surface <- surfaces,
+        max_revision = if(surface == "descriptor_publication.verify", do: 8, else: 3),
         {suffix, profile, code} <- [
           {"null-profile", nil, "invalid_profile"},
           {"null-algorithms", %{"algorithms" => nil}, "invalid_profile"},
           {"null-revisions", %{"revisions" => nil}, "invalid_profile"},
           {"empty-profile", %{}, nil},
-          {"missing-algorithms", %{"revisions" => %{"min" => 1, "max" => 3}}, nil},
+          {"missing-algorithms", %{"revisions" => %{"min" => 1, "max" => max_revision}}, nil},
           {"missing-revisions",
            %{"algorithms" => ["EdDSA", "Ed25519", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]}, nil}
         ] do
@@ -233,8 +243,8 @@ defmodule CharterAgreementProtocol.RunnerInputCases do
     bytes
   end
 
-  defp kind_cases(cases) do
-    for surface <- Corpus.surfaces() -- ["descriptor_publication.verify"],
+  defp kind_cases(cases, surfaces) do
+    for surface <- surfaces,
         {kind, value} <- [
           {"integer", "[1]"},
           {"integer", "{}"},

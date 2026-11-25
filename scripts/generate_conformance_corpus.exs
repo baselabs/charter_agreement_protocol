@@ -1,6 +1,7 @@
 Code.require_file("signing_prepare_cases.exs", __DIR__)
 Code.require_file("ed25519_key_cases.exs", __DIR__)
 Code.require_file("runner_input_cases.exs", __DIR__)
+Code.require_file("descriptor_publication_corpus.exs", __DIR__)
 
 alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest, ExtensionRegistry}
 alias CharterAgreementProtocol.Conformance.Corpus
@@ -2542,19 +2543,7 @@ cases =
     end
   end) ++ Enum.map(shared_lifecycle_ids, &Map.fetch!(shared_lifecycle_cases, &1))
 
-# Keep the signed descriptor histories in the certified files, including
-# the ML-DSA signatures when regeneration runs on a limited substrate.
-publication_cases =
-  root
-  |> Path.join("cases/*descriptor*-verify.json")
-  |> Path.wildcard()
-  |> Kernel.++([Path.join(root, "cases/signing-prepare.json")])
-  |> Enum.flat_map(fn path ->
-    %{"cases" => retained} = path |> File.read!() |> :json.decode()
-    Enum.filter(retained, &String.starts_with?(&1["id"], "descriptor-publication-"))
-  end)
-
-cases = cases ++ publication_cases
+cases = cases ++ CharterAgreementProtocol.DescriptorPublicationCorpus.cases()
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 

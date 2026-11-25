@@ -49,8 +49,13 @@ defmodule CharterAgreementProtocol.DescriptorPublicationTest do
 
     float_revision = Map.put(document, "protocol_revision", 8.0)
 
-    assert {:error, %Error{code: :descriptor_publication_invalid}} =
+    assert {:error, %Error{code: :invalid_type}} =
              CAP.encode_descriptor_publication(float_revision, limits)
+
+    empty_compact = Map.put(document, "descriptors", ["", List.last(document["descriptors"])])
+
+    assert {:error, %Error{code: :descriptor_publication_invalid}} =
+             CAP.encode_descriptor_publication(empty_compact, limits)
   end
 
   test "key ids and retired keys are excluded from the complete active key set" do
