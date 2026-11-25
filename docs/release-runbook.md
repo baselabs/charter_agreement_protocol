@@ -174,15 +174,17 @@ ExDoc build is not byte-stable, so docs bytes are never compared: docs the regis
 already serves for this version are kept. The keyed step only uploads the two
 verified archives, package first, using `mix run --no-mix-exs` from
 `release-assets/`, where there is no `mix.exs` and no project is loaded. The uploader
-re-reads the served state immediately before each docs POST. For a staged
-package, it first checks the stage checksum and then confirms the release is
-still unpublished. A second publisher or an approval between the final read and
-the POST is the residual race, controlled by custody of the publication key. No
-project code runs with the publication key.
+re-reads the served state before each POST. It skips a matching package and
+docs that the final read reports as served. For a staged package, it first
+checks the stage checksum and then confirms the release is still unpublished.
+The uploader follows no redirects and retries no POSTs. A second publisher or
+an approval between the final read and the POST is the residual race,
+controlled by custody of the publication key. No project code runs with that
+key.
 
 A release or its docs may be held for approval. After the owner approves, dispatch
 `publish.yml` again on the same commit. The workflow checks the rebuilt package
-against the served package and uploads only what is missing. The run succeeds only
+against the served package. The run succeeds only
 when read-back serves the matching package and a readable docs archive containing
 root `index.html` and `release.json`. The record must name this package and version
 and a commit equal to the dispatched commit or an ancestor in the repository's
