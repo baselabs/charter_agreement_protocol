@@ -218,20 +218,26 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
 
     assert ReleaseCompatibility.verify_reverse!(row, baseline, old, named) == 1
 
-    assert_raise RuntimeError, ~r/unrecorded.*new-case/, fn ->
-      ReleaseCompatibility.verify_reverse!(%{transitions: []}, baseline, old, named)
-    end
+    assert_raise RuntimeError,
+                 ~r/unrecorded.*new-case.*baseline: "chain_invalid".*candidate: %\{/,
+                 fn ->
+                   ReleaseCompatibility.verify_reverse!(%{transitions: []}, baseline, old, named)
+                 end
 
-    assert_raise RuntimeError, ~r/no longer firing.*new-case/, fn ->
-      ReleaseCompatibility.verify_reverse!(row, baseline, named, named)
-    end
+    assert_raise RuntimeError,
+                 ~r/no longer firing.*new-case.*baseline: %\{.*candidate: %\{/,
+                 fn ->
+                   ReleaseCompatibility.verify_reverse!(row, baseline, named, named)
+                 end
 
-    assert_raise RuntimeError, ~r/outcome drift.*new-case/, fn ->
-      wrong_code =
-        Map.put(old, "corpus_runner/new-case", observation("chain.verify", "invalid_type"))
+    wrong_code =
+      Map.put(old, "corpus_runner/new-case", observation("chain.verify", "invalid_type"))
 
-      ReleaseCompatibility.verify_reverse!(row, baseline, wrong_code, named)
-    end
+    assert_raise RuntimeError,
+                 ~r/outcome drift.*new-case.*baseline: "invalid_type".*candidate: %\{/,
+                 fn ->
+                   ReleaseCompatibility.verify_reverse!(row, baseline, wrong_code, named)
+                 end
 
     assert_raise RuntimeError, ~r/witness .* disagrees with red_to_green/, fn ->
       path = [:transitions, Access.at(0), :witnesses, Access.at(0), :to]

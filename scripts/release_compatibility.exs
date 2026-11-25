@@ -123,24 +123,37 @@ defmodule CharterAgreementProtocol.ReleaseCompatibility do
           do: {id, change(before, later)}
 
     if expected != changed do
-      unexpected = Map.drop(changed, Map.keys(expected)) |> Enum.sort()
-      stale = Map.drop(expected, Map.keys(changed)) |> Enum.sort()
-
-      drift =
-        Enum.filter(changed, fn {id, pair} ->
-          Map.has_key?(expected, id) and expected[id] != pair
-        end)
-
       raise """
       reverse differential #{baseline}: compatibility witnesses disagree
-      unrecorded: #{inspect(unexpected, limit: :infinity)}
-      no longer firing: #{inspect(stale, limit: :infinity)}
-      outcome drift: #{inspect(Enum.sort(drift), limit: :infinity)}
+      #{mismatch_report(expected, changed, actual, candidate)}
       """
     end
 
     map_size(changed)
   end
+
+  defp mismatch_report(expected, changed, actual, candidate) do
+    (Map.keys(expected) ++ Map.keys(changed))
+    |> Enum.uniq()
+    |> Enum.sort()
+    |> Enum.reject(&(expected[&1] == changed[&1]))
+    |> Enum.map_join("\n", fn id ->
+      recorded = expected[id]
+      reason = mismatch_reason(recorded, changed[id])
+
+      outcomes = [
+        recorded: recorded,
+        baseline: actual[id]["value"],
+        candidate: candidate[id]["value"]
+      ]
+
+      "#{reason} #{id}: #{inspect(outcomes, limit: :infinity, printable_limit: :infinity)}"
+    end)
+  end
+
+  defp mismatch_reason(nil, _observed), do: "unrecorded"
+  defp mismatch_reason(_recorded, nil), do: "no longer firing"
+  defp mismatch_reason(_recorded, _observed), do: "outcome drift"
 
   defp operations(observed) do
     Map.new(observed, fn {id, %{"operation" => operation}} -> {id, operation} end)

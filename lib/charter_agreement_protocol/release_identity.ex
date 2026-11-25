@@ -205,7 +205,6 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               cases: ~w(
                 signing-legacy-successor-without-accepted-parent
                 signing-legacy-supersession-target-still-proposed
-                signing-termination-without-accepted-predecessor
               )
             }
           ]
