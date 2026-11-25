@@ -261,17 +261,15 @@ defmodule CharterAgreementProtocol.SigningInput do
     }
   end
 
-  defp valid_fields?(%__MODULE__{
-         kind: kind,
-         protected_segment: protected,
-         payload_segment: payload,
-         message: message
-       }) do
+  defp valid_fields?(input) do
+    kind = Map.get(input, :kind)
+    protected = Map.get(input, :protected_segment)
+    payload = Map.get(input, :payload_segment)
+    message = Map.get(input, :message)
+
     kind in Map.keys(@types) and is_binary(protected) and protected != "" and
       is_binary(payload) and payload != "" and message == protected <> "." <> payload
   end
-
-  defp valid_fields?(_input), do: false
 
   defp decode_kind(:party_descriptor, compact, limits),
     do: PartyDescriptor.decode(compact, limits)

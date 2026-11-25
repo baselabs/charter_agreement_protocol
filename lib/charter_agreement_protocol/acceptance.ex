@@ -250,19 +250,17 @@ defmodule CharterAgreementProtocol.Acceptance do
 
   def equivocation(_left, _right), do: equivocation_error()
 
-  defp equivocation_coordinates?(%AcceptanceFacts{
-         charter_id: charter,
-         revision_number: number,
-         party_descriptor_digest: descriptor,
-         party_role: role,
-         revision_digest: revision,
-         acceptance_digest: acceptance
-       }) do
+  defp equivocation_coordinates?(facts) do
+    charter = Map.get(facts, :charter_id)
+    number = Map.get(facts, :revision_number)
+    descriptor = Map.get(facts, :party_descriptor_digest)
+    role = Map.get(facts, :party_role)
+    revision = Map.get(facts, :revision_digest)
+    acceptance = Map.get(facts, :acceptance_digest)
+
     is_binary(charter) and is_integer(number) and is_binary(descriptor) and is_binary(role) and
       is_binary(revision) and is_binary(acceptance)
   end
-
-  defp equivocation_coordinates?(_facts), do: false
 
   @doc "Return an Acceptance's domain-separated content digest."
   @spec digest(t()) :: binary()

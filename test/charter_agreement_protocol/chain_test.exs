@@ -592,6 +592,7 @@ defmodule CharterAgreementProtocol.ChainTest do
           Map.delete(at, :year),
           Map.delete(at, :calendar),
           %{at | day: 99},
+          %{at | hour: nil},
           %{at | second: 99},
           %{at | zone_abbr: nil},
           %{at | calendar: nil}

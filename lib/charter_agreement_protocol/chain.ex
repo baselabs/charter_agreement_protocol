@@ -139,17 +139,15 @@ defmodule CharterAgreementProtocol.Chain do
 
   def governing_revision(_facts, _at), do: invalid_type()
 
-  defp governing_facts_shape?(%ChainFacts{
-         revision_facts: revisions,
-         termination_facts: notices,
-         superseded_revision_digests: superseded
-       }) do
+  defp governing_facts_shape?(facts) do
+    revisions = Map.get(facts, :revision_facts)
+    notices = Map.get(facts, :termination_facts)
+    superseded = Map.get(facts, :superseded_revision_digests)
+
     Retained.binaries?(superseded) and Retained.list?(revisions) and Retained.list?(notices) and
       Enum.all?(revisions, &governing_revision_shape?/1) and
       Enum.all?(notices, &governing_notice_shape?/1)
   end
-
-  defp governing_facts_shape?(_facts), do: false
 
   defp governing_revision_shape?(%RevisionFacts{
          revision: revision,
@@ -845,9 +843,7 @@ defmodule CharterAgreementProtocol.Chain do
          microsecond: {microsecond, precision}
        })
        when is_binary(abbreviation) and is_atom(calendar) and is_integer(year) and
-              is_integer(month) and is_integer(day) and is_integer(hour) and
-              is_integer(minute) and is_integer(second) and is_integer(microsecond) and
-              precision in 0..6 do
+              is_integer(month) and is_integer(day) and precision in 0..6 do
     with {:ok, date} <- Date.new(year, month, day, calendar),
          {:ok, time} <- Time.new(hour, minute, second, {microsecond, precision}, calendar),
          {:ok, datetime} <- DateTime.new(date, time, "Etc/UTC", UTCOnlyTimeZoneDatabase) do
