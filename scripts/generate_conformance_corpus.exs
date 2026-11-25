@@ -2800,7 +2800,8 @@ supplemental_cases =
     id -> shared_lifecycle_cases |> Map.fetch!(id) |> case_with_genesis_identity.()
   end)
 
-cases = cases ++ CharterAgreementProtocol.DescriptorPublicationCorpus.cases() ++ supplemental_cases
+cases =
+  cases ++ CharterAgreementProtocol.DescriptorPublicationCorpus.cases() ++ supplemental_cases
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 
