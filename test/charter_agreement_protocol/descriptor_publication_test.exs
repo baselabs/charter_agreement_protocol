@@ -3,7 +3,7 @@ defmodule CharterAgreementProtocol.DescriptorPublicationTest do
   use ExUnit.Case, async: true
 
   alias CharterAgreementProtocol, as: CAP
-  alias CAP.{Capability, DescriptorPublicationFacts, Error, Facts, Limits}
+  alias CAP.{Capability, CompactJws, DescriptorPublicationFacts, Error, Facts, Limits}
   alias CAP.Conformance.{Corpus, Runner}
 
   test "the Ed25519 publication vectors verify the complete history and pair" do
@@ -139,6 +139,24 @@ defmodule CharterAgreementProtocol.DescriptorPublicationTest do
 
     assert {:error, %Error{code: :descriptor_invalid}} =
              CAP.descriptor_next_key_commitment(List.duplicate(nil, 33), limits)
+  end
+
+  test "signed revision-8 framing is confined to party descriptors" do
+    %{"descriptors" => [compact | _]} = "opened" |> publication_text() |> JSON.decode!()
+    [header, payload, signature] = String.split(compact, ".")
+    protected = Base.url_decode64!(header, padding: false)
+
+    for type <- ["cap+acceptance", "cap+termination", "cap+receipt"] do
+      changed =
+        protected
+        |> String.replace("cap+party", type)
+        |> Base.url_encode64(padding: false)
+
+      compact = Enum.join([changed, payload, signature], ".")
+
+      assert {:error, %Error{code: :protected_header_invalid}} =
+               CompactJws.parse(compact, type, Limits.default())
+    end
   end
 
   test "ML-DSA history follows the capability lane's certified verdict" do

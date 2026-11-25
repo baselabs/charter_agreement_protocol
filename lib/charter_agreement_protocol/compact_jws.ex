@@ -142,7 +142,7 @@ defmodule CharterAgreementProtocol.CompactJws do
              {:ok, protected} <- canonical_value(protected_bytes, limits, :protected),
              {:ok, {alg, kid}} <- protected_header(protected, expected_typ),
              {:ok, payload} <- canonical_value(payload_bytes, limits, :payload, expected_typ),
-             :ok <- bind_algorithm(alg, payload),
+             :ok <- bind_algorithm(alg, payload, expected_typ),
              {:ok, signature} <- bounded_signature(signature_raw, alg) do
           {:ok,
            %__MODULE__{
@@ -224,8 +224,11 @@ defmodule CharterAgreementProtocol.CompactJws do
   # row together — EdDSA at any accepted revision, Ed25519 from revision 2.
   # Revision range alone is the per-artifact schemas' job; this binds the
   # pair. This is the one place header and payload coexist.
-  defp bind_algorithm(alg, {:object, members}) do
+  defp bind_algorithm(alg, {:object, members}, typ) do
     case List.keyfind(members, "protocol_revision", 0) do
+      {"protocol_revision", {:integer, 8}} when typ != "cap+party" ->
+        protected_error()
+
       {"protocol_revision", {:integer, revision}} ->
         if Algorithm.binds?(alg, revision), do: :ok, else: protected_error()
 
@@ -234,7 +237,7 @@ defmodule CharterAgreementProtocol.CompactJws do
     end
   end
 
-  defp bind_algorithm(_alg, _payload), do: protected_error()
+  defp bind_algorithm(_alg, _payload, _typ), do: protected_error()
 
   defp valid_kid?(kid) when is_binary(kid) and byte_size(kid) in 1..128,
     do: kid_bytes?(kid)
