@@ -33,7 +33,13 @@ cardinalities. The following are enforced by the codec and the normative text
   bodies, hint URIs).
 - Cross-field rules: conditional member presence (successor-only members),
   timestamp ordering, decision/outcome pairing, and genesis shape. Only
-  revision 8 admits the descriptor commitment member.
+  revision 8 admits the descriptor commitment member. Acceptance and charter
+  revision schemas have separate closed branches for legacy and revision-8
+  claims, so the revision-specific member sets are enforced by the schemas.
+- Quorum roles are sorted and distinct, and thresholds depend on which
+  roles are eligible and how many the rule names. The schemas express
+  member types, cardinality, and the empty zero-threshold assignment rule.
+  The remaining quorum and assignment rules are in core §§6.1–6.2.
 - Extension namespace cardinality and the critical/optional exclusivity
   invariant (the dialect has no `maxProperties`).
 
@@ -49,4 +55,6 @@ report instance validates) and one constructed single-defect negative per
 shipped constraint (dropped required member, unknown member, wrong type,
 wrong enumeration, violated bound), each observed to fail. The completed
 seeds inject grammar-valid values for optional members so every constraint
-carries both directions.
+carries both directions. The gate completes a seed for each legacy and
+revision-8 branch and compares each branch's member and required sets
+with its compiled codec definition.

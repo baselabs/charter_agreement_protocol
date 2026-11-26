@@ -36,6 +36,9 @@ release.
   error across framing, claims, signature verification, profile, and limits.
 - Bind the producer algorithm and revision pairs, artifact-list check order,
   and descriptor history order to their requirements.
+- Express the legacy and revision-8 acceptance and charter claim shapes as
+  closed alternatives in the bounded wire schema dialect. The verifier
+  checks quorum role ordering, uniqueness, and bindings.
 
 ## 2026-11-25 — descriptor key commitments and publication
 

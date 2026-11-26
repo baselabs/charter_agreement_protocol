@@ -3,7 +3,9 @@ Code.require_file("runner_input_cases.exs", __DIR__)
 alias CharterAgreementProtocol.Conformance.{Cli, Report}
 
 alias CharterAgreementProtocol.{
+  Acceptance,
   Base64Url,
+  CharterRevision,
   Conformance.Corpus,
   Conformance.Report,
   Conformance.Runner,
@@ -231,11 +233,14 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
   ]
 
   @artifact_sources %{
-    "acceptance-claims" => "lib/charter_agreement_protocol/acceptance.ex",
-    "charter-revision-claims" => "lib/charter_agreement_protocol/charter_revision.ex",
     "party-descriptor-claims" => "lib/charter_agreement_protocol/party_descriptor.ex",
     "receipt-claims" => "lib/charter_agreement_protocol/receipt.ex",
     "termination-claims" => "lib/charter_agreement_protocol/termination_notice.ex"
+  }
+
+  @revisioned_codecs %{
+    "acceptance-claims" => Acceptance,
+    "charter-revision-claims" => CharterRevision
   }
 
   def run do
@@ -243,27 +248,14 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
     member_census(schemas)
     closure_census(schemas)
 
-    seeds =
-      Map.new(build_seeds(), fn {name, seed} ->
-        {name, complete(schema_document(schemas, name), seed)}
-      end)
+    seeds = Map.new(build_seeds())
 
     {seed_positives, negatives} =
       Enum.reduce(schemas, {0, 0}, fn {name, document, parsed}, {positives, count} ->
-        seed = Map.fetch!(seeds, name)
-        assert_valid(name, "completed seed", parsed, seed)
+        variants = seed_variants(name, document, Map.fetch!(seeds, name))
+        emitted = Enum.sum_by(variants, &check_seed(name, document, parsed, &1))
 
-        emitted =
-          document
-          |> defects(document, seed, [])
-          |> Enum.map(fn {label, operation} = defect ->
-            defective = apply_defect(seed, operation)
-            assert_invalid(name, label, parsed, defective)
-            defect
-          end)
-          |> length()
-
-        {positives + 1, count + emitted}
+        {positives + length(variants), count + emitted}
       end)
 
     corpus_positives = validate_corpus_artifacts(schemas)
@@ -272,6 +264,18 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
       "wire schemas: ok schemas=#{length(schemas)} seeds=#{seed_positives} " <>
         "corpus_positives=#{corpus_positives} negatives=#{negatives}"
     )
+  end
+
+  defp check_seed(name, document, parsed, {variant, input}) do
+    seed = complete_node(document, variant, input)
+    assert_valid(name, "completed seed", parsed, seed)
+    defects = defects(document, variant, seed, [])
+
+    Enum.each(defects, fn {label, operation} ->
+      assert_invalid(name, label, parsed, apply_defect(seed, operation))
+    end)
+
+    length(defects)
   end
 
   ## Schema loading — resolved once per run
@@ -313,22 +317,40 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
   # set of the compiled codec definition it serves.
   defp member_census(schemas) do
     Enum.each(@artifact_sources, fn {schema_name, source_path} ->
-      {^schema_name, document, _parsed} = List.keyfind(schemas, schema_name, 0)
-
-      declared = declared_fields(source_path)
-      properties = document |> properties_of() |> Enum.map(&elem(&1, 0)) |> Enum.sort()
-      required = document |> schema_member("required") |> member_names() |> Enum.sort()
-
-      unless properties == Enum.map(declared, &elem(&1, 0)) |> Enum.sort() do
-        raise "wire schema members diverge from the codec definition: #{schema_name}\n" <>
-                "schema: #{inspect(properties)}\ncodec: #{inspect(Enum.map(declared, &elem(&1, 0)))}"
-      end
-
-      unless required ==
-               Enum.filter(declared, &elem(&1, 1)) |> Enum.map(&elem(&1, 0)) |> Enum.sort() do
-        raise "wire schema required set diverges from the codec definition: #{schema_name}"
-      end
+      document = schema_document(schemas, schema_name)
+      assert_codec_fields(schema_name, document, declared_fields(source_path))
     end)
+
+    Enum.each(@revisioned_codecs, fn {name, codec} ->
+      document = schema_document(schemas, name)
+
+      Enum.each(claim_variants(document), fn {revision, variant} ->
+        definition = codec.definition(revision)
+        declared = Enum.map(definition.fields, &{&1.name, &1.required?})
+        assert_codec_fields("#{name} revision #{revision}", variant, declared)
+      end)
+    end)
+  end
+
+  defp assert_codec_fields(name, document, declared) do
+    properties = document |> properties_of() |> Enum.map(&elem(&1, 0)) |> Enum.sort()
+    required = document |> schema_member("required") |> member_names() |> Enum.sort()
+
+    unless properties == Enum.map(declared, &elem(&1, 0)) |> Enum.sort() do
+      raise "wire schema members diverge from the codec definition: #{name}\n" <>
+              "schema: #{inspect(properties)}\n" <>
+              "codec: #{inspect(Enum.map(declared, &elem(&1, 0)))}"
+    end
+
+    unless required ==
+             Enum.filter(declared, &elem(&1, 1)) |> Enum.map(&elem(&1, 0)) |> Enum.sort() do
+      raise "wire schema required set diverges from the codec definition: #{name}"
+    end
+  end
+
+  defp claim_variants(document) do
+    {:array, [legacy, revision_eight]} = schema_member(document, "oneOf")
+    [{1, legacy}, {8, revision_eight}]
   end
 
   # Every schema object that names properties is closed — the wire grammar
@@ -396,6 +418,31 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
   defp literal_string(literal) when is_binary(literal), do: literal
 
   ## Seeds — live corpus and report documents
+
+  defp seed_variants(name, document, legacy) when is_map_key(@revisioned_codecs, name) do
+    [{1, legacy_schema}, {8, revision_eight_schema}] = claim_variants(document)
+    [{legacy_schema, legacy}, {revision_eight_schema, revision_eight_seed(name)}]
+  end
+
+  defp seed_variants(_name, document, seed), do: [{document, seed}]
+
+  defp revision_eight_seed("acceptance-claims") do
+    {:string, compact} =
+      "acceptance-verify.json"
+      |> named_case_input!("assignment-assignor-pairing")
+      |> member!("compact")
+
+    compact_payload(compact)
+  end
+
+  defp revision_eight_seed("charter-revision-claims") do
+    {:string, text} =
+      "charter_revision-decode.json"
+      |> named_case_input!("quorum-three-party-roster")
+      |> member!("text")
+
+    decode!(text)
+  end
 
   defp build_seeds do
     descriptor = case_compact("party_descriptor-verify.json", 0)
@@ -549,8 +596,6 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
   end
 
   ## Seed completion — inject grammar-valid values for absent optional members
-
-  defp complete(document, seed), do: complete_node(document, document, seed)
 
   defp complete_node(document, node, instance) do
     node = resolve(document, node)
@@ -1111,6 +1156,15 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
       {"cases", {:array, cases}} = List.keyfind(members, "cases", 0)
       Enum.at(cases, index)
     end)
+  end
+
+  defp named_case_input!(file, id) do
+    {:array, cases} = member!(corpus_file!("cases/" <> file), "cases")
+
+    case Enum.find(cases, &(member!(&1, "id") == {:string, id})) do
+      nil -> raise "missing wire schema seed: #{id}"
+      one -> input_of(one)
+    end
   end
 
   defp compact_payload(compact) do

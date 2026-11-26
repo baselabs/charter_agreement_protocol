@@ -9,73 +9,101 @@
    "type": "string",
    "minLength": 20,
    "maxLength": 64
-  }
- },
- "type": "object",
- "required": [
-  "protocol_revision",
-  "charter_id",
-  "revision_number",
-  "revision_digest",
-  "party_descriptor_digest",
-  "party_role",
-  "accepted_at"
- ],
- "properties": {
-  "protocol_revision": {
-   "enum": [
-    1,
-    2,
-    3,
-    8
-   ]
-  },
-  "charter_id": {
-   "$ref": "#/$defs/tagged_digest"
-  },
-  "revision_number": {
-   "type": "integer",
-   "minimum": 1,
-   "maximum": 9007199254740991
-  },
-  "revision_digest": {
-   "$ref": "#/$defs/tagged_digest"
-  },
-  "prev_revision_digest": {
-   "$ref": "#/$defs/tagged_digest"
-  },
-  "party_descriptor_digest": {
-   "$ref": "#/$defs/tagged_digest"
   },
   "party_role": {
    "type": "string",
    "minLength": 1,
    "maxLength": 128
-  },
-  "accepted_at": {
-   "$ref": "#/$defs/timestamp"
-  },
-  "replacement_role": {
-   "type": "string",
-   "minLength": 1,
-   "maxLength": 128
   }
  },
- "additionalProperties": false,
- "allOf": [
+ "oneOf": [
   {
-   "if": {
-    "required": [
-     "replacement_role"
-    ]
-   },
-   "then": {
-    "properties": {
-     "protocol_revision": {
-      "const": 8
-     }
+   "type": "object",
+   "required": [
+    "protocol_revision",
+    "charter_id",
+    "revision_number",
+    "revision_digest",
+    "party_descriptor_digest",
+    "party_role",
+    "accepted_at"
+   ],
+   "properties": {
+    "protocol_revision": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 3
+    },
+    "charter_id": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "revision_number": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 9007199254740991
+    },
+    "revision_digest": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "prev_revision_digest": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "party_descriptor_digest": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "party_role": {
+     "$ref": "#/$defs/party_role"
+    },
+    "accepted_at": {
+     "$ref": "#/$defs/timestamp"
     }
-   }
+   },
+   "additionalProperties": false
+  },
+  {
+   "type": "object",
+   "required": [
+    "protocol_revision",
+    "charter_id",
+    "revision_number",
+    "revision_digest",
+    "party_descriptor_digest",
+    "party_role",
+    "accepted_at"
+   ],
+   "properties": {
+    "protocol_revision": {
+     "type": "integer",
+     "const": 8
+    },
+    "charter_id": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "revision_number": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 9007199254740991
+    },
+    "revision_digest": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "prev_revision_digest": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "party_descriptor_digest": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "party_role": {
+     "$ref": "#/$defs/party_role"
+    },
+    "accepted_at": {
+     "$ref": "#/$defs/timestamp"
+    },
+    "replacement_role": {
+     "$ref": "#/$defs/party_role"
+    }
+   },
+   "additionalProperties": false
   }
  ]
 }

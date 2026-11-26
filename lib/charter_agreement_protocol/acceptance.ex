@@ -318,8 +318,10 @@ defmodule CharterAgreementProtocol.Acceptance do
     end
   end
 
-  defp definition(8), do: @revision_eight_definition
-  defp definition(_revision), do: @definition
+  @doc false
+  @spec definition(integer()) :: Schema.Definition.t()
+  def definition(8), do: @revision_eight_definition
+  def definition(_revision), do: @definition
 
   defp extract({:object, members}, envelope) do
     values = Map.new(members)

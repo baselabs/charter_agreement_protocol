@@ -24,6 +24,7 @@
  ],
  "properties": {
   "protocol_revision": {
+   "type": "integer",
    "enum": [
     1,
     2,

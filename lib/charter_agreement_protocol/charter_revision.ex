@@ -434,18 +434,23 @@ defmodule CharterAgreementProtocol.CharterRevision do
          :ok <- IntegerClaims.check(:charter_revision, value),
          {:ok, canonical} <- Canonicalization.encode(value),
          :ok <- exact_bytes(bytes, canonical),
-         {:ok, validated} <- Schema.validate(definition(value), value) do
+         {:ok, validated} <- Schema.validate(definition_for_claims(value), value) do
       extract(validated, bytes)
     end
   end
 
-  defp definition({:object, members}) do
+  defp definition_for_claims({:object, members}) do
     if List.keyfind(members, "protocol_revision", 0) == {"protocol_revision", {:integer, 8}},
-      do: @quorum_revision_definition,
-      else: @definition
+      do: definition(8),
+      else: definition(1)
   end
 
-  defp definition(_value), do: @definition
+  defp definition_for_claims(_value), do: definition(1)
+
+  @doc false
+  @spec definition(integer()) :: Schema.Definition.t()
+  def definition(8), do: @quorum_revision_definition
+  def definition(_revision), do: @definition
 
   defp exact_bytes(bytes, bytes), do: :ok
 
