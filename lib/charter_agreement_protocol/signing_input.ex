@@ -139,8 +139,7 @@ defmodule CharterAgreementProtocol.SigningInput do
          :ok <- exact_signature_length(signature, length),
          true <- valid_fields?(input),
          compact <- input.message <> "." <> Base64Url.encode(signature),
-         {:ok, _artifact} <- decode_kind(input.kind, compact, limits),
-         true <- byte_size(compact) <= limits.max_bytes do
+         {:ok, _artifact} <- decode_kind(input.kind, compact, limits) do
       {:ok, compact}
     else
       :signature_length -> signature_invalid()
@@ -180,8 +179,7 @@ defmodule CharterAgreementProtocol.SigningInput do
          true <- claims_revision(kind, claims_value, revision),
          {:ok, payload_bytes} <- Canonicalization.encode(claims_value),
          {:ok, protected_bytes} <- protected(operation, kid, alg),
-         signing_input <- frame(operation, alg, protected_bytes, payload_bytes),
-         true <- valid_fields?(signing_input),
+         signing_input = frame(operation, alg, protected_bytes, payload_bytes),
          %{signature_bytes: signature_bytes} <- Algorithm.row_for(alg),
          signature_segment_length <- Kernel.trunc(Float.ceil(signature_bytes * 4 / 3)),
          true <-

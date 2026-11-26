@@ -67,6 +67,7 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
     signing-retained-lineage-guard-skip
     signing-runtime-cache-skip
     signing-retained-shape-skip
+    signing-legacy-emission-pair-relaxed
     jcs-number-defeat
     padding-acceptance
     separator-collapse

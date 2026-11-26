@@ -204,6 +204,9 @@ defmodule CharterAgreementProtocol.CharterRevisionTest do
     assert {:error, %Error{code: :invalid_type}} =
              CharterAgreementProtocol.decode_charter_revision(:not_bytes, Limits.default())
 
+    assert {:error, %Error{code: :invalid_type, subject: ["charter_revision"]}} =
+             CharterAgreementProtocol.decode_charter_revision("null", Limits.default())
+
     invalid_limits = %{Limits.default() | max_bytes: -1}
 
     assert {:error, %Error{code: :invalid_limits}} =

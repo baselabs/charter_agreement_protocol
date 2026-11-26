@@ -9,6 +9,7 @@ defmodule CharterAgreementProtocol.SigningInputTest do
     Canonicalization,
     Capability.Profile,
     ChainFixture,
+    CharterRevisionFixture,
     DescriptorFixture,
     Error,
     Limits,
@@ -599,6 +600,117 @@ defmodule CharterAgreementProtocol.SigningInputTest do
                envelope(setup.issuer.kid, missing_termination),
                genesis_set
              )
+  end
+
+  test "the producer refuses a verifiable non-emission legacy pair" do
+    descriptor = DescriptorFixture.genesis(claims: %{"protocol_revision" => 3})
+    input = %{"kid" => descriptor.kid, "claims" => descriptor.claims, "algorithm" => "Ed25519"}
+    header = %{"alg" => "Ed25519", "kid" => descriptor.kid, "typ" => "cap+party"}
+
+    published =
+      DescriptorFixture.compact(descriptor.claims, descriptor.kid, descriptor.private,
+        protected: header
+      )
+
+    assert {:ok, _facts} =
+             CharterAgreementProtocol.verify_descriptor(published.compact, nil, Limits.default())
+
+    assert {:error, %Error{code: :signing_input_invalid}} =
+             CharterAgreementProtocol.descriptor_signing_input(input)
+  end
+
+  test "an arbiter outside both quorums can assent to an assignment" do
+    setup = ChainFixture.base()
+    arbiter = DescriptorFixture.genesis(key: DescriptorFixture.key(3, "arbiter-key"))
+    assignee = DescriptorFixture.genesis(key: DescriptorFixture.key(4, "assignee-key"))
+    fields = quorum_revision_fields(setup, arbiter)
+    genesis = CharterRevisionFixture.genesis(claims: fields)
+    unchanged = CharterRevisionFixture.successor(genesis, 2, claims: fields)
+
+    replacement = %{
+      "role" => "issuer",
+      "assignor_party_id" => setup.issuer.party_id,
+      "assignor_descriptor_digest" => setup.issuer.digest,
+      "assignee_descriptor_digest" => assignee.digest,
+      "assent_quorum" => %{"roles" => ["acceptor"], "threshold" => 1}
+    }
+
+    assigned_fields =
+      fields
+      |> put_in(["parties", Access.at(2), "party_descriptor_digest"], assignee.digest)
+      |> Map.put("party_replacements", [replacement])
+
+    assigned = CharterRevisionFixture.successor(genesis, 2, claims: assigned_fields)
+
+    vote =
+      genesis
+      |> AcceptanceFixture.claims(setup.issuer, "issuer", %{"protocol_revision" => 8})
+      |> AcceptanceFixture.compact(setup.issuer, alg: "Ed25519")
+
+    descriptors = [arbiter.compact | ChainFixture.descriptors(setup)]
+
+    for {successor, context_descriptors, expected} <- [
+          {unchanged, descriptors, :error},
+          {assigned, [assignee.compact | descriptors], :ok}
+        ] do
+      assert {:ok, set} =
+               CharterAgreementProtocol.build_set(
+                 [genesis.bytes, successor.bytes],
+                 [vote.compact],
+                 [],
+                 context_descriptors
+               )
+
+      assert {:ok, chain} =
+               CharterAgreementProtocol.verify_chain(
+                 set.revisions,
+                 set.acceptances,
+                 set.descriptors,
+                 set.terminations,
+                 Limits.default()
+               )
+
+      assert chain.accepted_revision_digests == [genesis.digest]
+
+      claims =
+        AcceptanceFixture.claims(successor, arbiter, "arbiter", %{"protocol_revision" => 8})
+
+      result =
+        CharterAgreementProtocol.acceptance_signing_input(
+          %{"kid" => arbiter.kid, "claims" => claims},
+          set
+        )
+
+      case expected do
+        :ok -> assert {:ok, %SigningInput{kind: :acceptance}} = result
+        :error -> assert {:error, %Error{code: :signing_refused}} = result
+      end
+    end
+  end
+
+  defp quorum_revision_fields(setup, arbiter) do
+    parties = [
+      quorum_binding("acceptor", setup.acceptor, "acceptor"),
+      quorum_binding("arbiter", arbiter, "arbiter"),
+      quorum_binding("issuer", setup.issuer, "acceptor")
+    ]
+
+    rule = %{"roles" => ["acceptor", "issuer"], "threshold" => 1}
+
+    %{
+      "protocol_revision" => 8,
+      "parties" => parties,
+      "acceptance_quorum" => rule,
+      "termination_rules" => %{"reason_codes" => ["mutual", "breach"], "quorum" => rule}
+    }
+  end
+
+  defp quorum_binding(role, descriptor, participation) do
+    %{
+      "role" => role,
+      "party_descriptor_digest" => descriptor.digest,
+      "participation" => participation
+    }
   end
 
   @tag skip:

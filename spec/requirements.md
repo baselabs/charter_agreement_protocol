@@ -10,9 +10,9 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ## Bound evidence
 
-- Requirements: 109
+- Requirements: 110
 - Corpus cells: 113
-- Named mutations: 95
+- Named mutations: 96
 
 ## Requirements
 
@@ -190,6 +190,12 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 - Corpus: `signing.prepare:valid`
 - Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
+
+### CAP-SIGNING-emission-pairs
+
+- Corpus: `signing.prepare:valid`, `signing.prepare:invalid_constraint`
+- Gate: `CharterAgreementProtocol.SigningInputTest`
+- Mutation: `signing-legacy-emission-pair-relaxed`
 
 ### CAP-SIGNING-declared-key-refusal
 
@@ -628,7 +634,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ### CAP-CHAIN-artifact-set-bounds
 
-- Corpus: `chain.verify:exact_bound`, `chain.verify:maximum_plus_one`
+- Corpus: `chain.verify:exact_bound`, `chain.verify:maximum_plus_one`, `chain.verify:invalid_type`
 - Gate: `CharterAgreementProtocol.Architecture.ChainRoutingShapeTest`
 - Mutation: `artifact-set-bytes-ceiling-skip`
 

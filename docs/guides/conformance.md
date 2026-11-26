@@ -29,7 +29,7 @@ is the one place in the guides where they are recorded.
 | Corpus digest | `sha-256:YWWrKUBf9INHHAfLipSBV4-n5dHpJbZU0yX85MV3aLo` |
 | Index SHA-256 (base64url) | `m0lyG1Uk49ESNy6ZvhUaSwP35vX80oHvJvJ2WDO0hC4` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:NyFIlXE_m1sbgqHYQ9_rPLDfxVD7JosrDGLDkPij3lg` |
+| Specification digest | `sha-256:rdXTWCJkV20OTtDN9is3LqSTsm_yLaTU5unqpnUvbGg` |
 | Cases | 773, in 17 case files |
 
 The [TypeScript source pin](../../priv/verifier-source.json) selects the

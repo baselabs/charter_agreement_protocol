@@ -34,6 +34,8 @@ release.
   signature length, claims, and signature verification errors reached by
   revision-8 votes. Legacy duplicate-vote cases pin the later artifact's
   error across framing, claims, signature verification, profile, and limits.
+- Bind the producer algorithm and revision pairs, artifact-list check order,
+  and descriptor history order to their requirements.
 
 ## 2026-11-25 — descriptor key commitments and publication
 

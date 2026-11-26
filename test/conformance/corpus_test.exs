@@ -729,10 +729,52 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       assert %{"typ" => "cap+acceptance"} = header
       assert {:ok, plan} = CAP.prepare_signing(operation, request, set, limits, profile)
       assert plan.signing_input == frame
+      assert {:ok, _compact} = CAP.assemble_compact(frame, <<0::512>>)
+
+      assert {:error, %Error{code: :signing_input_invalid}} =
+               CAP.assemble_compact(%{frame | kind: wrong}, <<0::512>>)
+
+      payload = Base.url_encode64("{}", padding: false)
+      message = frame.protected_segment <> "." <> payload
+      broken = %{frame | payload_segment: payload, message: message}
+
+      assert {:error, %Error{code: :signing_input_invalid}} =
+               CAP.assemble_compact(broken, <<0::512>>)
+
       assert {:error, %Error{code: :signing_refused}} = wrong_producer.(claims, set)
 
       assert {:error, %Error{code: :signing_refused}} =
                CAP.prepare_signing(wrong, request, set, limits, profile)
+    end
+  end
+
+  test "set-aware producers require matching coordinates for an otherwise eligible role" do
+    acceptance = shipped_input("signing-prepare", "signing-assignment-incoming-party")
+    termination = shipped_input("signing-prepare", "signing-quorum-termination-second-role")
+    accept_set = signing_context(acceptance["context"])
+    terminate_set = signing_context(termination["context"])
+    vote = Map.take(acceptance, ["kid", "claims", "algorithm"])
+    notice = Map.take(termination, ["kid", "claims", "algorithm"])
+    digest = vote["claims"]["revision_digest"]
+    assert {:ok, _frame} = CAP.acceptance_signing_input(vote, accept_set)
+    assert {:ok, _frame} = CAP.termination_signing_input(notice, terminate_set)
+
+    for {field, value} <- [
+          {"charter_id", digest},
+          {"revision_number", 3},
+          {"prev_revision_digest", digest}
+        ] do
+      mismatched = put_in(vote, ["claims", field], value)
+
+      assert {:error, %Error{code: :signing_refused}} =
+               CAP.acceptance_signing_input(mismatched, accept_set)
+    end
+
+    for field <- ["charter_id", "party_descriptor_digest"] do
+      mismatched = put_in(notice, ["claims", field], digest)
+
+      assert {:error, %Error{code: :signing_refused}} =
+               CAP.termination_signing_input(mismatched, terminate_set)
     end
   end
 
@@ -746,6 +788,24 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       request = Map.take(input, ["kid", "claims", "algorithm"])
 
       assert {:error, %Error{code: ^error}} = CAP.party_replacement_signing_input(request, set)
+    end
+  end
+
+  test "set-aware producers refuse votes with a wire revision incompatible with the charter" do
+    for {id, revision, producer} <- [
+          {"signing-ed25519-acceptance", 8, &CAP.acceptance_signing_input/2},
+          {"signing-assignment-incoming-party", 2, &CAP.acceptance_signing_input/2},
+          {"signing-ed25519-termination", 8, &CAP.termination_signing_input/2},
+          {"signing-quorum-termination-second-role", 2, &CAP.termination_signing_input/2}
+        ] do
+      input = shipped_input("signing-prepare", id)
+      set = signing_context(input["context"])
+      request = Map.take(input, ["kid", "claims", "algorithm"])
+
+      assert {:ok, _frame} = producer.(request, set)
+
+      mismatched = put_in(request, ["claims", "protocol_revision"], revision)
+      assert {:error, %Error{code: :signing_refused}} = producer.(mismatched, set)
     end
   end
 

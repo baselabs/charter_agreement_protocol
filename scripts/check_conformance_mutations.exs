@@ -721,6 +721,13 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
       command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
     },
     %{
+      name: "signing-legacy-emission-pair-relaxed",
+      path: "lib/charter_agreement_protocol/signing_input.ex",
+      from: ~s(      {"protocol_revision", {:integer, ^revision}} ->),
+      to: ~s(      {"protocol_revision", {:integer, legacy}} when legacy in [revision, 3] ->),
+      command: ~w(mix test test/charter_agreement_protocol/signing_input_test.exs --seed 42)
+    },
+    %{
       name: "corpus-expectation-flip",
       path: "priv/conformance/cases/base64url-decode.json",
       from:

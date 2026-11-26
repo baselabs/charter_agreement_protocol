@@ -232,6 +232,12 @@ defmodule CharterAgreementProtocol.RequirementMap do
        {:corpus, ["signing.prepare:valid"]},
        {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest}
      ]},
+    {"CAP-SIGNING-emission-pairs",
+     [
+       {:corpus, ["signing.prepare:valid", "signing.prepare:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.SigningInputTest},
+       {:mutation, "signing-legacy-emission-pair-relaxed"}
+     ]},
     {"CAP-SIGNING-declared-key-refusal",
      [
        {:corpus, ["signing.prepare:invalid_constraint"]},
@@ -756,7 +762,12 @@ defmodule CharterAgreementProtocol.RequirementMap do
      ]},
     {"CAP-CHAIN-artifact-set-bounds",
      [
-       {:corpus, ["chain.verify:exact_bound", "chain.verify:maximum_plus_one"]},
+       {:corpus,
+        [
+          "chain.verify:exact_bound",
+          "chain.verify:maximum_plus_one",
+          "chain.verify:invalid_type"
+        ]},
        {:gate, CharterAgreementProtocol.Architecture.ChainRoutingShapeTest},
        {:mutation, "artifact-set-bytes-ceiling-skip"}
      ]},
