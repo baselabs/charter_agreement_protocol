@@ -821,6 +821,20 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     end
   end
 
+  test "checked signing validates the context type before building the input" do
+    limits = Limits.default()
+    profile = Profile.full()
+    assert {:ok, set} = CAP.build_set([], [], [], [])
+
+    for kind <- [:acceptance, :party_replacement, :termination] do
+      assert {:error, %Error{code: :signing_input_invalid, subject: ["signing_input"]}} =
+               CAP.prepare_signing(kind, %{}, set, limits, profile)
+
+      assert {:error, %Error{code: :invalid_type, subject: ["signing_plan"]}} =
+               CAP.prepare_signing(kind, %{}, nil, limits, profile)
+    end
+  end
+
   test "standalone verification rechecks closed retained quorum and replacement shapes" do
     limits = Limits.default()
 
