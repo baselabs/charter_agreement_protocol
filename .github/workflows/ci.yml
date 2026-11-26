@@ -161,12 +161,21 @@ jobs:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
           version-type: strict
+          install-hex: false
 
       - name: Refuse BEAM runtime drift
         env:
           EXPECTED_ELIXIR: ${{ matrix.elixir }}
           EXPECTED_OTP: ${{ matrix.otp }}
         run: scripts/toolchain.sh --installed "elixir=$EXPECTED_ELIXIR" "erlang=$EXPECTED_OTP"
+
+      - name: Install the Hex client pinned by the release action
+        working-directory: ${{ runner.temp }}
+        run: |
+          version="$(curl -fsSL 'https://raw.githubusercontent.com/baselabs/.github/3bfbb84692a65b4d2c03dc3b7932353026fe6943/.github/actions/hex-publish/hex-version')"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test ! -e mix.exs
+          mix local.hex "$version" --force
 
       - name: Install dependencies
         run: mix deps.get --check-locked
@@ -209,12 +218,21 @@ jobs:
           elixir-version: ${{ steps.toolchain.outputs.elixir }}
           otp-version: ${{ steps.toolchain.outputs.otp }}
           version-type: strict
+          install-hex: false
 
       - name: Refuse BEAM runtime drift
         env:
           EXPECTED_ELIXIR: ${{ steps.toolchain.outputs.elixir }}
           EXPECTED_OTP: ${{ steps.toolchain.outputs.otp }}
         run: scripts/toolchain.sh --installed "elixir=$EXPECTED_ELIXIR" "erlang=$EXPECTED_OTP"
+
+      - name: Install the Hex client pinned by the release action
+        working-directory: ${{ runner.temp }}
+        run: |
+          version="$(curl -fsSL 'https://raw.githubusercontent.com/baselabs/.github/3bfbb84692a65b4d2c03dc3b7932353026fe6943/.github/actions/hex-publish/hex-version')"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test ! -e mix.exs
+          mix local.hex "$version" --force
 
       - name: Install dependencies
         run: mix deps.get --check-locked
