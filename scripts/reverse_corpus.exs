@@ -4,11 +4,16 @@ defmodule CharterAgreementProtocol.ReverseCorpus do
   alias CharterAgreementProtocol.Conformance.{Corpus, Runner}
 
   def load!(root) do
+    cases_dir = Path.join(root, "cases")
+
     files =
-      root
-      |> Path.join("{index.json,cases/*.json}")
-      |> Path.wildcard()
-      |> Map.new(&{Path.relative_to(&1, root), File.read!(&1)})
+      cases_dir
+      |> File.ls!()
+      |> Enum.filter(&String.ends_with?(&1, ".json"))
+      |> Map.new(fn name ->
+        {Path.join("cases", name), File.read!(Path.join(cases_dir, name))}
+      end)
+      |> Map.put("index.json", File.read!(Path.join(root, "index.json")))
 
     {:ok, corpus} = Corpus.load(files)
     corpus

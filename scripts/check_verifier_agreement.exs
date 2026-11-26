@@ -16,6 +16,7 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
   @escript "charter_agreement_protocol"
   @cap_repository "https://github.com/baselabs/charter_agreement_protocol.git"
   @metadata "priv/release-metadata.json"
+  @no_maintenance ["-c", "maintenance.auto=false", "-c", "gc.auto=0"]
 
   @seeded_reds [
     %{
@@ -104,7 +105,9 @@ defmodule CharterAgreementProtocol.VerifierAgreementGate do
     try do
       {_output, 0} = System.cmd("git", ["init", "--quiet", "--bare"], cd: scratch)
       args = ["fetch", "--quiet", "--no-tags", "--depth=1", @cap_repository, commit]
-      {_output, 0} = System.cmd("git", args, cd: scratch, stderr_to_stdout: true)
+
+      {_output, 0} =
+        System.cmd("git", @no_maintenance ++ args, cd: scratch, stderr_to_stdout: true)
 
       {bytes, 0} =
         System.cmd("git", ["cat-file", "blob", blob], cd: scratch, stderr_to_stdout: true)
