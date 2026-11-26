@@ -24,13 +24,11 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 - Record limited-substrate outcomes for receipt preparation when an ML-DSA
   chain blocks verification before malformed claims are checked.
 
-
 - Add shared verdict cases for partial receipt views, termination at equal
   instants, and sibling repair. Record explicit outcomes for limited runtimes.
 
 - Read CI runtime defaults and compatibility lanes only through the shared
   toolchain reader, with exact installed-version checks.
-
 
 - Qualify landing candidates once through `qualified`, enforce exact CI runtimes
   and locked dependency fetching, and separate authorized registry publication

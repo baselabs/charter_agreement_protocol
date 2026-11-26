@@ -132,9 +132,6 @@
       "spec/schemas/timestamp.json",
       "spec/security-considerations.md"
     ],
-    "requirements": {},
-    "aliases": [
-      "baselabs/charter_agreement_protocol"
-    ]
+    "requirements": {}
   }
 }
