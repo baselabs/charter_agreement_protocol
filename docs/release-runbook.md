@@ -37,7 +37,7 @@ the last one hashes every shipped file, so it has to see the final bytes.
 2. **Index SHA-256 pins.** Put the new index SHA-256 in
    `@certified_index_sha256_base64url` in
    `lib/charter_agreement_protocol/conformance/cli.ex` and in `@index_sha` in
-   `test/architecture/package_boundary_test.exs`.
+   `test/architecture/release_metadata_test.exs`.
 
 3. **Requirements matrix.** Update the evidence in
    `lib/charter_agreement_protocol/requirement_map.ex` for any new corpus
@@ -161,62 +161,35 @@ resolve when the published commit is tagged after registry readback.
 
 ## 5. Publication
 
-The release operator owns the `publish` environment and its `HEX_API_KEY`. The release operator obtains release
-authorization and dispatches `.github/workflows/publish.yml` on the default branch
-with the full qualified SHA as `release_commit`. The first job checks default-branch
-history, the successful `qualified` check and the absence of a version tag before
-checkout. The workflow takes the registry scripts from its own revision, then builds
-the requested commit in a job without the publish environment. The upload job verifies
-checksums and runs the workflow revision’s uploader. The build installs the exact runtime and locked dependencies without a dependency cache,
-builds the docs, and checks package contents and reproducibility. It builds the
-package archive and the docs archive once into `release-assets/`. After the docs
-build and before packing, it writes root `release.json` with exactly `package`,
-`version` and `commit`; the commit is the validated `release_commit`.
+CI builds the package and HTML documentation from locked dependencies and
+records the package, version and source commit in the docs archive's
+`release.json`. The `qualified` check requires that build to pass. Its CI run
+retains the two archives and their manifest for seven days.
 
-The registry check reads public Hex anonymously. A package name the registry lacks is refused: a first
-publication is the owner's decision. A retired version or differing served package
-bytes is refused. The package is the release; docs are a rendering of it, and an
-ExDoc build is not byte-stable, so docs bytes are never compared: docs the registry
-already serves for this version are kept. The keyed step only uploads the two
-verified archives, package first, using `mix run --no-mix-exs` from
-the runner's temporary directory, with absolute paths to the verified
-archives. The uploader re-reads the served state before each POST. It skips a matching package and
-docs that the final read reports as served. For a staged package, it first
-checks the stage checksum and then confirms the release is still unpublished.
-The uploader preserves a matching pending stage with its docs. Hex's client can
-resend an in-flight upload if the connection drops before the response. It also
-retains the key across a redirect from Hex. A second publisher or approval after
-the final read or between attempts is the residual race, controlled by custody of
-the publication key. Only the isolated upload job receives that key.
+With release authorization, the release operator dispatches `publish.yml` on
+the default branch using the full qualified SHA as `release_commit`. The
+upload job verifies the qualification run and archives, requires the package
+to exist, and checks the version tag, stamped changelog and registry state.
+It checks for an OTP application version collision across Hex repositories.
+The upload job alone uses the `publish` environment and exchanges its
+workload identity for a short-lived package-scoped token when Hex needs an
+upload.
 
-After the owner approves a held upload, dispatch `publish.yml` again with the
-same `release_commit`. An earlier matching stage may hold only the package.
-Approving that stage publishes the package alone. The next dispatch checks the
-served package bytes and uploads the missing docs. If Hex holds the docs for
-approval too, approve them and dispatch once more with the same
-`release_commit`. The run succeeds only
-when read-back serves the matching package and a readable docs archive containing
-root `index.html` and `release.json`. The record must name this package and version
-and a commit equal to the dispatched commit or an ancestor in the repository's
-history. That is the published commit; missing or invalid provenance is refused.
-`release.json` is the uploader's record, not an attestation or protection against
-a forged claim.
+After approval of a held release or docs upload, dispatch again with the same
+`release_commit` and the original CI run ID as `qualification_run`. Read-back
+checks both served archives against the same qualification and requires
+`release.json` to identify the dispatched commit. It exports those archives
+and `SHA256SUMS` in `release-assets`. If the qualification has expired, a
+fresh run can proceed only if its archives match any bytes Hex already serves.
 
-Read-back replaces the built docs archive in `release-assets` with the served
-archive. The workflow then records `SHA256SUMS` and exports the `release-assets`
-artifact, so its docs are exactly the bytes downloaded and inspected from Hex.
-After read-back, the release operator creates and pushes `v<version>` on the published commit
-named by the served docs' `release.json`, compares the package archive in
-`release-assets` with the registry's bytes, and creates the GitHub release
-`v<version>` from those assets. Consumers download the
-archives and `SHA256SUMS` from that GitHub release and compare the checksums with
-the registry's package checksum. The workflow never creates a release or pushes a
-tag. Release preparation does not hold a registry key, publish from a workstation,
-dispatch publication or push tags. Never move a published tag or overwrite a
-release. Publishing remains outside Mix aliases and project callbacks.
+After read-back, the release operator compares the package archive in
+`release-assets` with Hex's checksum and creates the version tag and GitHub
+release on the commit named by the served `release.json`. Consumers verify the
+downloaded archives using `SHA256SUMS` and the registry's package checksum.
+Never move a published tag or overwrite a release.
 
-The static hub is a separate publication: the release operator dispatches `pages.yml` on the
-default branch to stage and deploy the committed site.
+The static hub is a separate publication. The release operator dispatches
+`pages.yml` on the default branch to stage and deploy the committed site.
 
 ## 6. After publishing
 

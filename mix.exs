@@ -128,6 +128,7 @@ defmodule CharterAgreementProtocol.MixProject do
 
   defp docs do
     [
+      formatters: ["html"],
       main: "readme",
       source_ref: "v#{@version}",
       source_url: @source_url,

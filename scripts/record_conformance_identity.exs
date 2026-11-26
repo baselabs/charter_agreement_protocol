@@ -16,7 +16,7 @@ replace.(
   index_sha
 )
 
-replace.("test/architecture/package_boundary_test.exs", ~r/(@index_sha ")[^"]+/, index_sha)
+replace.("test/architecture/release_metadata_test.exs", ~r/(@index_sha ")[^"]+/, index_sha)
 
 spec_digest =
   "spec/**/*"

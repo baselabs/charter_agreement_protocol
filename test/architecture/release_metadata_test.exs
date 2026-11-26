@@ -1,9 +1,9 @@
-defmodule CharterAgreementProtocol.Architecture.PackageBoundaryTest do
+defmodule CharterAgreementProtocol.Architecture.ReleaseMetadataTest do
   use ExUnit.Case, async: true
 
   @index_sha "m0lyG1Uk49ESNy6ZvhUaSwP35vX80oHvJvJ2WDO0hC4"
 
-  test "the explicit package boundary includes certified release evidence and excludes tooling" do
+  test "the package ships release evidence without maintainer tooling" do
     files = CharterAgreementProtocol.MixProject.project()[:package][:files]
 
     assert "priv/release-metadata.json" in files

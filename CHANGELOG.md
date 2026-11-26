@@ -4,6 +4,10 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+- Qualify the Hex package and documentation in CI and publish those exact
+  archives through the shared release action. Reuse the qualification run
+  when retrying publication.
+
 - Verify revision-8 party quorums and declared assignments from signed
   acceptances and descriptor histories. Resolve receipt signing keys by
   the issuing role's owner at the occurrence instant.
@@ -27,8 +31,6 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 - Read CI runtime defaults and compatibility lanes only through the shared
   toolchain reader, with exact installed-version checks.
 
-- Require served docs provenance in `release.json`, name its commit as the published
-  commit, and export the served docs archive after read-back.
 
 - Qualify landing candidates once through `qualified`, enforce exact CI runtimes
   and locked dependency fetching, and separate authorized registry publication
