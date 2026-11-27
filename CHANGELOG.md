@@ -4,6 +4,10 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+- Verify per-party signer scopes on revision-8 descriptors. Exclude outside
+  votes from acceptance, assignment and termination counts, check scope
+  before signing, and retain the matched scope as a verification fact.
+
 - Qualify the Hex package and documentation in CI and publish those exact
   archives through the shared release action. Reuse the qualification run
   when retrying publication.

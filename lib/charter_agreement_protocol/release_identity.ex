@@ -167,9 +167,370 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     %{
       package_versions: ["1.1.0"],
       verification_semantics: 7,
-      census_digest: "sha-256:YWWrKUBf9INHHAfLipSBV4-n5dHpJbZU0yX85MV3aLo",
+      census_digest: "sha-256:HX8S7sjbzp4YggO7e8aaO5omlHek6cOwgD52PkGOAtM",
       protocol_revisions: [1, 2, 3, 8],
       transitions: [
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          operation: "acceptance.verify",
+          description:
+            "Admit signer-scoped descriptor evidence and apply its pinned artifact rules.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "valid",
+              cases: ~w(
+                signer-scope-acceptance-empty-ed25519
+                signer-scope-acceptance-empty-mldsa65
+                signer-scope-acceptance-historical-ed25519
+                signer-scope-acceptance-historical-mldsa65
+                signer-scope-acceptance-matched-ed25519
+                signer-scope-acceptance-matched-mldsa65
+                signer-scope-acceptance-outside-ed25519
+                signer-scope-acceptance-outside-mldsa65
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          operation: "chain.verify",
+          description:
+            "Admit signer-scoped descriptor evidence and apply its pinned artifact rules.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "valid",
+              cases: ~w(
+                signer-scope-chain-matched-ed25519
+                signer-scope-chain-matched-mldsa65
+                signer-scope-chain-outside-ed25519
+                signer-scope-chain-outside-mldsa65
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          operation: "descriptor_publication.verify",
+          description:
+            "Admit signer-scoped descriptor evidence and apply its pinned artifact rules.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "invalid_type",
+              to: "valid",
+              cases: ~w(
+                signer-scope-publication-matched-ed25519
+                signer-scope-publication-matched-mldsa65
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          operation: "descriptor_publication.verify",
+          description:
+            "Return the typed signer-scope or claims error reached after admission.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "invalid_type",
+              to: "descriptor_chain_invalid",
+              cases: ~w(
+                signer-scope-publication-outside-ed25519
+                signer-scope-publication-outside-mldsa65
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          operation: "governing_revision",
+          description:
+            "Admit signer-scoped descriptor evidence and apply its pinned artifact rules.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "valid",
+              cases: ~w(
+                signer-scope-governing-matched-ed25519
+                signer-scope-governing-matched-mldsa65
+                signer-scope-governing-outside-ed25519
+                signer-scope-governing-outside-mldsa65
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          operation: "party_descriptor.verify",
+          description:
+            "Admit signer-scoped descriptor evidence and apply its pinned artifact rules.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "valid",
+              cases: ~w(
+                signer-scope-descriptor-genesis-ed25519
+                signer-scope-descriptor-genesis-mldsa65
+                signer-scope-successor-matched-ed25519
+                signer-scope-successor-matched-mldsa65
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          operation: "party_descriptor.verify",
+          description:
+            "Return the typed signer-scope or claims error reached after admission.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "cardinality_violation",
+              cases: ~w(
+                signer-scope-grammar-role-count-ed25519
+                signer-scope-grammar-role-count-mldsa65
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "descriptor_chain_invalid",
+              cases: ~w(
+                signer-scope-successor-outside-ed25519
+                signer-scope-successor-outside-mldsa65
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "descriptor_invalid",
+              cases: ~w(
+                signer-scope-grammar-key-retired-ed25519
+                signer-scope-grammar-key-retired-mldsa65
+                signer-scope-grammar-key-undeclared-ed25519
+                signer-scope-grammar-key-undeclared-mldsa65
+                signer-scope-grammar-kind-type-ed25519
+                signer-scope-grammar-kind-type-mldsa65
+                signer-scope-grammar-kind-unknown-ed25519
+                signer-scope-grammar-kind-unknown-mldsa65
+                signer-scope-grammar-kinds-duplicate-ed25519
+                signer-scope-grammar-kinds-duplicate-mldsa65
+                signer-scope-grammar-kinds-unsorted-ed25519
+                signer-scope-grammar-kinds-unsorted-mldsa65
+                signer-scope-grammar-roles-duplicate-ed25519
+                signer-scope-grammar-roles-duplicate-mldsa65
+                signer-scope-grammar-roles-unsorted-ed25519
+                signer-scope-grammar-roles-unsorted-mldsa65
+                signer-scope-grammar-signers-duplicate-ed25519
+                signer-scope-grammar-signers-duplicate-mldsa65
+                signer-scope-grammar-signers-unsorted-ed25519
+                signer-scope-grammar-signers-unsorted-mldsa65
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "invalid_type",
+              cases: ~w(
+                signer-scope-grammar-array-type-ed25519
+                signer-scope-grammar-array-type-mldsa65
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "nested_invalid",
+              cases: ~w(
+                signer-scope-grammar-kind-count-ed25519
+                signer-scope-grammar-kind-count-mldsa65
+                signer-scope-grammar-kinds-missing-ed25519
+                signer-scope-grammar-kinds-missing-mldsa65
+                signer-scope-grammar-kinds-type-ed25519
+                signer-scope-grammar-kinds-type-mldsa65
+                signer-scope-grammar-role-byte-bound-ed25519
+                signer-scope-grammar-role-byte-bound-mldsa65
+                signer-scope-grammar-role-empty-ed25519
+                signer-scope-grammar-role-empty-mldsa65
+                signer-scope-grammar-role-member-ed25519
+                signer-scope-grammar-role-member-mldsa65
+                signer-scope-grammar-role-missing-ed25519
+                signer-scope-grammar-role-missing-mldsa65
+                signer-scope-grammar-role-type-ed25519
+                signer-scope-grammar-role-type-mldsa65
+                signer-scope-grammar-signer-count-ed25519
+                signer-scope-grammar-signer-count-mldsa65
+                signer-scope-grammar-signer-member-ed25519
+                signer-scope-grammar-signer-member-mldsa65
+                signer-scope-grammar-signer-missing-thumbprint-ed25519
+                signer-scope-grammar-signer-missing-thumbprint-mldsa65
+                signer-scope-grammar-signers-missing-ed25519
+                signer-scope-grammar-signers-missing-mldsa65
+                signer-scope-grammar-signers-type-ed25519
+                signer-scope-grammar-signers-type-mldsa65
+                signer-scope-grammar-thumbprint-grammar-ed25519
+                signer-scope-grammar-thumbprint-grammar-mldsa65
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          operation: "receipt.verify",
+          description:
+            "Admit signer-scoped descriptor evidence and apply its pinned artifact rules.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "valid",
+              cases: ~w(
+                signer-scope-receipt-matched-ed25519
+                signer-scope-receipt-matched-mldsa65
+                signer-scope-receipt-outside-ed25519
+                signer-scope-receipt-outside-mldsa65
+                signer-scope-receipt-unverified-unrecognized-revision-ed25519
+                signer-scope-receipt-unverified-unrecognized-revision-mldsa65
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "valid",
+              cases: ~w(
+                signer-scope-receipt-unverified-bare-revision-ed25519
+                signer-scope-receipt-unverified-bare-revision-mldsa65
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          operation: "signing.prepare",
+          description:
+            "Admit signer-scoped descriptor evidence and apply its pinned artifact rules.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "valid",
+              cases: ~w(
+                signer-scope-prepare-receipt-matched-ed25519
+                signer-scope-prepare-receipt-matched-mldsa65
+                signer-scope-prepare-successor-matched-ed25519
+                signer-scope-prepare-successor-matched-mldsa65
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "signing_input_invalid",
+              to: "valid",
+              cases: ~w(
+                signer-scope-prepare-acceptance-matched-ed25519
+                signer-scope-prepare-acceptance-matched-mldsa65
+                signer-scope-prepare-termination-matched-ed25519
+                signer-scope-prepare-termination-matched-mldsa65
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          operation: "signing.prepare",
+          description:
+            "Return the typed signer-scope or claims error reached after admission.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "descriptor_chain_invalid",
+              cases: ~w(
+                signer-scope-prepare-successor-outside-ed25519
+                signer-scope-prepare-successor-outside-mldsa65
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "protected_header_invalid",
+              to: "signing_refused",
+              cases: ~w(
+                signer-scope-prepare-receipt-outside-ed25519
+                signer-scope-prepare-receipt-outside-mldsa65
+              )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "signing_input_invalid",
+              to: "signing_refused",
+              cases: ~w(
+                signer-scope-prepare-acceptance-outside-ed25519
+                signer-scope-prepare-acceptance-outside-mldsa65
+                signer-scope-prepare-termination-outside-ed25519
+                signer-scope-prepare-termination-outside-mldsa65
+              )
+            }
+          ]
+        },
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          operation: "termination.verify",
+          description:
+            "Admit signer-scoped descriptor evidence and apply its pinned artifact rules.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "unknown_member",
+              to: "valid",
+              cases: ~w(
+                signer-scope-termination-empty-ed25519
+                signer-scope-termination-empty-mldsa65
+                signer-scope-termination-historical-ed25519
+                signer-scope-termination-historical-mldsa65
+                signer-scope-termination-matched-ed25519
+                signer-scope-termination-matched-mldsa65
+                signer-scope-termination-outside-ed25519
+                signer-scope-termination-outside-mldsa65
+              )
+            }
+          ]
+        },
         %{
           class: :verdict_narrowing,
           direction: :green_to_red,

@@ -201,6 +201,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
         "party_descriptor_digest" => facts.party_descriptor_digest,
         "descriptor_position" => Atom.to_string(facts.descriptor_position)
       }
+      |> scope_projection(facts)
     end)
   end
 
@@ -232,6 +233,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
         "reason_code" => facts.reason_code,
         "descriptor_position" => Atom.to_string(facts.descriptor_position)
       }
+      |> scope_projection(facts)
     end)
   end
 
@@ -290,6 +292,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
         "deployment_digest_matched" => facts.deployment_digest_matched,
         "optional_extensions_retained" => facts.optional_extensions_retained
       }
+      |> scope_projection(facts)
     end)
   end
 
@@ -321,6 +324,16 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   end
 
   defp execute(_one, _profile), do: invalid(:invalid_type)
+
+  defp scope_projection(output, %{scope_status: status, signer_thumbprint: thumbprint})
+       when status in [:matched, :outside] do
+    Map.merge(output, %{
+      "scope_status" => Atom.to_string(status),
+      "signer_thumbprint" => thumbprint
+    })
+  end
+
+  defp scope_projection(output, _facts), do: output
 
   defp binding_projection([]), do: nil
 

@@ -83,57 +83,172 @@
     }
    },
    "additionalProperties": false
+  },
+  "scope_signer": {
+   "type": "object",
+   "required": [
+    "key_thumbprint",
+    "artifact_kinds"
+   ],
+   "properties": {
+    "key_thumbprint": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "artifact_kinds": {
+     "type": "array",
+     "minItems": 0,
+     "maxItems": 4,
+     "items": {
+      "enum": [
+       "acceptance",
+       "descriptor",
+       "receipt",
+       "termination"
+      ]
+     }
+    }
+   },
+   "additionalProperties": false
+  },
+  "signing_scope": {
+   "type": "object",
+   "required": [
+    "role",
+    "signers"
+   ],
+   "properties": {
+    "role": {
+     "type": "string",
+     "minLength": 1,
+     "maxLength": 128
+    },
+    "signers": {
+     "type": "array",
+     "minItems": 0,
+     "maxItems": 32,
+     "items": {
+      "$ref": "#/$defs/scope_signer"
+     }
+    }
+   },
+   "additionalProperties": false
   }
  },
- "type": "object",
- "required": [
-  "protocol_revision",
-  "descriptor_number",
-  "verification_keys",
-  "attestation_hints",
-  "extensions",
-  "effective_from"
- ],
- "properties": {
-  "protocol_revision": {
-   "enum": [1, 2, 3, 8]
+ "oneOf": [
+  {
+   "type": "object",
+   "required": [
+    "protocol_revision",
+    "descriptor_number",
+    "verification_keys",
+    "attestation_hints",
+    "extensions",
+    "effective_from"
+   ],
+   "properties": {
+    "protocol_revision": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 3
+    },
+    "party_id": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "descriptor_number": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 9007199254740991
+    },
+    "prev_descriptor_digest": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "verification_keys": {
+     "type": "array",
+     "minItems": 1,
+     "maxItems": 32,
+     "items": {
+      "$ref": "#/$defs/verification_key"
+     }
+    },
+    "attestation_hints": {
+     "type": "array",
+     "minItems": 0,
+     "maxItems": 16,
+     "items": {
+      "$ref": "#/$defs/attestation_hint"
+     }
+    },
+    "extensions": {
+     "$ref": "#/$defs/extension_envelope"
+    },
+    "effective_from": {
+     "$ref": "#/$defs/timestamp"
+    }
+   },
+   "additionalProperties": false
   },
-  "party_id": {
-   "$ref": "#/$defs/tagged_digest"
-  },
-  "descriptor_number": {
-   "type": "integer",
-   "minimum": 1,
-   "maximum": 9007199254740991
-  },
-  "prev_descriptor_digest": {
-   "$ref": "#/$defs/tagged_digest"
-  },
-  "next_key_commitment": {
-   "$ref": "#/$defs/tagged_digest"
-  },
-  "verification_keys": {
-   "type": "array",
-   "minItems": 1,
-   "maxItems": 32,
-   "items": {
-    "$ref": "#/$defs/verification_key"
-   }
-  },
-  "attestation_hints": {
-   "type": "array",
-   "minItems": 0,
-   "maxItems": 16,
-   "items": {
-    "$ref": "#/$defs/attestation_hint"
-   }
-  },
-  "extensions": {
-   "$ref": "#/$defs/extension_envelope"
-  },
-  "effective_from": {
-   "$ref": "#/$defs/timestamp"
+  {
+   "type": "object",
+   "required": [
+    "protocol_revision",
+    "descriptor_number",
+    "verification_keys",
+    "attestation_hints",
+    "extensions",
+    "effective_from"
+   ],
+   "properties": {
+    "protocol_revision": {
+     "type": "integer",
+     "minimum": 8,
+     "maximum": 8
+    },
+    "party_id": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "descriptor_number": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 9007199254740991
+    },
+    "prev_descriptor_digest": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "next_key_commitment": {
+     "$ref": "#/$defs/tagged_digest"
+    },
+    "verification_keys": {
+     "type": "array",
+     "minItems": 1,
+     "maxItems": 32,
+     "items": {
+      "$ref": "#/$defs/verification_key"
+     }
+    },
+    "attestation_hints": {
+     "type": "array",
+     "minItems": 0,
+     "maxItems": 16,
+     "items": {
+      "$ref": "#/$defs/attestation_hint"
+     }
+    },
+    "extensions": {
+     "$ref": "#/$defs/extension_envelope"
+    },
+    "effective_from": {
+     "$ref": "#/$defs/timestamp"
+    },
+    "signing_scopes": {
+     "type": "array",
+     "minItems": 0,
+     "maxItems": 64,
+     "items": {
+      "$ref": "#/$defs/signing_scope"
+     }
+    }
+   },
+   "additionalProperties": false
   }
- },
- "additionalProperties": false
+ ]
 }

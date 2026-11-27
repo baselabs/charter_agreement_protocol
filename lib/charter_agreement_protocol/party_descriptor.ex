@@ -20,6 +20,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     Extension,
     Facts,
     Internal.Retained,
+    Internal.SigningScope,
     Json,
     Limits,
     Schema,
@@ -65,6 +66,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     :descriptor_number,
     :prev_descriptor_digest,
     :next_key_commitment,
+    :signing_scopes,
     :verification_keys,
     :attestation_hints,
     :extensions,
@@ -79,6 +81,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
           descriptor_number: pos_integer(),
           prev_descriptor_digest: nil | binary(),
           next_key_commitment: nil | binary(),
+          signing_scopes: nil | [SigningScope.t()],
           verification_keys: [VerificationKey.t()],
           attestation_hints: [AttestationHint.t()],
           extensions: CharterAgreementProtocol.Json.value(),
@@ -263,8 +266,10 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
 
   def decode(_compact, _limits), do: {:error, Error.new(:invalid_type, ["limits"])}
 
-  defp definition(8), do: @definition
-  defp definition(_legacy), do: @legacy_definition
+  @doc false
+  @spec definition(integer()) :: Schema.Definition.t()
+  def definition(8), do: %{@definition | fields: @definition.fields ++ [SigningScope.field()]}
+  def definition(_legacy), do: @legacy_definition
 
   @doc "Return the descriptor's domain-separated content digest."
   @spec digest(t()) :: binary()
@@ -343,6 +348,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
          {:ok, keys} <- verification_keys(values["verification_keys"], protocol_revision),
          :ok <- unique_active_keys(keys),
          :ok <- unique_key_material(keys, protocol_revision),
+         {:ok, scopes} <- decode_scopes(values["signing_scopes"], keys),
          {:ok, hints} <- attestation_hints(values["attestation_hints"]),
          {:ok, extension_outcome} <-
            Extension.validate(values["extensions"], :party_descriptor),
@@ -355,6 +361,7 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
          descriptor_number: descriptor_number,
          prev_descriptor_digest: previous,
          next_key_commitment: promise,
+         signing_scopes: scopes,
          verification_keys: keys,
          attestation_hints: hints,
          extensions: values["extensions"],
@@ -438,6 +445,10 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     for %VerificationKey{status: :active} = key <- keys, do: key_thumbprint(key)
   end
 
+  defp decode_scopes(nil, _keys), do: {:ok, nil}
+
+  defp decode_scopes(scopes, keys), do: SigningScope.decode(scopes, active_thumbprints(keys))
+
   defp key_thumbprint(key) do
     {:ok, bytes} =
       Canonicalization.encode_plain(%{
@@ -497,12 +508,27 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
   defp prepare_decoded(descriptor, compact, predecessor, profile) do
     with {:ok, party_id, keys, lineage} <-
            verification_context(descriptor, predecessor, compact, profile) do
-      {:ok, %{artifact: descriptor, party_id: party_id, keys: keys, lineage: lineage}}
+      scope_status = predecessor_scope(predecessor, descriptor.envelope.kid)
+
+      {:ok,
+       %{
+         artifact: descriptor,
+         party_id: party_id,
+         keys: keys,
+         lineage: lineage,
+         scope_status: scope_status
+       }}
     end
   end
 
   defp verify_prepared(
-         %{artifact: descriptor, party_id: party_id, keys: [key], lineage: lineage},
+         %{
+           artifact: descriptor,
+           party_id: party_id,
+           keys: [key],
+           lineage: lineage,
+           scope_status: scope_status
+         },
          profile
        ) do
     with :ok <-
@@ -511,12 +537,23 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
              key.public_key,
              key.algorithm,
              profile
-           ) do
+           ),
+         :ok <- successor_scope(scope_status) do
       {:ok, facts(descriptor, party_id, lineage)}
     end
   end
 
   defp verify_prepared(%{keys: []}, _profile), do: key_error()
+
+  defp predecessor_scope(nil, _kid), do: :not_required
+  defp predecessor_scope(%{descriptor: %{signing_scopes: nil}}, _kid), do: :not_required
+
+  defp predecessor_scope(%{descriptor: descriptor}, kid) do
+    SigningScope.for_key(descriptor, kid, nil, "descriptor").scope_status
+  end
+
+  defp successor_scope(:outside), do: chain_error()
+  defp successor_scope(_scope), do: :ok
 
   defp do_verify_chain_view(compacts, limits, profile) do
     with {:ok, decoded} <- decode_chain_entries(compacts, limits),

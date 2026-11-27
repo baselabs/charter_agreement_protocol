@@ -19,6 +19,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
     Error,
     Facts,
     Internal.Retained,
+    Internal.SigningScope,
     Limits,
     PartyDescriptor,
     Schema,
@@ -250,7 +251,7 @@ defmodule CharterAgreementProtocol.TerminationNotice do
   defp verify_prepared(%{artifact: artifact, descriptor: descriptor, keys: [key]}, profile) do
     with :ok <-
            CompactJws.verify_signature(artifact.envelope, key.public_key, key.algorithm, profile) do
-      {:ok, facts(artifact, descriptor)}
+      {:ok, facts(artifact, descriptor, key)}
     end
   end
 
@@ -405,7 +406,9 @@ defmodule CharterAgreementProtocol.TerminationNotice do
     Enum.filter(descriptor.verification_keys, &(&1.key_id == kid and &1.status == :active))
   end
 
-  defp facts(termination, descriptor) do
+  defp facts(termination, descriptor, key) do
+    scope = SigningScope.facts(descriptor.descriptor, key, termination.party_role, "termination")
+
     {:ok, facts} =
       Facts.build(TerminationFacts, %{
         termination: termination,
@@ -421,7 +424,9 @@ defmodule CharterAgreementProtocol.TerminationNotice do
         issued_at: termination.issued_at,
         detail_digest: termination.detail_digest,
         signing_key_id: termination.envelope.kid,
-        descriptor_position: descriptor.descriptor_position
+        descriptor_position: descriptor.descriptor_position,
+        scope_status: scope.scope_status,
+        signer_thumbprint: scope.signer_thumbprint
       })
 
     facts

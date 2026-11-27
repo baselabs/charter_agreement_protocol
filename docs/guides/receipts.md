@@ -84,6 +84,11 @@ signature made with the wrong key.
 
 ### What the result tells you
 
+Scope follows the issuing role's descriptor in the named accepted revision.
+Read `scope_status` and `signer_thumbprint` for that match. An outside receipt
+remains signed evidence. A bare or unrecognized revision yields
+`scope_status: :not_verified` and a nil thumbprint.
+
 - `governing_match` is `:match` when the receipt's revision governed at
   `occurred_at`, `:mismatch` when another revision did (or none did, for example after
   a termination), and `:undetermined` when the view is contested at that instant.

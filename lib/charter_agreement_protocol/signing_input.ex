@@ -49,6 +49,7 @@ defmodule CharterAgreementProtocol.SigningInput do
     CharterRevision,
     Error,
     Internal.IntegerClaims,
+    Internal.SigningScope,
     Limits,
     PartyDescriptor,
     Quorum,
@@ -295,6 +296,10 @@ defmodule CharterAgreementProtocol.SigningInput do
           {:ok, CharterRevision.t()} | {:error, Error.t()}
   def refusal_check(:acceptance, acceptance, chain) do
     with {:ok, revision} <- acceptance_revision(acceptance, chain),
+         :ok <-
+           SigningScope.refuse(
+             SigningScope.in_chains(acceptance, chain.descriptor_chains, "acceptance")
+           ),
          :ok <- no_equivocation(acceptance, chain),
          :ok <- current_head_in_ancestry(revision, chain),
          do: {:ok, revision}
@@ -302,6 +307,10 @@ defmodule CharterAgreementProtocol.SigningInput do
 
   def refusal_check(:termination, termination, chain) do
     with {:ok, revision} <- termination_revision(termination, chain),
+         :ok <-
+           SigningScope.refuse(
+             SigningScope.in_chains(termination, chain.descriptor_chains, "termination")
+           ),
          :ok <- governing_at_effective_time(termination, revision, chain),
          do: {:ok, revision}
   end
@@ -343,7 +352,12 @@ defmodule CharterAgreementProtocol.SigningInput do
       acceptance.charter_id == charter_id and
       acceptance.revision_number == revision.revision_number and
       acceptance.prev_revision_digest == revision.prev_revision_digest and eligible and
-      Quorum.eligible?(acceptance, revision, previous)
+      eligible_role?(acceptance, revision, previous)
+  end
+
+  defp eligible_role?(acceptance, revision, previous) do
+    (acceptance.replacement_role == nil and revision.party_replacements != []) or
+      Quorum.participation_reason(acceptance, revision, previous) == nil
   end
 
   defp termination_revision(termination, chain) do

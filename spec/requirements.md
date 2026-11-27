@@ -10,11 +10,35 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ## Bound evidence
 
-- Requirements: 110
+- Requirements: 114
 - Corpus cells: 113
-- Named mutations: 96
+- Named mutations: 101
 
 ## Requirements
+
+### CAP-DESCRIPTOR-signer-scopes
+
+- Corpus: `party_descriptor.verify:valid`, `party_descriptor.verify:invalid_constraint`, `party_descriptor.verify:unknown_member`, `descriptor_chain.verify:chain_invalid`, `descriptor_publication.verify:invalid_constraint`
+- Mutation: `scope-successor-kind-bypass`
+
+### CAP-SCOPE-artifact-facts
+
+- Corpus: `acceptance.verify:valid`, `termination.verify:valid`, `receipt.verify:valid`
+- Gate: `CharterAgreementProtocol.SignerScopeTest`
+- Mutation: `scope-artifact-kind-bypass`
+
+### CAP-SCOPE-vote-credit
+
+- Corpus: `chain.verify:valid`, `governing_revision:terminated`
+- Gate: `CharterAgreementProtocol.SignerScopeTest`
+- Mutation: `scope-assignment-assent-bypass`
+- Mutation: `scope-termination-count-bypass`
+
+### CAP-SCOPE-producer-refusal
+
+- Corpus: `signing.prepare:valid`, `signing.prepare:invalid_constraint`
+- Gate: `CharterAgreementProtocol.SignerScopeTest`
+- Mutation: `scope-receipt-preparation-bypass`
 
 ### CAP-QUORUM-roster-and-votes
 

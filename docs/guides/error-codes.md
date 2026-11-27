@@ -109,11 +109,11 @@ Signed artifacts are attached compact JWS strings.
 
 | Code | Meaning | Typical cause | What to do |
 |---|---|---|---|
-| `:descriptor_invalid` | the descriptor's claims are inconsistent | a public key of the wrong length, an ML-DSA key in a revision-1 or revision-2 descriptor, duplicate key ids, no active key, a genesis with `party_id` or a successor without it | reject the input |
+| `:descriptor_invalid` | the descriptor's claims are inconsistent | an invalid public key, duplicate key ids, no active key, invalid genesis or successor coordinates, or unsorted, duplicate or undeclared scope entries | reject the input |
 | `:descriptor_key_invalid` | the signing `kid` is not an active key where it must be | a genesis signed by a key it does not list, or a successor signed by a key that is not active in its predecessor | reject the input |
 | `:descriptor_commitment_mismatch` | a successor did not open the predecessor's key commitment | a missing, extra or different active key, or a legacy successor | check the complete promised set |
 | `:descriptor_publication_invalid` | a publication failed its canonical shape or history rules | a wrong current name, a fork, or an equal effective instant | check the publication and its history |
-| `:descriptor_chain_invalid` | a descriptor history does not link up | no genesis or two, the same descriptor twice, a successor whose number, predecessor digest or `party_id` does not follow, or predecessor facts that do not verify again | reject the input; if you passed the predecessor facts, pass the ones `verify_descriptor` returned |
+| `:descriptor_chain_invalid` | a descriptor history does not link up | missing or duplicate genesis, inconsistent successor coordinates, an invalid predecessor history, or a successor signed outside the predecessor's scope | check the signed history and the predecessor's `descriptor` scope |
 
 ## Charter chain and governing revision
 
@@ -183,7 +183,10 @@ The signing-input functions (`descriptor_signing_input/1`,
 | `:signing_input_invalid` | the input does not describe a valid artifact for this producer | claims that fail the artifact's schema, a `protocol_revision` that does not match the algorithm (`Ed25519` signs at 2, `ML-DSA-65` at 3), an unknown `"algorithm"`, a bad `kid`, extra input members | fix the claims |
 | `:signing_key_invalid` | snapshot key shape fails | wrong registry length or strict point encoding | supply a valid public key |
 | `:signing_key_mismatch` | snapshot differs from every resolved descriptor key | kid, bytes or key algorithm mismatch | check the holder's descriptor key |
-| `:signing_refused` | the claims contradict the signer's own view of the charter | accepting a revision with wrong coordinates, accepting a sibling of a revision the party already accepted, an ancestry that leaves out an accepted head, a notice whose revision does not govern at `effective_at` or whose `reason_code` is not listed | do not sign; correct the claims or the view you passed |
+| `:signing_refused` | the claims contradict the signer's own view of the charter | inconsistent coordinates, acceptance of a competing sibling, incomplete ancestry, an ineligible termination notice, or a signing key outside its declared scope | check the claims, the retained view, and the scope of the selected key |
+
+`:signer_outside_scope` is an acceptance credit reason. Verification still
+returns the acceptance as signed evidence.
 
 `assemble_compact/2` returns `:signing_input_invalid` when framing fields are
 missing or inconsistent. It returns `:signature_invalid` when the signature length is

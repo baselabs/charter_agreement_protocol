@@ -9,6 +9,37 @@ defmodule CharterAgreementProtocol.RequirementMap do
   """
 
   @entries [
+    {"CAP-DESCRIPTOR-signer-scopes",
+     [
+       {:corpus,
+        [
+          "party_descriptor.verify:valid",
+          "party_descriptor.verify:invalid_constraint",
+          "party_descriptor.verify:unknown_member",
+          "descriptor_chain.verify:chain_invalid",
+          "descriptor_publication.verify:invalid_constraint"
+        ]},
+       {:mutation, "scope-successor-kind-bypass"}
+     ]},
+    {"CAP-SCOPE-artifact-facts",
+     [
+       {:corpus, ["acceptance.verify:valid", "termination.verify:valid", "receipt.verify:valid"]},
+       {:gate, CharterAgreementProtocol.SignerScopeTest},
+       {:mutation, "scope-artifact-kind-bypass"}
+     ]},
+    {"CAP-SCOPE-vote-credit",
+     [
+       {:corpus, ["chain.verify:valid", "governing_revision:terminated"]},
+       {:gate, CharterAgreementProtocol.SignerScopeTest},
+       {:mutation, "scope-assignment-assent-bypass"},
+       {:mutation, "scope-termination-count-bypass"}
+     ]},
+    {"CAP-SCOPE-producer-refusal",
+     [
+       {:corpus, ["signing.prepare:valid", "signing.prepare:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.SignerScopeTest},
+       {:mutation, "scope-receipt-preparation-bypass"}
+     ]},
     {"CAP-QUORUM-roster-and-votes",
      [
        {:corpus,

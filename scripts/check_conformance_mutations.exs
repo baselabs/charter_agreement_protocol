@@ -7,6 +7,42 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
 
   @mutations [
     %{
+      name: "scope-successor-kind-bypass",
+      path: "lib/charter_agreement_protocol/party_descriptor.ex",
+      from: "defp successor_scope(:outside), do: chain_error()",
+      to: "defp successor_scope(:outside), do: :ok",
+      command: ~w(mix test test/conformance/runner_report_cli_test.exs --seed 42)
+    },
+    %{
+      name: "scope-artifact-kind-bypass",
+      path: "lib/charter_agreement_protocol/internal/signing_scope.ex",
+      from: "&(&1.key_thumbprint == thumbprint and kind in &1.artifact_kinds)",
+      to: "&(&1.key_thumbprint == thumbprint)",
+      command: ~w(mix test test/charter_agreement_protocol/signer_scope_test.exs --seed 42)
+    },
+    %{
+      name: "scope-assignment-assent-bypass",
+      path: "lib/charter_agreement_protocol/chain.ex",
+      from: "facts.scope_status != :outside and",
+      to: "facts.scope_status in [:matched, :outside, :not_required, :not_verified] and",
+      command: ~w(mix test test/charter_agreement_protocol/signer_scope_test.exs --seed 42)
+    },
+    %{
+      name: "scope-termination-count-bypass",
+      path: "lib/charter_agreement_protocol/chain.ex",
+      from: "vote.scope_status != :outside",
+      to: "vote.scope_status != :not_verified",
+      command: ~w(mix test test/charter_agreement_protocol/signer_scope_test.exs --seed 42)
+    },
+    %{
+      name: "scope-receipt-preparation-bypass",
+      path: "lib/charter_agreement_protocol/signing_plan.ex",
+      from:
+        "defp check_scope(:receipt, %{scope: scope}), do: SigningScope.refuse(scope.scope_status)",
+      to: "defp check_scope(:receipt, %{scope: _scope}), do: :ok",
+      command: ~w(mix test test/conformance/runner_report_cli_test.exs --seed 42)
+    },
+    %{
       name: "next-key-opening-skip",
       path: "lib/charter_agreement_protocol/party_descriptor.ex",
       from: "true <- Digest.equal?(expected, commitment_digest(descriptor.verification_keys))",

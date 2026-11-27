@@ -63,6 +63,10 @@ answer.
 | Chain and governing revision | facts about the view you supplied; the one governing digest at an instant you choose, or `:contested`, or `:none` | that the view is complete, what the counterparty holds, any policy outcome |
 | Receipt | the issuing party's signed record, bound to exact revision coordinates, a deployment digest, a `grant` reference, a `decision` and an `outcome`, with governance computed at `occurred_at` | that the `grant` reference was live, permission to act, that the action ran, that its effect happened, legal validity, that terms were met, the real time |
 
+Signer scope compares declared role, artifact kind and active key identity
+in a signed descriptor. It describes the evidence the verifier reads.
+The host still establishes identity, authority and legal effect.
+
 ## Host checklist
 
 These are the parts of security that CAP leaves to your application. The

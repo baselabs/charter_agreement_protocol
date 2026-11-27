@@ -33,9 +33,10 @@ cardinalities. The following are enforced by the codec and the normative text
   bodies, hint URIs).
 - Cross-field rules: conditional member presence (successor-only members),
   timestamp ordering, decision/outcome pairing, and genesis shape. Only
-  revision 8 admits the descriptor commitment member. Acceptance and charter
-  revision schemas have separate closed branches for legacy and revision-8
-  claims, so the revision-specific member sets are enforced by the schemas.
+  revision 8 admits descriptor commitments and signer scopes. Party descriptor,
+  acceptance and charter revision schemas have separate closed branches for
+  legacy and revision-8 claims. Scope role ordering, distinctness and active
+  key membership are enforced by the descriptor codec.
 - Quorum roles are sorted and distinct, and thresholds depend on which
   roles are eligible and how many the rule names. The schemas express
   member types, cardinality, and the empty zero-threshold assignment rule.

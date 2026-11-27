@@ -29,6 +29,12 @@ defmodule CharterAgreementProtocol.AcceptanceFacts do
     keeps this as a fact; whether a superseded descriptor may still sign is
     your policy.
   - `protocol_revision`: the Acceptance's `protocol_revision`.
+  - `scope_status`: `:not_required`, `:matched` or `:outside` for the pinned descriptor.
+  - `signer_thumbprint`: the signing key's algorithm-and-public-key identity.
+  - `credit`: `:not_evaluated` for single-artifact verification, or
+    `:not_required` or `:uncredited` in a verified set.
+  - `credit_reason`: the first applicable reason for an uncredited vote,
+    otherwise `nil`.
   - `alg`: the JWS `alg` it was signed with, such as `"Ed25519"`.
   - `not_verified`: the twelve atoms from
     `CharterAgreementProtocol.Facts.not_verified_floor/0`: `:tenancy`,
@@ -61,7 +67,15 @@ defmodule CharterAgreementProtocol.AcceptanceFacts do
     :descriptor_position,
     :not_verified
   ]
-  defstruct @enforce_keys ++ [protocol_revision: nil, alg: nil]
+  defstruct @enforce_keys ++
+              [
+                protocol_revision: nil,
+                alg: nil,
+                scope_status: :not_verified,
+                signer_thumbprint: nil,
+                credit: :not_evaluated,
+                credit_reason: nil
+              ]
 
   @typedoc "Facts for one verified Acceptance. See the module doc for each field."
   @type t :: %__MODULE__{
@@ -76,6 +90,11 @@ defmodule CharterAgreementProtocol.AcceptanceFacts do
           accepted_at: Timestamp.t(),
           signing_key_id: binary(),
           descriptor_position: :head | :superseded | :contested,
+          scope_status: :not_required | :matched | :outside | :not_verified,
+          signer_thumbprint: binary() | nil,
+          credit: :not_evaluated | :not_required | :uncredited,
+          credit_reason:
+            :arbiter_not_counted | :role_outside_quorum | :signer_outside_scope | nil,
           not_verified: [atom()],
           protocol_revision: pos_integer() | nil,
           alg: binary() | nil

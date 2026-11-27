@@ -82,6 +82,14 @@ revision digests, and `winner` is `nil`.
 Acceptances by different parties on competing branches are not equivocation. Each
 party signed one thing. That case shows up as a contested view at the chain level.
 
+An acceptance retains the `scope_status` and `signer_thumbprint` from its
+pinned descriptor. Chain verification keeps signatures and vote credit
+separately. The first applicable uncredited reason is `:arbiter_not_counted`,
+`:role_outside_quorum`, or `:signer_outside_scope`. An outside acceptance
+cannot satisfy a quorum or an assignment. Its signature remains visible.
+An ordinary assignment assent can count for its party when that party
+lies outside the quorum and its signer scope permits the artifact.
+
 ## Chain rules
 
 Over the complete view you supply, `verify_chain/5` requires:
@@ -147,6 +155,10 @@ revision's `effective_from`. Closure never brings an older revision back into fo
 A notice that names a revision that does not govern at its `effective_at` is still
 valid signed evidence, and it stays in `termination_facts`. It does not close the
 charter.
+
+A notice with `scope_status: :outside` stays in `termination_facts` and
+contributes no termination vote. The notice's descriptor digest fixes
+the scope used for the computation.
 
 ## Checks when you produce artifacts
 

@@ -8,6 +8,11 @@ A serialized signing context is verified before claims are prepared. A
 receipt case with an ML-DSA chain can therefore report a substrate error
 before reaching an invalid claim.
 
+The signer-scope cases use real Ed25519 and ML-DSA-65 signatures. Artifact
+reports include scope facts for `matched` and `outside`; a receipt with an
+unresolved scope keeps the ordinary receipt projection. Its verification
+facts expose `:not_verified` and a nil thumbprint.
+
 The conformance corpus is a fixed set of test cases. Each case gives exact input bytes
 and the exact result CAP returns for them: the full output for a valid case, the error
 code for an invalid one. Two implementations that agree on every case agree on those
@@ -26,11 +31,11 @@ is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:YWWrKUBf9INHHAfLipSBV4-n5dHpJbZU0yX85MV3aLo` |
-| Index SHA-256 (base64url) | `m0lyG1Uk49ESNy6ZvhUaSwP35vX80oHvJvJ2WDO0hC4` |
+| Corpus digest | `sha-256:HX8S7sjbzp4YggO7e8aaO5omlHek6cOwgD52PkGOAtM` |
+| Index SHA-256 (base64url) | `OnVv8xh9p4Dpl9dZB7NQB0hwjuTDpUROT0BnNlqTHds` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:dWnRbJoswTEoZfEk0bwIJ33IdhIMqxEp5EqbsPg9Bsw` |
-| Cases | 773, in 17 case files |
+| Specification digest | `sha-256:pRrvM0nNRXN6M_l2Y1KfzGn9E5SxIwBBYY5cGsSlqIg` |
+| Cases | 887, in 17 case files |
 
 The [TypeScript source pin](../../priv/verifier-source.json) selects the
 verifier that CI runs against every case.

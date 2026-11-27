@@ -26,6 +26,7 @@ defmodule CharterAgreementProtocol.SigningPlan do
     DescriptorFacts,
     Error,
     Internal.Retained,
+    Internal.SigningScope,
     Limits,
     PartyDescriptor,
     Receipt,
@@ -64,7 +65,8 @@ defmodule CharterAgreementProtocol.SigningPlan do
            Retained.compact(artifact.envelope),
          {:ok, prepared} <- prepare_artifact(kind, provisional, verify_with, limits, profile),
          {:ok, key} <- membership(prepared.keys, public_key, signing_input.alg),
-         :ok <- supported(signing_input.alg) do
+         :ok <- supported(signing_input.alg),
+         :ok <- check_scope(kind, prepared) do
       {:ok,
        %__MODULE__{
          signing_input: signing_input,
@@ -144,6 +146,12 @@ defmodule CharterAgreementProtocol.SigningPlan do
 
   defp prepare_artifact(:termination, compact, {revision, chain}, limits, profile),
     do: TerminationNotice.prepare(compact, revision, chain, limits, profile)
+
+  defp check_scope(:party_descriptor, %{scope_status: :outside}),
+    do: {:error, Error.new(:descriptor_chain_invalid, ["party_descriptor", "chain"])}
+
+  defp check_scope(:receipt, %{scope: scope}), do: SigningScope.refuse(scope.scope_status)
+  defp check_scope(_kind, _prepared), do: :ok
 
   defp membership(:unnamed, _public_key, _alg), do: {:ok, :unnamed}
 

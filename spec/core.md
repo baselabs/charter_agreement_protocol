@@ -256,6 +256,36 @@ opening returns `descriptor_commitment_mismatch` in standalone verification
 and `descriptor_chain_invalid` in a descriptor chain. The successor can
 omit its own commitment. Valid competing openings remain fork evidence.
 
+#### Signer scopes
+
+A revision-8 Party Descriptor MAY carry `signing_scopes`. Earlier
+descriptor grammars MUST reject the member [CAP-DESCRIPTOR-signer-scopes].
+The array holds at most 64 objects with exactly `role` and `signers`.
+A role is 1 to 128 UTF-8 bytes. Each `signers` array holds at most 32
+objects with exactly `key_thumbprint` and `artifact_kinds`. Each
+thumbprint MUST identify an active declared verification key using
+the existing `signer_key` digest. Kinds are `acceptance`, `descriptor`,
+`receipt`, and `termination`. Roles, thumbprints in each role, and
+kinds in each signer entry MUST be bytewise sorted and distinct
+[CAP-DESCRIPTOR-signer-scopes].
+
+An absent member yields `not_required`. A present array permits a match
+only for the selected key, role and kind. Empty arrays supply no matches.
+For descriptor succession, the predecessor's signing key MUST match
+the `descriptor` kind under some role. After a valid signature, an
+outside successor MUST return `descriptor_chain_invalid`. This rule uses
+the predecessor's scope. The successor may declare a disjoint active key
+set if any predecessor commitment opens [CAP-DESCRIPTOR-signer-scopes].
+
+An acceptance or termination MUST match against the exact descriptor it
+pins. A receipt MUST use the issuing role's descriptor in the named
+accepted revision. With a bare revision or an unrecognized revision, the
+receipt MUST report `scope_status: not_verified` and a null thumbprint.
+The result of resolved matching is `matched` or `outside`, and its
+`signer_thumbprint` identifies the verified key. A later descriptor
+preserves scope matches on earlier pins. Receipt scope describes the
+evidence [CAP-SCOPE-artifact-facts].
+
 #### 4.2.2 Descriptor publication
 
 An unsigned publication MUST be canonical JSON with exactly
@@ -362,6 +392,13 @@ basis, preparation returns `receipt_claims_mismatch` before membership
 skips membership and reports `unnamed`. A bare revision-8 charter MUST
 return `signing_refused` during preparation [CAP-SIGNING-snapshot-membership].
 Other successful plans report `matched`.
+
+Checked producers MUST refuse an outside acceptance, termination, or
+receipt with `signing_refused` and subject `["signing_input", "scope"]`.
+An outside descriptor successor MUST return `descriptor_chain_invalid`
+after snapshot membership and runtime support checks. The build-only
+descriptor and receipt framing functions have no scope context
+[CAP-SCOPE-producer-refusal].
 
 Acceptance and termination preparation MUST verify the retained set, apply
 the existing R1-R3 producer refusals, and derive the claimed revision and
@@ -563,6 +600,17 @@ Verified votes outside both rules contribute no quorum vote. Legacy
 revisions retain the all-party acceptance and single-party termination
 rules [CAP-QUORUM-roster-and-votes].
 
+An outside acceptance MUST remain in the verified facts and MUST NOT
+count toward acceptance quorum or assignment assent. Chain verification
+MUST assign the first applicable uncredited reason in this order:
+`arbiter_not_counted`, `role_outside_quorum`, `signer_outside_scope`.
+An ordinary vote may match either governing acceptance rule. The
+assignor's marked vote uses the predecessor's rule. Eligible votes
+report `credit: not_required` and a null reason. Single-artifact
+acceptance verification reports `credit: not_evaluated` and a null
+reason. An outside acceptance still supplies a signature fact for
+supersession checks [CAP-SCOPE-vote-credit].
+
 A successor becomes accepted only when its immediate predecessor is
 accepted. Proposed revisions convey no quorum rule to
 successors. When there is no accepted ancestor, the raw predecessor's
@@ -578,6 +626,8 @@ per group. A group closes the charter only if its quorum is met and its
 revision uniquely governs at the group's instant. Signing preparation
 MUST refuse a termination role outside its rule or a revision that
 does not govern at that instant [CAP-QUORUM-termination-grouping].
+Outside termination notices MUST remain visible and contribute no
+termination vote [CAP-SCOPE-vote-credit].
 
 ### 6.2 Party assignments
 
@@ -604,6 +654,10 @@ Both governing quorum rules apply, and an assignee cannot satisfy the
 predecessor rule for a replaced role. Incomplete assent leaves the
 assignment pending and reports outstanding roles. Competing accepted
 revisions remain contested [CAP-ASSIGNMENT-assent].
+An ordinary assent from a party outside the acceptance quorum still
+satisfies that party's assignment side when its signer scope permits it.
+The predecessor rule determines the eligibility of each marked assignor
+vote [CAP-SCOPE-vote-credit].
 
 Checked preparation accepts the assignor marker only for kind
 `party_replacement`. Both preparation kinds emit `cap+acceptance` artifacts.

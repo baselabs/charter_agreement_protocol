@@ -149,6 +149,18 @@ compact JWS strings for the rest. CAP checks every artifact from those bytes
 and trusts nothing the artifacts say about each other until it has checked
 it.
 
+## Descriptor keys and scope
+
+| API | Use |
+|---|---|
+| `signer_thumbprint/1` | Identify a descriptor verification key by algorithm and public bytes |
+| `verify_descriptor/3` and `verify_descriptor_chain/2` | Verify descriptor history, including predecessor scope |
+| `verify_acceptance/4`, `verify_termination/4`, and `verify_receipt/3` | Read `scope_status` and `signer_thumbprint` from verified evidence |
+| `prepare_signing/5` | Check the available context and scope before invoking external custody |
+
+A matching scope describes the party's declared rule. Use the exact
+descriptor history or accepted revision named by the artifact.
+
 ## Ask which revision governs, and at what time
 
 ```elixir

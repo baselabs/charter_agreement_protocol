@@ -32,6 +32,8 @@ defmodule CharterAgreementProtocol.TerminationFacts do
   - `descriptor_position`: where the signer's descriptor sits in its chain:
     `:head`, `:superseded` or `:contested`.
   - `protocol_revision`: the notice's `protocol_revision`.
+  - `scope_status`: `:not_required`, `:matched` or `:outside` for the pinned descriptor.
+  - `signer_thumbprint`: the signing key's algorithm-and-public-key identity.
   - `alg`: the JWS `alg` it was signed with, such as `"Ed25519"`.
   - `not_verified`: the twelve atoms from
     `CharterAgreementProtocol.Facts.not_verified_floor/0`: `:tenancy`,
@@ -65,7 +67,13 @@ defmodule CharterAgreementProtocol.TerminationFacts do
     :descriptor_position,
     :not_verified
   ]
-  defstruct @enforce_keys ++ [protocol_revision: nil, alg: nil]
+  defstruct @enforce_keys ++
+              [
+                protocol_revision: nil,
+                alg: nil,
+                scope_status: :not_verified,
+                signer_thumbprint: nil
+              ]
 
   @typedoc "Facts for one verified termination notice. See the module doc for each field."
   @type t :: %__MODULE__{
@@ -81,6 +89,8 @@ defmodule CharterAgreementProtocol.TerminationFacts do
           detail_digest: nil | binary(),
           signing_key_id: binary(),
           descriptor_position: :head | :superseded | :contested,
+          scope_status: :not_required | :matched | :outside | :not_verified,
+          signer_thumbprint: binary() | nil,
           not_verified: [atom()],
           protocol_revision: pos_integer() | nil,
           alg: binary() | nil

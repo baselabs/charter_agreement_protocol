@@ -2800,8 +2800,16 @@ supplemental_cases =
     id -> shared_lifecycle_cases |> Map.fetch!(id) |> case_with_genesis_identity.()
   end)
 
+scope_cases =
+  shared_lifecycle_cases
+  |> Map.values()
+  |> Enum.filter(&String.starts_with?(&1["id"], "signer-scope-"))
+  |> Enum.sort_by(& &1["id"])
+
 cases =
-  cases ++ CharterAgreementProtocol.DescriptorPublicationCorpus.cases() ++ supplemental_cases
+  cases ++
+    CharterAgreementProtocol.DescriptorPublicationCorpus.cases() ++
+    supplemental_cases ++ scope_cases
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 

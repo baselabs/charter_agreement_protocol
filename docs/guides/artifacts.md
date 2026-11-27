@@ -54,6 +54,7 @@ by a key that was active in the predecessor.
 | `prev_descriptor_digest` | successors only | Tagged digest of the predecessor |
 | `descriptor_number` | yes | 1 at genesis, then exactly one more each time |
 | `next_key_commitment` | no | Revision-8 tagged digest committing to a successor's active key set |
+| `signing_scopes` | no | Revision-8 role and artifact-kind allowlists for active key thumbprints |
 | `verification_keys` | yes | 1 to 32 keys, unique, at least one `active`. Each key has `key_id`, `algorithm` (`Ed25519`, `ML-DSA-44`, `ML-DSA-65` or `ML-DSA-87`), `public_key` (base64url at the algorithm's exact length) and `status` (`active` or `retired`). ML-DSA keys require revision 3 or 8. One descriptor may mix algorithms |
 | `attestation_hints` | yes | 0 to 16 hints, each `kind` and `uri`. CAP never fetches them |
 | `extensions` | yes | The [extension envelope](#extension-envelope) |
@@ -61,6 +62,15 @@ by a key that was active in the predecessor.
 
 Verifying a descriptor proves signed key continuity. It does not prove who the party
 is, or that a key has not been revoked since.
+
+Signer scopes have at most 64 role entries with at most 32 signer entries
+per role. Each signer names a `key_thumbprint` and an `artifact_kinds` array
+drawn from `acceptance`, `descriptor`, `receipt` and `termination`. Sort
+roles, thumbprints and kinds bytewise and use each value once per list.
+Use `signer_thumbprint/1` to identify a descriptor key from its algorithm
+and public bytes. Omission leaves the descriptor unrestricted. A present
+empty array supplies no match. A scoped predecessor needs a key with the
+`descriptor` kind under some role to sign its successor.
 
 ### Acceptance (`cap+acceptance`)
 

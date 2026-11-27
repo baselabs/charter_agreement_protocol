@@ -170,12 +170,29 @@ defmodule CharterAgreementProtocol.Quorum do
   end
 
   @doc false
-  @spec eligible?(struct(), struct(), struct() | nil) :: boolean()
-  def eligible?(vote, revision, previous) do
-    vote.party_role in acceptance(revision).roles or
-      (previous != nil and vote.party_role in acceptance(previous).roles) or
-      revision.party_replacements != []
+  @spec participation_reason(struct(), struct(), struct() | nil) ::
+          :arbiter_not_counted | :role_outside_quorum | nil
+  def participation_reason(%{replacement_role: nil, party_role: role}, revision, previous) do
+    reason = role_reason(revision, role)
+
+    if reason == :role_outside_quorum and previous != nil and role in acceptance(previous).roles,
+      do: nil,
+      else: reason
   end
+
+  def participation_reason(vote, _revision, previous), do: role_reason(previous, vote.party_role)
+
+  defp role_reason(%{protocol_revision: 8} = revision, role) do
+    party = Enum.find(revision.parties, &(&1.role == role))
+
+    cond do
+      party && party.participation == "arbiter" -> :arbiter_not_counted
+      role not in acceptance(revision).roles -> :role_outside_quorum
+      true -> nil
+    end
+  end
+
+  defp role_reason(_revision, _role), do: nil
 
   @doc false
   @spec evaluate(struct(), [struct()], struct() | nil) :: {boolean(), [binary()]}

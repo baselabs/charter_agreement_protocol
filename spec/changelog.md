@@ -8,6 +8,15 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-11-27 — signer scopes
+
+Revision-8 descriptors can declare role and artifact-kind allowlists for
+active key thumbprints. Scope follows the pinned descriptor, including the
+predecessor for descriptor succession and the named accepted revision for
+receipts. Outside acceptances and terminations remain signature facts and
+contribute no eligible vote. Checked signing enforces the matching rule.
+The 1.1.0 candidate records the cases in its verification semantics 7 row.
+
 ## 2026-11-25 — party quorums and assignments
 
 - Revision 8 admits acceptance and termination quorums that count distinct

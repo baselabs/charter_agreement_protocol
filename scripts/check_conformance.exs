@@ -10,6 +10,7 @@ alias CharterAgreementProtocol.{
   Conformance.Report,
   Conformance.Runner,
   Json,
+  PartyDescriptor,
   RequirementMap
 }
 
@@ -233,14 +234,14 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
   ]
 
   @artifact_sources %{
-    "party-descriptor-claims" => "lib/charter_agreement_protocol/party_descriptor.ex",
     "receipt-claims" => "lib/charter_agreement_protocol/receipt.ex",
     "termination-claims" => "lib/charter_agreement_protocol/termination_notice.ex"
   }
 
   @revisioned_codecs %{
     "acceptance-claims" => Acceptance,
-    "charter-revision-claims" => CharterRevision
+    "charter-revision-claims" => CharterRevision,
+    "party-descriptor-claims" => PartyDescriptor
   }
 
   def run do
@@ -442,6 +443,15 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
       |> member!("text")
 
     decode!(text)
+  end
+
+  defp revision_eight_seed("party-descriptor-claims") do
+    {:string, compact} =
+      "party_descriptor-verify.json"
+      |> named_case_input!("signer-scope-descriptor-genesis-ed25519")
+      |> member!("compact")
+
+    compact_payload(compact)
   end
 
   defp build_seeds do

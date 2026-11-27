@@ -26,6 +26,7 @@ defmodule CharterAgreementProtocol.Acceptance do
     Error,
     Facts,
     Internal.Retained,
+    Internal.SigningScope,
     Limits,
     PartyDescriptor,
     Quorum,
@@ -301,7 +302,7 @@ defmodule CharterAgreementProtocol.Acceptance do
   defp verify_prepared(%{artifact: artifact, descriptor: descriptor, keys: [key]}, profile) do
     with :ok <-
            CompactJws.verify_signature(artifact.envelope, key.public_key, key.algorithm, profile) do
-      {:ok, facts(artifact, descriptor)}
+      {:ok, facts(artifact, descriptor, key)}
     end
   end
 
@@ -454,7 +455,9 @@ defmodule CharterAgreementProtocol.Acceptance do
     Enum.filter(descriptor.verification_keys, &(&1.key_id == kid and &1.status == :active))
   end
 
-  defp facts(acceptance, descriptor) do
+  defp facts(acceptance, descriptor, key) do
+    scope = SigningScope.facts(descriptor.descriptor, key, acceptance.party_role, "acceptance")
+
     {:ok, facts} =
       Facts.build(AcceptanceFacts, %{
         acceptance: acceptance,
@@ -469,7 +472,9 @@ defmodule CharterAgreementProtocol.Acceptance do
         party_role: acceptance.party_role,
         accepted_at: acceptance.accepted_at,
         signing_key_id: acceptance.envelope.kid,
-        descriptor_position: descriptor.descriptor_position
+        descriptor_position: descriptor.descriptor_position,
+        scope_status: scope.scope_status,
+        signer_thumbprint: scope.signer_thumbprint
       })
 
     facts

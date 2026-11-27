@@ -42,6 +42,11 @@ defmodule CharterAgreementProtocol.ReceiptFacts do
     was validated against its schema; an unknown, reserved or retired one is
     kept without validation, so a name here does not prove registration.
   - `protocol_revision`: the receipt's `protocol_revision`.
+  - `scope_status`: `:not_required`, `:matched` or `:outside` for the
+    issuing role's descriptor in the named accepted revision. A bare or
+    unrecognized revision yields `:not_verified`.
+  - `signer_thumbprint`: the signing key's algorithm-and-public-key identity,
+    or `nil` when scope cannot be resolved.
   - `alg`: the JWS `alg` it was signed with, such as `"Ed25519"`.
   - `not_verified`: the twelve atoms from
     `CharterAgreementProtocol.Facts.not_verified_floor/0` (`:tenancy`,
@@ -84,7 +89,14 @@ defmodule CharterAgreementProtocol.ReceiptFacts do
     :optional_extensions_retained,
     :not_verified
   ]
-  defstruct @enforce_keys ++ [protocol_revision: nil, alg: nil, holder_match: :not_evaluated]
+  defstruct @enforce_keys ++
+              [
+                protocol_revision: nil,
+                alg: nil,
+                holder_match: :not_evaluated,
+                scope_status: :not_verified,
+                signer_thumbprint: nil
+              ]
 
   @typedoc "Facts for one verified receipt. See the module doc for each field."
   @type t :: %__MODULE__{
@@ -103,6 +115,8 @@ defmodule CharterAgreementProtocol.ReceiptFacts do
           occurred_at: Timestamp.t(),
           recorded_at: Timestamp.t(),
           signing_key_id: nil | binary(),
+          scope_status: :not_required | :matched | :outside | :not_verified,
+          signer_thumbprint: binary() | nil,
           chain_conflict: :none | :fork_evidenced,
           governing_match: :match | :mismatch | :undetermined,
           holder_match: :match | :undetermined | :not_evaluated,

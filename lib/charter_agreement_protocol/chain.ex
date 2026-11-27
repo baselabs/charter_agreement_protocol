@@ -58,7 +58,8 @@ defmodule CharterAgreementProtocol.Chain do
          {:ok, acceptance_facts} <-
            verify_acceptances(acceptances, revision_index, descriptor_chains, limits, profile),
          :ok <- unique_acceptance_coordinates(acceptance_facts),
-         {:ok, revision_facts} <- build_revision_facts(indexed_revisions, acceptance_facts),
+         {:ok, revision_facts, acceptance_facts} <-
+           build_revision_facts(indexed_revisions, acceptance_facts),
          :ok <- signed_supersession_targets(revision_facts),
          {:ok, termination_facts} <-
            verify_terminations(terminations, revision_index, descriptor_chains, limits, profile) do
@@ -168,9 +169,11 @@ defmodule CharterAgreementProtocol.Chain do
          governing_revision_digest: digest,
          reason_code: reason,
          effective_at: at,
-         party_role: role
+         party_role: role,
+         scope_status: scope
        }) do
-    is_binary(digest) and is_binary(reason) and is_binary(role) and timestamp_shape?(at)
+    is_binary(digest) and is_binary(reason) and is_binary(role) and timestamp_shape?(at) and
+      scope in [:matched, :outside, :not_required, :not_verified]
   end
 
   defp governing_notice_shape?(_facts), do: false
@@ -527,21 +530,48 @@ defmodule CharterAgreementProtocol.Chain do
     votes = Enum.group_by(acceptance_facts, & &1.revision_digest)
     raw = Map.new(indexed_revisions)
 
-    indexed_revisions
-    |> Enum.sort_by(fn {digest, revision} -> {revision.revision_number, digest} end)
-    |> Enum.reduce({[], %{}}, fn {digest, revision}, {facts, inherited} ->
-      matches = Map.get(votes, digest, [])
-      previous = Map.get(inherited, revision.prev_revision_digest)
-      raw_previous = Map.get(raw, revision.prev_revision_digest)
-      {quorum, missing} = Quorum.evaluate(revision, matches, previous || raw_previous)
-      signed? = quorum and missing == []
-      accepted? = signed? and previous == raw_previous
+    {facts, credited_votes, _inherited} =
+      indexed_revisions
+      |> Enum.sort_by(fn {digest, revision} -> {revision.revision_number, digest} end)
+      |> Enum.reduce({[], [], %{}}, fn {digest, revision}, {facts, credited_votes, inherited} ->
+        previous = Map.get(inherited, revision.prev_revision_digest)
+        raw_previous = Map.get(raw, revision.prev_revision_digest)
+        rule = previous || raw_previous
+        matches = Enum.map(Map.get(votes, digest, []), &credit(&1, revision, rule))
+        counted = Enum.filter(matches, &countable?(&1, revision))
+        signature = Quorum.evaluate(revision, matches, rule)
 
-      result = revision_facts(digest, revision, matches, signed?, accepted?, missing)
-      {[result | facts], Map.put(inherited, digest, if(accepted?, do: revision, else: previous))}
-    end)
-    |> elem(0)
-    |> collect_ok()
+        {quorum, missing} =
+          if counted == matches, do: signature, else: Quorum.evaluate(revision, counted, rule)
+
+        signed? = signature == {true, []}
+        accepted? = quorum and missing == [] and previous == raw_previous
+
+        result = revision_facts(digest, revision, matches, signed?, accepted?, missing)
+        next = Map.put(inherited, digest, if(accepted?, do: revision, else: previous))
+        {[result | facts], [matches | credited_votes], next}
+      end)
+
+    with {:ok, revisions} <- collect_ok(facts),
+         do: {:ok, revisions, List.flatten(credited_votes)}
+  end
+
+  defp credit(facts, revision, predecessor) do
+    reason =
+      Quorum.participation_reason(facts.acceptance, revision, predecessor) ||
+        if(facts.scope_status == :outside, do: :signer_outside_scope)
+
+    if reason,
+      do: %{facts | credit: :uncredited, credit_reason: reason},
+      else: %{facts | credit: :not_required}
+  end
+
+  # Every candidate party supplies ordinary assignment assent. Quorum rules
+  # still select the eligible roles, and scope applies to both calculations.
+  defp countable?(facts, revision) do
+    facts.scope_status != :outside and
+      (facts.credit != :uncredited or
+         (revision.party_replacements != [] and facts.acceptance.replacement_role == nil))
   end
 
   defp revision_facts(digest, revision, matches, signed?, accepted?, missing) do
@@ -800,7 +830,8 @@ defmodule CharterAgreementProtocol.Chain do
   end
 
   defp termination_quorum_met?(revision, votes) do
-    Quorum.met?(Quorum.termination(revision), Enum.map(votes, & &1.party_role))
+    roles = for vote <- votes, vote.scope_status != :outside, do: vote.party_role
+    Quorum.met?(Quorum.termination(revision), roles)
   end
 
   @doc false

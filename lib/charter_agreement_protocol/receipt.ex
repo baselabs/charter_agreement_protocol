@@ -33,6 +33,7 @@ defmodule CharterAgreementProtocol.Receipt do
     Extension,
     Facts,
     Internal.Retained,
+    Internal.SigningScope,
     Limits,
     ReceiptFacts,
     RevisionFacts,
@@ -245,7 +246,7 @@ defmodule CharterAgreementProtocol.Receipt do
   defp do_verify(compact, context, limits, profile) do
     with {:ok, prepared} <- prepare_receipt(compact, context, limits, profile),
          :ok <- verify_prepared_signature(prepared, profile) do
-      facts(prepared.artifact, prepared.projection, prepared.context)
+      facts(prepared.artifact, prepared.projection, prepared.context, prepared.scope)
     end
   end
 
@@ -272,7 +273,7 @@ defmodule CharterAgreementProtocol.Receipt do
          {:ok, receipt} <- decode(compact, limits),
          {:ok, projection} <- project(receipt, verified_context),
          :ok <- CompactJws.admit(receipt.envelope, profile) do
-      {keys, holder_keys, holder_match} = context_keys(verified_context, receipt)
+      {keys, holder_keys, holder_match, scope} = context_keys(verified_context, receipt)
 
       {:ok,
        %{
@@ -281,21 +282,20 @@ defmodule CharterAgreementProtocol.Receipt do
          context: verified_context,
          verify_with: elem(verified_context, 1),
          keys: keys,
-         holder_keys: holder_keys
+         holder_keys: holder_keys,
+         scope: scope
        }}
     end
   end
 
-  defp context_keys({:revision, _revision}, _receipt), do: {:unnamed, :unnamed, :not_evaluated}
+  defp context_keys({:revision, _revision}, _receipt),
+    do: {:unnamed, :unnamed, :not_evaluated, SigningScope.unverified()}
 
   defp context_keys({:chain, chain}, receipt) do
     accepted = Enum.filter(chain.revision_facts, &(&1.acceptance_status == :accepted))
 
-    revisions =
-      case Enum.filter(accepted, &(&1.revision_digest == receipt.revision_digest)) do
-        [] -> accepted
-        recognized -> recognized
-      end
+    recognized = Enum.find(accepted, &(&1.revision_digest == receipt.revision_digest))
+    revisions = if recognized, do: [recognized], else: accepted
 
     descriptors = Enum.flat_map(chain.descriptor_chains, & &1.descriptors)
     role = receipt.issuing_party_role
@@ -305,8 +305,14 @@ defmodule CharterAgreementProtocol.Receipt do
     keys = descriptor_keys(claimed, receipt.envelope.kid)
     held = Enum.filter(claimed, &(&1.party_id == holder))
     holder_keys = if holder, do: descriptor_keys(held, receipt.envelope.kid), else: keys
-    {keys, holder_keys, holder_match}
+    scope = receipt_scope(recognized, claimed, receipt.envelope.kid, role)
+    {keys, holder_keys, holder_match, scope}
   end
+
+  defp receipt_scope(nil, _descriptors, _kid, _role), do: SigningScope.unverified()
+
+  defp receipt_scope(_revision, [%DescriptorFacts{descriptor: descriptor}], kid, role),
+    do: SigningScope.for_key(descriptor, kid, role, "receipt")
 
   defp verify_prepared_signature(%{keys: :unnamed}, _profile), do: :ok
 
@@ -688,7 +694,7 @@ defmodule CharterAgreementProtocol.Receipt do
     end
   end
 
-  defp facts(receipt, projection, verified_context) do
+  defp facts(receipt, projection, verified_context, scope) do
     additions =
       case verified_context do
         {:revision, %CharterRevision{protocol_revision: 8}} -> [:signature, :ownership]
@@ -718,6 +724,8 @@ defmodule CharterAgreementProtocol.Receipt do
         occurred_at: receipt.occurred_at,
         recorded_at: receipt.recorded_at,
         signing_key_id: signing_key_id,
+        scope_status: scope.scope_status,
+        signer_thumbprint: scope.signer_thumbprint,
         chain_conflict: projection.chain_conflict,
         governing_match: projection.governing_match,
         holder_match: projection.holder_match,
