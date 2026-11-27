@@ -6,6 +6,10 @@ to set up, what `mix quality` checks, how the pinned TypeScript verifier
 works, how to change the corpus or the specification, and what every change
 needs before it lands.
 
+Contributions are licensed under Apache-2.0, as section 5 of the license describes, and
+every commit carries a Developer Certificate of Origin sign-off (`git commit -s`). See
+IPR.md.
+
 Commands below that compile or test run on the maintainers' build box through
 their remote-run tooling, never on a workstation. Public repositories without a
 build-box checkout run their checks in qualification CI.

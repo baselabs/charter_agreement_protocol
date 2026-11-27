@@ -153,4 +153,5 @@ Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-Apache-2.0. See [LICENSE](https://github.com/baselabs/charter_agreement_protocol/blob/main/LICENSE).
+Apache-2.0, maintained by BaseLabs Holdings LLC. See LICENSE and NOTICE, and
+IPR.md for contributions.

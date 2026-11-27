@@ -101,6 +101,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "README.md",
         "CHANGELOG.md",
         "CONTRIBUTING.md",
+        "IPR.md",
         "LICENSE",
         "NOTICE",
         "SECURITY.md",
@@ -175,6 +176,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "CHANGELOG.md",
         "SECURITY.md",
         "CONTRIBUTING.md",
+        "IPR.md",
         "docs/errata.md"
       ],
       groups_for_extras: [
@@ -233,6 +235,7 @@ defmodule CharterAgreementProtocol.MixProject do
           "CHANGELOG.md",
           "SECURITY.md",
           "CONTRIBUTING.md",
+          "IPR.md",
           "docs/errata.md"
         ]
       ],
