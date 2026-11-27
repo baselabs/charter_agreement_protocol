@@ -37,7 +37,7 @@ defmodule CharterAgreementProtocol.ReceiptInspectionCorpus do
         claims
         |> put_in(["grant", "scheme"], "host")
         |> update_in(["grant"], &Map.delete(&1, "grant_digest"))
-        |> put_in(["extensions", "optional", "com.example.audit"], %{
+        |> put_in(["extensions", "optional", "com.example/audit"], %{
           "note" => "café",
           "values" => [true, nil, 2]
         })

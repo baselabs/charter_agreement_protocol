@@ -31,8 +31,8 @@ is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:FEcZa3RUpPKowlUPAI-_asdwIA5U0a2M1edUbc6U-fc` |
-| Index SHA-256 (base64url) | `F8mT6nR_ej4pbX_x5uLOSs02oHZAdv3L3dmrCBi4-UU` |
+| Corpus digest | `sha-256:ew0s7y5AEsOSxcE9z9EnUx1Z5N_cKIqB1lcWla0dOM0` |
+| Index SHA-256 (base64url) | `YThYf0ylU8IagbSJiJ9eH7NwY6q4iEDJSYRXD-Vba9A` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
 | Specification digest | `sha-256:gGKnKXpoc4leFWpJt5q5O0BTClUaQ0CuNvsn_S7ddQo` |
 | Cases | 901, in 18 case files |
