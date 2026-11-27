@@ -75,13 +75,19 @@ defmodule CharterAgreementProtocol.PartyDescriptor do
     :envelope
   ]
 
+  @typedoc "A role with the active key thumbprints and artifact kinds declared for it."
+  @type signing_scope :: %{
+          role: binary(),
+          signers: [%{key_thumbprint: binary(), artifact_kinds: [binary()]}]
+        }
+
   @type t :: %__MODULE__{
           protocol_revision: 1 | 2 | 3 | 8,
           party_id: nil | binary(),
           descriptor_number: pos_integer(),
           prev_descriptor_digest: nil | binary(),
           next_key_commitment: nil | binary(),
-          signing_scopes: nil | [SigningScope.t()],
+          signing_scopes: nil | [signing_scope()],
           verification_keys: [VerificationKey.t()],
           attestation_hints: [AttestationHint.t()],
           extensions: CharterAgreementProtocol.Json.value(),

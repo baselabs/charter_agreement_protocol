@@ -239,8 +239,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :error_code_change,
           direction: :red_to_red,
           operation: "descriptor_publication.verify",
-          description:
-            "Return the typed signer-scope or claims error reached after admission.",
+          description: "Return the typed signer-scope or claims error reached after admission.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -300,8 +299,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :error_code_change,
           direction: :red_to_red,
           operation: "party_descriptor.verify",
-          description:
-            "Return the typed signer-scope or claims error reached after admission.",
+          description: "Return the typed signer-scope or claims error reached after admission.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -469,8 +467,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :error_code_change,
           direction: :red_to_red,
           operation: "signing.prepare",
-          description:
-            "Return the typed signer-scope or claims error reached after admission.",
+          description: "Return the typed signer-scope or claims error reached after admission.",
           witnesses: [
             %{
               entry_point: "corpus_runner",

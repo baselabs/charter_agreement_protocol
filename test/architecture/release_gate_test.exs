@@ -16,6 +16,11 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
   }
 
   @mutation_names ~w(
+    scope-successor-kind-bypass
+    scope-artifact-kind-bypass
+    scope-assignment-assent-bypass
+    scope-termination-count-bypass
+    scope-receipt-preparation-bypass
     next-key-opening-skip
     next-key-prefix-dropped
     next-key-algorithm-omitted

@@ -124,10 +124,26 @@ defmodule CharterAgreementProtocol.Internal.Retained do
 
   defp descriptor_shape?(%PartyDescriptor{verification_keys: keys} = descriptor) do
     complete?(descriptor, PartyDescriptor) and list?(keys) and Enum.all?(keys, &key_shape?/1) and
-      (is_nil(descriptor.next_key_commitment) or is_binary(descriptor.next_key_commitment))
+      optional_binary?(descriptor.next_key_commitment) and
+      (is_nil(descriptor.signing_scopes) or scopes_shape?(descriptor.signing_scopes))
   end
 
   defp descriptor_shape?(_other), do: false
+
+  defp scopes_shape?(scopes), do: list?(scopes) and Enum.all?(scopes, &scope_shape?/1)
+
+  defp scope_shape?(%{role: role, signers: signers} = scope) when map_size(scope) == 2 do
+    is_binary(role) and list?(signers) and Enum.all?(signers, &scope_signer_shape?/1)
+  end
+
+  defp scope_shape?(_scope), do: false
+
+  defp scope_signer_shape?(%{key_thumbprint: thumbprint, artifact_kinds: kinds} = signer)
+       when map_size(signer) == 2 do
+    is_binary(thumbprint) and binaries?(kinds)
+  end
+
+  defp scope_signer_shape?(_signer), do: false
 
   defp key_shape?(
          %PartyDescriptor.VerificationKey{
@@ -232,6 +248,9 @@ defmodule CharterAgreementProtocol.Internal.Retained do
   end
 
   defp field_shape?(:party_replacements, supplied, _verified), do: replacements_shape?(supplied)
+
+  defp field_shape?(:signing_scopes, supplied, nil), do: is_nil(supplied)
+  defp field_shape?(:signing_scopes, supplied, _verified), do: scopes_shape?(supplied)
 
   defp field_shape?(:not_verified, supplied, _verified),
     do: list?(supplied) and Enum.all?(supplied, &is_atom/1)

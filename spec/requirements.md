@@ -19,6 +19,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 ### CAP-DESCRIPTOR-signer-scopes
 
 - Corpus: `party_descriptor.verify:valid`, `party_descriptor.verify:invalid_constraint`, `party_descriptor.verify:unknown_member`, `descriptor_chain.verify:chain_invalid`, `descriptor_publication.verify:invalid_constraint`
+- Gate: `CharterAgreementProtocol.SignerScopeTest`
 - Mutation: `scope-successor-kind-bypass`
 
 ### CAP-SCOPE-artifact-facts

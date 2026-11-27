@@ -34,7 +34,7 @@ is the one place in the guides where they are recorded.
 | Corpus digest | `sha-256:7G3_s2vf8CaUvTEC-FOdN6gh3g5cdRvQld6i1CwwPm4` |
 | Index SHA-256 (base64url) | `DZcLjIwGRERe3xrPtmXKvHbH7a3dt0ZKaW9ZgMUdzSo` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:pRrvM0nNRXN6M_l2Y1KfzGn9E5SxIwBBYY5cGsSlqIg` |
+| Specification digest | `sha-256:ZauwuqPUMJWx4_zqPWXFy8iSaW09OniVJTHW4CVHxy0` |
 | Cases | 887, in 17 case files |
 
 The [TypeScript source pin](../../priv/verifier-source.json) selects the

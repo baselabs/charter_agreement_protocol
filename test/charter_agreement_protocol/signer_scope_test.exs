@@ -35,8 +35,10 @@ defmodule CharterAgreementProtocol.SignerScopeTest do
 
       outside = input("governing_revision", "governing-outside", suffix)
       assert {:ok, accepted} = verify_chain(outside)
+
       assert [%{scope_status: :outside, signer_thumbprint: thumbprint}] =
                accepted.termination_facts
+
       assert is_binary(thumbprint)
       assert [governing] = accepted.accepted_revision_digests
       [%{"at" => at}] = outside["queries"]
@@ -171,6 +173,40 @@ defmodule CharterAgreementProtocol.SignerScopeTest do
         end
       end
     end
+  end
+
+  test "retained predecessor scopes are checked for shape and re-read from signed bytes" do
+    matched = input("party_descriptor-verify", "successor-matched", "ed25519")
+    outside = input("party_descriptor-verify", "successor-outside", "ed25519")
+    [root] = matched["predecessor_compacts"]
+    limits = Limits.default()
+    assert {:ok, predecessor} = CAP.verify_descriptor(root, nil, limits)
+    assert [scope] = predecessor.descriptor.signing_scopes
+    [signer | _] = scope.signers
+
+    assert {:ok, %{descriptor_number: 2}} =
+             CAP.verify_descriptor(matched["compact"], predecessor, limits)
+
+    malformed_scopes = [
+      nil,
+      :invalid,
+      [%{}],
+      [%{scope | signers: [%{}]}],
+      [%{scope | signers: [%{signer | artifact_kinds: [false]}]}]
+    ]
+
+    for scopes <- malformed_scopes do
+      malformed = put_in(predecessor.descriptor.signing_scopes, scopes)
+
+      assert {:error, %Error{code: :invalid_type}} =
+               CAP.verify_descriptor(matched["compact"], malformed, limits)
+    end
+
+    forged = put_in(predecessor.descriptor.signing_scopes, [])
+    assert {:ok, _facts} = CAP.verify_descriptor(matched["compact"], forged, limits)
+
+    assert {:error, %Error{code: :descriptor_chain_invalid}} =
+             CAP.verify_descriptor(outside["compact"], forged, limits)
   end
 
   defp verify_chain(input) do

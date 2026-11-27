@@ -11,6 +11,7 @@ alias CharterAgreementProtocol.{
   Digest,
   ExtensionRegistry
 }
+
 alias CharterAgreementProtocol.Conformance.Corpus
 
 root = System.get_env("CAP_CONFORMANCE_ROOT") || "priv/conformance"

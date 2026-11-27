@@ -3,8 +3,6 @@ defmodule CharterAgreementProtocol.Internal.SigningScope do
 
   alias CharterAgreementProtocol.{Error, PartyDescriptor, Schema}
 
-  @type t :: %{role: binary(), signers: [signer()]}
-  @type signer :: %{key_thumbprint: binary(), artifact_kinds: [binary()]}
   @type status :: :not_required | :matched | :outside | :not_verified
 
   @kind_values Enum.map(~w(acceptance descriptor receipt termination), &{:string, &1})
@@ -37,7 +35,8 @@ defmodule CharterAgreementProtocol.Internal.SigningScope do
     Schema.field("signing_scopes", types: [:array], cardinality: {0, 64}, nested: {:array, @role})
   end
 
-  @spec decode({:array, list()}, list()) :: {:ok, [t()]} | {:error, Error.t()}
+  @spec decode({:array, list()}, list()) ::
+          {:ok, [PartyDescriptor.signing_scope()]} | {:error, Error.t()}
   def decode({:array, entries}, active) do
     scopes = Enum.map(entries, &entry/1)
 

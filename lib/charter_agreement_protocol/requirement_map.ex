@@ -19,6 +19,7 @@ defmodule CharterAgreementProtocol.RequirementMap do
           "descriptor_chain.verify:chain_invalid",
           "descriptor_publication.verify:invalid_constraint"
         ]},
+       {:gate, CharterAgreementProtocol.SignerScopeTest},
        {:mutation, "scope-successor-kind-bypass"}
      ]},
     {"CAP-SCOPE-artifact-facts",
