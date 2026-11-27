@@ -72,6 +72,7 @@
       "lib/charter_agreement_protocol/internal/case_json.ex",
       "lib/charter_agreement_protocol/internal/integer_claims.ex",
       "lib/charter_agreement_protocol/internal/retained.ex",
+      "lib/charter_agreement_protocol/internal/signing_scope.ex",
       "lib/charter_agreement_protocol/internal/unicode.ex",
       "lib/charter_agreement_protocol/json.ex",
       "lib/charter_agreement_protocol/limits.ex",
