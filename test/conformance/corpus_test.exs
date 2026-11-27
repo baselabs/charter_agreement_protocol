@@ -1,3 +1,5 @@
+Code.require_file("../../scripts/conformance_fixture_keys.exs", __DIR__)
+
 defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   use ExUnit.Case, async: false
 
@@ -11,6 +13,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     Capability.Profile,
     Chain,
     CharterRevision,
+    ConformanceFixtureKeys,
     DescriptorChain,
     Error,
     Limits,
@@ -270,7 +273,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
               if plan.signing_input.alg == "Ed25519" do
                 public = Base.url_decode64!(input["public_key"], padding: false)
 
-                signature = signing_signature(plan, public, one["id"])
+                signature = signing_signature(plan, public, one)
 
                 assert {:ok, _compact} = CharterAgreementProtocol.finish_signing(plan, signature)
 
@@ -480,7 +483,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   defp signing_context(:null), do: nil
   defp signing_context(value), do: value
 
-  defp signing_signature(plan, public, "signing-ed25519-mixed-order") do
+  defp signing_signature(plan, public, %{"id" => "signing-ed25519-mixed-order"}) do
     assert Base.encode16(public, case: :lower) ==
              "9599999999999999999999999999999999999999999999999999999999999999"
 
@@ -493,14 +496,18 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     Base.url_decode64!(signature, padding: false)
   end
 
-  defp signing_signature(plan, public, id) do
-    byte =
-      Enum.find(1..9, fn n ->
-        elem(:crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<n>>, 32)), 0) == public
-      end)
+  defp signing_signature(plan, public, %{
+         "id" => "signer-scope-" <> _suffix = id,
+         "input" => %{"kid" => kid}
+       }) do
+    {fixture_public, private} = ConformanceFixtureKeys.scope_ed25519(kid)
+    assert fixture_public == public, id
+    :crypto.sign(:eddsa, :none, plan.signing_input.message, [private, :ed25519])
+  end
 
-    assert is_integer(byte), id
-    {_public, private} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<byte>>, 32))
+  defp signing_signature(plan, public, %{"id" => id}) do
+    private = ConformanceFixtureKeys.legacy_ed25519_private(public)
+    assert is_binary(private), id
     :crypto.sign(:eddsa, :none, plan.signing_input.message, [private, :ed25519])
   end
 

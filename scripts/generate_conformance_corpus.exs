@@ -2,8 +2,15 @@ Code.require_file("signing_prepare_cases.exs", __DIR__)
 Code.require_file("ed25519_key_cases.exs", __DIR__)
 Code.require_file("runner_input_cases.exs", __DIR__)
 Code.require_file("descriptor_publication_corpus.exs", __DIR__)
+Code.require_file("conformance_fixture_keys.exs", __DIR__)
 
-alias CharterAgreementProtocol.{Base64Url, Canonicalization, Digest, ExtensionRegistry}
+alias CharterAgreementProtocol.{
+  Base64Url,
+  Canonicalization,
+  ConformanceFixtureKeys,
+  Digest,
+  ExtensionRegistry
+}
 alias CharterAgreementProtocol.Conformance.Corpus
 
 root = System.get_env("CAP_CONFORMANCE_ROOT") || "priv/conformance"
@@ -217,7 +224,7 @@ canonical = fn value ->
 end
 
 descriptor_key = fn byte, key_id ->
-  {public, private} = :crypto.generate_key(:eddsa, :ed25519, :binary.copy(<<byte>>, 32))
+  {public, private} = ConformanceFixtureKeys.ed25519(byte)
 
   {%{
      "key_id" => key_id,
@@ -2805,6 +2812,18 @@ scope_cases =
   |> Map.values()
   |> Enum.filter(&String.starts_with?(&1["id"], "signer-scope-"))
   |> Enum.sort_by(& &1["id"])
+
+for %{
+      "surface" => "signing.prepare",
+      "id" => id,
+      "input" => %{"algorithm" => "Ed25519", "kid" => kid, "public_key" => encoded}
+    } <- scope_cases do
+  {public, _private} = ConformanceFixtureKeys.scope_ed25519(kid)
+
+  if Base64Url.encode(public) != encoded do
+    raise "signer scope fixture key does not match its named seed: #{id}"
+  end
+end
 
 cases =
   cases ++
