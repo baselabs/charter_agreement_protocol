@@ -258,13 +258,15 @@ omit its own commitment. Valid competing openings remain fork evidence.
 
 #### Signer scopes
 
-A revision-8 Party Descriptor MAY carry `signing_scopes`. Earlier
-descriptor grammars MUST reject the member [CAP-DESCRIPTOR-signer-scopes].
+A revision-8 Party Descriptor MAY carry `signing_scopes`
+[CAP-DESCRIPTOR-signer-scopes]. Earlier descriptor grammars MUST reject the
+member [CAP-DESCRIPTOR-signer-scopes].
 The array holds at most 64 objects with exactly `role` and `signers`.
 A role is 1 to 128 UTF-8 bytes. Each `signers` array holds at most 32
 objects with exactly `key_thumbprint` and `artifact_kinds`. Each
 thumbprint MUST identify an active declared verification key using
-the existing `signer_key` digest. Kinds are `acceptance`, `descriptor`,
+the existing `signer_key` digest [CAP-DESCRIPTOR-signer-scopes].
+Kinds are `acceptance`, `descriptor`,
 `receipt`, and `termination`. Roles, thumbprints in each role, and
 kinds in each signer entry MUST be bytewise sorted and distinct
 [CAP-DESCRIPTOR-signer-scopes].
@@ -272,15 +274,17 @@ kinds in each signer entry MUST be bytewise sorted and distinct
 An absent member yields `not_required`. A present array permits a match
 only for the selected key, role and kind. Empty arrays supply no matches.
 For descriptor succession, the predecessor's signing key MUST match
-the `descriptor` kind under some role. After a valid signature, an
-outside successor MUST return `descriptor_chain_invalid`. This rule uses
+the `descriptor` kind under some role [CAP-DESCRIPTOR-signer-scopes].
+After a valid signature, an outside successor MUST return
+`descriptor_chain_invalid` [CAP-DESCRIPTOR-signer-scopes]. This rule uses
 the predecessor's scope. The successor may declare a disjoint active key
 set if any predecessor commitment opens [CAP-DESCRIPTOR-signer-scopes].
 
 An acceptance or termination MUST match against the exact descriptor it
-pins. A receipt MUST use the issuing role's descriptor in the named
-accepted revision. With a bare revision or an unrecognized revision, the
-receipt MUST report `scope_status: not_verified` and a null thumbprint.
+pins [CAP-SCOPE-artifact-facts]. A receipt MUST use the issuing role's
+descriptor in the named accepted revision [CAP-SCOPE-artifact-facts].
+With a bare revision or an unrecognized revision, the receipt MUST report
+`scope_status: not_verified` and a null thumbprint [CAP-SCOPE-artifact-facts].
 The result of resolved matching is `matched` or `outside`, and its
 `signer_thumbprint` identifies the verified key. A later descriptor
 preserves scope matches on earlier pins. Receipt scope describes the
@@ -394,10 +398,12 @@ return `signing_refused` during preparation [CAP-SIGNING-snapshot-membership].
 Other successful plans report `matched`.
 
 Checked producers MUST refuse an outside acceptance, termination, or
-receipt with `signing_refused` and subject `["signing_input", "scope"]`.
+receipt with `signing_refused` and subject `["signing_input", "scope"]`
+[CAP-SCOPE-producer-refusal].
 An outside descriptor successor MUST return `descriptor_chain_invalid`
-after snapshot membership and runtime support checks. The build-only
-descriptor and receipt framing functions have no scope context
+after snapshot membership and runtime support checks
+[CAP-SCOPE-producer-refusal]. The build-only descriptor and receipt
+framing functions have no scope context
 [CAP-SCOPE-producer-refusal].
 
 Acceptance and termination preparation MUST verify the retained set, apply
@@ -601,9 +607,10 @@ revisions retain the all-party acceptance and single-party termination
 rules [CAP-QUORUM-roster-and-votes].
 
 An outside acceptance MUST remain in the verified facts and MUST NOT
-count toward acceptance quorum or assignment assent. Chain verification
-MUST assign the first applicable uncredited reason in this order:
-`arbiter_not_counted`, `role_outside_quorum`, `signer_outside_scope`.
+count toward acceptance quorum or assignment assent [CAP-SCOPE-vote-credit].
+Chain verification MUST assign the first applicable uncredited reason in
+this order: `arbiter_not_counted`, `role_outside_quorum`, `signer_outside_scope`
+[CAP-SCOPE-vote-credit].
 An ordinary vote may match either governing acceptance rule. The
 assignor's marked vote uses the predecessor's rule. Eligible votes
 report `credit: not_required` and a null reason. Single-artifact

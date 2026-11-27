@@ -1,5 +1,5 @@
 defmodule CharterAgreementProtocol.Internal.SigningScope do
-  @moduledoc false
+  @moduledoc "Signer scope grammar and matching. CAP never authorizes."
 
   alias CharterAgreementProtocol.{Error, PartyDescriptor, Schema}
 

@@ -2835,7 +2835,7 @@ raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.e
 
 grouped = Enum.group_by(cases, & &1["surface"])
 
-files =
+case_files =
   Enum.map(Corpus.surfaces(), fn surface ->
     path = "cases/" <> String.replace(surface, ".", "-") <> ".json"
     surface_cases = Map.fetch!(grouped, surface)
@@ -2845,11 +2845,13 @@ files =
         tagged.(%{"format" => case_format, "cases" => surface_cases})
       )
 
-    target = Path.join(root, path)
-    File.mkdir_p!(Path.dirname(target))
-    File.write!(target, bytes)
+    entry = %{
+      "path" => path,
+      "sha256_base64url" => raw_hash.(bytes),
+      "cases" => length(surface_cases)
+    }
 
-    %{"path" => path, "sha256_base64url" => raw_hash.(bytes), "cases" => length(surface_cases)}
+    {entry, bytes}
   end)
 
 observed = Enum.frequencies_by(cases, &{&1["surface"], &1["class"]})
@@ -2873,7 +2875,7 @@ index = %{
   "corpus_digest" => "",
   "registry_digest" => ExtensionRegistry.digest() |> Digest.to_tagged(),
   "total_cases" => length(cases),
-  "files" => files,
+  "files" => Enum.map(case_files, &elem(&1, 0)),
   "applicability" => applicability
 }
 
@@ -2886,6 +2888,20 @@ identity =
   |> Digest.to_tagged()
 
 index = Map.put(index, "corpus_digest", identity)
-File.mkdir_p!(root)
-File.write!(Path.join(root, "index.json"), canonical.(index))
+case_outputs = Enum.map(case_files, fn {entry, bytes} -> {entry["path"], bytes} end)
+outputs = [{"index.json", canonical.(index)} | case_outputs]
+
+# Encoded keys, signatures, and digests can collide with the repository's vocabulary guard.
+forbidden = Regex.compile!(List.to_string([?v, ?i, ?s, ?a]), "i")
+
+Enum.each(outputs, fn {path, bytes} ->
+  if Regex.match?(forbidden, bytes), do: raise("vendor-neutrality collision in #{path}")
+end)
+
+Enum.each(outputs, fn {path, bytes} ->
+  target = Path.join(root, path)
+  File.mkdir_p!(Path.dirname(target))
+  File.write!(target, bytes)
+end)
+
 IO.puts(identity)

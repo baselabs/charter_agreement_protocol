@@ -609,15 +609,14 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   defp projected_acceptance_result({:ok, facts}) do
-    %{
-      "status" => "valid",
-      "output" => %{
-        "acceptance_digest" => facts.acceptance_digest,
-        "revision_digest" => facts.revision_digest,
-        "party_descriptor_digest" => facts.party_descriptor_digest,
-        "descriptor_position" => Atom.to_string(facts.descriptor_position)
-      }
+    output = %{
+      "acceptance_digest" => facts.acceptance_digest,
+      "revision_digest" => facts.revision_digest,
+      "party_descriptor_digest" => facts.party_descriptor_digest,
+      "descriptor_position" => Atom.to_string(facts.descriptor_position)
     }
+
+    %{"status" => "valid", "output" => Map.merge(output, projected_scope(facts))}
   end
 
   defp projected_acceptance_result({:error, %Error{code: code}}),
@@ -645,16 +644,15 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   defp projected_termination_result({:ok, facts}) do
-    %{
-      "status" => "valid",
-      "output" => %{
-        "termination_digest" => facts.termination_digest,
-        "governing_revision_digest" => facts.governing_revision_digest,
-        "party_descriptor_digest" => facts.party_descriptor_digest,
-        "reason_code" => facts.reason_code,
-        "descriptor_position" => Atom.to_string(facts.descriptor_position)
-      }
+    output = %{
+      "termination_digest" => facts.termination_digest,
+      "governing_revision_digest" => facts.governing_revision_digest,
+      "party_descriptor_digest" => facts.party_descriptor_digest,
+      "reason_code" => facts.reason_code,
+      "descriptor_position" => Atom.to_string(facts.descriptor_position)
     }
+
+    %{"status" => "valid", "output" => Map.merge(output, projected_scope(facts))}
   end
 
   defp projected_termination_result({:error, %Error{code: code}}),
@@ -1139,24 +1137,30 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
   end
 
   defp projected_receipt_result({:ok, facts}) do
-    %{
-      "status" => "valid",
-      "output" => %{
-        "receipt_digest" => facts.receipt_digest,
-        "revision_number" => facts.revision_number,
-        "revision_digest" => facts.revision_digest,
-        "decision" => Atom.to_string(facts.decision),
-        "outcome" => Atom.to_string(facts.outcome),
-        "chain_conflict" => Atom.to_string(facts.chain_conflict),
-        "governing_match" => Atom.to_string(facts.governing_match),
-        "deployment_digest_matched" => facts.deployment_digest_matched,
-        "optional_extensions_retained" => facts.optional_extensions_retained
-      }
+    output = %{
+      "receipt_digest" => facts.receipt_digest,
+      "revision_number" => facts.revision_number,
+      "revision_digest" => facts.revision_digest,
+      "decision" => Atom.to_string(facts.decision),
+      "outcome" => Atom.to_string(facts.outcome),
+      "chain_conflict" => Atom.to_string(facts.chain_conflict),
+      "governing_match" => Atom.to_string(facts.governing_match),
+      "deployment_digest_matched" => facts.deployment_digest_matched,
+      "optional_extensions_retained" => facts.optional_extensions_retained
     }
+
+    %{"status" => "valid", "output" => Map.merge(output, projected_scope(facts))}
   end
 
   defp projected_receipt_result({:error, %Error{code: code}}),
     do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+
+  defp projected_scope(%{scope_status: status}) when status in [:not_required, :not_verified],
+    do: %{}
+
+  defp projected_scope(%{scope_status: status, signer_thumbprint: thumbprint}) do
+    %{"scope_status" => Atom.to_string(status), "signer_thumbprint" => thumbprint}
+  end
 
   defp projected_equivocation_result({:error, %Error{code: code}}),
     do: %{"status" => "invalid", "error_code" => Atom.to_string(code)}

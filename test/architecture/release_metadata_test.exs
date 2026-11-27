@@ -1,7 +1,7 @@
 defmodule CharterAgreementProtocol.Architecture.ReleaseMetadataTest do
   use ExUnit.Case, async: true
 
-  @index_sha "DZcLjIwGRERe3xrPtmXKvHbH7a3dt0ZKaW9ZgMUdzSo"
+  @index_sha "f5p3xsEX4uQ0BLeXMDthNt5V37cRWxGXjPrZGWEIv5o"
 
   test "the package ships release evidence without maintainer tooling" do
     files = CharterAgreementProtocol.MixProject.project()[:package][:files]

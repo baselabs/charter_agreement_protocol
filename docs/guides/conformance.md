@@ -31,10 +31,10 @@ is the one place in the guides where they are recorded.
 
 | Identity | Value |
 |---|---|
-| Corpus digest | `sha-256:7G3_s2vf8CaUvTEC-FOdN6gh3g5cdRvQld6i1CwwPm4` |
-| Index SHA-256 (base64url) | `DZcLjIwGRERe3xrPtmXKvHbH7a3dt0ZKaW9ZgMUdzSo` |
+| Corpus digest | `sha-256:8QFOBU4C9JJj2cw153sRuHhwaZYdIgGsyTKc6qKEWFE` |
+| Index SHA-256 (base64url) | `f5p3xsEX4uQ0BLeXMDthNt5V37cRWxGXjPrZGWEIv5o` |
 | Extension registry digest | `sha-256:u754joyHGcLCTm1LYV2s6eHauUUdDfJDwwyhbAbxvzc` |
-| Specification digest | `sha-256:ZauwuqPUMJWx4_zqPWXFy8iSaW09OniVJTHW4CVHxy0` |
+| Specification digest | `sha-256:VJCN2X-LlShK44cBoYXD3NIy7LrhQjSyhBpgi-g2-0s` |
 | Cases | 887, in 17 case files |
 
 The [TypeScript source pin](../../priv/verifier-source.json) selects the
