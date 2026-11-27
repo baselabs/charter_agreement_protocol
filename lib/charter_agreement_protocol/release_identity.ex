@@ -167,7 +167,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     %{
       package_versions: ["1.1.0"],
       verification_semantics: 7,
-      census_digest: "sha-256:ew0s7y5AEsOSxcE9z9EnUx1Z5N_cKIqB1lcWla0dOM0",
+      census_digest: "sha-256:qQdzVwtF1oEBE94goFskvz9gidt4rnJZSWeOvpQrTlk",
       protocol_revisions: [1, 2, 3, 8],
       transitions: [
         %{
@@ -182,6 +182,9 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               from: "invalid_type",
               to: "valid",
               cases: ~w(
+                receipt-inspect-artifact-byte-exact
+                receipt-inspect-empty-profile
+                receipt-inspect-missing-revisions
                 receipt-inspection-contested-ed25519
                 receipt-inspection-different-deployment-ed25519
                 receipt-inspection-grant-differs-ed25519
@@ -193,6 +196,13 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
                 receipt-inspection-unrecognized-ed25519
                 receipt-inspection-unrecognized-mldsa65
               )
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "invalid_profile",
+              to: "valid",
+              cases: ["receipt-inspect-missing-algorithms"]
             }
           ]
         },
@@ -201,7 +211,7 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           direction: :red_to_red,
           operation: "receipt.inspect",
           description:
-            "Return the typed grant digest or signature refusal reached by inspection.",
+            "Return the typed grant digest, signature, or limit refusal reached by inspection.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
@@ -216,6 +226,18 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
               from: "invalid_type",
               to: "signature_invalid",
               cases: ["receipt-inspection-bad-signature-ed25519"]
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "invalid_type",
+              to: "limit_exceeded",
+              cases: ~w(
+                receipt-inspect-artifact-byte-over-limit
+                receipt-inspect-empty-revisions-top-limits-artifact-bytes
+                receipt-inspect-empty-revisions-top-limits-bytes
+                receipt-inspect-empty-revisions-top-limits-items
+              )
             }
           ]
         },

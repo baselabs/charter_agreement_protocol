@@ -1,8 +1,10 @@
 defmodule CharterAgreementProtocol.RunnerInputCases do
   alias CharterAgreementProtocol.Conformance.Corpus
 
+  @deferred_surfaces ~w(descriptor_publication.verify receipt.inspect)
+
   def cases(cases) do
-    surfaces = Corpus.surfaces() -- ["descriptor_publication.verify"]
+    surfaces = Corpus.surfaces() -- @deferred_surfaces
 
     profile_cases(cases, surfaces) ++
       context_cases(cases) ++
@@ -16,9 +18,30 @@ defmodule CharterAgreementProtocol.RunnerInputCases do
     profile_cases(cases, surfaces) ++ kind_cases(cases, surfaces)
   end
 
+  def inspection_cases(cases) do
+    surface = "receipt.inspect"
+    base = valid_case(cases, surface)
+    prefix = "receipt-inspect"
+
+    largest =
+      base["input"]["chain"]
+      |> Map.values()
+      |> List.flatten()
+      |> then(&[base["input"]["compact"] | &1])
+      |> Enum.map(&byte_size/1)
+      |> Enum.max()
+
+    profile_cases(cases, [surface]) ++
+      receipt_context_cases(base, prefix, largest) ++
+      receipt_order_cases(base, prefix) ++
+      compact_float_cases(base, "receipt", prefix) ++
+      range_float_cases(base, prefix, 8) ++
+      kind_cases(cases, [surface]) ++ chain_view_cases(base, prefix, ["chain"])
+  end
+
   defp profile_cases(cases, surfaces) do
     for surface <- surfaces,
-        max_revision = if(surface == "descriptor_publication.verify", do: 8, else: 3),
+        max_revision = if(surface in @deferred_surfaces, do: 8, else: 3),
         {suffix, profile, code} <- [
           {"null-profile", nil, "invalid_profile"},
           {"null-algorithms", %{"algorithms" => nil}, "invalid_profile"},
@@ -43,33 +66,15 @@ defmodule CharterAgreementProtocol.RunnerInputCases do
     claims = :json.decode(revision["input"]["text"]) |> Map.put("abp_bindings", [])
     {:ok, text} = CharterAgreementProtocol.Canonicalization.encode_plain(claims)
 
-    [
+    zero_limit =
       invalid(
         governing,
         "governing-zero-byte-limit",
         Map.put(governing["input"], "limits", %{"max_bytes" => 0}),
         "limit_exceeded"
-      ),
-      %{
-        receipt
-        | "id" => "receipt-artifact-byte-exact",
-          "class" => "valid",
-          "input" => Map.put(receipt["input"], "limits", %{"max_bytes" => byte_size(compact)})
-      },
-      invalid(
-        receipt,
-        "receipt-artifact-byte-over-limit",
-        Map.put(receipt["input"], "limits", %{"max_bytes" => byte_size(compact) - 1}),
-        "limit_exceeded"
       )
-      |> Map.put("class", "maximum_plus_one"),
-      invalid(receipt, "receipt-missing-context", %{"compact" => compact}, "invalid_type"),
-      invalid(
-        receipt,
-        "receipt-null-chain",
-        %{"compact" => compact, "chain" => nil},
-        "invalid_type"
-      ),
+
+    revision_cases = [
       invalid(
         receipt,
         "receipt-malformed-revision-context",
@@ -91,6 +96,37 @@ defmodule CharterAgreementProtocol.RunnerInputCases do
               })
           }
       }
+    ]
+
+    receipt_cases = receipt_context_cases(receipt, "receipt", byte_size(compact))
+    [zero_limit] ++ receipt_cases ++ revision_cases
+  end
+
+  defp receipt_context_cases(base, prefix, bound) do
+    input = base["input"]
+    compact = input["compact"]
+
+    [
+      %{
+        base
+        | "id" => prefix <> "-artifact-byte-exact",
+          "class" => "valid",
+          "input" => Map.put(input, "limits", %{"max_bytes" => bound})
+      },
+      base
+      |> invalid(
+        prefix <> "-artifact-byte-over-limit",
+        Map.put(input, "limits", %{"max_bytes" => bound - 1}),
+        "limit_exceeded"
+      )
+      |> Map.put("class", "maximum_plus_one"),
+      invalid(base, prefix <> "-missing-context", %{"compact" => compact}, "invalid_type"),
+      invalid(
+        base,
+        prefix <> "-null-chain",
+        %{"compact" => compact, "chain" => nil},
+        "invalid_type"
+      )
     ]
   end
 
@@ -138,20 +174,19 @@ defmodule CharterAgreementProtocol.RunnerInputCases do
       end
 
     receipt = valid_case(cases, "receipt.verify")
+    json_cases ++ chain_cases ++ receipt_order_cases(receipt, "receipt")
+  end
 
-    receipt_cases =
-      for {suffix, limits} <- [
-            {"items", %{"max_artifact_set_items" => 1}},
-            {"bytes", %{"max_artifact_set_bytes" => 10}},
-            {"artifact-bytes", %{"max_bytes" => 10}}
-          ] do
-        input =
-          receipt["input"] |> put_in(["chain", "revisions"], []) |> Map.put("limits", limits)
+  defp receipt_order_cases(base, prefix) do
+    for {suffix, limits} <- [
+          {"items", %{"max_artifact_set_items" => 1}},
+          {"bytes", %{"max_artifact_set_bytes" => 10}},
+          {"artifact-bytes", %{"max_bytes" => 10}}
+        ] do
+      input = base["input"] |> put_in(["chain", "revisions"], []) |> Map.put("limits", limits)
 
-        invalid(receipt, "receipt-empty-revisions-top-limits-" <> suffix, input, "limit_exceeded")
-      end
-
-    json_cases ++ chain_cases ++ receipt_cases
+      invalid(base, prefix <> "-empty-revisions-top-limits-" <> suffix, input, "limit_exceeded")
+    end
   end
 
   defp float_cases(cases) do
@@ -171,26 +206,9 @@ defmodule CharterAgreementProtocol.RunnerInputCases do
       end
 
     verify_cases =
-      for {kind, surface} <- [
-            {"party_descriptor", "party_descriptor.verify"},
-            {"acceptance", "acceptance.verify"},
-            {"termination", "termination.verify"},
-            {"receipt", "receipt.verify"}
-          ],
-          field <- integer_fields(kind) do
-        base = valid_case(cases, surface)
-        [header, payload, signature] = String.split(base["input"]["compact"], ".")
-        claims = payload |> Base.url_decode64!(padding: false) |> :json.decode()
-        bytes = float_json(Map.put(claims, field, claims[field] / 1))
-        compact = Enum.join([header, Base.url_encode64(bytes, padding: false), signature], ".")
-
-        invalid(
-          base,
-          kind <> "-verify-float-" <> String.replace(field, "_", "-"),
-          Map.put(base["input"], "compact", compact),
-          "invalid_type"
-        )
-      end
+      Enum.flat_map(~w(party_descriptor acceptance termination receipt), fn kind ->
+        compact_float_cases(valid_case(cases, kind <> ".verify"), kind, kind <> "-verify")
+      end)
 
     revision = valid_case(cases, "charter_revision.decode")
     claims = :json.decode(revision["input"]["text"])
@@ -214,23 +232,46 @@ defmodule CharterAgreementProtocol.RunnerInputCases do
         )
       end
 
-    range_cases =
-      for surface <- ~w(party_descriptor.verify chain.verify_profile signing.prepare),
-          {suffix, range} <- [
-            {"minimum", %{"min" => 1.0, "max" => 3}},
-            {"maximum", %{"min" => 1, "max" => 3.0}}
-          ] do
-        base = valid_case(cases, surface)
+    profiled_surfaces = ~w(party_descriptor.verify chain.verify_profile signing.prepare)
 
-        invalid(
-          base,
-          String.replace(surface, ".", "-") <> "-float-revision-" <> suffix,
-          Map.put(base["input"], "profile", %{"revisions" => range}),
-          "invalid_profile"
-        )
-      end
+    range_cases =
+      Enum.flat_map(profiled_surfaces, fn surface ->
+        prefix = String.replace(surface, ".", "-")
+        range_float_cases(valid_case(cases, surface), prefix, 3)
+      end)
 
     claims_cases ++ verify_cases ++ revision_cases ++ range_cases
+  end
+
+  defp compact_float_cases(base, kind, prefix) do
+    [header, payload, signature] = String.split(base["input"]["compact"], ".")
+    claims = payload |> Base.url_decode64!(padding: false) |> :json.decode()
+
+    for field <- integer_fields(kind) do
+      bytes = float_json(Map.put(claims, field, claims[field] / 1))
+      compact = Enum.join([header, Base.url_encode64(bytes, padding: false), signature], ".")
+
+      invalid(
+        base,
+        prefix <> "-float-" <> String.replace(field, "_", "-"),
+        Map.put(base["input"], "compact", compact),
+        "invalid_type"
+      )
+    end
+  end
+
+  defp range_float_cases(base, prefix, maximum) do
+    for {suffix, range} <- [
+          {"minimum", %{"min" => 1.0, "max" => maximum}},
+          {"maximum", %{"min" => 1, "max" => maximum / 1}}
+        ] do
+      invalid(
+        base,
+        prefix <> "-float-revision-" <> suffix,
+        Map.put(base["input"], "profile", %{"revisions" => range}),
+        "invalid_profile"
+      )
+    end
   end
 
   defp integer_fields("party_descriptor"), do: ~w(protocol_revision descriptor_number)
@@ -281,24 +322,28 @@ defmodule CharterAgreementProtocol.RunnerInputCases do
   defp kind_input(input, _surface), do: input
 
   defp chain_view_cases(cases) do
-    for {surface, base, path} <- [
-          {"receipt", valid_case(cases, "receipt.verify"), ["chain"]},
-          {"signing-receipt", Enum.find(cases, &(&1["id"] == "signing-ed25519-receipt")),
-           ["context", "chain"]}
-        ],
-        {suffix, member, value} <- [
+    signing = Enum.find(cases, &(&1["id"] == "signing-ed25519-receipt"))
+
+    chain_view_cases(valid_case(cases, "receipt.verify"), "receipt", ["chain"]) ++
+      chain_view_cases(signing, "signing-receipt", ["context", "chain"])
+  end
+
+  defp chain_view_cases(base, prefix, path) do
+    for {suffix, member, value} <- [
           {"limits", "limits", %{"max_artifact_set_items" => 1}},
           {"null-limits", "limits", nil},
           {"extra", "extra", true},
           {"profile", "profile", %{}}
         ] do
       input = update_in(base["input"], path, &Map.put(&1, member, value))
-      invalid(base, surface <> "-chain-view-" <> suffix, input, "invalid_type")
+      invalid(base, prefix <> "-chain-view-" <> suffix, input, "invalid_type")
     end
   end
 
-  defp valid_case(cases, surface),
-    do: Enum.find(cases, &(&1["surface"] == surface and &1["expect"]["status"] == "valid"))
+  defp valid_case(cases, surface) do
+    Enum.find(cases, &(&1["surface"] == surface and &1["expect"]["status"] == "valid")) ||
+      raise "no valid runner input fixture for #{surface}"
+  end
 
   defp invalid(base, id, input, code),
     do: %{

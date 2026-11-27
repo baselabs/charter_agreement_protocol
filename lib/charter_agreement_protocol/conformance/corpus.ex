@@ -168,7 +168,8 @@ defmodule CharterAgreementProtocol.Conformance.Corpus do
       n_a: "non-receipt codec and set-construction behavior is outside receipt verification"
     },
     "receipt.inspect" => %{
-      required: ~w(valid invalid_type invalid_constraint signature_invalid chain_fork terminated),
+      required:
+        ~w(valid invalid_type invalid_constraint signature_invalid chain_fork terminated maximum_plus_one),
       n_a: "inspection reuses the receipt and chain codec, signature, and profile gates"
     }
   }

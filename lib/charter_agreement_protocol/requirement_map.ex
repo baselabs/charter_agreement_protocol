@@ -383,7 +383,8 @@ defmodule CharterAgreementProtocol.RequirementMap do
         [
           "signing.prepare:exact_bound",
           "signing.prepare:maximum_plus_one",
-          "receipt.verify:maximum_plus_one"
+          "receipt.verify:maximum_plus_one",
+          "receipt.inspect:maximum_plus_one"
         ]},
        {:gate, CharterAgreementProtocol.Architecture.PreSignCheckTest},
        {:mutation, "signing-build-default-limits"},

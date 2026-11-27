@@ -207,7 +207,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert counts["chain.verify"] + counts["governing_revision"] == 161
     assert counts["chain.verify_profile"] == 26
     assert counts["receipt.verify"] == 76
-    assert counts["receipt.inspect"] == 14
+    assert counts["receipt.inspect"] == 44
     assert counts["signing.prepare"] == 147
   end
 

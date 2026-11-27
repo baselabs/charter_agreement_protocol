@@ -11,7 +11,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 ## Bound evidence
 
 - Requirements: 118
-- Corpus cells: 119
+- Corpus cells: 120
 - Named mutations: 105
 
 ## Requirements
@@ -316,7 +316,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ### CAP-SIGNING-caller-limits
 
-- Corpus: `signing.prepare:exact_bound`, `signing.prepare:maximum_plus_one`, `receipt.verify:maximum_plus_one`
+- Corpus: `signing.prepare:exact_bound`, `signing.prepare:maximum_plus_one`, `receipt.verify:maximum_plus_one`, `receipt.inspect:maximum_plus_one`
 - Gate: `CharterAgreementProtocol.Architecture.PreSignCheckTest`
 - Mutation: `signing-build-default-limits`
 - Mutation: `signing-set-limits-skip`

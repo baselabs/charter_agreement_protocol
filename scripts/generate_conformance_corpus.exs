@@ -2833,6 +2833,7 @@ cases =
     supplemental_cases ++ scope_cases
 
 cases = cases ++ CharterAgreementProtocol.ReceiptInspectionCorpus.cases(cases)
+cases = cases ++ CharterAgreementProtocol.RunnerInputCases.inspection_cases(cases)
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 
