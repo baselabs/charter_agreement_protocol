@@ -87,10 +87,11 @@ machine-readable terms govern if they disagree. CAP records it and does not act 
   in an artifact's extensions.
 
 **Protocol revision.** The wire version an artifact declares (`protocol_revision`).
-Published CAP 1.0.0 verifies revisions 1, 2 and 3. Revision 3 adds ML-DSA
-signatures. The CAP 1.1.0 candidate adds revision 8 for party descriptors,
-descriptor publications, charter revisions, acceptances and termination notices.
-Revision-8 charters can declare party quorums and assignments.
+CAP 1.1.0 verifies protocol revisions 1, 2 and 3, including ML-DSA signatures
+from revision 3. It also verifies revision 8 for party descriptors, descriptor
+publications, charter revisions, acceptances and termination notices.
+Revision-8 charters can declare party quorums and assignments. Receipts that
+refer to them still use protocol revisions 1, 2 or 3.
 
 **Receipt.** A signed record of an action (`cap+receipt`), tied to the exact revision
 and deployment it was taken under.

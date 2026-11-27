@@ -28,6 +28,7 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
   @candidate_version Mix.Project.config()[:version]
   # Published setup cells use the same CAP release line as the 1.0 signer.
   @hex_dependency ~s({:charter_agreement_protocol, "~> 1.0.0"})
+  @current_hex_dependency ~s({:charter_agreement_protocol, "~> #{@candidate_version}"})
 
   # Evaluates cell_*.exs in order with one binding and one environment, then prints
   # each result under a marker line.
@@ -142,7 +143,8 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
   defp run_guide!(name, signer?) do
     source = File.read!(Path.join(@root, "docs/guides/#{name}"))
     [install | rest] = cells(source)
-    assert install =~ @hex_dependency
+    hex_dependency = if signer?, do: @hex_dependency, else: @current_hex_dependency
+    assert install =~ hex_dependency
     if signer?, do: assert(install =~ ~s({:charter_agreement_signer, "~> 1.0.0"}))
 
     dependencies = ~s({:charter_agreement_protocol, path: #{inspect(@root)}, override: true})

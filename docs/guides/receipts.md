@@ -119,17 +119,18 @@ unresolved fork. A receipt that names a revision you hold reports
 `governing_match: :undetermined` with `chain_conflict: :none`, because two branches
 compete at that instant. A receipt that names a sibling you have never seen reports
 `chain_conflict: :fork_evidenced`.
+
 ## Inspect a receipt
 
-Build an artifact set from the retained revision, acceptance, termination and
-descriptor bytes with `CharterAgreementProtocol.build_set/4`. Pass that set,
-the receipt compact, the retained grant digest or `nil`, and your limits to
-`CharterAgreementProtocol.inspect_receipt/4`. Use `JSON.encode!/1` to export
-the returned record.
+Build an artifact set from the retained revision, acceptance, termination, and
+descriptor bytes with `CharterAgreementProtocol.build_set/4`. Call
+`CharterAgreementProtocol.inspect_receipt(compact, set, grant_reference, limits)`.
+Pass your retained tagged grant digest or `nil` as `grant_reference`. Use
+`JSON.encode!/1` to export the returned record.
 
-The record holds the original signed segments and their digests, the
-decoded payload, and the signing key thumbprint. Its grant comparison
-reports digest equality. Its governing comparison names the revision
-governing at the signed receipt instant and any differing fields. When
-the view supplies no unique governing revision, the reason is recorded
-with `not_verified`.
+Join the three original signed segments in `signed` with periods to reconstruct
+the compact receipt. The record includes the decoded payload and the signing
+key thumbprint. Its `grant` section compares digests. Its `agreement` section
+names the revision governing at `occurred_at` and lists any differing fields.
+If the view has no unique governing revision, the agreement status is
+`"not_verified"` and the record gives the reason.

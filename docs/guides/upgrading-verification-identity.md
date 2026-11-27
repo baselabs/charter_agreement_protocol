@@ -4,7 +4,7 @@ If you store charter artifacts and verify them again later, you need to know
 whether a newer CAP release would reach the same results. CAP publishes that
 as data. This page says what to store, what to compare when you verify again,
 how releases map to verification semantics, and what to change for each
-upgrade from 0.3.x through the 1.1.0 candidate.
+upgrade from 0.3.x through 1.1.0.
 
 ## What to store next to the artifacts
 
@@ -224,9 +224,15 @@ preparation returns its existing `signing_input_invalid` boundary code. The rele
   legacy successor of an unsigned genesis remains proposed. A query that used to
   return that successor returns `:none` when no other revision governs.
 - **Verify revision-8 charters and assignments.** Revision 8 supports party
-  quorums for acceptance and termination. Every party must assent to a new
-  revision that assigns a party position. With a verified chain, receipt keys
-  resolve against the issuing role's owner at the receipt's occurrence instant.
+  quorums for acceptance and termination. An assignment requires assent from
+  every party named in the new revision and from each assignor. With a verified
+  chain, receipt keys resolve against the issuing role's owner at `occurred_at`.
+- **Check signer scopes.** When a descriptor declares scopes, an outside
+  signature cannot contribute to a quorum or satisfy assignment assent.
+  Checked signing refuses a key outside its scope.
+- **Export receipt evidence.** `inspect_receipt/4` takes your retained artifact
+  set and an optional grant digest. It preserves the original compact segments
+  and reports the signing key provenance and agreement with the governing view.
 - **Verify descriptor commitments and publications.** Revision 8 supports
   committed successor key sets and current/next publications checked against the
   signed descriptor history.
@@ -237,17 +243,17 @@ preparation returns its existing `signing_input_invalid` boundary code. The rele
 ## Choose the dependency requirement
 
 ```elixir
-{:charter_agreement_protocol, "~> 1.0.0"}
+{:charter_agreement_protocol, "~> 1.1.0"}
 ```
 
-The 1.x public Elixir API follows Semantic Versioning. `~> 1.0.0` accepts
-1.0.x patch releases; `~> 1.0` also accepts later 1.x minor releases.
+The 1.x public Elixir API follows Semantic Versioning. `~> 1.1.0` accepts
+1.1.x patch releases. `~> 1.1` also accepts later 1.x minor releases.
 Verification behavior has its own identity: record the semantics version,
 corpus, registry and specification digests whenever updating the lock.
 A package major version does not change an artifact's `protocol_revision`.
 
 Your `mix.lock` fixes the exact version until `mix deps.update`. If exact
-package bytes matter, use `== 1.0.0` and retain the Hex checksum from the lock.
+package bytes matter, use `== 1.1.0` and retain the Hex checksum from the lock.
 
 ## Runtimes that cannot verify ML-DSA
 

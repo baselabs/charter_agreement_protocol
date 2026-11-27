@@ -125,7 +125,7 @@ party signs it.
 
 | Member | Required | Rule |
 |---|---|---|
-| `protocol_revision` | yes | 1, 2 or 8 |
+| `protocol_revision` | yes | 1, 2 or 3, including when the receipt names a revision-8 charter |
 | `charter_id` | yes | The charter id |
 | `revision_number` | yes | Must equal the named revision's number |
 | `revision_digest` | yes | The revision the action ran under |

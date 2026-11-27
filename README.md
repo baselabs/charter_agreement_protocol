@@ -34,7 +34,7 @@ and is not proven.
 
 ```elixir
 def deps do
-  [{:charter_agreement_protocol, "~> 1.0.0"}]
+  [{:charter_agreement_protocol, "~> 1.1.0"}]
 end
 ```
 
@@ -80,7 +80,8 @@ what the facts mean.
 CAP builds the exact bytes to sign and checks the result. Signing happens outside CAP,
 with your keys. With your own signing code, call `prepare_signing/5` first: before a
 signature exists, it checks the claims, the context, your limits and profile, and that
-your key is one your own descriptor names. Sign `plan.signing_input.message`, then
+your key is one your own descriptor names. It checks the key's scope when the
+descriptor declares one. Sign `plan.signing_input.message`, then
 `finish_signing/2` assembles the compact and verifies it. The companion package
 [`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer) does all of
 this for you: it takes your key handle, refuses before the key is used when the artifact
@@ -104,7 +105,7 @@ flow.
 |---|---|---|
 | `charter_agreement_protocol` (this package) | Elixir | Reference verifier and the bytes to sign |
 | [`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer) | Elixir | Signs artifacts with your key handle |
-| [`@charter-agreement-protocol/verifier`](https://www.npmjs.com/package/@charter-agreement-protocol/verifier) | TypeScript | Independent second verifier |
+| [`@charter-agreement-protocol/verifier`](https://www.npmjs.com/package/@charter-agreement-protocol/verifier) | TypeScript | Independent second verifier (2.0.0 for CAP 1.1.0) |
 | [`@charter-agreement-protocol/signer`](https://www.npmjs.com/package/@charter-agreement-protocol/signer) | TypeScript | Signer for Node |
 
 The two verifiers share no code. Both must give the same answer, byte for byte, on
@@ -134,13 +135,16 @@ capability-limited expectations for Node and browser verification.
 
 ## Status
 
-The 1.1.0 candidate verifies revision-8 descriptor commitments and publications,
-quorums for acceptance and termination, and declared party assignments. Every
-charter successor needs an accepted predecessor. On replay, a signed legacy
-successor of an unsigned genesis can lose governing status.
-The installation example targets the published 1.0.0 series. See the [changelog](CHANGELOG.md)
-for what changed, and [upgrading](docs/guides/upgrading-verification-identity.md) before
-moving between versions.
+CAP 1.1.0 verifies revision-8 descriptor commitments and publications,
+acceptance and termination quorums, and declared party assignments.
+Descriptor scopes determine which keys can contribute to those quorums and
+to assignment assent. Every charter successor needs an accepted predecessor.
+On replay, a signed legacy successor of an unsigned genesis can lose governing
+status. Use `inspect_receipt/4` to export the signed segments, key provenance,
+and comparisons with your retained grant digest and governing revision.
+
+See the [changelog](CHANGELOG.md) and the
+[upgrade guide](docs/guides/upgrading-verification-identity.md).
 
 ## Contributing and security
 

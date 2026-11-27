@@ -4,6 +4,8 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-11-27
+
 - Inspect signed receipts against retained chain artifacts. Return the exact
   compact segments, key provenance, grant digest comparison, and agreement
   with the governing revision in a portable record.
