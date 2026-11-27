@@ -4,6 +4,10 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+- Inspect signed receipts against retained chain artifacts. Return the exact
+  compact segments, key provenance, grant digest comparison, and agreement
+  with the governing revision in a portable record.
+
 - Verify per-party signer scopes on revision-8 descriptors. Exclude outside
   votes from acceptance, assignment and termination counts, check scope
   before signing, and retain the matched scope as a verification fact.

@@ -115,6 +115,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "docs/adr/supported-otp-set.md",
         "docs/adr/dependency-currency-gate.md",
         "docs/adr/pre-sign-check.md",
+        "docs/adr/receipt-inspection.md",
         "docs/adr/release-identity.md"
       ],
       licenses: ["Apache-2.0"],
@@ -161,6 +162,7 @@ defmodule CharterAgreementProtocol.MixProject do
         "docs/adr/algorithm-name-agility.md",
         "docs/adr/ml-dsa-admission.md",
         "docs/adr/pre-sign-check.md",
+        "docs/adr/receipt-inspection.md",
         "docs/adr/release-identity.md",
         "spec/core.md",
         "spec/requirements.md",
@@ -214,6 +216,7 @@ defmodule CharterAgreementProtocol.MixProject do
           "docs/adr/algorithm-name-agility.md",
           "docs/adr/ml-dsa-admission.md",
           "docs/adr/pre-sign-check.md",
+          "docs/adr/receipt-inspection.md",
           "docs/adr/release-identity.md"
         ],
         Specification: [
@@ -251,6 +254,7 @@ defmodule CharterAgreementProtocol.MixProject do
           CharterAgreementProtocol.DescriptorFacts,
           CharterAgreementProtocol.TerminationFacts,
           CharterAgreementProtocol.ReceiptFacts,
+          CharterAgreementProtocol.ReceiptInspection,
           CharterAgreementProtocol.ForkEvidence,
           CharterAgreementProtocol.AcceptanceEquivocation,
           CharterAgreementProtocol.Facts

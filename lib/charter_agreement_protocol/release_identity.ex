@@ -167,9 +167,57 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
     %{
       package_versions: ["1.1.0"],
       verification_semantics: 7,
-      census_digest: "sha-256:8QFOBU4C9JJj2cw153sRuHhwaZYdIgGsyTKc6qKEWFE",
+      census_digest: "sha-256:FEcZa3RUpPKowlUPAI-_asdwIA5U0a2M1edUbc6U-fc",
       protocol_revisions: [1, 2, 3, 8],
       transitions: [
+        %{
+          class: :admission,
+          direction: :red_to_green,
+          operation: "receipt.inspect",
+          description: "Inspect verified receipt signatures, retained bytes, and view agreement.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "invalid_type",
+              to: "valid",
+              cases: ~w(
+                receipt-inspection-contested-ed25519
+                receipt-inspection-different-deployment-ed25519
+                receipt-inspection-grant-differs-ed25519
+                receipt-inspection-grant-differs-mldsa65
+                receipt-inspection-host-without-digest-ed25519
+                receipt-inspection-matched-ed25519
+                receipt-inspection-matched-mldsa65
+                receipt-inspection-terminated-ed25519
+                receipt-inspection-unrecognized-ed25519
+                receipt-inspection-unrecognized-mldsa65
+              )
+            }
+          ]
+        },
+        %{
+          class: :error_code_change,
+          direction: :red_to_red,
+          operation: "receipt.inspect",
+          description: "Return the typed grant digest or signature refusal reached by inspection.",
+          witnesses: [
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "invalid_type",
+              to: "digest_encoding_invalid",
+              cases: ["receipt-inspection-bad-grant-digest-ed25519"]
+            },
+            %{
+              entry_point: "corpus_runner",
+              baselines: ["hex:1.0.0", "npm:1.0.0"],
+              from: "invalid_type",
+              to: "signature_invalid",
+              cases: ["receipt-inspection-bad-signature-ed25519"]
+            }
+          ]
+        },
         %{
           class: :admission,
           direction: :red_to_green,

@@ -112,6 +112,7 @@ defmodule CharterAgreementProtocol do
     PartyDescriptor,
     Receipt,
     ReceiptFacts,
+    ReceiptInspection,
     SigningInput,
     TerminationFacts,
     TerminationNotice
@@ -600,6 +601,21 @@ defmodule CharterAgreementProtocol do
         ) ::
           {:ok, ReceiptFacts.t()} | {:error, CharterAgreementProtocol.Error.t()}
   defdelegate verify_receipt(compact, context, limits), to: Receipt, as: :verify
+
+  @doc """
+  Inspect a receipt against a raw `CharterAgreementProtocol.ArtifactSet`.
+
+  Pass the retained tagged grant digest or `nil`. The result holds the exact
+  compact segments, decoded claims, signature provenance, and separate grant
+  and governing comparisons. The result can be serialized with `JSON.encode/1`.
+  """
+  @spec inspect_receipt(term(), ArtifactSet.t(), binary() | nil, Limits.t()) ::
+          {:ok, ReceiptInspection.t()} | {:error, Error.t()}
+  @spec inspect_receipt(term(), ArtifactSet.t(), binary() | nil, Limits.t(), Profile.t()) ::
+          {:ok, ReceiptInspection.t()} | {:error, Error.t()}
+  def inspect_receipt(compact, set, grant_reference, limits, profile \\ Profile.full()) do
+    Receipt.inspect(compact, set, grant_reference, limits, profile)
+  end
 
   @doc """
   Verify one receipt under a capability profile.

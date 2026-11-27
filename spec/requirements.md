@@ -10,11 +10,35 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ## Bound evidence
 
-- Requirements: 114
-- Corpus cells: 113
-- Named mutations: 101
+- Requirements: 118
+- Corpus cells: 119
+- Named mutations: 105
 
 ## Requirements
+
+### CAP-INSPECTION-provenance
+
+- Corpus: `receipt.inspect:valid`, `receipt.inspect:signature_invalid`
+- Gate: `CharterAgreementProtocol.Conformance.CorpusTest`
+- Mutation: `inspection-signature-bypass`
+
+### CAP-INSPECTION-signed-bytes
+
+- Corpus: `receipt.inspect:valid`
+- Gate: `CharterAgreementProtocol.Conformance.CorpusTest`
+- Mutation: `inspection-payload-digest-drift`
+
+### CAP-INSPECTION-grant-digest
+
+- Corpus: `receipt.inspect:valid`, `receipt.inspect:invalid_constraint`
+- Gate: `CharterAgreementProtocol.Conformance.CorpusTest`
+- Mutation: `inspection-grant-comparison-bypass`
+
+### CAP-INSPECTION-governing-agreement
+
+- Corpus: `receipt.inspect:valid`, `receipt.inspect:chain_fork`, `receipt.inspect:terminated`
+- Gate: `CharterAgreementProtocol.Conformance.CorpusTest`
+- Mutation: `inspection-governing-differences-drop`
 
 ### CAP-DESCRIPTOR-signer-scopes
 
@@ -240,7 +264,7 @@ requirement. Regenerate with `mix run scripts/render_requirements.exs`.
 
 ### CAP-CONFORMANCE-runner-inputs
 
-- Corpus: `base64url.decode:invalid_type`, `json.decode:invalid_type`, `canonicalization.encode:invalid_type`, `digest.hash:invalid_type`, `schema.validate:invalid_type`, `party_descriptor.verify:invalid_type`, `descriptor_chain.verify:invalid_type`, `descriptor_publication.verify:invalid_type`, `charter_revision.decode:invalid_type`, `acceptance.verify:invalid_type`, `acceptance.equivocation:invalid_type`, `termination.verify:invalid_type`, `chain.verify:invalid_type`, `chain.verify_profile:invalid_type`, `governing_revision:invalid_type`, `receipt.verify:invalid_type`, `signing.prepare:invalid_type`
+- Corpus: `base64url.decode:invalid_type`, `json.decode:invalid_type`, `canonicalization.encode:invalid_type`, `digest.hash:invalid_type`, `schema.validate:invalid_type`, `party_descriptor.verify:invalid_type`, `descriptor_chain.verify:invalid_type`, `descriptor_publication.verify:invalid_type`, `charter_revision.decode:invalid_type`, `acceptance.verify:invalid_type`, `acceptance.equivocation:invalid_type`, `termination.verify:invalid_type`, `chain.verify:invalid_type`, `chain.verify_profile:invalid_type`, `governing_revision:invalid_type`, `receipt.verify:invalid_type`, `receipt.inspect:invalid_type`, `signing.prepare:invalid_type`
 - Gate: `CharterAgreementProtocol.Conformance.RunnerPropertyTest`
 - Mutation: `runner-null-axis-default`
 

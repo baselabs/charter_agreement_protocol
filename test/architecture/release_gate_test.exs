@@ -16,6 +16,10 @@ defmodule CharterAgreementProtocol.Architecture.ReleaseGateTest do
   }
 
   @mutation_names ~w(
+    inspection-signature-bypass
+    inspection-payload-digest-drift
+    inspection-grant-comparison-bypass
+    inspection-governing-differences-drop
     scope-successor-kind-bypass
     scope-artifact-kind-bypass
     scope-assignment-assent-bypass

@@ -3,6 +3,7 @@ Code.require_file("ed25519_key_cases.exs", __DIR__)
 Code.require_file("runner_input_cases.exs", __DIR__)
 Code.require_file("descriptor_publication_corpus.exs", __DIR__)
 Code.require_file("conformance_fixture_keys.exs", __DIR__)
+Code.require_file("receipt_inspection_corpus.exs", __DIR__)
 
 alias CharterAgreementProtocol.{
   Base64Url,
@@ -2830,6 +2831,8 @@ cases =
   cases ++
     CharterAgreementProtocol.DescriptorPublicationCorpus.cases() ++
     supplemental_cases ++ scope_cases
+
+cases = cases ++ CharterAgreementProtocol.ReceiptInspectionCorpus.cases(cases)
 
 raw_hash = fn bytes -> bytes |> Digest.of() |> Map.fetch!(:bytes) |> Base64Url.encode() end
 

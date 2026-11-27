@@ -230,6 +230,7 @@ defmodule CharterAgreementProtocol.ConformanceSchemaGate do
     "descriptor_chain.verify",
     "party_descriptor.verify",
     "receipt.verify",
+    "receipt.inspect",
     "termination.verify"
   ]
 

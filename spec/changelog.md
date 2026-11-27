@@ -8,6 +8,12 @@ changelog (`../CHANGELOG.md`): a package release ships a specification
 revision, but a specification revision does not require a package
 release.
 
+## 2026-11-27 — receipt inspection
+
+Inspection preserves a verified receipt's exact signed segments and reports
+signature provenance, retained grant digest equality, and agreement with the
+governing view. The browser and SDK expose the same inspection record.
+
 ## 2026-11-27 — signer scopes
 
 Revision-8 descriptors can declare role and artifact-kind allowlists for

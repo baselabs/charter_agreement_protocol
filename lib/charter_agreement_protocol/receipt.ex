@@ -21,6 +21,8 @@ defmodule CharterAgreementProtocol.Receipt do
 
   alias CharterAgreementProtocol.{
     AcceptanceFacts,
+    ArtifactSet,
+    Base64Url,
     Capability.Profile,
     Chain,
     ChainFacts,
@@ -36,6 +38,7 @@ defmodule CharterAgreementProtocol.Receipt do
     Internal.SigningScope,
     Limits,
     ReceiptFacts,
+    ReceiptInspection,
     RevisionFacts,
     Schema,
     TerminationFacts,
@@ -226,6 +229,45 @@ defmodule CharterAgreementProtocol.Receipt do
 
   def verify(_compact, _context, _limits, _profile), do: invalid_type()
 
+  @doc "Inspect a receipt against raw retained chain artifacts and an optional grant digest."
+  @spec inspect(term(), ArtifactSet.t(), binary() | nil, Limits.t(), Profile.t()) ::
+          {:ok, ReceiptInspection.t()} | {:error, Error.t()}
+  def inspect(compact, artifact_set, grant_reference, limits, profile) do
+    with :ok <- Limits.check(limits),
+         :ok <- Profile.check(profile),
+         :ok <- check_grant_reference(grant_reference),
+         {:ok, chain} <- Chain.verify_set(artifact_set, limits, profile),
+         {:ok, prepared} <- prepare_verified_receipt(compact, {:chain, chain}, limits, profile),
+         {:ok, {public, algorithm}} <- verify_prepared_signature(prepared, profile) do
+      key = %{
+        "algorithm" => algorithm,
+        "key_id" => prepared.artifact.envelope.kid,
+        "public_key" => Base64Url.encode(public),
+        "status" => "active"
+      }
+
+      ReceiptInspection.build(
+        compact,
+        prepared.artifact,
+        chain,
+        key,
+        prepared.projection.deployment_digest_matched,
+        prepared.scope.scope_status,
+        grant_reference
+      )
+    end
+  end
+
+  defp check_grant_reference(nil), do: :ok
+
+  defp check_grant_reference(reference) when is_binary(reference) do
+    if byte_size(reference) == 51 and match?({:ok, _digest}, Digest.from_tagged(reference)),
+      do: :ok,
+      else: {:error, Error.new(:digest_encoding_invalid, ["grant_reference"])}
+  end
+
+  defp check_grant_reference(_reference), do: invalid_type()
+
   @doc false
   @spec decode_for_signing(term(), Limits.t()) :: {:ok, t()} | {:error, Error.t()}
   def decode_for_signing(compact, %Limits{} = limits) when is_binary(compact) do
@@ -245,7 +287,7 @@ defmodule CharterAgreementProtocol.Receipt do
 
   defp do_verify(compact, context, limits, profile) do
     with {:ok, prepared} <- prepare_receipt(compact, context, limits, profile),
-         :ok <- verify_prepared_signature(prepared, profile) do
+         {:ok, _key} <- verify_prepared_signature(prepared, profile) do
       facts(prepared.artifact, prepared.projection, prepared.context, prepared.scope)
     end
   end
@@ -269,8 +311,13 @@ defmodule CharterAgreementProtocol.Receipt do
   end
 
   defp prepare_receipt(compact, context, limits, profile) do
-    with {:ok, verified_context} <- reverify_context(context, limits, profile),
-         {:ok, receipt} <- decode(compact, limits),
+    with {:ok, context} <- reverify_context(context, limits, profile) do
+      prepare_verified_receipt(compact, context, limits, profile)
+    end
+  end
+
+  defp prepare_verified_receipt(compact, verified_context, limits, profile) do
+    with {:ok, receipt} <- decode(compact, limits),
          {:ok, projection} <- project(receipt, verified_context),
          :ok <- CompactJws.admit(receipt.envelope, profile) do
       {keys, holder_keys, holder_match, scope} = context_keys(verified_context, receipt)
@@ -314,7 +361,7 @@ defmodule CharterAgreementProtocol.Receipt do
   defp receipt_scope(_revision, [%DescriptorFacts{descriptor: descriptor}], kid, role),
     do: SigningScope.for_key(descriptor, kid, role, "receipt")
 
-  defp verify_prepared_signature(%{keys: :unnamed}, _profile), do: :ok
+  defp verify_prepared_signature(%{keys: :unnamed}, _profile), do: {:ok, nil}
 
   defp verify_prepared_signature(
          %{artifact: receipt, keys: keys, holder_keys: holders},
@@ -326,9 +373,10 @@ defmodule CharterAgreementProtocol.Receipt do
       end)
 
     with :ok <- signature_outcome(results) do
-      if Enum.any?(Enum.zip(keys, results), &holder_signature?(&1, holders)),
-        do: :ok,
-        else: claims_error()
+      case Enum.find(Enum.zip(keys, results), &holder_signature?(&1, holders)) do
+        {key, :ok} -> {:ok, key}
+        nil -> claims_error()
+      end
     end
   end
 

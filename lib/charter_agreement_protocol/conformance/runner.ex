@@ -11,6 +11,7 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
 
   alias CharterAgreementProtocol.{
     Acceptance,
+    ArtifactSet,
     Base64Url,
     Canonicalization,
     Capability.Profile,
@@ -296,6 +297,21 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
     end)
   end
 
+  defp execute(%{"surface" => "receipt.inspect", "input" => input}, profile) do
+    {:ok, caller_limits} = limits(input)
+
+    with {:ok, set} <- inspection_artifacts(input["chain"]) do
+      Receipt.inspect(input["compact"], set, input["grant_reference"], caller_limits, profile)
+    end
+    |> project_ok(fn inspection ->
+      Map.new(inspection, fn
+        {:claims, claims} -> {"claims", claims}
+        {:not_verified, floor} -> {"not_verified", floor}
+        {field, values} -> {Atom.to_string(field), Map.new(values, &inspection_member/1)}
+      end)
+    end)
+  end
+
   defp execute(%{"surface" => "signing.prepare", "input" => input}, _profile) do
     with {:ok, limits} <- limits(input),
          {:ok, profile} <- parse_profile(input),
@@ -324,6 +340,8 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
   end
 
   defp execute(_one, _profile), do: invalid(:invalid_type)
+
+  defp inspection_member({field, value}), do: {Atom.to_string(field), value}
 
   defp scope_projection(output, %{scope_status: status, signer_thumbprint: thumbprint})
        when status in [:matched, :outside] do
@@ -537,6 +555,20 @@ defmodule CharterAgreementProtocol.Conformance.Runner do
 
   defp receipt_context(%{"chain" => chain}, limits), do: chain_view(chain, limits)
   defp receipt_context(_input, _limits), do: type_error()
+
+  defp inspection_artifacts(
+         %{
+           "revisions" => revisions,
+           "acceptances" => acceptances,
+           "descriptors" => descriptors,
+           "terminations" => terminations
+         } = view
+       )
+       when map_size(view) == 4 do
+    ArtifactSet.build(revisions, acceptances, terminations, descriptors)
+  end
+
+  defp inspection_artifacts(_view), do: type_error()
 
   defp chain_view(
          %{

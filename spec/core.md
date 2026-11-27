@@ -500,6 +500,41 @@ Verification against a bare revision-8 charter is descriptive. The
 receipt facts MUST include both `signature` and `ownership` in
 `not_verified` [CAP-RECEIPT-partial-view].
 
+#### Receipt inspection
+
+Inspection takes a receipt compact, a retained chain artifact set, and an
+optional tagged grant digest. It MUST apply chain verification and the
+chain-view receipt signature, claims, and holder checks before returning
+inspection evidence [CAP-INSPECTION-provenance].
+Its provenance includes the key thumbprint of the verified signing key,
+the receipt's charter and revision coordinates and issuing role, and the
+scope status for the named accepted revision. Revision status is `verified`
+for a named accepted revision and `not_verified` otherwise.
+
+Inspection MUST return the protected, payload, and signature segments
+as received, with tagged SHA-256 of the exact protected and payload
+segment bytes and the existing receipt content digest
+[CAP-INSPECTION-signed-bytes].
+Decoded claims preserve the values in the signed payload within the
+receipt grammar's bounds.
+
+The grant comparison MUST report `matches` or `differs` when both tagged
+digests are supplied, and `not_verified` with `receipt_grant_digest_missing`
+or `grant_reference_missing` when a digest is absent
+[CAP-INSPECTION-grant-digest].
+An absent claim digest takes precedence when both digests are absent.
+
+Inspection MUST report governing agreement separately from receipt
+verification [CAP-INSPECTION-governing-agreement].
+It compares the receipt at `occurred_at` with the unique governing revision.
+The result names the governing revision's digest and number and lists the
+differing fields in bytewise order from `agent_party_role`,
+`deployment_digest` for that agent role, `issuing_party_role`,
+`revision_digest`, and `revision_number`. The result is `matches` for
+an empty list and `differs` otherwise. Without a unique governing revision,
+it is `not_verified` with `no_governing_revision` or
+`contested_governing_revision`, for an absent or contested result respectively.
+
 ### 4.7 Extension envelope
 
 The extension envelope MUST be registry-conformant on every

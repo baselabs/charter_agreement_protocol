@@ -10,6 +10,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
   alias CharterAgreementProtocol.{
     Acceptance,
+    ArtifactSet,
     Capability.Profile,
     Chain,
     CharterRevision,
@@ -206,6 +207,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
     assert counts["chain.verify"] + counts["governing_revision"] == 161
     assert counts["chain.verify_profile"] == 26
     assert counts["receipt.verify"] == 76
+    assert counts["receipt.inspect"] == 14
     assert counts["signing.prepare"] == 147
   end
 
@@ -229,6 +231,7 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
       assert_termination_expectations(protocol_cases(cases))
       assert_chain_expectations(protocol_cases(cases))
       assert_receipt_expectations(protocol_cases(cases))
+      assert_inspection_expectations(protocol_cases(cases))
     end
 
     @tag skip:
@@ -1101,6 +1104,72 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
 
       assert projected_receipt_result(actual) == one["expect"]
     end)
+  end
+
+  defp assert_inspection_expectations(cases) do
+    for %{"surface" => "receipt.inspect", "input" => input} = one <- cases do
+      limits = case_limits(input)
+      profile = case_profile(input)
+
+      result =
+        with %{"chain" => chain} when is_map(chain) <- input,
+             {:ok, set} <-
+               ArtifactSet.build(
+                 chain["revisions"],
+                 chain["acceptances"],
+                 chain["terminations"],
+                 chain["descriptors"]
+               ) do
+          CAP.inspect_receipt(input["compact"], set, input["grant_reference"], limits, profile)
+        else
+          _invalid -> {:error, Error.new(:invalid_type, ["artifact_set"])}
+        end
+
+      projection =
+        case result do
+          {:ok, evidence} ->
+            output = evidence |> JSON.encode!() |> JSON.decode!()
+
+            assert Enum.join(
+                     [
+                       evidence.signed.protected_segment,
+                       evidence.signed.payload_segment,
+                       evidence.signed.signature_segment
+                     ],
+                     "."
+                   ) == input["compact"], one["id"]
+
+            %{"status" => "valid", "output" => output}
+
+          {:error, %Error{code: code}} ->
+            %{"status" => "invalid", "error_code" => Atom.to_string(code)}
+        end
+
+      assert projection == one["expect"], one["id"]
+    end
+  end
+
+  test "receipt inspection accepts the default profile and checks caller limits" do
+    input = shipped_input("receipt-inspect", "receipt-inspection-matched-ed25519")
+    chain = input["chain"]
+    default = Limits.default()
+
+    assert {:ok, set} =
+             ArtifactSet.build(
+               chain["revisions"],
+               chain["acceptances"],
+               chain["terminations"],
+               chain["descriptors"]
+             )
+
+    assert {:ok, inspected} =
+             CAP.inspect_receipt(input["compact"], set, input["grant_reference"], default)
+
+    assert inspected.agreement.status == "matches"
+    assert {:ok, limits} = Limits.new(max_artifact_set_bytes: 0)
+
+    assert {:error, %Error{code: :limit_exceeded}} =
+             CAP.inspect_receipt(input["compact"], set, input["grant_reference"], limits)
   end
 
   defp receipt_context(%{"revision_text" => text}, limits),

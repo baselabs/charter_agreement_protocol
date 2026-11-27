@@ -9,6 +9,31 @@ defmodule CharterAgreementProtocol.RequirementMap do
   """
 
   @entries [
+    {"CAP-INSPECTION-provenance",
+     [
+       {:corpus, ["receipt.inspect:valid", "receipt.inspect:signature_invalid"]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest},
+       {:mutation, "inspection-signature-bypass"}
+     ]},
+    {"CAP-INSPECTION-signed-bytes",
+     [
+       {:corpus, ["receipt.inspect:valid"]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest},
+       {:mutation, "inspection-payload-digest-drift"}
+     ]},
+    {"CAP-INSPECTION-grant-digest",
+     [
+       {:corpus, ["receipt.inspect:valid", "receipt.inspect:invalid_constraint"]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest},
+       {:mutation, "inspection-grant-comparison-bypass"}
+     ]},
+    {"CAP-INSPECTION-governing-agreement",
+     [
+       {:corpus,
+        ["receipt.inspect:valid", "receipt.inspect:chain_fork", "receipt.inspect:terminated"]},
+       {:gate, CharterAgreementProtocol.Conformance.CorpusTest},
+       {:mutation, "inspection-governing-differences-drop"}
+     ]},
     {"CAP-DESCRIPTOR-signer-scopes",
      [
        {:corpus,

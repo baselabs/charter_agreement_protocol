@@ -7,6 +7,34 @@ defmodule CharterAgreementProtocol.ConformanceMutationGate do
 
   @mutations [
     %{
+      name: "inspection-signature-bypass",
+      path: "lib/charter_agreement_protocol/receipt.ex",
+      from: "{:ok, {public, algorithm}} <- verify_prepared_signature(prepared, profile) do",
+      to: "[{public, algorithm} | _rest] <- prepared.keys do",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "inspection-payload-digest-drift",
+      path: "lib/charter_agreement_protocol/receipt_inspection.ex",
+      from: "payload_segment_digest: payload |> Digest.of() |> Digest.to_tagged()",
+      to: "payload_segment_digest: protected |> Digest.of() |> Digest.to_tagged()",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "inspection-grant-comparison-bypass",
+      path: "lib/charter_agreement_protocol/receipt_inspection.ex",
+      from: "claimed == reference -> {\"matches\", nil}",
+      to: "is_binary(claimed) -> {\"matches\", nil}",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
+      name: "inspection-governing-differences-drop",
+      path: "lib/charter_agreement_protocol/receipt_inspection.ex",
+      from: "fields: fields,",
+      to: "fields: [],",
+      command: ~w(mix test test/conformance/corpus_test.exs --seed 42)
+    },
+    %{
       name: "scope-successor-kind-bypass",
       path: "lib/charter_agreement_protocol/party_descriptor.ex",
       from: "defp successor_scope(:outside), do: chain_error()",
