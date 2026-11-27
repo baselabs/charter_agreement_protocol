@@ -99,7 +99,9 @@ defmodule CharterAgreementProtocol.ReceiptInspectionCorpus do
       |> Enum.uniq()
 
     thumbprint = key |> Map.take(~w(algorithm public_key)) |> canonical() |> tagged(:signer_key)
-    coordinates = Map.take(claims, ~w(charter_id revision_digest revision_number issuing_party_role))
+
+    coordinates =
+      Map.take(claims, ~w(charter_id revision_digest revision_number issuing_party_role))
 
     output = %{
       "signed" => %{

@@ -1137,7 +1137,8 @@ defmodule CharterAgreementProtocol.Conformance.CorpusTest do
                        evidence.signed.signature_segment
                      ],
                      "."
-                   ) == input["compact"], one["id"]
+                   ) == input["compact"],
+                   one["id"]
 
             %{"status" => "valid", "output" => output}
 

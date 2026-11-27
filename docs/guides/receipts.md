@@ -124,7 +124,7 @@ compete at that instant. A receipt that names a sibling you have never seen repo
 Build an artifact set from the retained revision, acceptance, termination and
 descriptor bytes with `CharterAgreementProtocol.build_set/4`. Pass that set,
 the receipt compact, the retained grant digest or `nil`, and your limits to
-`CharterAgreementProtocol.inspect_receipt/4`. Use `JSON.encode/1` to export
+`CharterAgreementProtocol.inspect_receipt/4`. Use `JSON.encode!/1` to export
 the returned record.
 
 The record holds the original signed segments and their digests, the

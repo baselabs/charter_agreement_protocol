@@ -607,7 +607,7 @@ defmodule CharterAgreementProtocol do
 
   Pass the retained tagged grant digest or `nil`. The result holds the exact
   compact segments, decoded claims, signature provenance, and separate grant
-  and governing comparisons. The result can be serialized with `JSON.encode/1`.
+  and governing comparisons. The result can be serialized with `JSON.encode!/1`.
   """
   @spec inspect_receipt(term(), ArtifactSet.t(), binary() | nil, Limits.t()) ::
           {:ok, ReceiptInspection.t()} | {:error, Error.t()}

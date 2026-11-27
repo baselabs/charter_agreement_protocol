@@ -200,7 +200,8 @@ defmodule CharterAgreementProtocol.ReleaseIdentity do
           class: :error_code_change,
           direction: :red_to_red,
           operation: "receipt.inspect",
-          description: "Return the typed grant digest or signature refusal reached by inspection.",
+          description:
+            "Return the typed grant digest or signature refusal reached by inspection.",
           witnesses: [
             %{
               entry_point: "corpus_runner",
