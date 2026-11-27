@@ -18,7 +18,6 @@
 /.elixir_ls/
 /.lexical/
 /.serena/
-/graphify-out/
 /.claude/
 /.mcp.json
 .env
