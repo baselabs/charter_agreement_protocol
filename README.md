@@ -34,7 +34,7 @@ and is not proven.
 
 ```elixir
 def deps do
-  [{:charter_agreement_protocol, "~> 1.1.0"}]
+  [{:charter_agreement_protocol, "~> 1.3"}]
 end
 ```
 
@@ -105,7 +105,7 @@ flow.
 |---|---|---|
 | `charter_agreement_protocol` (this package) | Elixir | Reference verifier and the bytes to sign |
 | [`charter_agreement_signer`](https://hex.pm/packages/charter_agreement_signer) | Elixir | Signs artifacts with your key handle |
-| [`@charter-agreement-protocol/verifier`](https://www.npmjs.com/package/@charter-agreement-protocol/verifier) | TypeScript | Independent second verifier (2.0.0 for CAP 1.1.0) |
+| [`@charter-agreement-protocol/verifier`](https://www.npmjs.com/package/@charter-agreement-protocol/verifier) | TypeScript | Independent second verifier (2.0.0 for CAP 1.3.0) |
 | [`@charter-agreement-protocol/signer`](https://www.npmjs.com/package/@charter-agreement-protocol/signer) | TypeScript | Signer for Node |
 
 The two verifiers share no code. Both must give the same answer, byte for byte, on
@@ -135,7 +135,7 @@ capability-limited expectations for Node and browser verification.
 
 ## Status
 
-CAP 1.1.0 verifies revision-8 descriptor commitments and publications,
+CAP 1.3.0 verifies revision-8 descriptor commitments and publications,
 acceptance and termination quorums, and declared party assignments.
 Descriptor scopes determine which keys can contribute to those quorums and
 to assignment assent. Every charter successor needs an accepted predecessor.

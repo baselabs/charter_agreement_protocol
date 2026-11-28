@@ -28,7 +28,9 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
   @candidate_version Mix.Project.config()[:version]
   # Published setup cells use the same CAP release line as the 1.0 signer.
   @hex_dependency ~s({:charter_agreement_protocol, "~> 1.0.0"})
-  @current_hex_dependency ~s({:charter_agreement_protocol, "~> #{@candidate_version}"})
+  @candidate_version_parts Version.parse!(@candidate_version)
+  @candidate_release_line "#{@candidate_version_parts.major}.#{@candidate_version_parts.minor}"
+  @current_hex_dependency ~s({:charter_agreement_protocol, "~> #{@candidate_release_line}"})
 
   # Evaluates cell_*.exs in order with one binding and one environment, then prints
   # each result under a marker line.

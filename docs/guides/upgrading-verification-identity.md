@@ -4,7 +4,7 @@ If you store charter artifacts and verify them again later, you need to know
 whether a newer CAP release would reach the same results. CAP publishes that
 as data. This page says what to store, what to compare when you verify again,
 how releases map to verification semantics, and what to change for each
-upgrade from 0.3.x through 1.1.0.
+upgrade from 0.3.x through 1.3.0.
 
 ## What to store next to the artifacts
 
@@ -103,7 +103,7 @@ carries the same rows in its `compatibility` member.
 | 4 | 0.4.0, 0.4.1 | a Party Descriptor's `effective_from` must be 1 to 64 bytes, like the other timestamps |
 | 5 | 0.5.0 | a charter's parties must be distinct: a revision that names one descriptor for two roles fails with `:revision_invalid`, and a chain view whose revision parties resolve to one party's descriptor history, or that holds a history no revision names, fails with `:chain_invalid` |
 | 6 | 0.6.0, 1.0.0 | Ed25519 admission rejects two more small-order encodings and keys that are not curve points, applying one point rule to the public key and signature `R`; malformed caller-built context field types return `invalid_type` consistently; some revision numbers, topology values and list members returned `ok` in 0.5.0, while other malformed context fields raised or returned a context-specific error |
-| 7 | 1.1.0 | Admits revision-8 descriptor commitments and current/next publications, party quorums, and declared assignments. Every non-genesis charter revision requires an accepted predecessor. A signed legacy successor of an unsigned genesis can lose governing status. |
+| 7 | 1.3.0 | Admits revision-8 descriptor commitments and current/next publications, party quorums, and declared assignments. Every non-genesis charter revision requires an accepted predecessor. A signed legacy successor of an unsigned genesis can lose governing status. |
 
 Releases before 0.4.0 shipped no manifest. Their rows are CAP's
 classification of those releases, published afterward; their packages are
@@ -217,7 +217,9 @@ artifacts need no migration. Improper lists passed to plain JSON conversion,
 or revision encoding now return `invalid_type` instead of raising. Signing
 preparation returns its existing `signing_input_invalid` boundary code. The release metadata records 1.0.0 with the existing corpus row.
 
-## From 1.0.0 to 1.1.0
+## From 1.0.0 to 1.3.0
+
+This package skips the 1.1 and 1.2 release lines.
 
 - **Re-verify stored charter views.** A charter successor is eligible only if its
   immediate predecessor has been accepted, including for legacy revisions. A signed
@@ -236,24 +238,24 @@ preparation returns its existing `signing_input_invalid` boundary code. The rele
 - **Verify descriptor commitments and publications.** Revision 8 supports
   committed successor key sets and current/next publications checked against the
   signed descriptor history.
-- **Record the new verification identity.** Semantics moves to 7. The 1.1.0
+- **Record the new verification identity.** Semantics moves to 7. The 1.3.0
   compatibility row lists typed errors and changed successful outputs alongside
   verdict changes.
 
 ## Choose the dependency requirement
 
 ```elixir
-{:charter_agreement_protocol, "~> 1.1.0"}
+{:charter_agreement_protocol, "~> 1.3"}
 ```
 
-The 1.x public Elixir API follows Semantic Versioning. `~> 1.1.0` accepts
-1.1.x patch releases. `~> 1.1` also accepts later 1.x minor releases.
+The 1.x public Elixir API follows Semantic Versioning. `~> 1.3` accepts
+1.3.x patches and later 1.x minor releases. `~> 1.3.0` accepts only 1.3.x patches.
 Verification behavior has its own identity: record the semantics version,
 corpus, registry and specification digests whenever updating the lock.
 A package major version does not change an artifact's `protocol_revision`.
 
 Your `mix.lock` fixes the exact version until `mix deps.update`. If exact
-package bytes matter, use `== 1.1.0` and retain the Hex checksum from the lock.
+package bytes matter, use `== 1.3.0` and retain the Hex checksum from the lock.
 
 ## Runtimes that cannot verify ML-DSA
 

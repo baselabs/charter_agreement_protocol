@@ -4,7 +4,9 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
-## [1.1.0] — 2026-11-27
+## [1.3.0] — 2026-11-27
+
+This package skips the 1.1 and 1.2 release lines.
 
 - Inspect signed receipts against retained chain artifacts. Return the exact
   compact segments, key provenance, grant digest comparison, and agreement
@@ -26,7 +28,7 @@ All notable public changes to `charter_agreement_protocol` are documented here.
   successor of an unsigned genesis remains proposed and cannot govern.
 
 - Verify descriptor histories in ascending party ID order. Record the
-  resulting error-code changes in the 1.1.0 compatibility row.
+  resulting error-code changes in the 1.3.0 compatibility row.
 
 - Admit revision-8 successor key commitments and verify unsigned current/next
   descriptor publications against their complete signed history.

@@ -21,7 +21,7 @@ active key thumbprints. Scope follows the pinned descriptor, including the
 predecessor for descriptor succession and the named accepted revision for
 receipts. Outside acceptances and terminations remain signature facts and
 contribute no eligible vote. Checked signing enforces the matching rule.
-The 1.1.0 candidate records the cases in its verification semantics 7 row.
+The 1.3.0 candidate records the cases in its verification semantics 7 row.
 
 ## 2026-11-25 — party quorums and assignments
 
@@ -59,7 +59,7 @@ The 1.1.0 candidate records the cases in its verification semantics 7 row.
 
 Revision 8 binds a successor's complete active key set and defines a bounded,
 unsigned publication of the current and next descriptors. The current source
-candidate, 1.1.0, records verification semantics 7.
+candidate, 1.3.0, records verification semantics 7.
 
 ## 2026-11-09 — editorial clarification for package 1.0.0
 
