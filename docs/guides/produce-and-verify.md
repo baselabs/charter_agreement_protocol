@@ -19,8 +19,8 @@ have not used `verify_chain/5` yet.
 ```elixir
 def deps do
   [
-    {:charter_agreement_protocol, "~> 1.0.0"},
-    {:charter_agreement_signer, "~> 1.0.0"}
+    {:charter_agreement_protocol, "~> 1.3"},
+    {:charter_agreement_signer, "~> 1.4"}
   ]
 end
 ```

@@ -2,8 +2,8 @@
 
 ```elixir
 Mix.install([
-  {:charter_agreement_protocol, "~> 1.0.0"},
-  {:charter_agreement_signer, "~> 1.0.0"}
+  {:charter_agreement_protocol, "~> 1.3"},
+  {:charter_agreement_signer, "~> 1.4"}
 ])
 ```
 
@@ -225,7 +225,7 @@ eur_claims = acceptance_claims.(eur, issuer)
 }
 ```
 
-Both refuse with `:signing_refused`, and the signer stops before it calls the key handle.
+Both refuse with `:signing_refused`, and the signer stops before it calls `sign/2`.
 Accepting EUR would mean the same party signed two different revisions at the same number,
 which is equivocation. The producer never builds that signature.
 

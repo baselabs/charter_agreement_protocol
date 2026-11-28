@@ -4,6 +4,8 @@ All notable public changes to `charter_agreement_protocol` are documented here.
 
 ## [Unreleased]
 
+- The signer guide and notebooks now install CAP 1.3 with signer 1.4.
+
 ## [1.3.0] — 2026-11-27
 
 This package skips the 1.1 and 1.2 release lines.

@@ -2,8 +2,8 @@
 
 ```elixir
 Mix.install([
-  {:charter_agreement_protocol, "~> 1.0.0"},
-  {:charter_agreement_signer, "~> 1.0.0"}
+  {:charter_agreement_protocol, "~> 1.3"},
+  {:charter_agreement_signer, "~> 1.4"}
 ])
 ```
 
@@ -117,8 +117,9 @@ The result is a compact JWS: three base64url parts joined by dots. The signer al
 verified it with CAP before returning it, so a broken handle or a wrong key never produces
 an artifact.
 
-`protocol_revision` 2 with `Ed25519` is the default pair the signer mints. Pass
-`algorithm: "ML-DSA-65"` with `protocol_revision` 3 for a post-quantum key instead.
+This example uses `protocol_revision` 2 and the signer's default algorithm, `Ed25519`.
+For a post-quantum key, pass `algorithm: "ML-DSA-65"` and set `protocol_revision` to 3
+in the claims.
 
 ## The counterparty verifies both descriptors
 

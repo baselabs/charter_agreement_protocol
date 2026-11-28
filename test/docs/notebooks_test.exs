@@ -8,10 +8,10 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
   separate `elixir` process, carrying variables and aliases from cell to cell the way
   Livebook does, and prints each cell's result for the assertions below.
 
-  Network: the notebooks install the matching 1.0 signer from Hex.
+  Network: the notebooks install the matching 1.4 signer from Hex.
   `CAP_DOCS_SIGNER_PATH` may select real matching signer source during coordinated
   preparation. The evaluated CAP version comes from the checkout and the signer
-  version must be 1.0.0. If both the `Mix.install` cache and the local Hex package
+  version must be 1.4.0. If both the `Mix.install` cache and the local Hex package
   cache lack it, the first run needs network access. Later runs reuse the cache.
   Offline, `mix test --exclude notebooks` skips this file.
 
@@ -26,11 +26,10 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
 
   @root Path.expand("../..", __DIR__)
   @candidate_version Mix.Project.config()[:version]
-  # Published setup cells use the same CAP release line as the 1.0 signer.
-  @hex_dependency ~s({:charter_agreement_protocol, "~> 1.0.0"})
   @candidate_version_parts Version.parse!(@candidate_version)
   @candidate_release_line "#{@candidate_version_parts.major}.#{@candidate_version_parts.minor}"
-  @current_hex_dependency ~s({:charter_agreement_protocol, "~> #{@candidate_release_line}"})
+  @hex_dependency ~s({:charter_agreement_protocol, "~> #{@candidate_release_line}"})
+  @signer_dependency ~s({:charter_agreement_signer, "~> 1.4"})
 
   # Evaluates cell_*.exs in order with one binding and one environment, then prints
   # each result under a marker line.
@@ -73,6 +72,7 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
     output = run_notebook!("fork-repair.livemd")
 
     assert output =~ "code: :signing_refused"
+    assert output =~ "signer: {:error, {:refused, :signing_refused}}"
     assert output =~ "kind: :acceptance_equivocation"
     assert output =~ "winner: nil"
     assert output =~ "{:ok, :contested}"
@@ -145,12 +145,11 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
   defp run_guide!(name, signer?) do
     source = File.read!(Path.join(@root, "docs/guides/#{name}"))
     [install | rest] = cells(source)
-    hex_dependency = if signer?, do: @hex_dependency, else: @current_hex_dependency
-    assert install =~ hex_dependency
-    if signer?, do: assert(install =~ ~s({:charter_agreement_signer, "~> 1.0.0"}))
+    assert install =~ @hex_dependency
+    if signer?, do: assert(install =~ @signer_dependency)
 
     dependencies = ~s({:charter_agreement_protocol, path: #{inspect(@root)}, override: true})
-    signer = if signer?, do: ~s(, {:charter_agreement_signer, "~> 1.0.0"}), else: ""
+    signer = if signer?, do: ", #{@signer_dependency}", else: ""
     setup = matching_signer("Mix.install([" <> dependencies <> signer <> "])")
     work = Path.join(System.tmp_dir!(), "cap-guide-#{System.unique_integer([:positive])}")
     File.mkdir_p!(work)
@@ -159,8 +158,6 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
   end
 
   defp matching_signer(setup) do
-    dependency = ~s({:charter_agreement_signer, "~> 1.0.0"})
-
     setup =
       case System.get_env("CAP_DOCS_SIGNER_PATH") do
         nil ->
@@ -169,7 +166,7 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
         path ->
           String.replace(
             setup,
-            dependency,
+            @signer_dependency,
             ~s({:charter_agreement_signer, path: #{inspect(Path.expand(path))}})
           )
       end
@@ -179,7 +176,7 @@ defmodule CharterAgreementProtocol.Docs.NotebooksTest do
 
       expected_versions = [
         charter_agreement_protocol: #{inspect(@candidate_version)},
-        charter_agreement_signer: "1.0.0"
+        charter_agreement_signer: "1.4.0"
       ]
 
       for {app, expected} <- expected_versions,
